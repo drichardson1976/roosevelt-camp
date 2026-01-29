@@ -24,30 +24,65 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== CONFIGURATION ====================
-    // SUPABASE CONFIGURATION - UPDATE THESE WITH YOUR CREDENTIALS!
     const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
     
-    // Initialize Supabase client
     const supabase = SUPABASE_URL.includes('YOUR_') 
       ? null 
       : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.051";
-    const BUILD_TIMESTAMP = "2026-01-29 11:30am PST";
-    const BUILD_DATE = new Date("2026-01-29T11:30:00-08:00");
-    const CHANGELOG = "Fixed input focus bug - cursor no longer leaves text fields while typing";
+    const VERSION = "12.052";
+    const BUILD_TIMESTAMP = "2026-01-29 12:15pm PST";
+    const BUILD_DATE = new Date("2026-01-29T12:15:00-08:00");
+    
+    // ==================== RELEASE NOTES ====================
+    const RELEASE_NOTES = [
+      {
+        version: "12.052",
+        date: "2026-01-29",
+        changes: [
+          "Added separate dev (red) and production (green) version banners",
+          "Dev banner always visible with DB status and runtime",
+          "Production banner hidden by default - double-click basketball logo to reveal",
+          "Added clickable release notes modal"
+        ]
+      },
+      {
+        version: "12.051",
+        date: "2026-01-29",
+        changes: [
+          "Fixed input focus bug - cursor no longer leaves text fields while typing",
+          "Created StableInput component to prevent focus loss during re-renders",
+          "Wrapped form components with React.memo to prevent unnecessary re-renders",
+          "Isolated form state to prevent parent re-renders"
+        ]
+      },
+      {
+        version: "12.050-supabase",
+        date: "2026-01-29",
+        changes: [
+          "Initial Supabase integration",
+          "Added database connection status indicator",
+          "Implemented storage functions for content, counselors, registrations"
+        ]
+      }
+    ];
+
+    // ==================== ENVIRONMENT DETECTION ====================
+    const isDevelopment = () => {
+      const hostname = window.location.hostname;
+      return hostname.includes('dev') || 
+             hostname.includes('localhost') || 
+             hostname.includes('127.0.0.1') ||
+             hostname.includes('--dev');
+    };
 
     // ==================== DUMMY DATA ====================
     const DUMMY_CONTENT = {
       heroTitle: "Roosevelt Girls Basketball",
       heroSubtitle: "Summer Daycamp 2026",
       heroTagline: "Build Skills. Build Friendships. Build Your Future.",
-      heroImage: null,
-      heroImageOriginal: null,
-      venmoImage: null,
-      venmoImageOriginal: null,
       venmoUsername: "@RHSDayCamp",
       aboutText: "Join us for an incredible summer of basketball at Roosevelt High School! Our camp is designed for young athletes who want to develop their basketball skills while having fun and making lasting friendships. Led by Audrey Richardson and staffed by current Roosevelt Varsity players, campers will learn fundamental skills, team strategies, and the values that make Rough Riders champions.",
       contactEmail: "rhsdaycamp@gmail.com",
@@ -57,111 +92,35 @@
       sessionCost: "$60",
       campDates: "June 22 - August 28, 2026",
       ageRange: "Completed 3rd - 8th Grade",
-      latePolicy: "If you are more than 30 minutes late for pickup, please bring a $10 Starbucks gift card for the counselor who stayed late with your child.",
-      locationAddress: "Roosevelt High School Gymnasium\n1410 NE 66th St\nSeattle, WA 98115",
-      cancellationPolicy: "We require at least 14 days notice for cancellations to receive a full refund.",
-      scholarshipInfo: "We believe every child deserves the chance to experience our camp, regardless of their family's financial situation."
+      locationAddress: "Roosevelt High School Gymnasium\n1410 NE 66th St\nSeattle, WA 98115"
     };
 
     const DUMMY_COUNSELORS = [
-      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', password: null, birthdate: '2008-03-15', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience. Led team to state championships in 2025.', photo: null, originalPhoto: null, visible: true },
-      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', password: null, birthdate: '2008-07-22', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range. All-conference selection.', photo: null, originalPhoto: null, visible: true },
-      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', password: null, birthdate: '2009-01-10', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense and court vision.', photo: null, originalPhoto: null, visible: true },
-      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', password: null, birthdate: '2009-05-28', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves and rebounding skills.', photo: null, originalPhoto: null, visible: true },
+      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience. Led team to state championships in 2025.', visible: true },
+      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range. All-conference selection.', visible: true },
+      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense and court vision.', visible: true },
+      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves and rebounding skills.', visible: true },
     ];
 
     const DUMMY_REGISTRATIONS = [
-      { 
-        id: 'reg1', 
-        parentName: 'Jennifer Adams', 
-        parentEmail: 'jadams@email.com', 
-        parentPhone: '(206) 555-1234',
-        childName: 'Olivia Adams', 
-        childBirthdate: '2015-04-12',
-        childGrade: '5th',
-        date: '2026-06-22', 
-        sessions: ['morning'], 
-        status: 'approved',
-        emergencyContacts: [
-          { name: 'Mike Adams', phone: '(206) 555-1235', relationship: 'Father' },
-          { name: 'Grandma Rose', phone: '(206) 555-1236', relationship: 'Grandmother' }
-        ],
-        paymentStatus: 'paid',
-        venmoCode: 'JENADA123',
-        createdAt: '2026-01-15'
-      },
-      { 
-        id: 'reg2', 
-        parentName: 'Robert Chen', 
-        parentEmail: 'rchen@email.com',
-        parentPhone: '(206) 555-2345', 
-        childName: 'Lily Chen', 
-        childBirthdate: '2014-08-20',
-        childGrade: '6th',
-        date: '2026-06-22', 
-        sessions: ['morning', 'afternoon'], 
-        status: 'pending',
-        emergencyContacts: [
-          { name: 'Susan Chen', phone: '(206) 555-2346', relationship: 'Mother' }
-        ],
-        paymentStatus: 'unpaid',
-        venmoCode: 'ROBCHE456',
-        createdAt: '2026-01-20'
-      },
-      { 
-        id: 'reg3', 
-        parentName: 'Maria Garcia', 
-        parentEmail: 'mgarcia@email.com',
-        parentPhone: '(206) 555-3456', 
-        childName: 'Sofia Garcia', 
-        childBirthdate: '2016-02-14',
-        childGrade: '4th',
-        date: '2026-06-23', 
-        sessions: ['afternoon'], 
-        status: 'approved',
-        emergencyContacts: [
-          { name: 'Carlos Garcia', phone: '(206) 555-3457', relationship: 'Father' },
-          { name: 'Ana Martinez', phone: '(206) 555-3458', relationship: 'Aunt' }
-        ],
-        paymentStatus: 'paid',
-        venmoCode: 'MARGAR789',
-        scholarshipRequested: true,
-        scholarshipAmount: 50,
-        createdAt: '2026-01-18'
-      }
+      { id: 'reg1', parentName: 'Jennifer Adams', parentEmail: 'jadams@email.com', childName: 'Olivia Adams', date: '2026-06-22', sessions: ['morning'], status: 'approved', paymentStatus: 'paid' },
+      { id: 'reg2', parentName: 'Robert Chen', parentEmail: 'rchen@email.com', childName: 'Lily Chen', date: '2026-06-22', sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
+      { id: 'reg3', parentName: 'Maria Garcia', parentEmail: 'mgarcia@email.com', childName: 'Sofia Garcia', date: '2026-06-23', sessions: ['afternoon'], status: 'approved', paymentStatus: 'paid' }
     ];
 
     const DUMMY_REGISTERED_USERS = [
-      { email: 'jadams@email.com', name: 'Jennifer Adams', password: 'parent123', role: 'parent', phone: '(206) 555-1234' },
-      { email: 'rchen@email.com', name: 'Robert Chen', password: 'parent123', role: 'parent', phone: '(206) 555-2345' },
-      { email: 'mgarcia@email.com', name: 'Maria Garcia', password: 'parent123', role: 'parent', phone: '(206) 555-3456' },
+      { email: 'jadams@email.com', name: 'Jennifer Adams', password: 'parent123', role: 'parent' },
+      { email: 'rchen@email.com', name: 'Robert Chen', password: 'parent123', role: 'parent' },
+      { email: 'mgarcia@email.com', name: 'Maria Garcia', password: 'parent123', role: 'parent' },
       { email: 'sarah.mitchell@roosevelt.edu', name: 'Sarah Mitchell', password: 'counselor123', role: 'counselor' },
     ];
 
-    const DUMMY_COUNSELOR_AVAILABILITY = {
-      'sarah.mitchell@roosevelt.edu': {
-        '2026-06-22': { available: ['morning', 'afternoon'], unavailable: [] },
-        '2026-06-23': { available: ['morning'], unavailable: ['afternoon'] },
-        '2026-06-24': { available: ['morning', 'afternoon'], unavailable: [] },
-      },
-      'maya.johnson@roosevelt.edu': {
-        '2026-06-22': { available: ['afternoon'], unavailable: ['morning'] },
-        '2026-06-23': { available: ['morning', 'afternoon'], unavailable: [] },
-      },
-      'emma.chen@roosevelt.edu': {
-        '2026-06-22': { available: ['morning', 'afternoon'], unavailable: [] },
-        '2026-06-23': { available: ['morning', 'afternoon'], unavailable: [] },
-        '2026-06-24': { available: ['afternoon'], unavailable: [] },
-      }
-    };
+    const DUMMY_COUNSELOR_AVAILABILITY = {};
 
-    // ==================== SUPABASE STORAGE FUNCTIONS ====================
+    // ==================== SUPABASE STORAGE ====================
     const storage = {
       async get(table) {
-        if (!supabase) {
-          console.log('Supabase not configured, using dummy data');
-          return null;
-        }
+        if (!supabase) return null;
         try {
           const { data, error } = await supabase.from(table).select('*');
           if (error) throw error;
@@ -170,53 +129,63 @@
           console.error(`Error fetching ${table}:`, e);
           return null;
         }
-      },
-      
-      async set(table, id, data) {
-        if (!supabase) {
-          console.log('Supabase not configured, skipping save');
-          return false;
-        }
-        try {
-          const { error } = await supabase.from(table).upsert({ 
-            id, 
-            data, 
-            updated_at: new Date().toISOString() 
-          });
-          if (error) throw error;
-          return true;
-        } catch (e) {
-          console.error(`Error saving to ${table}:`, e);
-          return false;
-        }
-      },
-
-      async delete(table, id) {
-        if (!supabase) return false;
-        try {
-          const { error } = await supabase.from(table).delete().eq('id', id);
-          if (error) throw error;
-          return true;
-        } catch (e) {
-          console.error(`Error deleting from ${table}:`, e);
-          return false;
-        }
       }
     };
 
+    // ==================== RELEASE NOTES MODAL ====================
+    const ReleaseNotesModal = ({ isOpen, onClose }) => {
+      if (!isOpen) return null;
+      
+      return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-green-800 text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="font-display text-2xl">Release Notes</h2>
+              <button onClick={onClose} className="text-white hover:text-green-200 text-2xl font-bold">×</button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {RELEASE_NOTES.map((release, idx) => (
+                <div key={release.version} className={`${idx > 0 ? 'mt-6 pt-6 border-t border-gray-200' : ''}`}>
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="bg-green-100 text-green-800 font-mono font-bold px-3 py-1 rounded-full text-sm">v{release.version}</span>
+                    <span className="text-gray-500 text-sm">{release.date}</span>
+                    {idx === 0 && <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">LATEST</span>}
+                  </div>
+                  <ul className="space-y-2">
+                    {release.changes.map((change, changeIdx) => (
+                      <li key={changeIdx} className="flex items-start gap-2 text-gray-700">
+                        <span className="text-green-600 mt-1">•</span>
+                        <span>{change}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="bg-gray-50 px-6 py-3 text-right">
+              <button onClick={onClose} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition">Close</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     // ==================== VERSION BANNER ====================
-    const VersionBanner = () => {
+    const VersionBanner = ({ isVisible, isDev }) => {
       const [elapsedTime, setElapsedTime] = useState('');
       const [dbStatus, setDbStatus] = useState('checking');
+      const [showReleaseNotes, setShowReleaseNotes] = useState(false);
       
       useEffect(() => {
         const updateElapsed = () => {
           const now = new Date();
           const diff = Math.floor((now - BUILD_DATE) / 1000);
-          const hours = Math.floor(diff / 3600);
+          const days = Math.floor(diff / 86400);
+          const hours = Math.floor((diff % 86400) / 3600);
           const minutes = Math.floor((diff % 3600) / 60);
           const seconds = diff % 60;
           let parts = [];
+          if (days > 0) parts.push(`${days}d`);
           if (hours > 0) parts.push(`${hours}h`);
           if (minutes > 0) parts.push(`${minutes}m`);
           parts.push(`${seconds}s`);
@@ -225,7 +194,6 @@
         updateElapsed();
         const interval = setInterval(updateElapsed, 1000);
         
-        // Check DB connection
         if (supabase) {
           supabase.from('camp_content').select('id').limit(1)
             .then(({ error }) => setDbStatus(error ? 'error' : 'connected'))
@@ -237,28 +205,35 @@
         return () => clearInterval(interval);
       }, []);
       
-      const statusColors = {
-        'checking': 'bg-yellow-600',
-        'connected': 'bg-green-600',
-        'error': 'bg-red-600',
-        'not-configured': 'bg-orange-600'
+      if (!isVisible) return null;
+      
+      const dbStatusConfig = {
+        'checking': { icon: '⏳', text: 'Checking DB...' },
+        'connected': { icon: '✓', text: 'DB Connected' },
+        'error': { icon: '✗', text: 'DB Error' },
+        'not-configured': { icon: '⚠', text: 'Using Dummy Data' }
       };
       
-      const statusText = {
-        'checking': '⏳ Checking DB...',
-        'connected': '✓ Supabase Connected',
-        'error': '✗ DB Error',
-        'not-configured': '⚠ Using Dummy Data'
-      };
+      const bannerColor = isDev ? 'bg-red-600' : 'bg-green-600';
+      const envLabel = isDev ? 'DEVELOPMENT' : 'PRODUCTION';
       
       return (
-        <div className={`${statusColors[dbStatus]} text-white text-center py-1 text-sm font-mono flex items-center justify-center gap-4`}>
-          <span>Version {VERSION}</span>
-          <span>•</span>
-          <span>{statusText[dbStatus]}</span>
-          <span>•</span>
-          <span>Running: {elapsedTime}</span>
-        </div>
+        <>
+          <div className={`${bannerColor} text-white text-center py-2 text-sm font-mono`}>
+            <div className="flex items-center justify-center gap-3 flex-wrap px-4">
+              <span className="font-bold">{envLabel}</span>
+              <span>•</span>
+              <span>v{VERSION}</span>
+              <span>•</span>
+              <span>{dbStatusConfig[dbStatus].icon} {dbStatusConfig[dbStatus].text}</span>
+              <span>•</span>
+              <span>Running: {elapsedTime}</span>
+              <span>•</span>
+              <button onClick={() => setShowReleaseNotes(true)} className="underline hover:text-yellow-200 transition">📋 Release Notes</button>
+            </div>
+          </div>
+          <ReleaseNotesModal isOpen={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />
+        </>
       );
     };
 
@@ -269,10 +244,7 @@
       
       useEffect(() => {
         const fadeTimer = setTimeout(() => setFading(true), 2500);
-        const hideTimer = setTimeout(() => {
-          setVisible(false);
-          if (onDone) onDone();
-        }, 3000);
+        const hideTimer = setTimeout(() => { setVisible(false); if (onDone) onDone(); }, 3000);
         return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
       }, []);
       
@@ -285,140 +257,77 @@
     };
 
     // ==================== STABLE INPUT COMPONENT ====================
-    // This component prevents focus loss by isolating input state
     const StableInput = ({ type = 'text', value, onChange, className, placeholder, id, autoComplete }) => {
-      const inputRef = useRef(null);
-      
-      const handleChange = useCallback((e) => {
-        onChange(e.target.value);
-      }, [onChange]);
-      
-      return (
-        <input
-          ref={inputRef}
-          id={id}
-          type={type}
-          value={value}
-          onChange={handleChange}
-          className={className}
-          placeholder={placeholder}
-          autoComplete={autoComplete || 'off'}
-        />
-      );
+      const handleChange = useCallback((e) => { onChange(e.target.value); }, [onChange]);
+      return <input id={id} type={type} value={value} onChange={handleChange} className={className} placeholder={placeholder} autoComplete={autoComplete || 'off'} />;
     };
 
     // ==================== MAIN APP ====================
     function RooseveltCamp() {
-      // Core state
       const [currentPage, setCurrentPage] = useState('home');
       const [user, setUser] = useState(null);
       const [toast, setToast] = useState(null);
       const [isLoading, setIsLoading] = useState(true);
+      const [showProductionBanner, setShowProductionBanner] = useState(false);
       
-      // Data state
       const [content, setContent] = useState(DUMMY_CONTENT);
       const [counselors, setCounselors] = useState(DUMMY_COUNSELORS);
       const [registrations, setRegistrations] = useState(DUMMY_REGISTRATIONS);
       const [registeredUsers, setRegisteredUsers] = useState(DUMMY_REGISTERED_USERS);
       const [counselorAvailability, setCounselorAvailability] = useState(DUMMY_COUNSELOR_AVAILABILITY);
       
-      // Admin state
-      const [adminAccounts] = useState([
-        { id: 'admin1', email: 'admin', name: 'Audrey Richardson', password: 'admin', role: 'admin' }
-      ]);
+      const [adminAccounts] = useState([{ id: 'admin1', email: 'admin', name: 'Audrey Richardson', password: 'admin', role: 'admin' }]);
 
-      const showToast = useCallback((message, type = 'success') => {
-        setToast({ message, type });
-      }, []);
+      const isDevEnv = isDevelopment();
+      const showToast = useCallback((message, type = 'success') => { setToast({ message, type }); }, []);
 
-      // Load data from Supabase on mount
       useEffect(() => {
         const loadData = async () => {
           setIsLoading(true);
-          
           if (supabase) {
             try {
-              // Load content
               const contentData = await storage.get('camp_content');
-              if (contentData && contentData.length > 0) {
-                setContent(contentData[0].data);
-              }
-              
-              // Load counselors
+              if (contentData && contentData.length > 0) setContent(contentData[0].data);
               const counselorData = await storage.get('camp_counselors');
-              if (counselorData && counselorData.length > 0) {
-                setCounselors(counselorData.map(c => c.data));
-              }
-              
-              // Load registrations
+              if (counselorData && counselorData.length > 0) setCounselors(counselorData.map(c => c.data));
               const regData = await storage.get('camp_registrations');
-              if (regData && regData.length > 0) {
-                setRegistrations(regData.map(r => r.data));
-              }
-              
-              // Load users
-              const userData = await storage.get('camp_registered_users');
-              if (userData && userData.length > 0) {
-                setRegisteredUsers(userData[0].data);
-              }
-              
-              // Load availability
-              const availData = await storage.get('camp_counselor_availability');
-              if (availData && availData.length > 0) {
-                setCounselorAvailability(availData[0].data);
-              }
-            } catch (e) {
-              console.error('Error loading data:', e);
-            }
+              if (regData && regData.length > 0) setRegistrations(regData.map(r => r.data));
+            } catch (e) { console.error('Error loading data:', e); }
           }
-          
           setIsLoading(false);
         };
-        
         loadData();
       }, []);
 
-      // Calculate statistics
       const getPendingCount = useCallback(() => registrations.filter(r => r.status === 'pending').length, [registrations]);
       const getApprovedCount = useCallback(() => registrations.filter(r => r.status === 'approved').length, [registrations]);
       const getUnpaidCount = useCallback(() => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length, [registrations]);
+
+      const handleLogoDoubleClick = useCallback(() => {
+        if (!isDevEnv) setShowProductionBanner(prev => !prev);
+      }, [isDevEnv]);
 
       // ==================== NAVIGATION ====================
       const Navigation = () => (
         <nav className="bg-green-900 text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div 
-              className="font-display text-2xl tracking-wide cursor-pointer hover:text-green-300 transition"
+              className="font-display text-2xl tracking-wide cursor-pointer hover:text-green-300 transition select-none"
               onClick={() => { setCurrentPage('home'); setUser(null); }}
+              onDoubleClick={handleLogoDoubleClick}
+              title={!isDevEnv ? "Double-click for version info" : ""}
             >
               🏀 ROOSEVELT CAMP
             </div>
             <div className="flex gap-4 items-center">
-              <button 
-                onClick={() => setCurrentPage('home')}
-                className={`px-3 py-1 rounded transition ${currentPage === 'home' ? 'bg-green-700' : 'hover:bg-green-800'}`}
-              >
-                Home
-              </button>
+              <button onClick={() => setCurrentPage('home')} className={`px-3 py-1 rounded transition ${currentPage === 'home' ? 'bg-green-700' : 'hover:bg-green-800'}`}>Home</button>
               {user ? (
                 <>
-                  <span className="text-green-300 text-sm">
-                    {user.name} ({user.role})
-                  </span>
-                  <button 
-                    onClick={() => { setUser(null); setCurrentPage('home'); }}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition"
-                  >
-                    Logout
-                  </button>
+                  <span className="text-green-300 text-sm">{user.name} ({user.role})</span>
+                  <button onClick={() => { setUser(null); setCurrentPage('home'); }} className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition">Logout</button>
                 </>
               ) : (
-                <button 
-                  onClick={() => setCurrentPage('login')}
-                  className={`px-3 py-1 rounded transition ${currentPage === 'login' ? 'bg-green-700' : 'hover:bg-green-800'}`}
-                >
-                  Login
-                </button>
+                <button onClick={() => setCurrentPage('login')} className={`px-3 py-1 rounded transition ${currentPage === 'login' ? 'bg-green-700' : 'hover:bg-green-800'}`}>Login</button>
               )}
             </div>
           </div>
@@ -428,43 +337,26 @@
       // ==================== HOME PAGE ====================
       const HomePage = () => (
         <div className="min-h-screen">
-          {/* Hero Section */}
           <div className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-900 text-white">
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="relative max-w-6xl mx-auto px-4 py-20 text-center">
-              <h1 className="font-display text-6xl md:text-8xl tracking-wider mb-4 drop-shadow-lg">
-                {content.heroTitle}
-              </h1>
-              <h2 className="font-display text-4xl md:text-5xl tracking-wide text-green-200 mb-6">
-                {content.heroSubtitle}
-              </h2>
-              <p className="text-xl md:text-2xl text-green-100 mb-8 italic">
-                {content.heroTagline}
-              </p>
-              <button 
-                onClick={() => setCurrentPage('login')}
-                className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-xl px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition"
-              >
-                Register Now →
-              </button>
+              <h1 className="font-display text-6xl md:text-8xl tracking-wider mb-4 drop-shadow-lg">{content.heroTitle}</h1>
+              <h2 className="font-display text-4xl md:text-5xl tracking-wide text-green-200 mb-6">{content.heroSubtitle}</h2>
+              <p className="text-xl md:text-2xl text-green-100 mb-8 italic">{content.heroTagline}</p>
+              <button onClick={() => setCurrentPage('login')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-xl px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition">Register Now →</button>
             </div>
-            {/* Basketball decorative elements */}
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/20 rounded-full -translate-x-1/2 translate-y-1/2"></div>
             <div className="absolute top-10 right-10 w-20 h-20 bg-orange-500/10 rounded-full"></div>
           </div>
 
-          {/* Info Cards */}
           <div className="max-w-6xl mx-auto px-4 py-12">
             <div className="grid md:grid-cols-3 gap-6">
-              {/* Dates */}
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-600">
                 <div className="text-4xl mb-3">📅</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Camp Dates</h3>
                 <p className="text-gray-700">{content.campDates}</p>
                 <p className="text-sm text-gray-500 mt-2">Monday - Friday</p>
               </div>
-              
-              {/* Sessions */}
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500">
                 <div className="text-4xl mb-3">⏰</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Sessions</h3>
@@ -472,8 +364,6 @@
                 <p className="text-gray-700">Afternoon: {content.sessionAfternoon}</p>
                 <p className="text-green-600 font-semibold mt-2">{content.sessionCost} per session</p>
               </div>
-              
-              {/* Ages */}
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500">
                 <div className="text-4xl mb-3">👧</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Ages</h3>
@@ -483,30 +373,20 @@
             </div>
           </div>
 
-          {/* About Section */}
           <div className="bg-gray-50 py-12">
             <div className="max-w-4xl mx-auto px-4">
               <h2 className="font-display text-4xl text-green-800 text-center mb-6">About Our Camp</h2>
-              <p className="text-gray-700 text-lg leading-relaxed text-center">
-                {content.aboutText}
-              </p>
+              <p className="text-gray-700 text-lg leading-relaxed text-center">{content.aboutText}</p>
             </div>
           </div>
 
-          {/* Counselors Section */}
           <div className="max-w-6xl mx-auto px-4 py-12">
             <h2 className="font-display text-4xl text-green-800 text-center mb-8">Meet Our Counselors</h2>
             <div className="grid md:grid-cols-4 gap-6">
               {counselors.filter(c => c.visible !== false).map(counselor => (
                 <div key={counselor.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="h-32 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
-                    {counselor.photo ? (
-                      <img src={counselor.photo} alt={counselor.name} className="w-24 h-24 rounded-full object-cover border-4 border-white" />
-                    ) : (
-                      <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl border-4 border-white">
-                        {counselor.name.charAt(0)}
-                      </div>
-                    )}
+                    <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl border-4 border-white">{counselor.name.charAt(0)}</div>
                   </div>
                   <div className="p-4 text-center">
                     <h3 className="font-bold text-lg text-green-800">{counselor.name}</h3>
@@ -518,23 +398,13 @@
             </div>
           </div>
 
-          {/* Contact Section */}
           <div className="bg-green-900 text-white py-12">
             <div className="max-w-4xl mx-auto px-4 text-center">
               <h2 className="font-display text-4xl mb-6">Contact Us</h2>
               <div className="flex flex-col md:flex-row justify-center gap-8">
-                <div>
-                  <p className="text-green-300">Email</p>
-                  <p className="text-xl">{content.contactEmail}</p>
-                </div>
-                <div>
-                  <p className="text-green-300">Phone</p>
-                  <p className="text-xl">{content.contactPhone}</p>
-                </div>
-                <div>
-                  <p className="text-green-300">Location</p>
-                  <p className="text-xl whitespace-pre-line">{content.locationAddress}</p>
-                </div>
+                <div><p className="text-green-300">Email</p><p className="text-xl">{content.contactEmail}</p></div>
+                <div><p className="text-green-300">Phone</p><p className="text-xl">{content.contactPhone}</p></div>
+                <div><p className="text-green-300">Location</p><p className="text-xl whitespace-pre-line">{content.locationAddress}</p></div>
               </div>
             </div>
           </div>
@@ -542,9 +412,7 @@
       );
 
       // ==================== LOGIN PAGE ====================
-      // Extracted as a separate component to prevent re-renders from parent
       const LoginPage = React.memo(() => {
-        // Local state for login form - isolated from parent component
         const [loginEmail, setLoginEmail] = useState('');
         const [loginPassword, setLoginPassword] = useState('');
         const [loginError, setLoginError] = useState('');
@@ -552,83 +420,30 @@
         const handleLogin = useCallback((e) => {
           e.preventDefault();
           setLoginError('');
-          
-          // Check admin
           const admin = adminAccounts.find(a => a.email === loginEmail && a.password === loginPassword);
-          if (admin) {
-            setUser({ ...admin, role: 'admin' });
-            setCurrentPage('admin');
-            showToast(`Welcome back, ${admin.name}!`);
-            return;
-          }
-          
-          // Check registered users
+          if (admin) { setUser({ ...admin, role: 'admin' }); setCurrentPage('admin'); showToast(`Welcome back, ${admin.name}!`); return; }
           const registeredUser = registeredUsers.find(u => u.email === loginEmail && u.password === loginPassword);
-          if (registeredUser) {
-            setUser(registeredUser);
-            setCurrentPage(registeredUser.role === 'counselor' ? 'counselor' : 'parent');
-            showToast(`Welcome back, ${registeredUser.name}!`);
-            return;
-          }
-          
+          if (registeredUser) { setUser(registeredUser); setCurrentPage(registeredUser.role === 'counselor' ? 'counselor' : 'parent'); showToast(`Welcome back, ${registeredUser.name}!`); return; }
           setLoginError('Invalid email or password');
         }, [loginEmail, loginPassword]);
 
-        const handleEmailChange = useCallback((value) => {
-          setLoginEmail(value);
-        }, []);
-
-        const handlePasswordChange = useCallback((value) => {
-          setLoginPassword(value);
-        }, []);
-        
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
             <div className="max-w-md mx-auto px-4">
               <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="font-display text-3xl text-green-800 text-center mb-6">
-                  Welcome Back
-                </h2>
-                
-                {loginError && (
-                  <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-center">
-                    {loginError}
-                  </div>
-                )}
-                
+                <h2 className="font-display text-3xl text-green-800 text-center mb-6">Welcome Back</h2>
+                {loginError && <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-center">{loginError}</div>}
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div>
                     <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <StableInput
-                      id="login-email"
-                      type="text"
-                      value={loginEmail}
-                      onChange={handleEmailChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-                      placeholder="Enter email or 'admin'"
-                      autoComplete="username"
-                    />
+                    <StableInput id="login-email" type="text" value={loginEmail} onChange={setLoginEmail} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter email or 'admin'" autoComplete="username" />
                   </div>
                   <div>
                     <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <StableInput
-                      id="login-password"
-                      type="password"
-                      value={loginPassword}
-                      onChange={handlePasswordChange}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none"
-                      placeholder="Enter password"
-                      autoComplete="current-password"
-                    />
+                    <StableInput id="login-password" type="password" value={loginPassword} onChange={setLoginPassword} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter password" autoComplete="current-password" />
                   </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg transition"
-                  >
-                    Login
-                  </button>
+                  <button type="submit" className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg transition">Login</button>
                 </form>
-                
                 <div className="mt-6 p-4 bg-gray-50 rounded-lg">
                   <p className="text-sm text-gray-600 font-medium mb-2">Test Accounts:</p>
                   <ul className="text-xs text-gray-500 space-y-1">
@@ -647,13 +462,6 @@
       const AdminDashboard = React.memo(() => {
         const [activeTab, setActiveTab] = useState('dashboard');
         
-        // Local state for content editing
-        const [editingContent, setEditingContent] = useState({ ...content });
-        
-        const handleContentChange = useCallback((field, value) => {
-          setEditingContent(prev => ({ ...prev, [field]: value }));
-        }, []);
-        
         return (
           <div className="min-h-screen bg-gray-100">
             <div className="bg-green-800 text-white py-4">
@@ -663,56 +471,26 @@
               </div>
             </div>
             
-            {/* Tabs */}
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4">
                 <div className="flex gap-1 overflow-x-auto">
                   {['dashboard', 'registrations', 'counselors', 'content'].map(tab => (
-                    <button
-                      key={tab}
-                      onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-3 font-medium capitalize whitespace-nowrap border-b-2 transition ${
-                        activeTab === tab 
-                          ? 'border-green-600 text-green-700 bg-green-50' 
-                          : 'border-transparent text-gray-500 hover:text-gray-700'
-                      }`}
-                    >
+                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-3 font-medium capitalize whitespace-nowrap border-b-2 transition ${activeTab === tab ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
                       {tab}
-                      {tab === 'registrations' && getPendingCount() > 0 && (
-                        <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
-                          {getPendingCount()}
-                        </span>
-                      )}
+                      {tab === 'registrations' && getPendingCount() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{getPendingCount()}</span>}
                     </button>
                   ))}
                 </div>
               </div>
             </div>
             
-            {/* Content */}
             <div className="max-w-6xl mx-auto px-4 py-6">
               {activeTab === 'dashboard' && (
                 <div className="grid md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <div className="text-3xl mb-2">📝</div>
-                    <div className="text-3xl font-bold text-yellow-600">{getPendingCount()}</div>
-                    <div className="text-gray-600">Pending Approvals</div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <div className="text-3xl mb-2">✅</div>
-                    <div className="text-3xl font-bold text-green-600">{getApprovedCount()}</div>
-                    <div className="text-gray-600">Approved Registrations</div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <div className="text-3xl mb-2">💰</div>
-                    <div className="text-3xl font-bold text-red-600">{getUnpaidCount()}</div>
-                    <div className="text-gray-600">Awaiting Payment</div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <div className="text-3xl mb-2">👩‍🏫</div>
-                    <div className="text-3xl font-bold text-blue-600">{counselors.length}</div>
-                    <div className="text-gray-600">Counselors</div>
-                  </div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">📝</div><div className="text-3xl font-bold text-yellow-600">{getPendingCount()}</div><div className="text-gray-600">Pending Approvals</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">✅</div><div className="text-3xl font-bold text-green-600">{getApprovedCount()}</div><div className="text-gray-600">Approved Registrations</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">💰</div><div className="text-3xl font-bold text-red-600">{getUnpaidCount()}</div><div className="text-gray-600">Awaiting Payment</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">👩‍🏫</div><div className="text-3xl font-bold text-blue-600">{counselors.length}</div><div className="text-gray-600">Counselors</div></div>
                 </div>
               )}
               
@@ -735,31 +513,9 @@
                           <td className="px-4 py-3 font-medium">{reg.childName}</td>
                           <td className="px-4 py-3 text-gray-600">{reg.parentName}</td>
                           <td className="px-4 py-3 text-gray-600">{reg.date}</td>
-                          <td className="px-4 py-3">
-                            {reg.sessions.map(s => (
-                              <span key={s} className={`inline-block px-2 py-0.5 rounded text-xs mr-1 ${
-                                s === 'morning' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
-                              }`}>
-                                {s}
-                              </span>
-                            ))}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              reg.status === 'approved' ? 'bg-green-100 text-green-700' :
-                              reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {reg.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {reg.paymentStatus || 'unpaid'}
-                            </span>
-                          </td>
+                          <td className="px-4 py-3">{reg.sessions.map(s => <span key={s} className={`inline-block px-2 py-0.5 rounded text-xs mr-1 ${s === 'morning' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{s}</span>)}</td>
+                          <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${reg.status === 'approved' ? 'bg-green-100 text-green-700' : reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{reg.status}</span></td>
+                          <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{reg.paymentStatus || 'unpaid'}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -771,17 +527,13 @@
                 <div className="grid md:grid-cols-2 gap-4">
                   {counselors.map(c => (
                     <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl font-bold text-green-700">
-                        {c.name.charAt(0)}
-                      </div>
+                      <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl font-bold text-green-700">{c.name.charAt(0)}</div>
                       <div className="flex-1">
                         <h3 className="font-bold text-lg">{c.name}</h3>
                         <p className="text-gray-600 text-sm">{c.position} • {c.year}</p>
                         <p className="text-gray-500 text-xs">{c.email}</p>
                       </div>
-                      <div className={`px-3 py-1 rounded text-sm ${c.visible !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                        {c.visible !== false ? 'Visible' : 'Hidden'}
-                      </div>
+                      <div className={`px-3 py-1 rounded text-sm ${c.visible !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.visible !== false ? 'Visible' : 'Hidden'}</div>
                     </div>
                   ))}
                 </div>
@@ -790,31 +542,7 @@
               {activeTab === 'content' && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h2 className="font-bold text-xl mb-4">Site Content</h2>
-                  <div className="space-y-4">
-                    <div>
-                      <label htmlFor="content-hero-title" className="block text-sm font-medium text-gray-700 mb-1">Hero Title</label>
-                      <StableInput
-                        id="content-hero-title"
-                        type="text"
-                        value={editingContent.heroTitle}
-                        onChange={(value) => handleContentChange('heroTitle', value)}
-                        className="w-full px-4 py-2 border rounded focus:border-green-600 focus:outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="content-contact-email" className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
-                      <StableInput
-                        id="content-contact-email"
-                        type="text"
-                        value={editingContent.contactEmail}
-                        onChange={(value) => handleContentChange('contactEmail', value)}
-                        className="w-full px-4 py-2 border rounded focus:border-green-600 focus:outline-none"
-                      />
-                    </div>
-                    <p className="text-sm text-gray-500 italic">
-                      Content editing will be enabled in the full version.
-                    </p>
-                  </div>
+                  <p className="text-sm text-gray-500 italic">Content editing will be enabled in the full version.</p>
                 </div>
               )}
             </div>
@@ -834,48 +562,26 @@
                 <p className="text-green-200">Welcome, {user?.name}</p>
               </div>
             </div>
-            
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="bg-white rounded-xl shadow p-6 mb-6">
                 <h2 className="font-bold text-xl mb-4">My Registrations</h2>
-                {myRegistrations.length === 0 ? (
-                  <p className="text-gray-500">No registrations yet. Register your child for camp!</p>
-                ) : (
+                {myRegistrations.length === 0 ? <p className="text-gray-500">No registrations yet.</p> : (
                   <div className="space-y-4">
                     {myRegistrations.map(reg => (
                       <div key={reg.id} className="border rounded-lg p-4 flex items-center justify-between">
-                        <div>
-                          <h3 className="font-bold">{reg.childName}</h3>
-                          <p className="text-gray-600 text-sm">{reg.date} • {reg.sessions.join(', ')}</p>
-                        </div>
+                        <div><h3 className="font-bold">{reg.childName}</h3><p className="text-gray-600 text-sm">{reg.date} • {reg.sessions.join(', ')}</p></div>
                         <div className="flex gap-2">
-                          <span className={`px-3 py-1 rounded text-sm ${
-                            reg.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
-                            {reg.status}
-                          </span>
-                          <span className={`px-3 py-1 rounded text-sm ${
-                            reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                          }`}>
-                            {reg.paymentStatus || 'unpaid'}
-                          </span>
+                          <span className={`px-3 py-1 rounded text-sm ${reg.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{reg.status}</span>
+                          <span className={`px-3 py-1 rounded text-sm ${reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{reg.paymentStatus || 'unpaid'}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              
               <div className="bg-white rounded-xl shadow p-6">
                 <h2 className="font-bold text-xl mb-4">Payment Information</h2>
-                <p className="text-gray-600 mb-4">
-                  Pay via Venmo to <span className="font-mono font-bold text-green-700">{content.venmoUsername}</span>
-                </p>
-                <p className="text-sm text-gray-500">
-                  Include your unique code in the payment note: <span className="font-mono bg-gray-100 px-2 py-1 rounded">
-                    {user?.name ? `${user.name.substring(0, 3).toUpperCase()}...` : 'CODE'}
-                  </span>
-                </p>
+                <p className="text-gray-600 mb-4">Pay via Venmo to <span className="font-mono font-bold text-green-700">{content.venmoUsername}</span></p>
               </div>
             </div>
           </div>
@@ -885,7 +591,6 @@
       // ==================== COUNSELOR DASHBOARD ====================
       const CounselorDashboard = React.memo(() => {
         const counselor = counselors.find(c => c.email === user?.email);
-        const myAvailability = counselorAvailability[user?.email] || {};
         
         return (
           <div className="min-h-screen bg-gray-100">
@@ -895,34 +600,19 @@
                 <p className="text-green-200">Welcome, {user?.name}</p>
               </div>
             </div>
-            
             <div className="max-w-6xl mx-auto px-4 py-6">
-              <div className="bg-white rounded-xl shadow p-6 mb-6">
+              <div className="bg-white rounded-xl shadow p-6">
                 <h2 className="font-bold text-xl mb-4">My Profile</h2>
                 {counselor ? (
                   <div className="flex items-start gap-6">
-                    <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl font-bold text-green-700">
-                      {counselor.name.charAt(0)}
-                    </div>
+                    <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl font-bold text-green-700">{counselor.name.charAt(0)}</div>
                     <div>
                       <h3 className="font-bold text-xl">{counselor.name}</h3>
                       <p className="text-green-600">{counselor.position} • {counselor.year}</p>
                       <p className="text-gray-600 mt-2">{counselor.bio}</p>
                     </div>
                   </div>
-                ) : (
-                  <p className="text-gray-500">Profile not found.</p>
-                )}
-              </div>
-              
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="font-bold text-xl mb-4">My Availability</h2>
-                <p className="text-gray-600 mb-4">
-                  Sessions marked: {Object.keys(myAvailability).length} days
-                </p>
-                <p className="text-sm text-gray-500 italic">
-                  Full availability scheduler will be enabled in the complete version.
-                </p>
+                ) : <p className="text-gray-500">Profile not found.</p>}
               </div>
             </div>
           </div>
@@ -931,29 +621,19 @@
 
       // ==================== RENDER ====================
       if (isLoading) {
-        return (
-          <div className="min-h-screen bg-green-50 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-6xl mb-4">🏀</div>
-              <p className="text-green-700 font-medium">Loading Roosevelt Camp...</p>
-            </div>
-          </div>
-        );
+        return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="text-6xl mb-4">🏀</div><p className="text-green-700 font-medium">Loading Roosevelt Camp...</p></div></div>;
       }
 
       return (
         <div className="min-h-screen bg-gray-50">
-          <VersionBanner />
+          <VersionBanner isVisible={isDevEnv || showProductionBanner} isDev={isDevEnv} />
           <Navigation />
           {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
-          
           {currentPage === 'home' && <HomePage />}
           {currentPage === 'login' && <LoginPage />}
           {currentPage === 'admin' && user?.role === 'admin' && <AdminDashboard />}
           {currentPage === 'parent' && user?.role === 'parent' && <ParentDashboard />}
           {currentPage === 'counselor' && user?.role === 'counselor' && <CounselorDashboard />}
-          
-          {/* Footer */}
           <footer className="bg-gray-800 text-white py-6 text-center">
             <p className="text-gray-400">© 2026 Roosevelt High School Girls Basketball</p>
             <p className="text-gray-500 text-sm mt-1">Summer Day Camp Registration System</p>
@@ -962,7 +642,6 @@
       );
     }
 
-    // Mount the app
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<RooseveltCamp />);
   </script>
