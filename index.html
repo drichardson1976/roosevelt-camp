@@ -41,15 +41,15 @@
     
     console.log('🏀 Roosevelt Camp - Environment: ' + ENV + ', Schema: ' + SCHEMA);
 
-    const VERSION = "12.055";
+    const VERSION = "12.056";
     const BUILD_DATE = new Date();
     
     const RELEASE_NOTES = [
-      { version: "12.055", date: "2026-01-29", changes: ["Restored full admin content editing", "Restored counselor management with photo upload", "Restored parent registration flow", "Restored registration approval workflow", "Fixed build time display"] },
+      { version: "12.056", date: "2026-01-29", changes: ["Fixed counselor name editing crash in modal", "Added circular photo cropper with zoom and pan", "Added required phone field for counselors with auto-formatting (555) 555-1234"] },
+      { version: "12.055", date: "2026-01-29", changes: ["Restored full admin content editing", "Restored counselor management with photo upload", "Restored parent registration flow", "Fixed build time display"] },
       { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] },
       { version: "12.053", date: "2026-01-29", changes: ["Added dev/public schema separation"] },
-      { version: "12.052", date: "2026-01-29", changes: ["Added dev/prod version banners"] },
-      { version: "12.051", date: "2026-01-29", changes: ["Fixed input focus bug"] }
+      { version: "12.052", date: "2026-01-29", changes: ["Added dev/prod version banners"] }
     ];
 
     const isDevelopment = () => ENV === 'development';
@@ -68,10 +68,10 @@
     };
 
     const DEFAULT_COUNSELORS = [
-      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience.', photo: null, visible: true, order: 0 },
-      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
-      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
-      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
+      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', phone: '(206) 555-0101', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience.', photo: null, visible: true, order: 0 },
+      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', phone: '(206) 555-0102', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
+      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', phone: '(206) 555-0103', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
+      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', phone: '(206) 555-0104', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
     ];
 
     const storage = {
@@ -92,6 +92,20 @@
       }
     };
 
+    // Format phone number as (555) 555-1234
+    const formatPhoneNumber = (value) => {
+      const digits = value.replace(/\D/g, '').slice(0, 10);
+      if (digits.length === 0) return '';
+      if (digits.length <= 3) return '(' + digits;
+      if (digits.length <= 6) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+      return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+    };
+
+    const isValidPhone = (phone) => {
+      const digits = phone.replace(/\D/g, '');
+      return digits.length === 10;
+    };
+
     const Toast = ({ message, type, onDone }) => {
       const [visible, setVisible] = useState(true);
       const [fading, setFading] = useState(false);
@@ -104,11 +118,22 @@
       return <div className={'fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-opacity duration-500 ' + (type === 'error' ? 'bg-red-500' : 'bg-green-600') + ' ' + (fading ? 'opacity-0' : 'opacity-100')}>{type === 'success' ? '✓' : '⚠'} {message}</div>;
     };
 
-    const StableInput = ({ type = 'text', value, onChange, className, placeholder, rows }) => {
-      const handleChange = useCallback((e) => { onChange(e.target.value); }, [onChange]);
-      if (rows) return <textarea value={value} onChange={handleChange} className={className} placeholder={placeholder} rows={rows} />;
-      return <input type={type} value={value} onChange={handleChange} className={className} placeholder={placeholder} autoComplete="off" />;
-    };
+    // Fixed StableInput that won't lose focus
+    const StableInput = React.memo(({ type = 'text', value, onChange, className, placeholder, rows, disabled }) => {
+      const inputRef = useRef(null);
+      const handleChange = (e) => { onChange(e.target.value); };
+      if (rows) return <textarea ref={inputRef} value={value || ''} onChange={handleChange} className={className} placeholder={placeholder} rows={rows} disabled={disabled} />;
+      return <input ref={inputRef} type={type} value={value || ''} onChange={handleChange} className={className} placeholder={placeholder} autoComplete="off" disabled={disabled} />;
+    });
+
+    // Phone input with auto-formatting
+    const PhoneInput = React.memo(({ value, onChange, className, placeholder }) => {
+      const handleChange = (e) => {
+        const formatted = formatPhoneNumber(e.target.value);
+        onChange(formatted);
+      };
+      return <input type="tel" value={value || ''} onChange={handleChange} className={className} placeholder={placeholder || '(555) 555-1234'} autoComplete="off" />;
+    });
 
     const Modal = ({ isOpen, onClose, title, children }) => {
       if (!isOpen) return null;
@@ -125,26 +150,158 @@
       );
     };
 
-    const ImageUpload = ({ currentImage, onImageChange, label }) => {
+    // Circular Image Cropper Component
+    const ImageCropper = ({ image, onSave, onCancel }) => {
+      const canvasRef = useRef(null);
+      const [zoom, setZoom] = useState(1);
+      const [position, setPosition] = useState({ x: 0, y: 0 });
+      const [dragging, setDragging] = useState(false);
+      const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+      const [imageObj, setImageObj] = useState(null);
+
+      useEffect(() => {
+        const img = new Image();
+        img.onload = () => setImageObj(img);
+        img.src = image;
+      }, [image]);
+
+      useEffect(() => {
+        if (!imageObj || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const size = 250;
+        canvas.width = size;
+        canvas.height = size;
+
+        ctx.clearRect(0, 0, size, size);
+        
+        // Draw circular clip
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+
+        // Calculate scaled dimensions
+        const scale = zoom;
+        const imgWidth = imageObj.width * scale;
+        const imgHeight = imageObj.height * scale;
+        const x = (size - imgWidth) / 2 + position.x;
+        const y = (size - imgHeight) / 2 + position.y;
+
+        ctx.drawImage(imageObj, x, y, imgWidth, imgHeight);
+        ctx.restore();
+
+        // Draw circle border
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+        ctx.strokeStyle = '#16a34a';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }, [imageObj, zoom, position]);
+
+      const handleMouseDown = (e) => {
+        setDragging(true);
+        setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+      };
+
+      const handleMouseMove = (e) => {
+        if (!dragging) return;
+        setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+      };
+
+      const handleMouseUp = () => setDragging(false);
+
+      const handleSave = () => {
+        if (!canvasRef.current) return;
+        const dataUrl = canvasRef.current.toDataURL('image/png');
+        onSave(dataUrl);
+      };
+
+      return (
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-sm text-gray-600">Drag to position, use slider to zoom</p>
+          <div 
+            className="relative cursor-move bg-gray-100 rounded-full overflow-hidden"
+            style={{ width: 250, height: 250 }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <canvas ref={canvasRef} className="w-full h-full" />
+          </div>
+          <div className="w-full max-w-xs">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zoom: {Math.round(zoom * 100)}%</label>
+            <input 
+              type="range" 
+              min="0.5" 
+              max="3" 
+              step="0.1" 
+              value={zoom} 
+              onChange={(e) => setZoom(parseFloat(e.target.value))}
+              className="w-full"
+            />
+          </div>
+          <div className="flex gap-4">
+            <button onClick={onCancel} className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium">Cancel</button>
+            <button onClick={handleSave} className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium">Save Photo</button>
+          </div>
+        </div>
+      );
+    };
+
+    // Updated ImageUpload with cropping
+    const ImageUpload = ({ currentImage, onImageChange, label, circular = false }) => {
       const fileInputRef = useRef(null);
+      const [tempImage, setTempImage] = useState(null);
+      const [showCropper, setShowCropper] = useState(false);
+
       const handleFileSelect = (e) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
-          reader.onloadend = () => onImageChange(reader.result);
+          reader.onloadend = () => {
+            if (circular) {
+              setTempImage(reader.result);
+              setShowCropper(true);
+            } else {
+              onImageChange(reader.result);
+            }
+          };
           reader.readAsDataURL(file);
         }
+        e.target.value = '';
       };
+
+      const handleCropSave = (croppedImage) => {
+        onImageChange(croppedImage);
+        setShowCropper(false);
+        setTempImage(null);
+      };
+
+      const handleCropCancel = () => {
+        setShowCropper(false);
+        setTempImage(null);
+      };
+
       return (
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-          <div className="flex items-center gap-4">
-            {currentImage ? <img src={currentImage} alt="Preview" className="w-24 h-24 object-cover rounded-lg border" /> : <div className="w-24 h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">No image</div>}
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">{currentImage ? 'Change' : 'Upload'}</button>
-              {currentImage && <button type="button" onClick={() => onImageChange(null)} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">Remove</button>}
+          {showCropper && tempImage ? (
+            <ImageCropper image={tempImage} onSave={handleCropSave} onCancel={handleCropCancel} />
+          ) : (
+            <div className="flex items-center gap-4">
+              {currentImage ? (
+                <img src={currentImage} alt="Preview" className={'w-24 h-24 object-cover border ' + (circular ? 'rounded-full' : 'rounded-lg')} />
+              ) : (
+                <div className={'w-24 h-24 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs ' + (circular ? 'rounded-full' : 'rounded-lg')}>No image</div>
+              )}
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">{currentImage ? 'Change' : 'Upload'}</button>
+                {currentImage && <button type="button" onClick={() => onImageChange(null)} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">Remove</button>}
+              </div>
             </div>
-          </div>
+          )}
           <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
         </div>
       );
@@ -422,9 +579,9 @@
                     <h3 className="font-bold text-lg text-green-800">Parent/Guardian Info</h3>
                     <StableInput value={form.parentName} onChange={v => update('parentName', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Full Name *" />
                     <StableInput value={form.parentEmail} onChange={v => update('parentEmail', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Email *" />
-                    <StableInput value={form.parentPhone} onChange={v => update('parentPhone', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Phone *" />
+                    <PhoneInput value={form.parentPhone} onChange={v => update('parentPhone', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Phone *" />
                     <StableInput type="password" value={form.password} onChange={v => update('password', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Create Password *" />
-                    <button onClick={() => setStep(2)} disabled={!form.parentName || !form.parentEmail || !form.parentPhone || !form.password} className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg mt-4">Continue →</button>
+                    <button onClick={() => setStep(2)} disabled={!form.parentName || !form.parentEmail || !isValidPhone(form.parentPhone) || !form.password} className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg mt-4">Continue →</button>
                   </div>
                 )}
 
@@ -494,22 +651,157 @@
         );
       });
 
+      // Counselor Edit Form - Separate component to prevent re-render issues
+      const CounselorEditForm = React.memo(({ counselor, onSave, onCancel }) => {
+        const [form, setForm] = useState({ ...counselor });
+        
+        const updateField = useCallback((field, value) => {
+          setForm(prev => ({ ...prev, [field]: value }));
+        }, []);
+
+        const handlePhoneChange = useCallback((value) => {
+          setForm(prev => ({ ...prev, phone: value }));
+        }, []);
+
+        const handleSave = () => {
+          if (!form.name || !form.email || !isValidPhone(form.phone || '')) {
+            alert('Please fill in all required fields (Name, Email, Phone)');
+            return;
+          }
+          onSave(form);
+        };
+
+        return (
+          <div className="space-y-4">
+            <ImageUpload 
+              currentImage={form.photo} 
+              onImageChange={(img) => updateField('photo', img)} 
+              label="Photo" 
+              circular={true} 
+            />
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <StableInput 
+                  value={form.name} 
+                  onChange={(v) => updateField('name', v)} 
+                  className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" 
+                  placeholder="Full Name" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <StableInput 
+                  value={form.email} 
+                  onChange={(v) => updateField('email', v)} 
+                  className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" 
+                  placeholder="email@example.com" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <PhoneInput 
+                  value={form.phone} 
+                  onChange={handlePhoneChange} 
+                  className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" 
+                />
+                {form.phone && !isValidPhone(form.phone) && (
+                  <p className="text-red-500 text-xs mt-1">Please enter a valid 10-digit phone number</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                <StableInput 
+                  value={form.position} 
+                  onChange={(v) => updateField('position', v)} 
+                  className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" 
+                  placeholder="e.g., Point Guard" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                <select 
+                  value={form.year || ''} 
+                  onChange={e => updateField('year', e.target.value)} 
+                  className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none"
+                >
+                  <option value="">Select Year</option>
+                  <option value="Freshman">Freshman</option>
+                  <option value="Sophomore">Sophomore</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Senior">Senior</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+              <StableInput 
+                value={form.bio} 
+                onChange={(v) => updateField('bio', v)} 
+                className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" 
+                placeholder="Short bio..." 
+                rows={3} 
+              />
+            </div>
+            <label className="flex items-center gap-2">
+              <input 
+                type="checkbox" 
+                checked={form.visible !== false} 
+                onChange={e => updateField('visible', e.target.checked)} 
+                className="w-5 h-5" 
+              />
+              <span>Visible on website</span>
+            </label>
+            <div className="flex gap-4 pt-4">
+              <button onClick={onCancel} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-lg">Cancel</button>
+              <button 
+                onClick={handleSave} 
+                disabled={!form.name || !form.email || !isValidPhone(form.phone || '')} 
+                className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-2 rounded-lg"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        );
+      });
+
       const Admin = React.memo(() => {
         const [tab, setTab] = useState('dashboard');
         const [editContent, setEditContent] = useState({ ...content });
-        const [editCounselor, setEditCounselor] = useState(null);
+        const [editCounselorId, setEditCounselorId] = useState(null);
         const [showModal, setShowModal] = useState(false);
+        const [isNewCounselor, setIsNewCounselor] = useState(false);
 
         const handleSaveContent = () => saveContent(editContent);
-        const handleSaveCounselor = () => {
-          const updated = editCounselor.id && counselors.some(c => c.id === editCounselor.id) ? counselors.map(c => c.id === editCounselor.id ? editCounselor : c) : [...counselors, { ...editCounselor, id: 'c_' + Date.now(), order: counselors.length }];
+        
+        const handleOpenCounselorModal = (counselor, isNew = false) => {
+          setEditCounselorId(counselor?.id || null);
+          setIsNewCounselor(isNew);
+          setShowModal(true);
+        };
+
+        const handleSaveCounselor = (updatedCounselor) => {
+          let updated;
+          if (isNewCounselor) {
+            updated = [...counselors, { ...updatedCounselor, id: 'c_' + Date.now(), order: counselors.length }];
+          } else {
+            updated = counselors.map(c => c.id === updatedCounselor.id ? updatedCounselor : c);
+          }
           saveCounselors(updated);
           setShowModal(false);
+          setEditCounselorId(null);
         };
-        const handleDeleteCounselor = (id) => { if (confirm('Delete this counselor?')) saveCounselors(counselors.filter(c => c.id !== id)); };
+
+        const handleDeleteCounselor = (id) => { 
+          if (confirm('Delete this counselor?')) saveCounselors(counselors.filter(c => c.id !== id)); 
+        };
+        
         const handleApprove = (r) => saveRegistration({ ...r, status: 'approved' });
         const handleReject = (r) => { if (confirm('Reject this registration?')) saveRegistration({ ...r, status: 'rejected' }); };
         const handleTogglePaid = (r) => saveRegistration({ ...r, paymentStatus: r.paymentStatus === 'paid' ? 'unpaid' : 'paid' });
+
+        const editingCounselor = editCounselorId ? counselors.find(c => c.id === editCounselorId) : (isNewCounselor ? { name: '', email: '', phone: '', position: '', year: '', bio: '', photo: null, visible: true } : null);
 
         return (
           <div className="min-h-screen bg-gray-100">
@@ -549,13 +841,17 @@
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <h2 className="font-bold text-xl">Counselors</h2>
-                    <button onClick={() => { setEditCounselor({ name: '', email: '', position: '', year: '', bio: '', photo: null, visible: true }); setShowModal(true); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">+ Add</button>
+                    <button onClick={() => handleOpenCounselorModal(null, true)} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">+ Add</button>
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">{counselors.map(c => (
                     <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
                       {c.photo ? <img src={c.photo} alt={c.name} className="w-16 h-16 rounded-full object-cover" /> : <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl font-bold text-green-700">{c.name.charAt(0)}</div>}
-                      <div className="flex-1"><h3 className="font-bold">{c.name}</h3><p className="text-gray-600 text-sm">{c.position} • {c.year}</p></div>
-                      <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="text-blue-600 text-sm mr-2">Edit</button>
+                      <div className="flex-1">
+                        <h3 className="font-bold">{c.name}</h3>
+                        <p className="text-gray-600 text-sm">{c.position} • {c.year}</p>
+                        <p className="text-gray-400 text-xs">{c.phone}</p>
+                      </div>
+                      <button onClick={() => handleOpenCounselorModal(c, false)} className="text-blue-600 text-sm mr-2">Edit</button>
                       <button onClick={() => handleDeleteCounselor(c.id)} className="text-red-600 text-sm">Delete</button>
                     </div>
                   ))}</div>
@@ -603,23 +899,16 @@
                 </div>
               )}
             </div>
-            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editCounselor?.id ? 'Edit Counselor' : 'Add Counselor'}>
-              {editCounselor && (
-                <div className="space-y-4">
-                  <ImageUpload currentImage={editCounselor.photo} onImageChange={img => setEditCounselor(p => ({ ...p, photo: img }))} label="Photo" />
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <StableInput value={editCounselor.name} onChange={v => setEditCounselor(p => ({ ...p, name: v }))} className="px-4 py-2 border rounded-lg" placeholder="Name *" />
-                    <StableInput value={editCounselor.email} onChange={v => setEditCounselor(p => ({ ...p, email: v }))} className="px-4 py-2 border rounded-lg" placeholder="Email *" />
-                    <StableInput value={editCounselor.position} onChange={v => setEditCounselor(p => ({ ...p, position: v }))} className="px-4 py-2 border rounded-lg" placeholder="Position" />
-                    <select value={editCounselor.year} onChange={e => setEditCounselor(p => ({ ...p, year: e.target.value }))} className="px-4 py-2 border rounded-lg"><option value="">Year</option><option>Freshman</option><option>Sophomore</option><option>Junior</option><option>Senior</option></select>
-                  </div>
-                  <StableInput value={editCounselor.bio} onChange={v => setEditCounselor(p => ({ ...p, bio: v }))} className="w-full px-4 py-2 border rounded-lg" placeholder="Bio" rows={3} />
-                  <label className="flex items-center gap-2"><input type="checkbox" checked={editCounselor.visible} onChange={e => setEditCounselor(p => ({ ...p, visible: e.target.checked }))} className="w-5 h-5" /><span>Visible on website</span></label>
-                  <div className="flex gap-4 pt-4">
-                    <button onClick={() => setShowModal(false)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-lg">Cancel</button>
-                    <button onClick={handleSaveCounselor} disabled={!editCounselor.name || !editCounselor.email} className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-2 rounded-lg">Save</button>
-                  </div>
-                </div>
+
+            {/* Counselor Edit Modal */}
+            <Modal isOpen={showModal} onClose={() => { setShowModal(false); setEditCounselorId(null); }} title={isNewCounselor ? 'Add Counselor' : 'Edit Counselor'}>
+              {editingCounselor && (
+                <CounselorEditForm 
+                  key={editCounselorId || 'new'}
+                  counselor={editingCounselor} 
+                  onSave={handleSaveCounselor} 
+                  onCancel={() => { setShowModal(false); setEditCounselorId(null); }} 
+                />
               )}
             </Modal>
           </div>
@@ -670,7 +959,7 @@
                 {c ? (
                   <div className="flex items-start gap-6">
                     {c.photo ? <img src={c.photo} alt={c.name} className="w-24 h-24 rounded-full object-cover" /> : <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl font-bold text-green-700">{c.name.charAt(0)}</div>}
-                    <div><h3 className="font-bold text-xl">{c.name}</h3><p className="text-green-600">{c.position} • {c.year}</p><p className="text-gray-600 mt-2">{c.bio}</p></div>
+                    <div><h3 className="font-bold text-xl">{c.name}</h3><p className="text-green-600">{c.position} • {c.year}</p><p className="text-gray-500 text-sm">{c.phone}</p><p className="text-gray-600 mt-2">{c.bio}</p></div>
                   </div>
                 ) : <p className="text-gray-500">Profile not found.</p>}
               </div>
@@ -692,6 +981,248 @@
           {currentPage === 'admin' && user?.role === 'admin' && <Admin />}
           {currentPage === 'parent' && user?.role === 'parent' && <Parent />}
           {currentPage === 'counselor' && user?.role === 'counselor' && <Counselor />}
+          <footer className="bg-gray-800 text-white py-6 text-center"><p className="text-gray-400">© 2026 Roosevelt High School Girls Basketball</p></footer>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<RooseveltCamp />);
+  </script>
+</body>
+</html>
+selectedChildren.length > 0 ? selectedChildren.map(id => myChildren.find(c => c.id === id)?.name).join(', ') : 'None selected'}</p>
+                      <p>Sessions: {Object.values(selectedDates).flat().length}</p>
+                      {regType === 'weeks' && <p className="text-green-600">10% weekly discount applied!</p>}
+                      <div className="pt-4 border-t">
+                        <p className="text-2xl font-bold text-green-700">Total: ${calculateTotal()}</p>
+                      </div>
+                      <label className="flex items-center gap-2 mt-4 p-3 bg-yellow-50 rounded-lg">
+                        <input type="checkbox" checked={scholarshipRequested} onChange={e => setScholarshipRequested(e.target.checked)} className="w-5 h-5" />
+                        <span className="text-sm">Request scholarship assistance</span>
+                      </label>
+                    </div>
+                    <button onClick={handleRegister} disabled={selectedChildren.length === 0 || Object.values(selectedDates).flat().length === 0} className="w-full mt-4 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
+                  </div>
+                </div>
+              )}
+              
+              {parentTab === 'children' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-4">👧 My Children</h3>
+                    {myChildren.length === 0 ? <p className="text-gray-500 mb-4">No children added yet</p> : (
+                      <div className="space-y-3 mb-4">{myChildren.map(c => (
+                        <div key={c.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <span className="font-medium">{c.name}</span>
+                            {c.birthdate && <span className="text-gray-500 ml-2">Age: {calculateAge(c.birthdate)}</span>}
+                            {c.grade && <span className="text-gray-500 ml-2">Grade: {c.grade}</span>}
+                          </div>
+                        </div>
+                      ))}</div>
+                    )}
+                    <AddChildForm onAdd={addChild} />
+                  </div>
+                </div>
+              )}
+              
+              {parentTab === 'scholarship' && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="font-bold text-lg mb-4">💰 Scholarship Information</h3>
+                  <p className="text-gray-700 mb-4">{content.scholarshipInfo}</p>
+                  <p className="text-sm text-gray-500">To request a scholarship, check the box during registration.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Confirmation Modal */}
+            {showConfirmation && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 text-center">
+                  <div className="text-6xl mb-4">✅</div>
+                  <h2 className="font-display text-2xl text-green-800 mb-4">Registration Submitted!</h2>
+                  <p className="text-gray-700 mb-2">Children: {showConfirmation.children?.join(', ')}</p>
+                  <p className="text-2xl font-bold text-green-700 mb-4">Amount Due: ${showConfirmation.total}</p>
+                  <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                    <p className="font-medium">Pay via Venmo: {content.venmoUsername}</p>
+                    <p className="text-sm text-gray-600">Include code: <span className="font-mono bg-white px-2 py-0.5 rounded">{showConfirmation.venmoCode}</span></p>
+                  </div>
+                  {showConfirmation.scholarship && <p className="text-sm text-yellow-700 bg-yellow-50 p-2 rounded mb-4">📋 Scholarship request submitted</p>}
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-yellow-800"><strong>⚠️ Spot not confirmed until:</strong></p>
+                    <p className="text-sm text-yellow-700">✓ Payment received AND ✓ Admin approves</p>
+                  </div>
+                  <button onClick={() => { setShowConfirmation(null); setParentTab('dashboard'); }} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">View Payment Info</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      });
+
+      // Add Child Form
+      const AddChildForm = ({ onAdd }) => {
+        const [name, setName] = useState('');
+        const [birthdate, setBirthdate] = useState('');
+        const [grade, setGrade] = useState('');
+        
+        const handleAdd = () => {
+          if (!name) return;
+          onAdd({ name, birthdate, grade });
+          setName(''); setBirthdate(''); setGrade('');
+        };
+        
+        return (
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-3">Add Child</h4>
+            <div className="grid md:grid-cols-3 gap-3">
+              <StableInput value={name} onChange={setName} className="px-4 py-2 border rounded-lg" placeholder="Child's name" />
+              <StableInput type="date" value={birthdate} onChange={setBirthdate} className="px-4 py-2 border rounded-lg" />
+              <select value={grade} onChange={e => setGrade(e.target.value)} className="px-4 py-2 border rounded-lg">
+                <option value="">Grade</option>
+                {['3rd', '4th', '5th', '6th', '7th', '8th'].map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+            <button onClick={handleAdd} disabled={!name} className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white rounded-lg">Add Child</button>
+          </div>
+        );
+      };
+
+      // ==================== COUNSELOR DASHBOARD ====================
+      const CounselorDashboard = React.memo(() => {
+        const myCounselor = counselors.find(c => c.email === user?.email);
+        const myAvailability = counselorAvailability[user?.email] || {};
+        const [selectedMonth, setSelectedMonth] = useState(5);
+        
+        const getMonthDates = (month) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === month);
+        
+        const getSessionState = (date, session) => {
+          const dateData = myAvailability[date];
+          if (!dateData) return null;
+          if (dateData.available?.includes(session)) return 'available';
+          if (dateData.unavailable?.includes(session)) return 'unavailable';
+          if (Array.isArray(dateData) && dateData.includes(session)) return 'available';
+          return null;
+        };
+        
+        const cycleSession = async (date, session) => {
+          const newAvail = JSON.parse(JSON.stringify(myAvailability));
+          const currentState = getSessionState(date, session);
+          
+          if (!newAvail[date] || Array.isArray(newAvail[date])) {
+            const legacy = Array.isArray(newAvail[date]) ? newAvail[date] : [];
+            newAvail[date] = { available: [...legacy], unavailable: [] };
+          }
+          
+          if (currentState === null) {
+            newAvail[date].available = [...(newAvail[date].available || []), session];
+          } else if (currentState === 'available') {
+            newAvail[date].available = newAvail[date].available.filter(s => s !== session);
+            newAvail[date].unavailable = [...(newAvail[date].unavailable || []), session];
+          } else {
+            newAvail[date].unavailable = newAvail[date].unavailable.filter(s => s !== session);
+          }
+          
+          if ((!newAvail[date].available?.length) && (!newAvail[date].unavailable?.length)) {
+            delete newAvail[date];
+          }
+          
+          const allAvail = { ...counselorAvailability, [user?.email]: newAvail };
+          await saveCounselorAvailability(allAvail);
+        };
+        
+        const countAvailable = () => {
+          let count = 0;
+          Object.values(myAvailability).forEach(d => {
+            if (Array.isArray(d)) count += d.length;
+            else if (d?.available) count += d.available.length;
+          });
+          return count;
+        };
+
+        return (
+          <div className="min-h-screen bg-amber-50">
+            <div className="bg-green-800 text-white py-4"><div className="max-w-6xl mx-auto px-4"><h1 className="font-display text-3xl">Counselor Dashboard</h1><p className="text-green-200">Welcome, {user?.name}</p></div></div>
+            
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              {/* Stats */}
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-xl shadow p-6 text-center">
+                  <p className="text-3xl font-bold text-green-600">{countAvailable()}</p>
+                  <p className="text-gray-600">Sessions Available</p>
+                </div>
+                <div className="bg-white rounded-xl shadow p-6 text-center">
+                  <p className="text-3xl font-bold text-blue-600">{Object.keys(myAvailability).length}</p>
+                  <p className="text-gray-600">Days Set</p>
+                </div>
+                <div className="bg-white rounded-xl shadow p-6 text-center">
+                  <p className="text-3xl font-bold text-yellow-600">{KIDS_PER_COUNSELOR}</p>
+                  <p className="text-gray-600">Campers/Counselor</p>
+                </div>
+              </div>
+              
+              {/* Instructions */}
+              <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
+                <p className="text-green-800"><strong>Set your availability:</strong> Click sessions to cycle through Available (green) → Unavailable (red) → Not set (gray)</p>
+              </div>
+              
+              {/* Month Tabs */}
+              <div className="flex gap-2 mb-6">
+                {[{ m: 5, n: 'June' }, { m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                  <button key={m} onClick={() => setSelectedMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (selectedMonth === m ? 'bg-green-600 text-white' : 'bg-white text-green-700 border border-green-600')}>{n}</button>
+                ))}
+              </div>
+              
+              {/* Calendar */}
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="grid grid-cols-5 gap-3">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <div key={d} className="text-center font-bold text-green-800">{d}</div>)}
+                  {getMonthDates(selectedMonth).map(date => {
+                    const d = new Date(date + 'T12:00:00');
+                    const mornState = getSessionState(date, 'morning');
+                    const aftState = getSessionState(date, 'afternoon');
+                    const getStyle = (s) => s === 'available' ? 'bg-green-500 text-white' : s === 'unavailable' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600';
+                    
+                    return (
+                      <div key={date} className="border rounded-lg p-2">
+                        <div className="text-center font-bold text-green-800 mb-2">{d.getDate()}</div>
+                        <div className="space-y-1">
+                          <button onClick={() => cycleSession(date, 'morning')} className={'w-full py-1 rounded text-xs font-medium ' + getStyle(mornState)}>🌅 AM</button>
+                          <button onClick={() => cycleSession(date, 'afternoon')} className={'w-full py-1 rounded text-xs font-medium ' + getStyle(aftState)}>☀️ PM</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {/* Legend */}
+                <div className="mt-4 flex gap-4 justify-center text-sm">
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded"></div>Available</div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded"></div>Unavailable</div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded"></div>Not Set</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      });
+
+      // ==================== PAGE ROUTER ====================
+      if (isLoading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="text-6xl mb-4">🏀</div><p className="text-green-700 font-medium">Loading...</p></div></div>;
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <VersionBanner isVisible={isDevEnv || showProdBanner} isDev={isDevEnv} />
+          <Nav />
+          {toast && <Toast key={toast.key} message={toast.message} type={toast.type} onDone={clearToast} />}
+          {currentPage === 'home' && <Home />}
+          {currentPage === 'schedule' && <SchedulePage />}
+          {currentPage === 'counselors' && <CounselorsPage />}
+          {currentPage === 'login' && <Login />}
+          {currentPage === 'admin' && user?.role === 'admin' && <Admin />}
+          {currentPage === 'parent' && user?.role === 'parent' && <Parent />}
+          {currentPage === 'counselor' && user?.role === 'counselor' && <CounselorDashboard />}
           <footer className="bg-gray-800 text-white py-6 text-center"><p className="text-gray-400">© 2026 Roosevelt High School Girls Basketball</p></footer>
         </div>
       );
