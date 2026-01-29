@@ -27,17 +27,43 @@
     const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
     
+    // ==================== ENVIRONMENT DETECTION ====================
+    const getEnvironment = () => {
+      const hostname = window.location.hostname;
+      return (hostname.includes('dev') || 
+              hostname.includes('localhost') || 
+              hostname.includes('127.0.0.1') ||
+              hostname.includes('--dev')) ? 'development' : 'production';
+    };
+    
+    const ENV = getEnvironment();
+    const SCHEMA = ENV === 'development' ? 'dev' : 'public';
+    
+    // Initialize Supabase client with schema-specific configuration
     const supabase = SUPABASE_URL.includes('YOUR_') 
       ? null 
-      : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          db: { schema: SCHEMA }
+        });
+    
+    console.log(`🏀 Roosevelt Camp - Environment: ${ENV}, Schema: ${SCHEMA}`);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.052";
-    const BUILD_TIMESTAMP = "2026-01-29 12:15pm PST";
-    const BUILD_DATE = new Date("2026-01-29T12:15:00-08:00");
+    const VERSION = "12.053";
+    const BUILD_TIMESTAMP = "2026-01-29 12:45pm PST";
+    const BUILD_DATE = new Date("2026-01-29T12:45:00-08:00");
     
     // ==================== RELEASE NOTES ====================
     const RELEASE_NOTES = [
+      {
+        version: "12.053",
+        date: "2026-01-29",
+        changes: [
+          "Dev site now uses 'dev' schema in Supabase for isolated test data",
+          "Production site uses 'public' schema for real user data",
+          "Added console logging to confirm environment and schema"
+        ]
+      },
       {
         version: "12.052",
         date: "2026-01-29",
@@ -69,14 +95,8 @@
       }
     ];
 
-    // ==================== ENVIRONMENT DETECTION ====================
-    const isDevelopment = () => {
-      const hostname = window.location.hostname;
-      return hostname.includes('dev') || 
-             hostname.includes('localhost') || 
-             hostname.includes('127.0.0.1') ||
-             hostname.includes('--dev');
-    };
+    // isDevelopment helper for components
+    const isDevelopment = () => ENV === 'development';
 
     // ==================== DUMMY DATA ====================
     const DUMMY_CONTENT = {
@@ -209,7 +229,7 @@
       
       const dbStatusConfig = {
         'checking': { icon: '⏳', text: 'Checking DB...' },
-        'connected': { icon: '✓', text: 'DB Connected' },
+        'connected': { icon: '✓', text: `DB Connected (${SCHEMA})` },
         'error': { icon: '✗', text: 'DB Error' },
         'not-configured': { icon: '⚠', text: 'Using Dummy Data' }
       };
