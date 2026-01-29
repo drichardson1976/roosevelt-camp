@@ -23,628 +23,654 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
 
-    // ==================== CONFIGURATION ====================
     const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
-    
-    // ==================== ENVIRONMENT DETECTION ====================
+
     const getEnvironment = () => {
       const hostname = window.location.hostname;
-      return (hostname.includes('dev') || 
-              hostname.includes('localhost') || 
-              hostname.includes('127.0.0.1') ||
-              hostname.includes('--dev')) ? 'development' : 'production';
+      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev')) ? 'development' : 'production';
     };
     
     const ENV = getEnvironment();
     const SCHEMA = ENV === 'development' ? 'dev' : 'public';
     
-    // Initialize Supabase client with schema-specific configuration
-    const supabase = SUPABASE_URL.includes('YOUR_') 
-      ? null 
-      : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          db: { schema: SCHEMA },
-          global: {
-            headers: {
-              'Accept-Profile': SCHEMA,
-              'Content-Profile': SCHEMA
-            }
-          }
-        });
+    const supabase = SUPABASE_URL.includes('YOUR_') ? null : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: SCHEMA },
+      global: { headers: { 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA } }
+    });
     
-    console.log(`🏀 Roosevelt Camp - Environment: ${ENV}, Schema: ${SCHEMA}`);
+    console.log('🏀 Roosevelt Camp - Environment: ' + ENV + ', Schema: ' + SCHEMA);
 
-    // ==================== VERSION INFO ====================
-    const VERSION = "12.054";
-    const BUILD_TIMESTAMP = "2026-01-29 1:15pm PST";
-    const BUILD_DATE = new Date("2026-01-29T13:15:00-08:00");
+    const VERSION = "12.055";
+    const BUILD_DATE = new Date();
     
-    // ==================== RELEASE NOTES ====================
     const RELEASE_NOTES = [
-      {
-        version: "12.054",
-        date: "2026-01-29",
-        changes: [
-          "Fixed Supabase schema connection using Accept-Profile headers",
-          "Dev and production now correctly connect to separate schemas"
-        ]
-      },
-      {
-        version: "12.053",
-        date: "2026-01-29",
-        changes: [
-          "Dev site now uses 'dev' schema in Supabase for isolated test data",
-          "Production site uses 'public' schema for real user data",
-          "Added console logging to confirm environment and schema"
-        ]
-      },
-      {
-        version: "12.052",
-        date: "2026-01-29",
-        changes: [
-          "Added separate dev (red) and production (green) version banners",
-          "Dev banner always visible with DB status and runtime",
-          "Production banner hidden by default - double-click basketball logo to reveal",
-          "Added clickable release notes modal"
-        ]
-      },
-      {
-        version: "12.051",
-        date: "2026-01-29",
-        changes: [
-          "Fixed input focus bug - cursor no longer leaves text fields while typing",
-          "Created StableInput component to prevent focus loss during re-renders",
-          "Wrapped form components with React.memo to prevent unnecessary re-renders",
-          "Isolated form state to prevent parent re-renders"
-        ]
-      },
-      {
-        version: "12.050-supabase",
-        date: "2026-01-29",
-        changes: [
-          "Initial Supabase integration",
-          "Added database connection status indicator",
-          "Implemented storage functions for content, counselors, registrations"
-        ]
-      }
+      { version: "12.055", date: "2026-01-29", changes: ["Restored full admin content editing", "Restored counselor management with photo upload", "Restored parent registration flow", "Restored registration approval workflow", "Fixed build time display"] },
+      { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] },
+      { version: "12.053", date: "2026-01-29", changes: ["Added dev/public schema separation"] },
+      { version: "12.052", date: "2026-01-29", changes: ["Added dev/prod version banners"] },
+      { version: "12.051", date: "2026-01-29", changes: ["Fixed input focus bug"] }
     ];
 
-    // isDevelopment helper for components
     const isDevelopment = () => ENV === 'development';
 
-    // ==================== DUMMY DATA ====================
-    const DUMMY_CONTENT = {
-      heroTitle: "Roosevelt Girls Basketball",
-      heroSubtitle: "Summer Daycamp 2026",
-      heroTagline: "Build Skills. Build Friendships. Build Your Future.",
-      venmoUsername: "@RHSDayCamp",
-      aboutText: "Join us for an incredible summer of basketball at Roosevelt High School! Our camp is designed for young athletes who want to develop their basketball skills while having fun and making lasting friendships. Led by Audrey Richardson and staffed by current Roosevelt Varsity players, campers will learn fundamental skills, team strategies, and the values that make Rough Riders champions.",
-      contactEmail: "rhsdaycamp@gmail.com",
-      contactPhone: "(206) 384-1872",
-      sessionMorning: "9:00 AM - 12:00 PM",
-      sessionAfternoon: "12:00 PM - 3:00 PM",
-      sessionCost: "$60",
-      campDates: "June 22 - August 28, 2026",
-      ageRange: "Completed 3rd - 8th Grade",
-      locationAddress: "Roosevelt High School Gymnasium\n1410 NE 66th St\nSeattle, WA 98115"
+    const DEFAULT_CONTENT = {
+      heroTitle: "Roosevelt Girls Basketball", heroSubtitle: "Summer Daycamp 2026", heroTagline: "Build Skills. Build Friendships. Build Your Future.",
+      heroImage: null, venmoImage: null, venmoUsername: "@RHSDayCamp",
+      aboutText: "Join us for an incredible summer of basketball at Roosevelt High School! Our camp is designed for young athletes who want to develop their basketball skills while having fun and making lasting friendships.",
+      contactEmail: "rhsdaycamp@gmail.com", contactPhone: "(206) 384-1872",
+      sessionMorning: "9:00 AM - 12:00 PM", sessionAfternoon: "12:00 PM - 3:00 PM", sessionCost: "60",
+      campStartDate: "2026-06-22", campEndDate: "2026-08-28", ageRange: "Completed 3rd - 8th Grade",
+      locationName: "Roosevelt High School Gymnasium", locationAddress: "1410 NE 66th St", locationCity: "Seattle, WA 98115",
+      latePolicy: "If you are more than 30 minutes late for pickup, please bring a $10 Starbucks gift card for the counselor who stayed late.",
+      cancellationPolicy: "We require at least 14 days notice for cancellations to receive a full refund.",
+      scholarshipInfo: "Contact us to learn about scholarship opportunities."
     };
 
-    const DUMMY_COUNSELORS = [
-      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience. Led team to state championships in 2025.', visible: true },
-      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range. All-conference selection.', visible: true },
-      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense and court vision.', visible: true },
-      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves and rebounding skills.', visible: true },
+    const DEFAULT_COUNSELORS = [
+      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience.', photo: null, visible: true, order: 0 },
+      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
+      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
+      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
     ];
 
-    const DUMMY_REGISTRATIONS = [
-      { id: 'reg1', parentName: 'Jennifer Adams', parentEmail: 'jadams@email.com', childName: 'Olivia Adams', date: '2026-06-22', sessions: ['morning'], status: 'approved', paymentStatus: 'paid' },
-      { id: 'reg2', parentName: 'Robert Chen', parentEmail: 'rchen@email.com', childName: 'Lily Chen', date: '2026-06-22', sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
-      { id: 'reg3', parentName: 'Maria Garcia', parentEmail: 'mgarcia@email.com', childName: 'Sofia Garcia', date: '2026-06-23', sessions: ['afternoon'], status: 'approved', paymentStatus: 'paid' }
-    ];
-
-    const DUMMY_REGISTERED_USERS = [
-      { email: 'jadams@email.com', name: 'Jennifer Adams', password: 'parent123', role: 'parent' },
-      { email: 'rchen@email.com', name: 'Robert Chen', password: 'parent123', role: 'parent' },
-      { email: 'mgarcia@email.com', name: 'Maria Garcia', password: 'parent123', role: 'parent' },
-      { email: 'sarah.mitchell@roosevelt.edu', name: 'Sarah Mitchell', password: 'counselor123', role: 'counselor' },
-    ];
-
-    const DUMMY_COUNSELOR_AVAILABILITY = {};
-
-    // ==================== SUPABASE STORAGE ====================
     const storage = {
       async get(table) {
         if (!supabase) return null;
-        try {
-          const { data, error } = await supabase.from(table).select('*');
-          if (error) throw error;
-          return data;
-        } catch (e) {
-          console.error(`Error fetching ${table}:`, e);
-          return null;
-        }
+        try { const { data, error } = await supabase.from(table).select('*'); if (error) throw error; return data; } 
+        catch (e) { console.error('Error fetching ' + table + ':', e); return null; }
+      },
+      async set(table, id, data) {
+        if (!supabase) return false;
+        try { const { error } = await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() }); if (error) throw error; return true; }
+        catch (e) { console.error('Error saving to ' + table + ':', e); return false; }
+      },
+      async delete(table, id) {
+        if (!supabase) return false;
+        try { const { error } = await supabase.from(table).delete().eq('id', id); if (error) throw error; return true; }
+        catch (e) { console.error('Error deleting from ' + table + ':', e); return false; }
       }
     };
 
-    // ==================== RELEASE NOTES MODAL ====================
-    const ReleaseNotesModal = ({ isOpen, onClose }) => {
-      if (!isOpen) return null;
-      
-      return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-green-800 text-white px-6 py-4 flex items-center justify-between">
-              <h2 className="font-display text-2xl">Release Notes</h2>
-              <button onClick={onClose} className="text-white hover:text-green-200 text-2xl font-bold">×</button>
-            </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {RELEASE_NOTES.map((release, idx) => (
-                <div key={release.version} className={`${idx > 0 ? 'mt-6 pt-6 border-t border-gray-200' : ''}`}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="bg-green-100 text-green-800 font-mono font-bold px-3 py-1 rounded-full text-sm">v{release.version}</span>
-                    <span className="text-gray-500 text-sm">{release.date}</span>
-                    {idx === 0 && <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">LATEST</span>}
-                  </div>
-                  <ul className="space-y-2">
-                    {release.changes.map((change, changeIdx) => (
-                      <li key={changeIdx} className="flex items-start gap-2 text-gray-700">
-                        <span className="text-green-600 mt-1">•</span>
-                        <span>{change}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-            <div className="bg-gray-50 px-6 py-3 text-right">
-              <button onClick={onClose} className="bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition">Close</button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // ==================== VERSION BANNER ====================
-    const VersionBanner = ({ isVisible, isDev }) => {
-      const [elapsedTime, setElapsedTime] = useState('');
-      const [dbStatus, setDbStatus] = useState('checking');
-      const [showReleaseNotes, setShowReleaseNotes] = useState(false);
-      
-      useEffect(() => {
-        const updateElapsed = () => {
-          const now = new Date();
-          const diff = Math.floor((now - BUILD_DATE) / 1000);
-          const days = Math.floor(diff / 86400);
-          const hours = Math.floor((diff % 86400) / 3600);
-          const minutes = Math.floor((diff % 3600) / 60);
-          const seconds = diff % 60;
-          let parts = [];
-          if (days > 0) parts.push(`${days}d`);
-          if (hours > 0) parts.push(`${hours}h`);
-          if (minutes > 0) parts.push(`${minutes}m`);
-          parts.push(`${seconds}s`);
-          setElapsedTime(parts.join(' '));
-        };
-        updateElapsed();
-        const interval = setInterval(updateElapsed, 1000);
-        
-        if (supabase) {
-          supabase.from('camp_content').select('id').limit(1)
-            .then(({ error }) => setDbStatus(error ? 'error' : 'connected'))
-            .catch(() => setDbStatus('error'));
-        } else {
-          setDbStatus('not-configured');
-        }
-        
-        return () => clearInterval(interval);
-      }, []);
-      
-      if (!isVisible) return null;
-      
-      const dbStatusConfig = {
-        'checking': { icon: '⏳', text: 'Checking DB...' },
-        'connected': { icon: '✓', text: `DB Connected (${SCHEMA})` },
-        'error': { icon: '✗', text: 'DB Error' },
-        'not-configured': { icon: '⚠', text: 'Using Dummy Data' }
-      };
-      
-      const bannerColor = isDev ? 'bg-red-600' : 'bg-green-600';
-      const envLabel = isDev ? 'DEVELOPMENT' : 'PRODUCTION';
-      
-      return (
-        <>
-          <div className={`${bannerColor} text-white text-center py-2 text-sm font-mono`}>
-            <div className="flex items-center justify-center gap-3 flex-wrap px-4">
-              <span className="font-bold">{envLabel}</span>
-              <span>•</span>
-              <span>v{VERSION}</span>
-              <span>•</span>
-              <span>{dbStatusConfig[dbStatus].icon} {dbStatusConfig[dbStatus].text}</span>
-              <span>•</span>
-              <span>Running: {elapsedTime}</span>
-              <span>•</span>
-              <button onClick={() => setShowReleaseNotes(true)} className="underline hover:text-yellow-200 transition">📋 Release Notes</button>
-            </div>
-          </div>
-          <ReleaseNotesModal isOpen={showReleaseNotes} onClose={() => setShowReleaseNotes(false)} />
-        </>
-      );
-    };
-
-    // ==================== TOAST COMPONENT ====================
     const Toast = ({ message, type, onDone }) => {
       const [visible, setVisible] = useState(true);
       const [fading, setFading] = useState(false);
-      
       useEffect(() => {
         const fadeTimer = setTimeout(() => setFading(true), 2500);
         const hideTimer = setTimeout(() => { setVisible(false); if (onDone) onDone(); }, 3000);
         return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
       }, []);
-      
       if (!visible) return null;
+      return <div className={'fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-opacity duration-500 ' + (type === 'error' ? 'bg-red-500' : 'bg-green-600') + ' ' + (fading ? 'opacity-0' : 'opacity-100')}>{type === 'success' ? '✓' : '⚠'} {message}</div>;
+    };
+
+    const StableInput = ({ type = 'text', value, onChange, className, placeholder, rows }) => {
+      const handleChange = useCallback((e) => { onChange(e.target.value); }, [onChange]);
+      if (rows) return <textarea value={value} onChange={handleChange} className={className} placeholder={placeholder} rows={rows} />;
+      return <input type={type} value={value} onChange={handleChange} className={className} placeholder={placeholder} autoComplete="off" />;
+    };
+
+    const Modal = ({ isOpen, onClose, title, children }) => {
+      if (!isOpen) return null;
       return (
-        <div className={`fixed top-8 left-0 right-0 z-50 px-6 py-3 text-center shadow-lg text-white font-medium transition-opacity duration-500 ${type === 'error' ? 'bg-red-500' : 'bg-green-700'} ${fading ? 'opacity-0' : 'opacity-100'}`}>
-          {type === 'success' ? '✓' : '⚠'} {message}
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-green-800 text-white px-6 py-4 flex items-center justify-between">
+              <h2 className="font-display text-2xl">{title}</h2>
+              <button onClick={onClose} className="text-white hover:text-green-200 text-2xl font-bold">×</button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
+          </div>
         </div>
       );
     };
 
-    // ==================== STABLE INPUT COMPONENT ====================
-    const StableInput = ({ type = 'text', value, onChange, className, placeholder, id, autoComplete }) => {
-      const handleChange = useCallback((e) => { onChange(e.target.value); }, [onChange]);
-      return <input id={id} type={type} value={value} onChange={handleChange} className={className} placeholder={placeholder} autoComplete={autoComplete || 'off'} />;
+    const ImageUpload = ({ currentImage, onImageChange, label }) => {
+      const fileInputRef = useRef(null);
+      const handleFileSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => onImageChange(reader.result);
+          reader.readAsDataURL(file);
+        }
+      };
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+          <div className="flex items-center gap-4">
+            {currentImage ? <img src={currentImage} alt="Preview" className="w-24 h-24 object-cover rounded-lg border" /> : <div className="w-24 h-24 bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-xs">No image</div>}
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">{currentImage ? 'Change' : 'Upload'}</button>
+              {currentImage && <button type="button" onClick={() => onImageChange(null)} className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 text-sm">Remove</button>}
+            </div>
+          </div>
+          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
+        </div>
+      );
     };
 
-    // ==================== MAIN APP ====================
+    const VersionBanner = ({ isVisible, isDev }) => {
+      const [elapsedTime, setElapsedTime] = useState('0s');
+      const [dbStatus, setDbStatus] = useState('checking');
+      const [showNotes, setShowNotes] = useState(false);
+      
+      useEffect(() => {
+        const updateElapsed = () => {
+          const diff = Math.floor((new Date() - BUILD_DATE) / 1000);
+          const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+          setElapsedTime((h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm ' : '') + s + 's');
+        };
+        updateElapsed();
+        const interval = setInterval(updateElapsed, 1000);
+        if (supabase) supabase.from('camp_content').select('id').limit(1).then(({ error }) => setDbStatus(error ? 'error' : 'connected')).catch(() => setDbStatus('error'));
+        else setDbStatus('local');
+        return () => clearInterval(interval);
+      }, []);
+      
+      if (!isVisible) return null;
+      const statusText = { checking: '⏳ Checking...', connected: '✓ DB Connected (' + SCHEMA + ')', error: '✗ DB Error', local: '⚠ Local Data' };
+      
+      return (
+        <>
+          <div className={(isDev ? 'bg-red-600' : 'bg-green-600') + ' text-white text-center py-2 text-sm font-mono'}>
+            <div className="flex items-center justify-center gap-3 flex-wrap px-4">
+              <span className="font-bold">{isDev ? 'DEVELOPMENT' : 'PRODUCTION'}</span><span>•</span>
+              <span>v{VERSION}</span><span>•</span>
+              <span>{statusText[dbStatus]}</span><span>•</span>
+              <span>Running: {elapsedTime}</span><span>•</span>
+              <button onClick={() => setShowNotes(true)} className="underline hover:text-yellow-200">📋 Release Notes</button>
+            </div>
+          </div>
+          <Modal isOpen={showNotes} onClose={() => setShowNotes(false)} title="Release Notes">
+            {RELEASE_NOTES.map((r, i) => (
+              <div key={r.version} className={i > 0 ? 'mt-4 pt-4 border-t' : ''}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="bg-green-100 text-green-800 font-mono font-bold px-2 py-0.5 rounded text-sm">v{r.version}</span>
+                  <span className="text-gray-500 text-sm">{r.date}</span>
+                  {i === 0 && <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">LATEST</span>}
+                </div>
+                <ul className="text-sm text-gray-700 space-y-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
+              </div>
+            ))}
+          </Modal>
+        </>
+      );
+    };
+
     function RooseveltCamp() {
       const [currentPage, setCurrentPage] = useState('home');
       const [user, setUser] = useState(null);
       const [toast, setToast] = useState(null);
       const [isLoading, setIsLoading] = useState(true);
-      const [showProductionBanner, setShowProductionBanner] = useState(false);
+      const [showProdBanner, setShowProdBanner] = useState(false);
+      const [content, setContent] = useState(DEFAULT_CONTENT);
+      const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
+      const [registrations, setRegistrations] = useState([]);
+      const [users, setUsers] = useState([]);
       
-      const [content, setContent] = useState(DUMMY_CONTENT);
-      const [counselors, setCounselors] = useState(DUMMY_COUNSELORS);
-      const [registrations, setRegistrations] = useState(DUMMY_REGISTRATIONS);
-      const [registeredUsers, setRegisteredUsers] = useState(DUMMY_REGISTERED_USERS);
-      const [counselorAvailability, setCounselorAvailability] = useState(DUMMY_COUNSELOR_AVAILABILITY);
-      
-      const [adminAccounts] = useState([{ id: 'admin1', email: 'admin', name: 'Audrey Richardson', password: 'admin', role: 'admin' }]);
-
       const isDevEnv = isDevelopment();
-      const showToast = useCallback((message, type = 'success') => { setToast({ message, type }); }, []);
+      const showToast = useCallback((msg, type = 'success') => setToast({ message: msg, type }), []);
 
       useEffect(() => {
-        const loadData = async () => {
+        const load = async () => {
           setIsLoading(true);
           if (supabase) {
             try {
-              const contentData = await storage.get('camp_content');
-              if (contentData && contentData.length > 0) setContent(contentData[0].data);
-              const counselorData = await storage.get('camp_counselors');
-              if (counselorData && counselorData.length > 0) setCounselors(counselorData.map(c => c.data));
-              const regData = await storage.get('camp_registrations');
-              if (regData && regData.length > 0) setRegistrations(regData.map(r => r.data));
-            } catch (e) { console.error('Error loading data:', e); }
+              const cd = await storage.get('camp_content');
+              if (cd?.length > 0 && cd[0].data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
+              const cs = await storage.get('camp_counselors');
+              if (cs?.length > 0) setCounselors(cs.map(c => c.data).sort((a, b) => (a.order || 0) - (b.order || 0)));
+              const rg = await storage.get('camp_registrations');
+              if (rg?.length > 0) setRegistrations(rg.map(r => r.data));
+              const us = await storage.get('camp_registered_users');
+              if (us?.length > 0 && us[0].data) setUsers(us[0].data);
+            } catch (e) { console.error('Load error:', e); }
           }
           setIsLoading(false);
         };
-        loadData();
+        load();
       }, []);
 
-      const getPendingCount = useCallback(() => registrations.filter(r => r.status === 'pending').length, [registrations]);
-      const getApprovedCount = useCallback(() => registrations.filter(r => r.status === 'approved').length, [registrations]);
-      const getUnpaidCount = useCallback(() => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length, [registrations]);
+      const saveContent = async (c) => { setContent(c); await storage.set('camp_content', 'main', c); showToast('Content saved!'); };
+      const saveCounselors = async (cs) => { setCounselors(cs); for (const c of cs) await storage.set('camp_counselors', c.id, c); showToast('Counselors saved!'); };
+      const saveRegistration = async (r) => {
+        const newRegs = registrations.some(x => x.id === r.id) ? registrations.map(x => x.id === r.id ? r : x) : [...registrations, r];
+        setRegistrations(newRegs);
+        await storage.set('camp_registrations', r.id, r);
+        showToast('Registration saved!');
+      };
 
-      const handleLogoDoubleClick = useCallback(() => {
-        if (!isDevEnv) setShowProductionBanner(prev => !prev);
-      }, [isDevEnv]);
+      const getPending = () => registrations.filter(r => r.status === 'pending').length;
+      const getApproved = () => registrations.filter(r => r.status === 'approved').length;
+      const getUnpaid = () => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length;
 
-      // ==================== NAVIGATION ====================
-      const Navigation = () => (
+      const getCampDates = () => {
+        const dates = [], start = new Date(content.campStartDate), end = new Date(content.campEndDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          if (d.getDay() !== 0 && d.getDay() !== 6) dates.push(new Date(d).toISOString().split('T')[0]);
+        }
+        return dates;
+      };
+
+      const Nav = () => (
         <nav className="bg-green-900 text-white shadow-lg">
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div 
-              className="font-display text-2xl tracking-wide cursor-pointer hover:text-green-300 transition select-none"
-              onClick={() => { setCurrentPage('home'); setUser(null); }}
-              onDoubleClick={handleLogoDoubleClick}
-              title={!isDevEnv ? "Double-click for version info" : ""}
-            >
-              🏀 ROOSEVELT CAMP
-            </div>
+            <div className="font-display text-2xl tracking-wide cursor-pointer hover:text-green-300 select-none" onClick={() => { setCurrentPage('home'); setUser(null); }} onDoubleClick={() => !isDevEnv && setShowProdBanner(p => !p)} title={!isDevEnv ? 'Double-click for version info' : ''}>🏀 ROOSEVELT CAMP</div>
             <div className="flex gap-4 items-center">
-              <button onClick={() => setCurrentPage('home')} className={`px-3 py-1 rounded transition ${currentPage === 'home' ? 'bg-green-700' : 'hover:bg-green-800'}`}>Home</button>
+              <button onClick={() => setCurrentPage('home')} className={'px-3 py-1 rounded ' + (currentPage === 'home' ? 'bg-green-700' : 'hover:bg-green-800')}>Home</button>
               {user ? (
                 <>
                   <span className="text-green-300 text-sm">{user.name} ({user.role})</span>
-                  <button onClick={() => { setUser(null); setCurrentPage('home'); }} className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded transition">Logout</button>
+                  <button onClick={() => { setUser(null); setCurrentPage('home'); }} className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded">Logout</button>
                 </>
-              ) : (
-                <button onClick={() => setCurrentPage('login')} className={`px-3 py-1 rounded transition ${currentPage === 'login' ? 'bg-green-700' : 'hover:bg-green-800'}`}>Login</button>
-              )}
+              ) : <button onClick={() => setCurrentPage('login')} className={'px-3 py-1 rounded ' + (currentPage === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>}
             </div>
           </div>
         </nav>
       );
 
-      // ==================== HOME PAGE ====================
-      const HomePage = () => (
+      const Home = () => (
         <div className="min-h-screen">
           <div className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-900 text-white">
+            {content.heroImage && <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url(' + content.heroImage + ')', backgroundSize: 'cover', backgroundPosition: 'center' }} />}
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="relative max-w-6xl mx-auto px-4 py-20 text-center">
               <h1 className="font-display text-6xl md:text-8xl tracking-wider mb-4 drop-shadow-lg">{content.heroTitle}</h1>
               <h2 className="font-display text-4xl md:text-5xl tracking-wide text-green-200 mb-6">{content.heroSubtitle}</h2>
               <p className="text-xl md:text-2xl text-green-100 mb-8 italic">{content.heroTagline}</p>
-              <button onClick={() => setCurrentPage('login')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-xl px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition">Register Now →</button>
+              <button onClick={() => setCurrentPage('register')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-xl px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition">Register Now →</button>
             </div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-orange-500/20 rounded-full -translate-x-1/2 translate-y-1/2"></div>
-            <div className="absolute top-10 right-10 w-20 h-20 bg-orange-500/10 rounded-full"></div>
           </div>
-
           <div className="max-w-6xl mx-auto px-4 py-12">
             <div className="grid md:grid-cols-3 gap-6">
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-600">
                 <div className="text-4xl mb-3">📅</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Camp Dates</h3>
-                <p className="text-gray-700">{content.campDates}</p>
-                <p className="text-sm text-gray-500 mt-2">Monday - Friday</p>
+                <p className="text-gray-700">{new Date(content.campStartDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - {new Date(content.campEndDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
               </div>
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500">
                 <div className="text-4xl mb-3">⏰</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Sessions</h3>
                 <p className="text-gray-700">Morning: {content.sessionMorning}</p>
                 <p className="text-gray-700">Afternoon: {content.sessionAfternoon}</p>
-                <p className="text-green-600 font-semibold mt-2">{content.sessionCost} per session</p>
+                <p className="text-green-600 font-semibold mt-2">${content.sessionCost} per session</p>
               </div>
               <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500">
                 <div className="text-4xl mb-3">👧</div>
                 <h3 className="font-bold text-xl text-green-800 mb-2">Ages</h3>
                 <p className="text-gray-700">{content.ageRange}</p>
-                <p className="text-sm text-gray-500 mt-2">All skill levels welcome!</p>
               </div>
             </div>
           </div>
-
           <div className="bg-gray-50 py-12">
-            <div className="max-w-4xl mx-auto px-4">
-              <h2 className="font-display text-4xl text-green-800 text-center mb-6">About Our Camp</h2>
-              <p className="text-gray-700 text-lg leading-relaxed text-center">{content.aboutText}</p>
+            <div className="max-w-4xl mx-auto px-4 text-center">
+              <h2 className="font-display text-4xl text-green-800 mb-6">About Our Camp</h2>
+              <p className="text-gray-700 text-lg leading-relaxed">{content.aboutText}</p>
             </div>
           </div>
-
           <div className="max-w-6xl mx-auto px-4 py-12">
             <h2 className="font-display text-4xl text-green-800 text-center mb-8">Meet Our Counselors</h2>
             <div className="grid md:grid-cols-4 gap-6">
-              {counselors.filter(c => c.visible !== false).map(counselor => (
-                <div key={counselor.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
+              {counselors.filter(c => c.visible).map(c => (
+                <div key={c.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
                   <div className="h-32 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
-                    <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl border-4 border-white">{counselor.name.charAt(0)}</div>
+                    {c.photo ? <img src={c.photo} alt={c.name} className="w-24 h-24 rounded-full object-cover border-4 border-white" /> : <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl border-4 border-white">{c.name.charAt(0)}</div>}
                   </div>
                   <div className="p-4 text-center">
-                    <h3 className="font-bold text-lg text-green-800">{counselor.name}</h3>
-                    <p className="text-green-600 text-sm">{counselor.position} • {counselor.year}</p>
-                    <p className="text-gray-600 text-sm mt-2">{counselor.bio}</p>
+                    <h3 className="font-bold text-lg text-green-800">{c.name}</h3>
+                    <p className="text-green-600 text-sm">{c.position} • {c.year}</p>
+                    <p className="text-gray-600 text-sm mt-2">{c.bio}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-
           <div className="bg-green-900 text-white py-12">
             <div className="max-w-4xl mx-auto px-4 text-center">
               <h2 className="font-display text-4xl mb-6">Contact Us</h2>
               <div className="flex flex-col md:flex-row justify-center gap-8">
                 <div><p className="text-green-300">Email</p><p className="text-xl">{content.contactEmail}</p></div>
                 <div><p className="text-green-300">Phone</p><p className="text-xl">{content.contactPhone}</p></div>
-                <div><p className="text-green-300">Location</p><p className="text-xl whitespace-pre-line">{content.locationAddress}</p></div>
+                <div><p className="text-green-300">Location</p><p className="text-xl">{content.locationName}<br/>{content.locationAddress}<br/>{content.locationCity}</p></div>
               </div>
             </div>
           </div>
         </div>
       );
 
-      // ==================== LOGIN PAGE ====================
-      const LoginPage = React.memo(() => {
-        const [loginEmail, setLoginEmail] = useState('');
-        const [loginPassword, setLoginPassword] = useState('');
-        const [loginError, setLoginError] = useState('');
+      const Login = React.memo(() => {
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [error, setError] = useState('');
         
-        const handleLogin = useCallback((e) => {
+        const handleLogin = (e) => {
           e.preventDefault();
-          setLoginError('');
-          const admin = adminAccounts.find(a => a.email === loginEmail && a.password === loginPassword);
-          if (admin) { setUser({ ...admin, role: 'admin' }); setCurrentPage('admin'); showToast(`Welcome back, ${admin.name}!`); return; }
-          const registeredUser = registeredUsers.find(u => u.email === loginEmail && u.password === loginPassword);
-          if (registeredUser) { setUser(registeredUser); setCurrentPage(registeredUser.role === 'counselor' ? 'counselor' : 'parent'); showToast(`Welcome back, ${registeredUser.name}!`); return; }
-          setLoginError('Invalid email or password');
-        }, [loginEmail, loginPassword]);
+          setError('');
+          if (email === 'admin' && password === 'admin') { setUser({ name: 'Audrey Richardson', role: 'admin' }); setCurrentPage('admin'); showToast('Welcome, Audrey!'); return; }
+          const u = users.find(x => x.email === email && x.password === password);
+          if (u) { setUser(u); setCurrentPage(u.role === 'counselor' ? 'counselor' : 'parent'); showToast('Welcome, ' + u.name + '!'); return; }
+          const c = counselors.find(x => x.email === email);
+          if (c) { setUser({ ...c, role: 'counselor' }); setCurrentPage('counselor'); showToast('Welcome, ' + c.name + '!'); return; }
+          setError('Invalid email or password');
+        };
 
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
             <div className="max-w-md mx-auto px-4">
               <div className="bg-white rounded-2xl shadow-xl p-8">
                 <h2 className="font-display text-3xl text-green-800 text-center mb-6">Welcome Back</h2>
-                {loginError && <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-center">{loginError}</div>}
+                {error && <div className="bg-red-100 text-red-700 px-4 py-2 rounded-lg mb-4 text-center">{error}</div>}
                 <form onSubmit={handleLogin} className="space-y-4">
-                  <div>
-                    <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <StableInput id="login-email" type="text" value={loginEmail} onChange={setLoginEmail} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter email or 'admin'" autoComplete="username" />
-                  </div>
-                  <div>
-                    <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <StableInput id="login-password" type="password" value={loginPassword} onChange={setLoginPassword} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter password" autoComplete="current-password" />
-                  </div>
-                  <button type="submit" className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg transition">Login</button>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><StableInput value={email} onChange={setEmail} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter email or 'admin'" /></div>
+                  <div><label className="block text-sm font-medium text-gray-700 mb-1">Password</label><StableInput type="password" value={password} onChange={setPassword} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Enter password" /></div>
+                  <button type="submit" className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
                 </form>
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600 font-medium mb-2">Test Accounts:</p>
-                  <ul className="text-xs text-gray-500 space-y-1">
-                    <li>• Admin: admin / admin</li>
-                    <li>• Parent: jadams@email.com / parent123</li>
-                    <li>• Counselor: sarah.mitchell@roosevelt.edu / counselor123</li>
-                  </ul>
-                </div>
+                <div className="mt-6 text-center"><button onClick={() => setCurrentPage('register')} className="text-green-600 font-medium hover:underline">New? Register your child →</button></div>
+                <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500"><strong>Test:</strong> admin / admin</div>
               </div>
             </div>
           </div>
         );
       });
 
-      // ==================== ADMIN DASHBOARD ====================
-      const AdminDashboard = React.memo(() => {
-        const [activeTab, setActiveTab] = useState('dashboard');
-        
-        return (
-          <div className="min-h-screen bg-gray-100">
-            <div className="bg-green-800 text-white py-4">
-              <div className="max-w-6xl mx-auto px-4">
-                <h1 className="font-display text-3xl">Admin Dashboard</h1>
-                <p className="text-green-200">Welcome, {user?.name}</p>
-              </div>
-            </div>
-            
-            <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4">
-                <div className="flex gap-1 overflow-x-auto">
-                  {['dashboard', 'registrations', 'counselors', 'content'].map(tab => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-3 font-medium capitalize whitespace-nowrap border-b-2 transition ${activeTab === tab ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                      {tab}
-                      {tab === 'registrations' && getPendingCount() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{getPendingCount()}</span>}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            <div className="max-w-6xl mx-auto px-4 py-6">
-              {activeTab === 'dashboard' && (
-                <div className="grid md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">📝</div><div className="text-3xl font-bold text-yellow-600">{getPendingCount()}</div><div className="text-gray-600">Pending Approvals</div></div>
-                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">✅</div><div className="text-3xl font-bold text-green-600">{getApprovedCount()}</div><div className="text-gray-600">Approved Registrations</div></div>
-                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">💰</div><div className="text-3xl font-bold text-red-600">{getUnpaidCount()}</div><div className="text-gray-600">Awaiting Payment</div></div>
-                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">👩‍🏫</div><div className="text-3xl font-bold text-blue-600">{counselors.length}</div><div className="text-gray-600">Counselors</div></div>
-                </div>
-              )}
-              
-              {activeTab === 'registrations' && (
-                <div className="bg-white rounded-xl shadow overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Child</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Parent</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Date</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Sessions</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th>
-                        <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Payment</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {registrations.map(reg => (
-                        <tr key={reg.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-medium">{reg.childName}</td>
-                          <td className="px-4 py-3 text-gray-600">{reg.parentName}</td>
-                          <td className="px-4 py-3 text-gray-600">{reg.date}</td>
-                          <td className="px-4 py-3">{reg.sessions.map(s => <span key={s} className={`inline-block px-2 py-0.5 rounded text-xs mr-1 ${s === 'morning' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'}`}>{s}</span>)}</td>
-                          <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${reg.status === 'approved' ? 'bg-green-100 text-green-700' : reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{reg.status}</span></td>
-                          <td className="px-4 py-3"><span className={`px-2 py-1 rounded text-xs font-medium ${reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{reg.paymentStatus || 'unpaid'}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              
-              {activeTab === 'counselors' && (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {counselors.map(c => (
-                    <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl font-bold text-green-700">{c.name.charAt(0)}</div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg">{c.name}</h3>
-                        <p className="text-gray-600 text-sm">{c.position} • {c.year}</p>
-                        <p className="text-gray-500 text-xs">{c.email}</p>
-                      </div>
-                      <div className={`px-3 py-1 rounded text-sm ${c.visible !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{c.visible !== false ? 'Visible' : 'Hidden'}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {activeTab === 'content' && (
-                <div className="bg-white rounded-xl shadow p-6">
-                  <h2 className="font-bold text-xl mb-4">Site Content</h2>
-                  <p className="text-sm text-gray-500 italic">Content editing will be enabled in the full version.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      });
+      const Register = React.memo(() => {
+        const [step, setStep] = useState(1);
+        const [form, setForm] = useState({ parentName: '', parentEmail: '', parentPhone: '', password: '', childName: '', childBirthdate: '', childGrade: '', emergencyContacts: [{ name: '', phone: '', relationship: '' }], selectedDates: [], selectedSessions: {}, scholarshipRequested: false });
+        const campDates = getCampDates();
 
-      // ==================== PARENT DASHBOARD ====================
-      const ParentDashboard = React.memo(() => {
-        const myRegistrations = registrations.filter(r => r.parentEmail === user?.email);
-        
+        const update = (k, v) => setForm(p => ({ ...p, [k]: v }));
+        const toggleDate = (d) => {
+          setForm(p => {
+            const sel = p.selectedDates.includes(d) ? p.selectedDates.filter(x => x !== d) : [...p.selectedDates, d];
+            const sess = { ...p.selectedSessions };
+            if (!sel.includes(d)) delete sess[d]; else if (!sess[d]) sess[d] = ['morning'];
+            return { ...p, selectedDates: sel, selectedSessions: sess };
+          });
+        };
+        const toggleSession = (d, s) => {
+          setForm(p => {
+            const sess = { ...p.selectedSessions };
+            const cur = sess[d] || [];
+            sess[d] = cur.includes(s) ? (cur.length > 1 ? cur.filter(x => x !== s) : cur) : [...cur, s];
+            return { ...p, selectedSessions: sess };
+          });
+        };
+        const calcTotal = () => Object.values(form.selectedSessions).flat().length * parseInt(content.sessionCost);
+
+        const submit = async () => {
+          const reg = { id: 'reg_' + Date.now(), ...form, status: 'pending', paymentStatus: 'unpaid', totalAmount: calcTotal(), venmoCode: form.parentName.substring(0, 3).toUpperCase() + Date.now().toString().slice(-4), createdAt: new Date().toISOString() };
+          await saveRegistration(reg);
+          const newUser = { email: form.parentEmail, name: form.parentName, password: form.password, phone: form.parentPhone, role: 'parent' };
+          const updatedUsers = users.some(u => u.email === form.parentEmail) ? users.map(u => u.email === form.parentEmail ? newUser : u) : [...users, newUser];
+          setUsers(updatedUsers);
+          await storage.set('camp_registered_users', 'main', updatedUsers);
+          setUser(newUser);
+          setCurrentPage('parent');
+          showToast('Registration submitted!');
+        };
+
         return (
-          <div className="min-h-screen bg-gray-100">
-            <div className="bg-green-800 text-white py-4">
-              <div className="max-w-6xl mx-auto px-4">
-                <h1 className="font-display text-3xl">Parent Dashboard</h1>
-                <p className="text-green-200">Welcome, {user?.name}</p>
-              </div>
-            </div>
-            <div className="max-w-6xl mx-auto px-4 py-6">
-              <div className="bg-white rounded-xl shadow p-6 mb-6">
-                <h2 className="font-bold text-xl mb-4">My Registrations</h2>
-                {myRegistrations.length === 0 ? <p className="text-gray-500">No registrations yet.</p> : (
+          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+            <div className="max-w-2xl mx-auto px-4">
+              <div className="bg-white rounded-2xl shadow-xl p-8">
+                <h2 className="font-display text-3xl text-green-800 text-center mb-2">Camp Registration</h2>
+                <div className="flex justify-center gap-2 mb-8">{[1,2,3,4].map(s => <div key={s} className={'w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ' + (step >= s ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-500')}>{s}</div>)}</div>
+
+                {step === 1 && (
                   <div className="space-y-4">
-                    {myRegistrations.map(reg => (
-                      <div key={reg.id} className="border rounded-lg p-4 flex items-center justify-between">
-                        <div><h3 className="font-bold">{reg.childName}</h3><p className="text-gray-600 text-sm">{reg.date} • {reg.sessions.join(', ')}</p></div>
-                        <div className="flex gap-2">
-                          <span className={`px-3 py-1 rounded text-sm ${reg.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{reg.status}</span>
-                          <span className={`px-3 py-1 rounded text-sm ${reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{reg.paymentStatus || 'unpaid'}</span>
-                        </div>
-                      </div>
-                    ))}
+                    <h3 className="font-bold text-lg text-green-800">Parent/Guardian Info</h3>
+                    <StableInput value={form.parentName} onChange={v => update('parentName', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Full Name *" />
+                    <StableInput value={form.parentEmail} onChange={v => update('parentEmail', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Email *" />
+                    <StableInput value={form.parentPhone} onChange={v => update('parentPhone', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Phone *" />
+                    <StableInput type="password" value={form.password} onChange={v => update('password', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Create Password *" />
+                    <button onClick={() => setStep(2)} disabled={!form.parentName || !form.parentEmail || !form.parentPhone || !form.password} className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg mt-4">Continue →</button>
+                  </div>
+                )}
+
+                {step === 2 && (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-green-800">Camper Info</h3>
+                    <StableInput value={form.childName} onChange={v => update('childName', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" placeholder="Child's Full Name *" />
+                    <StableInput type="date" value={form.childBirthdate} onChange={v => update('childBirthdate', v)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none" />
+                    <select value={form.childGrade} onChange={e => update('childGrade', e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-600 focus:outline-none">
+                      <option value="">Select Grade *</option>
+                      {['3rd','4th','5th','6th','7th','8th'].map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <div className="flex gap-4 mt-6">
+                      <button onClick={() => setStep(1)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg">← Back</button>
+                      <button onClick={() => setStep(3)} disabled={!form.childName || !form.childBirthdate || !form.childGrade} className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Continue →</button>
+                    </div>
+                  </div>
+                )}
+
+                {step === 3 && (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-green-800">Select Dates</h3>
+                    <div className="max-h-64 overflow-y-auto border rounded-lg">
+                      {campDates.slice(0, 20).map(d => {
+                        const sel = form.selectedDates.includes(d);
+                        const sess = form.selectedSessions[d] || [];
+                        return (
+                          <div key={d} className={'p-3 border-b flex items-center justify-between ' + (sel ? 'bg-green-50' : '')}>
+                            <label className="flex items-center gap-3 cursor-pointer flex-1">
+                              <input type="checkbox" checked={sel} onChange={() => toggleDate(d)} className="w-5 h-5" />
+                              <span>{new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                            </label>
+                            {sel && (
+                              <div className="flex gap-2">
+                                <button onClick={() => toggleSession(d, 'morning')} className={'px-3 py-1 rounded text-xs font-medium ' + (sess.includes('morning') ? 'bg-yellow-500 text-white' : 'bg-gray-200')}>AM</button>
+                                <button onClick={() => toggleSession(d, 'afternoon')} className={'px-3 py-1 rounded text-xs font-medium ' + (sess.includes('afternoon') ? 'bg-blue-500 text-white' : 'bg-gray-200')}>PM</button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg"><div className="flex justify-between font-bold text-green-800 text-lg"><span>Total:</span><span>${calcTotal()}</span></div></div>
+                    <div className="flex gap-4">
+                      <button onClick={() => setStep(2)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg">← Back</button>
+                      <button onClick={() => setStep(4)} disabled={form.selectedDates.length === 0} className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Review →</button>
+                    </div>
+                  </div>
+                )}
+
+                {step === 4 && (
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg text-green-800">Review & Submit</h3>
+                    <div className="bg-gray-50 p-4 rounded-lg"><strong>Parent:</strong> {form.parentName} • {form.parentEmail}</div>
+                    <div className="bg-gray-50 p-4 rounded-lg"><strong>Camper:</strong> {form.childName} • {form.childGrade} Grade</div>
+                    <div className="bg-gray-50 p-4 rounded-lg"><strong>Dates:</strong> {form.selectedDates.length} days</div>
+                    <div className="bg-green-100 p-4 rounded-lg text-xl font-bold text-green-800 text-center">Total: ${calcTotal()}</div>
+                    <div className="flex gap-4">
+                      <button onClick={() => setStep(3)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-lg">← Back</button>
+                      <button onClick={submit} className="flex-1 bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Submit ✓</button>
+                    </div>
                   </div>
                 )}
               </div>
-              <div className="bg-white rounded-xl shadow p-6">
-                <h2 className="font-bold text-xl mb-4">Payment Information</h2>
-                <p className="text-gray-600 mb-4">Pay via Venmo to <span className="font-mono font-bold text-green-700">{content.venmoUsername}</span></p>
-              </div>
             </div>
           </div>
         );
       });
 
-      // ==================== COUNSELOR DASHBOARD ====================
-      const CounselorDashboard = React.memo(() => {
-        const counselor = counselors.find(c => c.email === user?.email);
-        
+      const Admin = React.memo(() => {
+        const [tab, setTab] = useState('dashboard');
+        const [editContent, setEditContent] = useState({ ...content });
+        const [editCounselor, setEditCounselor] = useState(null);
+        const [showModal, setShowModal] = useState(false);
+
+        const handleSaveContent = () => saveContent(editContent);
+        const handleSaveCounselor = () => {
+          const updated = editCounselor.id && counselors.some(c => c.id === editCounselor.id) ? counselors.map(c => c.id === editCounselor.id ? editCounselor : c) : [...counselors, { ...editCounselor, id: 'c_' + Date.now(), order: counselors.length }];
+          saveCounselors(updated);
+          setShowModal(false);
+        };
+        const handleDeleteCounselor = (id) => { if (confirm('Delete this counselor?')) saveCounselors(counselors.filter(c => c.id !== id)); };
+        const handleApprove = (r) => saveRegistration({ ...r, status: 'approved' });
+        const handleReject = (r) => { if (confirm('Reject this registration?')) saveRegistration({ ...r, status: 'rejected' }); };
+        const handleTogglePaid = (r) => saveRegistration({ ...r, paymentStatus: r.paymentStatus === 'paid' ? 'unpaid' : 'paid' });
+
         return (
           <div className="min-h-screen bg-gray-100">
-            <div className="bg-green-800 text-white py-4">
-              <div className="max-w-6xl mx-auto px-4">
-                <h1 className="font-display text-3xl">Counselor Dashboard</h1>
-                <p className="text-green-200">Welcome, {user?.name}</p>
-              </div>
+            <div className="bg-green-800 text-white py-4"><div className="max-w-6xl mx-auto px-4"><h1 className="font-display text-3xl">Admin Dashboard</h1><p className="text-green-200">Welcome, {user?.name}</p></div></div>
+            <div className="bg-white shadow"><div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
+              {['dashboard','registrations','counselors','content'].map(t => <button key={t} onClick={() => setTab(t)} className={'px-4 py-3 font-medium capitalize border-b-2 ' + (tab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>{t}{t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{getPending()}</span>}</button>)}
+            </div></div>
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              {tab === 'dashboard' && (
+                <div className="grid md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">📝</div><div className="text-3xl font-bold text-yellow-600">{getPending()}</div><div className="text-gray-600">Pending</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">✅</div><div className="text-3xl font-bold text-green-600">{getApproved()}</div><div className="text-gray-600">Approved</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">💰</div><div className="text-3xl font-bold text-red-600">{getUnpaid()}</div><div className="text-gray-600">Unpaid</div></div>
+                  <div className="bg-white rounded-xl shadow p-6"><div className="text-3xl mb-2">👩‍🏫</div><div className="text-3xl font-bold text-blue-600">{counselors.length}</div><div className="text-gray-600">Counselors</div></div>
+                </div>
+              )}
+              {tab === 'registrations' && (
+                <div className="bg-white rounded-xl shadow overflow-hidden">
+                  {registrations.length === 0 ? <div className="p-8 text-center text-gray-500">No registrations yet.</div> : (
+                    <table className="w-full">
+                      <thead className="bg-gray-50"><tr><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Child</th><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Parent</th><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Total</th><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Status</th><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Payment</th><th className="px-4 py-3 text-left text-sm font-medium text-gray-600">Actions</th></tr></thead>
+                      <tbody className="divide-y">{registrations.map(r => (
+                        <tr key={r.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{r.childName}</td>
+                          <td className="px-4 py-3 text-gray-600">{r.parentName}<br/><span className="text-xs text-gray-400">{r.parentEmail}</span></td>
+                          <td className="px-4 py-3">${r.totalAmount || 0}</td>
+                          <td className="px-4 py-3"><span className={'px-2 py-1 rounded text-xs font-medium ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>{r.status}</span></td>
+                          <td className="px-4 py-3"><button onClick={() => handleTogglePaid(r)} className={'px-2 py-1 rounded text-xs font-medium ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{r.paymentStatus || 'unpaid'}</button></td>
+                          <td className="px-4 py-3">{r.status === 'pending' && <><button onClick={() => handleApprove(r)} className="text-green-600 hover:text-green-800 text-sm mr-2">Approve</button><button onClick={() => handleReject(r)} className="text-red-600 hover:text-red-800 text-sm">Reject</button></>}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+              {tab === 'counselors' && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="font-bold text-xl">Counselors</h2>
+                    <button onClick={() => { setEditCounselor({ name: '', email: '', position: '', year: '', bio: '', photo: null, visible: true }); setShowModal(true); }} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">+ Add</button>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">{counselors.map(c => (
+                    <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
+                      {c.photo ? <img src={c.photo} alt={c.name} className="w-16 h-16 rounded-full object-cover" /> : <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl font-bold text-green-700">{c.name.charAt(0)}</div>}
+                      <div className="flex-1"><h3 className="font-bold">{c.name}</h3><p className="text-gray-600 text-sm">{c.position} • {c.year}</p></div>
+                      <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="text-blue-600 text-sm mr-2">Edit</button>
+                      <button onClick={() => handleDeleteCounselor(c.id)} className="text-red-600 text-sm">Delete</button>
+                    </div>
+                  ))}</div>
+                </div>
+              )}
+              {tab === 'content' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-green-800 mb-4">Hero Section</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Title</label><StableInput value={editContent.heroTitle} onChange={v => setEditContent(p => ({ ...p, heroTitle: v }))} className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Subtitle</label><StableInput value={editContent.heroSubtitle} onChange={v => setEditContent(p => ({ ...p, heroSubtitle: v }))} className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" /></div>
+                      <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Tagline</label><StableInput value={editContent.heroTagline} onChange={v => setEditContent(p => ({ ...p, heroTagline: v }))} className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" /></div>
+                      <div className="md:col-span-2"><ImageUpload currentImage={editContent.heroImage} onImageChange={img => setEditContent(p => ({ ...p, heroImage: img }))} label="Hero Background" /></div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-green-800 mb-4">About</h3>
+                    <StableInput value={editContent.aboutText} onChange={v => setEditContent(p => ({ ...p, aboutText: v }))} className="w-full px-4 py-2 border rounded-lg focus:border-green-600 focus:outline-none" rows={4} />
+                  </div>
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-green-800 mb-4">Camp Details</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label><StableInput type="date" value={editContent.campStartDate} onChange={v => setEditContent(p => ({ ...p, campStartDate: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">End Date</label><StableInput type="date" value={editContent.campEndDate} onChange={v => setEditContent(p => ({ ...p, campEndDate: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Morning Session</label><StableInput value={editContent.sessionMorning} onChange={v => setEditContent(p => ({ ...p, sessionMorning: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Afternoon Session</label><StableInput value={editContent.sessionAfternoon} onChange={v => setEditContent(p => ({ ...p, sessionAfternoon: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Cost per Session ($)</label><StableInput value={editContent.sessionCost} onChange={v => setEditContent(p => ({ ...p, sessionCost: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Age Range</label><StableInput value={editContent.ageRange} onChange={v => setEditContent(p => ({ ...p, ageRange: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-green-800 mb-4">Contact</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><StableInput value={editContent.contactEmail} onChange={v => setEditContent(p => ({ ...p, contactEmail: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><StableInput value={editContent.contactPhone} onChange={v => setEditContent(p => ({ ...p, contactPhone: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Location Name</label><StableInput value={editContent.locationName} onChange={v => setEditContent(p => ({ ...p, locationName: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Address</label><StableInput value={editContent.locationAddress} onChange={v => setEditContent(p => ({ ...p, locationAddress: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">City</label><StableInput value={editContent.locationCity} onChange={v => setEditContent(p => ({ ...p, locationCity: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1">Venmo</label><StableInput value={editContent.venmoUsername} onChange={v => setEditContent(p => ({ ...p, venmoUsername: v }))} className="w-full px-4 py-2 border rounded-lg" /></div>
+                    </div>
+                    <div className="mt-4"><ImageUpload currentImage={editContent.venmoImage} onImageChange={img => setEditContent(p => ({ ...p, venmoImage: img }))} label="Venmo QR Code" /></div>
+                  </div>
+                  <button onClick={handleSaveContent} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Save All Changes</button>
+                </div>
+              )}
             </div>
+            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editCounselor?.id ? 'Edit Counselor' : 'Add Counselor'}>
+              {editCounselor && (
+                <div className="space-y-4">
+                  <ImageUpload currentImage={editCounselor.photo} onImageChange={img => setEditCounselor(p => ({ ...p, photo: img }))} label="Photo" />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <StableInput value={editCounselor.name} onChange={v => setEditCounselor(p => ({ ...p, name: v }))} className="px-4 py-2 border rounded-lg" placeholder="Name *" />
+                    <StableInput value={editCounselor.email} onChange={v => setEditCounselor(p => ({ ...p, email: v }))} className="px-4 py-2 border rounded-lg" placeholder="Email *" />
+                    <StableInput value={editCounselor.position} onChange={v => setEditCounselor(p => ({ ...p, position: v }))} className="px-4 py-2 border rounded-lg" placeholder="Position" />
+                    <select value={editCounselor.year} onChange={e => setEditCounselor(p => ({ ...p, year: e.target.value }))} className="px-4 py-2 border rounded-lg"><option value="">Year</option><option>Freshman</option><option>Sophomore</option><option>Junior</option><option>Senior</option></select>
+                  </div>
+                  <StableInput value={editCounselor.bio} onChange={v => setEditCounselor(p => ({ ...p, bio: v }))} className="w-full px-4 py-2 border rounded-lg" placeholder="Bio" rows={3} />
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={editCounselor.visible} onChange={e => setEditCounselor(p => ({ ...p, visible: e.target.checked }))} className="w-5 h-5" /><span>Visible on website</span></label>
+                  <div className="flex gap-4 pt-4">
+                    <button onClick={() => setShowModal(false)} className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 rounded-lg">Cancel</button>
+                    <button onClick={handleSaveCounselor} disabled={!editCounselor.name || !editCounselor.email} className="flex-1 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-2 rounded-lg">Save</button>
+                  </div>
+                </div>
+              )}
+            </Modal>
+          </div>
+        );
+      });
+
+      const Parent = React.memo(() => {
+        const myRegs = registrations.filter(r => r.parentEmail === user?.email);
+        return (
+          <div className="min-h-screen bg-gray-100">
+            <div className="bg-green-800 text-white py-4"><div className="max-w-6xl mx-auto px-4"><h1 className="font-display text-3xl">Parent Dashboard</h1><p className="text-green-200">Welcome, {user?.name}</p></div></div>
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              <div className="flex justify-between items-center mb-4"><h2 className="font-bold text-xl">My Registrations</h2><button onClick={() => setCurrentPage('register')} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">+ Register Another</button></div>
+              {myRegs.length === 0 ? <div className="bg-white rounded-xl shadow p-8 text-center text-gray-500">No registrations yet. <button onClick={() => setCurrentPage('register')} className="text-green-600 font-medium hover:underline">Register your child →</button></div> : (
+                <div className="space-y-4">{myRegs.map(r => (
+                  <div key={r.id} className="bg-white rounded-xl shadow p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div><h3 className="font-bold text-xl text-green-800">{r.childName}</h3><p className="text-gray-600">{r.childGrade} Grade • {r.selectedDates?.length || 0} days</p></div>
+                      <div className="flex gap-2">
+                        <span className={'px-3 py-1 rounded-full text-sm font-medium ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : r.status === 'pending' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>{r.status}</span>
+                        <span className={'px-3 py-1 rounded-full text-sm font-medium ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{r.paymentStatus || 'unpaid'}</span>
+                      </div>
+                    </div>
+                    {r.status === 'approved' && r.paymentStatus !== 'paid' && (
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <h4 className="font-bold text-yellow-800 mb-2">Payment Due: ${r.totalAmount}</h4>
+                        <p className="text-sm text-yellow-700">Venmo: <span className="font-mono font-bold">{content.venmoUsername}</span></p>
+                        <p className="text-sm text-yellow-700">Code: <span className="font-mono bg-yellow-200 px-2 py-0.5 rounded">{r.venmoCode}</span></p>
+                        {content.venmoImage && <img src={content.venmoImage} alt="Venmo QR" className="w-32 h-32 mt-3" />}
+                      </div>
+                    )}
+                  </div>
+                ))}</div>
+              )}
+            </div>
+          </div>
+        );
+      });
+
+      const Counselor = React.memo(() => {
+        const c = counselors.find(x => x.email === user?.email);
+        return (
+          <div className="min-h-screen bg-gray-100">
+            <div className="bg-green-800 text-white py-4"><div className="max-w-6xl mx-auto px-4"><h1 className="font-display text-3xl">Counselor Dashboard</h1><p className="text-green-200">Welcome, {user?.name}</p></div></div>
             <div className="max-w-6xl mx-auto px-4 py-6">
               <div className="bg-white rounded-xl shadow p-6">
                 <h2 className="font-bold text-xl mb-4">My Profile</h2>
-                {counselor ? (
+                {c ? (
                   <div className="flex items-start gap-6">
-                    <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl font-bold text-green-700">{counselor.name.charAt(0)}</div>
-                    <div>
-                      <h3 className="font-bold text-xl">{counselor.name}</h3>
-                      <p className="text-green-600">{counselor.position} • {counselor.year}</p>
-                      <p className="text-gray-600 mt-2">{counselor.bio}</p>
-                    </div>
+                    {c.photo ? <img src={c.photo} alt={c.name} className="w-24 h-24 rounded-full object-cover" /> : <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl font-bold text-green-700">{c.name.charAt(0)}</div>}
+                    <div><h3 className="font-bold text-xl">{c.name}</h3><p className="text-green-600">{c.position} • {c.year}</p><p className="text-gray-600 mt-2">{c.bio}</p></div>
                   </div>
                 ) : <p className="text-gray-500">Profile not found.</p>}
               </div>
@@ -653,25 +679,20 @@
         );
       });
 
-      // ==================== RENDER ====================
-      if (isLoading) {
-        return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="text-6xl mb-4">🏀</div><p className="text-green-700 font-medium">Loading Roosevelt Camp...</p></div></div>;
-      }
+      if (isLoading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="text-6xl mb-4">🏀</div><p className="text-green-700 font-medium">Loading...</p></div></div>;
 
       return (
         <div className="min-h-screen bg-gray-50">
-          <VersionBanner isVisible={isDevEnv || showProductionBanner} isDev={isDevEnv} />
-          <Navigation />
+          <VersionBanner isVisible={isDevEnv || showProdBanner} isDev={isDevEnv} />
+          <Nav />
           {toast && <Toast message={toast.message} type={toast.type} onDone={() => setToast(null)} />}
-          {currentPage === 'home' && <HomePage />}
-          {currentPage === 'login' && <LoginPage />}
-          {currentPage === 'admin' && user?.role === 'admin' && <AdminDashboard />}
-          {currentPage === 'parent' && user?.role === 'parent' && <ParentDashboard />}
-          {currentPage === 'counselor' && user?.role === 'counselor' && <CounselorDashboard />}
-          <footer className="bg-gray-800 text-white py-6 text-center">
-            <p className="text-gray-400">© 2026 Roosevelt High School Girls Basketball</p>
-            <p className="text-gray-500 text-sm mt-1">Summer Day Camp Registration System</p>
-          </footer>
+          {currentPage === 'home' && <Home />}
+          {currentPage === 'login' && <Login />}
+          {currentPage === 'register' && <Register />}
+          {currentPage === 'admin' && user?.role === 'admin' && <Admin />}
+          {currentPage === 'parent' && user?.role === 'parent' && <Parent />}
+          {currentPage === 'counselor' && user?.role === 'counselor' && <Counselor />}
+          <footer className="bg-gray-800 text-white py-6 text-center"><p className="text-gray-400">© 2026 Roosevelt High School Girls Basketball</p></footer>
         </div>
       );
     }
