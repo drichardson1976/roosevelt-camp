@@ -1068,7 +1068,7 @@
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
           {page === 'home' && <Home />}
           {page === 'schedule' && <Schedule />}
-          {page === 'counselors' && <Counselors />}
+          {page === 'counselors' && <CounselorsPage />}
           {page === 'login' && <Login />}
           {page === 'admin' && user?.role === 'admin' && <Admin />}
           {page === 'parent' && user?.role === 'parent' && <Parent />}
