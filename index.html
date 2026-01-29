@@ -43,10 +43,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.061";
+    const VERSION = "12.063";
     const BUILD_DATE = new Date();
-    
+
     const RELEASE_NOTES = [
+      { version: "12.063", date: "2026-01-29", changes: [
+        "Fixed 1Password popup with data-1p-ignore attributes",
+        "Admin shows as 'Admin' - click to go to admin portal",
+        "Fixed input fields losing focus when typing",
+        "Enhanced child form: photo upload, birthdate, calculated age, optional phone",
+        "Auto-save for all content changes",
+        "Added change history with timestamps"
+      ]},
       { version: "12.061", date: "2026-01-29", changes: ["Fresh rebuild with all features", "Merged v12.042 features with Supabase schema separation", "Payment tracking, cancellation/refund system", "Collapsible calendar, scholarship requests"] },
       { version: "12.056", date: "2026-01-29", changes: ["Fixed counselor editing, photo cropper, phone formatting"] },
       { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] }
@@ -174,6 +182,227 @@
       let age = today.getFullYear() - birth.getFullYear();
       if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
       return age;
+    };
+
+    const formatTimestamp = (date) => {
+      const d = new Date(date);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    };
+
+    // ==================== STABLE INPUT COMPONENTS ====================
+    const StableInput = React.memo(({ value, onSave, type = 'text', className = '', placeholder = '' }) => {
+      const [local, setLocal] = useState(value || '');
+      const inputRef = useRef(null);
+      const initialValue = useRef(value);
+
+      useEffect(() => {
+        if (value !== initialValue.current && document.activeElement !== inputRef.current) {
+          setLocal(value || '');
+          initialValue.current = value;
+        }
+      }, [value]);
+
+      const handleBlur = () => {
+        if (local !== value) {
+          onSave(local);
+          initialValue.current = local;
+        }
+      };
+
+      return (
+        <input
+          ref={inputRef}
+          type={type}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={handleBlur}
+          className={className}
+          placeholder={placeholder}
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+        />
+      );
+    });
+
+    const StableTextarea = React.memo(({ value, onSave, className = '', placeholder = '', rows = 3 }) => {
+      const [local, setLocal] = useState(value || '');
+      const ref = useRef(null);
+      const initialValue = useRef(value);
+
+      useEffect(() => {
+        if (value !== initialValue.current && document.activeElement !== ref.current) {
+          setLocal(value || '');
+          initialValue.current = value;
+        }
+      }, [value]);
+
+      const handleBlur = () => {
+        if (local !== value) {
+          onSave(local);
+          initialValue.current = local;
+        }
+      };
+
+      return (
+        <textarea
+          ref={ref}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={handleBlur}
+          className={className}
+          placeholder={placeholder}
+          rows={rows}
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+        />
+      );
+    });
+
+    // ==================== COUNSELOR EDIT FORM ====================
+    const CounselorEditForm = ({ counselor, onSave, onCancel }) => {
+      const [form, setForm] = useState({ ...counselor });
+      const inputRef = useRef(null);
+      const [tempImg, setTempImg] = useState(null);
+      const [showCrop, setShowCrop] = useState(false);
+
+      const update = (field, value) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+      };
+
+      const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); };
+          reader.readAsDataURL(file);
+        }
+        if (e.target) e.target.value = '';
+      };
+
+      if (showCrop && tempImg) {
+        return <ImageCropper image={tempImg} onSave={(img) => { update('photo', img); setShowCrop(false); }} onCancel={() => setShowCrop(false)} />;
+      }
+
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            {form.photo ? (
+              <div className="relative">
+                <img src={form.photo} className="w-20 h-20 rounded-full object-cover border-2 border-green-600" />
+                <button onClick={() => inputRef.current?.click()} className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                <button onClick={() => update('photo', null)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">×</button>
+              </div>
+            ) : (
+              <div onClick={() => inputRef.current?.click()} className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span className="text-xs text-gray-500">Add</span>
+              </div>
+            )}
+            <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            <div className="flex-1 text-sm text-gray-500">Click to add/change photo</div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                value={form.name || ''}
+                onChange={e => update('name', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="Full name"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                value={form.email || ''}
+                onChange={e => update('email', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="email@example.com"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                value={form.phone || ''}
+                onChange={e => update('phone', formatPhone(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="(555) 555-1234"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+              <input
+                value={form.position || ''}
+                onChange={e => update('position', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="Point Guard"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+              <select value={form.year || ''} onChange={e => update('year', e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Select year</option>
+                <option value="Freshman">Freshman</option>
+                <option value="Sophomore">Sophomore</option>
+                <option value="Junior">Junior</option>
+                <option value="Senior">Senior</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={form.visible !== false} onChange={e => update('visible', e.target.checked)} className="w-5 h-5" />
+              <label className="text-sm font-medium text-gray-700">Visible on website</label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea
+              value={form.bio || ''}
+              onChange={e => update('bio', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              rows={3}
+              placeholder="Short bio..."
+              autoComplete="off"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+            <button onClick={() => onSave(form)} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Save</button>
+          </div>
+        </div>
+      );
     };
 
     // ==================== VERSION BANNER ====================
@@ -353,6 +582,7 @@
       const [registrations, setRegistrations] = useState([]);
       const [users, setUsers] = useState([]);
       const [availability, setAvailability] = useState({});
+      const [changeHistory, setChangeHistory] = useState([]);
       
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -375,19 +605,49 @@
             if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
             const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
+            const ch = await storage.get('camp_change_history');
+            if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
         load();
       }, []);
 
-      const saveContent = async (c) => { setContent(c); await storage.set('camp_content', 'main', c); showToast('Saved!'); };
-      const saveCounselors = async (cs) => { setCounselors(cs); for (const c of cs) await storage.set('camp_counselors', c.id, c); showToast('Saved!'); };
-      const saveReg = async (r) => {
+      const addToHistory = useCallback(async (action, details) => {
+        const entry = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          action,
+          details
+        };
+        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        setChangeHistory(newHistory);
+        await storage.set('camp_change_history', 'main', newHistory);
+      }, [changeHistory]);
+
+      const saveContent = async (c, field = null) => {
+        setContent(c);
+        await storage.set('camp_content', 'main', c);
+        if (field) {
+          addToHistory('Content Updated', `Changed "${field}"`);
+        }
+        showToast('Saved!');
+      };
+
+      const saveCounselors = async (cs, action = null) => {
+        setCounselors(cs);
+        for (const c of cs) await storage.set('camp_counselors', c.id, c);
+        if (action) addToHistory('Counselor', action);
+        showToast('Saved!');
+      };
+
+      const saveReg = async (r, action = null) => {
         const newRegs = registrations.some(x => x.id === r.id) ? registrations.map(x => x.id === r.id ? r : x) : [...registrations, r];
         setRegistrations(newRegs);
         await storage.set('camp_registrations', r.id, r);
+        if (action) addToHistory('Registration', action);
       };
+
       const saveUsers = async (u) => { setUsers(u); await storage.set('camp_registered_users', 'main', u); };
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
 
@@ -407,7 +667,13 @@
               ))}
               {user ? (
                 <React.Fragment>
-                  <span className="text-green-300 text-sm ml-2">{user.name}</span>
+                  {user.role === 'admin' ? (
+                    <button onClick={() => setPage('admin')} className="text-green-300 text-sm ml-2 hover:text-white hover:underline">
+                      Admin
+                    </button>
+                  ) : (
+                    <span className="text-green-300 text-sm ml-2">{user.name}</span>
+                  )}
                   <button onClick={() => { setUser(null); setPage('home'); }} className="px-3 py-1 bg-red-600 rounded text-sm">Logout</button>
                 </React.Fragment>
               ) : (
@@ -535,7 +801,7 @@
         const [phone, setPhone] = useState('');
 
         const handleLogin = () => {
-          if (email === 'admin' && password === 'admin') { setUser({ name: 'Audrey Richardson', role: 'admin' }); setPage('admin'); showToast('Welcome!'); return; }
+          if (email === 'admin' && password === 'admin') { setUser({ name: 'Admin', role: 'admin' }); setPage('admin'); showToast('Welcome, Admin!'); return; }
           const u = users.find(x => x.email === email && x.password === password);
           if (u) { setUser(u); setPage(u.role === 'counselor' ? 'counselor' : 'parent'); showToast('Welcome!'); return; }
           const c = counselors.find(x => x.email === email);
@@ -562,19 +828,19 @@
                 {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-center">{error}</div>}
                 
                 {mode === 'login' ? (
-                  <div className="space-y-4">
-                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" />
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
-                    <button onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
-                  </div>
+                  <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
+                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
+                  </form>
                 ) : (
-                  <div className="space-y-4">
-                    <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Full Name" />
-                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" />
-                    <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Phone" />
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" />
-                    <button onClick={handleRegister} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Create Account</button>
-                  </div>
+                  <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
+                    <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Full Name" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Phone" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                    <button type="button" onClick={handleRegister} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Create Account</button>
+                  </form>
                 )}
                 
                 <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }} className="w-full mt-4 text-green-600 hover:underline">
@@ -589,9 +855,13 @@
 
       // ==================== ADMIN ====================
       const Admin = () => {
-        const [editContent, setEditContent] = useState({ ...content });
         const [editCounselor, setEditCounselor] = useState(null);
         const [showModal, setShowModal] = useState(false);
+
+        const updateContent = (field, value) => {
+          const newContent = { ...content, [field]: value };
+          saveContent(newContent, field);
+        };
 
         return (
           <div className="min-h-screen bg-gray-100">
@@ -601,12 +871,12 @@
                 <p className="text-green-200">Welcome, {user?.name}</p>
               </div>
             </div>
-            
+
             <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4 flex gap-1">
-                {['dashboard', 'registrations', 'counselors', 'content'].map(t => (
-                  <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 capitalize border-b-2 ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t}{t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
+              <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
+                {['dashboard', 'registrations', 'counselors', 'content', 'history'].map(t => (
+                  <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 capitalize border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    {t === 'history' ? '📜 History' : t}{t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                   </button>
                 ))}
               </div>
@@ -634,14 +904,14 @@
                             <div className="text-sm text-gray-600">{r.parentName} • {r.date}</div>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => { saveReg({ ...r, status: 'approved' }); showToast('Approved!'); }} className="px-3 py-1 bg-green-600 text-white rounded text-sm">Approve</button>
-                            <button onClick={() => { saveReg({ ...r, status: 'rejected' }); showToast('Rejected'); }} className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm">Reject</button>
+                            <button onClick={() => { saveReg({ ...r, status: 'approved' }, `Approved ${r.childName} for ${r.date}`); showToast('Approved!'); }} className="px-3 py-1 bg-green-600 text-white rounded text-sm">Approve</button>
+                            <button onClick={() => { saveReg({ ...r, status: 'rejected' }, `Rejected ${r.childName} for ${r.date}`); showToast('Rejected'); }} className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm">Reject</button>
                           </div>
                         </div>
                       ))}</div>
                     )}
                   </div>
-                  
+
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg text-green-700 mb-4">Approved ({getApproved()})</h3>
                     {registrations.filter(r => r.status === 'approved').length === 0 ? <p className="text-gray-500">None</p> : (
@@ -653,12 +923,15 @@
                             <td className="p-2 text-gray-600">{r.parentName}</td>
                             <td className="p-2 text-gray-600">{r.date}</td>
                             <td className="p-2">
-                              <button onClick={() => { saveReg({ ...r, paymentStatus: r.paymentStatus === 'paid' ? 'unpaid' : 'paid' }); }} className={'px-2 py-1 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                              <button onClick={() => {
+                                const newStatus = r.paymentStatus === 'paid' ? 'unpaid' : 'paid';
+                                saveReg({ ...r, paymentStatus: newStatus }, `Marked ${r.childName} as ${newStatus} for ${r.date}`);
+                              }} className={'px-2 py-1 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
                                 {r.paymentStatus || 'unpaid'}
                               </button>
                             </td>
                             <td className="p-2">
-                              <button onClick={() => { saveReg({ ...r, status: 'cancelled', cancelledAt: new Date().toISOString() }); showToast('Cancelled'); }} className="text-red-600 text-sm">Cancel</button>
+                              <button onClick={() => { saveReg({ ...r, status: 'cancelled', cancelledAt: new Date().toISOString() }, `Cancelled ${r.childName} for ${r.date}`); showToast('Cancelled'); }} className="text-red-600 text-sm">Cancel</button>
                             </td>
                           </tr>
                         ))}</tbody>
@@ -683,7 +956,7 @@
                           <div className="text-sm text-gray-600">{c.position} • {c.year}</div>
                         </div>
                         <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="text-blue-600 text-sm">Edit</button>
-                        <button onClick={() => { if (confirm('Delete?')) saveCounselors(counselors.filter(x => x.id !== c.id)); }} className="text-red-600 text-sm">Delete</button>
+                        <button onClick={() => { if (confirm('Delete?')) saveCounselors(counselors.filter(x => x.id !== c.id), `Deleted counselor ${c.name}`); }} className="text-red-600 text-sm">Delete</button>
                       </div>
                     ))}
                   </div>
@@ -692,45 +965,123 @@
 
               {adminTab === 'content' && (
                 <div className="space-y-6">
+                  <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg">
+                    <p className="text-green-800"><strong>Auto-save enabled:</strong> Changes are saved automatically when you click outside the field</p>
+                  </div>
+
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold mb-4">Hero Section</h3>
                     <div className="grid md:grid-cols-2 gap-4">
-                      <div><label className="block text-sm text-gray-600 mb-1">Title</label><input value={editContent.heroTitle} onChange={e => setEditContent({ ...editContent, heroTitle: e.target.value })} className="w-full px-3 py-2 border rounded-lg" /></div>
-                      <div><label className="block text-sm text-gray-600 mb-1">Subtitle</label><input value={editContent.heroSubtitle} onChange={e => setEditContent({ ...editContent, heroSubtitle: e.target.value })} className="w-full px-3 py-2 border rounded-lg" /></div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Title</label>
+                        <StableInput value={content.heroTitle} onSave={(v) => updateContent('heroTitle', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Subtitle</label>
+                        <StableInput value={content.heroSubtitle} onSave={(v) => updateContent('heroSubtitle', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm text-gray-600 mb-1">Tagline</label>
+                        <StableInput value={content.heroTagline} onSave={(v) => updateContent('heroTagline', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
                     </div>
                   </div>
+
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold mb-4">Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
-                      <div><label className="block text-sm text-gray-600 mb-1">Session Cost</label><input value={editContent.sessionCost} onChange={e => setEditContent({ ...editContent, sessionCost: e.target.value })} className="w-full px-3 py-2 border rounded-lg" /></div>
-                      <div><label className="block text-sm text-gray-600 mb-1">Venmo</label><input value={editContent.venmoUsername} onChange={e => setEditContent({ ...editContent, venmoUsername: e.target.value })} className="w-full px-3 py-2 border rounded-lg" /></div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Session Cost</label>
+                        <StableInput value={content.sessionCost} onSave={(v) => updateContent('sessionCost', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Venmo Username</label>
+                        <StableInput value={content.venmoUsername} onSave={(v) => updateContent('venmoUsername', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Morning Session</label>
+                        <StableInput value={content.sessionMorning} onSave={(v) => updateContent('sessionMorning', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Afternoon Session</label>
+                        <StableInput value={content.sessionAfternoon} onSave={(v) => updateContent('sessionAfternoon', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Camp Dates</label>
+                        <StableInput value={content.campDates} onSave={(v) => updateContent('campDates', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Age Range</label>
+                        <StableInput value={content.ageRange} onSave={(v) => updateContent('ageRange', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
                     </div>
                   </div>
-                  <button onClick={() => saveContent(editContent)} className="w-full bg-green-700 text-white font-bold py-3 rounded-lg">Save Changes</button>
+
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold mb-4">Contact</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Email</label>
+                        <StableInput value={content.contactEmail} onSave={(v) => updateContent('contactEmail', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Phone</label>
+                        <StableInput value={content.contactPhone} onSave={(v) => updateContent('contactPhone', v)} className="w-full px-3 py-2 border rounded-lg" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-sm text-gray-600 mb-1">Location Address</label>
+                        <StableTextarea value={content.locationAddress} onSave={(v) => updateContent('locationAddress', v)} className="w-full px-3 py-2 border rounded-lg" rows={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold mb-4">About</h3>
+                    <label className="block text-sm text-gray-600 mb-1">About Text</label>
+                    <StableTextarea value={content.aboutText} onSave={(v) => updateContent('aboutText', v)} className="w-full px-3 py-2 border rounded-lg" rows={4} />
+                  </div>
+                </div>
+              )}
+
+              {adminTab === 'history' && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="font-bold text-lg text-green-800 mb-4">📜 Change History</h3>
+                  {changeHistory.length === 0 ? (
+                    <p className="text-gray-500">No changes recorded yet</p>
+                  ) : (
+                    <div className="space-y-2 max-h-96 overflow-y-auto">
+                      {changeHistory.map(entry => (
+                        <div key={entry.id} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50">
+                          <div className="text-xs text-gray-400 whitespace-nowrap pt-0.5">
+                            {formatTimestamp(entry.timestamp)}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-800">{entry.action}</div>
+                            <div className="text-sm text-gray-600">{entry.details}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editCounselor?.id ? 'Edit Counselor' : 'Add Counselor'}>
               {editCounselor && (
-                <div className="space-y-4">
-                  <ImageUpload currentImage={editCounselor.photo} onImageChange={img => setEditCounselor({ ...editCounselor, photo: img })} label="Photo" circular />
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <input value={editCounselor.name} onChange={e => setEditCounselor({ ...editCounselor, name: e.target.value })} className="px-3 py-2 border rounded-lg" placeholder="Name" />
-                    <input value={editCounselor.email} onChange={e => setEditCounselor({ ...editCounselor, email: e.target.value })} className="px-3 py-2 border rounded-lg" placeholder="Email" />
-                    <input value={editCounselor.phone} onChange={e => setEditCounselor({ ...editCounselor, phone: formatPhone(e.target.value) })} className="px-3 py-2 border rounded-lg" placeholder="Phone" />
-                    <input value={editCounselor.position} onChange={e => setEditCounselor({ ...editCounselor, position: e.target.value })} className="px-3 py-2 border rounded-lg" placeholder="Position" />
-                  </div>
-                  <textarea value={editCounselor.bio} onChange={e => setEditCounselor({ ...editCounselor, bio: e.target.value })} className="w-full px-3 py-2 border rounded-lg" rows={3} placeholder="Bio" />
-                  <div className="flex gap-4">
-                    <button onClick={() => setShowModal(false)} className="flex-1 py-2 bg-gray-200 rounded-lg">Cancel</button>
-                    <button onClick={() => {
-                      const updated = editCounselor.id ? counselors.map(c => c.id === editCounselor.id ? editCounselor : c) : [...counselors, { ...editCounselor, id: 'c_' + Date.now(), order: counselors.length }];
-                      saveCounselors(updated);
-                      setShowModal(false);
-                    }} className="flex-1 py-2 bg-green-600 text-white rounded-lg">Save</button>
-                  </div>
-                </div>
+                <CounselorEditForm
+                  counselor={editCounselor}
+                  onSave={(form) => {
+                    const isNew = !editCounselor.id;
+                    const updated = isNew
+                      ? [...counselors, { ...form, id: 'c_' + Date.now(), order: counselors.length }]
+                      : counselors.map(c => c.id === editCounselor.id ? { ...form, id: editCounselor.id } : c);
+                    const action = isNew ? `Added counselor ${form.name}` : `Updated ${form.name}`;
+                    saveCounselors(updated, action);
+                    setShowModal(false);
+                  }}
+                  onCancel={() => setShowModal(false)}
+                />
               )}
             </Modal>
           </div>
@@ -919,11 +1270,11 @@
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="font-bold text-lg mb-4">My Children</h3>
                   {myChildren.length > 0 && (
-                    <div className="space-y-2 mb-6">{myChildren.map(c => (
-                      <div key={c.id} className="p-3 border rounded-lg">
-                        <span className="font-medium">{c.name}</span>
-                        {c.grade && <span className="text-gray-500 ml-2">Grade: {c.grade}</span>}
-                      </div>
+                    <div className="space-y-4 mb-6">{myChildren.map(c => (
+                      <ChildCard key={c.id} child={c} onUpdate={(updatedChild) => {
+                        const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
+                        saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                      }} />
                     ))}</div>
                   )}
                   <AddChildForm onAdd={addChild} />
@@ -954,19 +1305,202 @@
         );
       };
 
-      const AddChildForm = ({ onAdd }) => {
+      const AddChildForm = ({ onAdd, onCancel }) => {
         const [name, setName] = useState('');
+        const [birthdate, setBirthdate] = useState('');
         const [grade, setGrade] = useState('');
+        const [phone, setPhone] = useState('');
+        const [photo, setPhoto] = useState(null);
+        const [showCrop, setShowCrop] = useState(false);
+        const [tempImg, setTempImg] = useState(null);
+        const inputRef = useRef(null);
+
+        const age = calculateAge(birthdate);
+
+        const handleFile = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setTempImg(reader.result);
+              setShowCrop(true);
+            };
+            reader.readAsDataURL(file);
+          }
+          if (e.target) e.target.value = '';
+        };
+
+        const handleSubmit = () => {
+          if (!name || !birthdate || !grade) return;
+          onAdd({ name, birthdate, grade, phone, photo });
+          setName(''); setBirthdate(''); setGrade(''); setPhone(''); setPhoto(null);
+        };
+
+        if (showCrop && tempImg) {
+          return (
+            <ImageCropper
+              image={tempImg}
+              onSave={(img) => { setPhoto(img); setShowCrop(false); }}
+              onCancel={() => { setShowCrop(false); setTempImg(null); }}
+            />
+          );
+        }
+
         return (
-          <div className="border-t pt-4">
-            <h4 className="font-medium mb-3">Add Child</h4>
-            <div className="flex gap-3">
-              <input value={name} onChange={e => setName(e.target.value)} className="flex-1 px-3 py-2 border rounded-lg" placeholder="Child's name" />
-              <select value={grade} onChange={e => setGrade(e.target.value)} className="px-3 py-2 border rounded-lg">
-                <option value="">Grade</option>
-                {['3rd', '4th', '5th', '6th', '7th', '8th'].map(g => <option key={g}>{g}</option>)}
+          <div className="border-t pt-4 space-y-4">
+            <h4 className="font-medium text-lg">Add Child</h4>
+
+            {/* Photo Upload with Face Silhouette Placeholder */}
+            <div className="flex justify-center">
+              {photo ? (
+                <div className="relative">
+                  <img src={photo} className="w-24 h-24 rounded-full object-cover border-2 border-green-600" />
+                  <button onClick={() => inputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm">✎</button>
+                  <button onClick={() => setPhoto(null)}
+                    className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">×</button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => inputRef.current?.click()}
+                  className="w-24 h-24 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300"
+                >
+                  <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                  <span className="text-xs text-gray-500 mt-1">Add Photo</span>
+                </div>
+              )}
+              <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </div>
+            <p className="text-xs text-gray-500 text-center">Photo helps us recognize your child at camp</p>
+
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Child's Name *</label>
+              <input value={name} onChange={e => setName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg" placeholder="Full name"
+                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+            </div>
+
+            {/* Birthdate & Calculated Age */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
+                <input type="date" value={birthdate} onChange={e => setBirthdate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  max={new Date().toISOString().split('T')[0]} data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700">
+                  {age !== null ? `${age} years old` : 'Select birthdate'}
+                </div>
+              </div>
+            </div>
+
+            {/* Grade */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Grade (Fall 2026) *</label>
+              <select value={grade} onChange={e => setGrade(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Select grade</option>
+                <option value="3rd">3rd Grade</option>
+                <option value="4th">4th Grade</option>
+                <option value="5th">5th Grade</option>
+                <option value="6th">6th Grade</option>
+                <option value="7th">7th Grade</option>
+                <option value="8th">8th Grade</option>
               </select>
-              <button onClick={() => { if (name) { onAdd({ name, grade }); setName(''); setGrade(''); } }} className="px-4 py-2 bg-green-600 text-white rounded-lg">Add</button>
+            </div>
+
+            {/* Phone (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Child's Phone <span className="text-gray-400">(optional)</span>
+              </label>
+              <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234"
+                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+              <p className="text-xs text-gray-500 mt-1">If your child has a phone for emergencies</p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-4 pt-4">
+              {onCancel && <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>}
+              <button onClick={handleSubmit} disabled={!name || !birthdate || !grade}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-green-700 disabled:hover:bg-gray-300">
+                Add Child
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== CHILD CARD ====================
+      const ChildCard = ({ child, onUpdate }) => {
+        const inputRef = useRef(null);
+        const [tempImg, setTempImg] = useState(null);
+        const [showCrop, setShowCrop] = useState(false);
+        const age = calculateAge(child.birthdate);
+
+        const handleFile = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); };
+            reader.readAsDataURL(file);
+          }
+          if (e.target) e.target.value = '';
+        };
+
+        if (showCrop && tempImg) {
+          return (
+            <div className="border rounded-lg p-4">
+              <ImageCropper
+                image={tempImg}
+                onSave={(img) => { onUpdate({ ...child, photo: img }); setShowCrop(false); }}
+                onCancel={() => { setShowCrop(false); setTempImg(null); }}
+              />
+            </div>
+          );
+        }
+
+        return (
+          <div className="border rounded-lg p-4 flex items-start gap-4">
+            {/* Photo with edit button or face placeholder */}
+            <div className="flex-shrink-0">
+              {child.photo ? (
+                <div className="relative">
+                  <img src={child.photo} className="w-20 h-20 rounded-full object-cover border-2 border-green-600" />
+                  <button onClick={() => inputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                </div>
+              ) : (
+                <div onClick={() => inputRef.current?.click()}
+                  className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                  <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                  <span className="text-xs text-gray-500">Add</span>
+                </div>
+              )}
+              <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1">
+              <div className="font-bold text-lg">{child.name}</div>
+              <div className="text-sm text-gray-600 space-y-1">
+                {child.grade && <div>Grade: {child.grade}</div>}
+                {child.birthdate && (
+                  <div>
+                    Birthday: {new Date(child.birthdate + 'T12:00:00').toLocaleDateString()}
+                    {age !== null && <span className="text-green-600 font-medium"> ({age} years old)</span>}
+                  </div>
+                )}
+                {child.phone && <div>Phone: {child.phone}</div>}
+              </div>
             </div>
           </div>
         );
@@ -1068,7 +1602,7 @@
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
           {page === 'home' && <Home />}
           {page === 'schedule' && <Schedule />}
-          {page === 'counselors' && <CounselorsPage />}
+          {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
           {page === 'admin' && user?.role === 'admin' && <Admin />}
           {page === 'parent' && user?.role === 'parent' && <Parent />}
