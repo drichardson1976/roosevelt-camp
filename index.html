@@ -43,18 +43,32 @@
     const supabase = SUPABASE_URL.includes('YOUR_') 
       ? null 
       : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-          db: { schema: SCHEMA }
+          db: { schema: SCHEMA },
+          global: {
+            headers: {
+              'Accept-Profile': SCHEMA,
+              'Content-Profile': SCHEMA
+            }
+          }
         });
     
     console.log(`🏀 Roosevelt Camp - Environment: ${ENV}, Schema: ${SCHEMA}`);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.053";
-    const BUILD_TIMESTAMP = "2026-01-29 12:45pm PST";
-    const BUILD_DATE = new Date("2026-01-29T12:45:00-08:00");
+    const VERSION = "12.054";
+    const BUILD_TIMESTAMP = "2026-01-29 1:15pm PST";
+    const BUILD_DATE = new Date("2026-01-29T13:15:00-08:00");
     
     // ==================== RELEASE NOTES ====================
     const RELEASE_NOTES = [
+      {
+        version: "12.054",
+        date: "2026-01-29",
+        changes: [
+          "Fixed Supabase schema connection using Accept-Profile headers",
+          "Dev and production now correctly connect to separate schemas"
+        ]
+      },
       {
         version: "12.053",
         date: "2026-01-29",
