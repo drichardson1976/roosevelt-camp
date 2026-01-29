@@ -43,10 +43,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.064";
+    const VERSION = "12.065";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.065", date: "2026-01-29", changes: [
+        "Added Parents tab in admin to view all registered parents and campers",
+        "Two-way in-app messaging system between admin and parents",
+        "Message individual, multiple, or all parents",
+        "Parents see messages in dashboard with unread indicators",
+        "Conversation threads with reply functionality"
+      ]},
       { version: "12.064", date: "2026-01-29", changes: [
         "Fixed modal closing when selecting text in edit forms",
         "Enhanced photo editing: adjust zoom/position, delete, or upload new",
@@ -437,6 +444,658 @@
       );
     };
 
+    // ==================== PARENTS TAB ====================
+    const ParentsTab = ({ users, registrations, messages, onSendMessage, showToast, addToHistory }) => {
+      const [searchTerm, setSearchTerm] = useState('');
+      const [selectedParents, setSelectedParents] = useState([]);
+      const [expandedParent, setExpandedParent] = useState(null);
+      const [showComposer, setShowComposer] = useState(false);
+      const [composerMode, setComposerMode] = useState('single'); // 'single', 'selected', 'all'
+      const [composerRecipient, setComposerRecipient] = useState(null);
+      const [viewingThread, setViewingThread] = useState(null);
+
+      const filteredUsers = users.filter(u =>
+        u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      const getParentRegs = (email) => registrations.filter(r => r.parentEmail === email);
+      const getParentMessages = (email) => messages.filter(m =>
+        m.to === 'all' || m.to?.includes(email) || m.from === email
+      );
+
+      const toggleSelectParent = (email) => {
+        setSelectedParents(prev =>
+          prev.includes(email) ? prev.filter(e => e !== email) : [...prev, email]
+        );
+      };
+
+      const selectAll = () => {
+        if (selectedParents.length === filteredUsers.length) {
+          setSelectedParents([]);
+        } else {
+          setSelectedParents(filteredUsers.map(u => u.email));
+        }
+      };
+
+      const openComposer = (mode, recipient = null) => {
+        setComposerMode(mode);
+        setComposerRecipient(recipient);
+        setShowComposer(true);
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Header with search and actions */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="font-bold text-xl text-green-800">👨‍👩‍👧 Parents & Campers</h3>
+                <p className="text-sm text-gray-500">{users.length} registered parents</p>
+              </div>
+              <div className="flex gap-2">
+                {selectedParents.length > 0 && (
+                  <button
+                    onClick={() => openComposer('selected')}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    ✉️ Message Selected ({selectedParents.length})
+                  </button>
+                )}
+                <button
+                  onClick={() => openComposer('all')}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  📢 Message All Parents
+                </button>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="flex gap-4 items-center">
+              <input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search parents by name or email..."
+                className="flex-1 px-4 py-2 border rounded-lg"
+                autoComplete="off"
+                data-1p-ignore="true"
+              />
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={selectedParents.length === filteredUsers.length && filteredUsers.length > 0}
+                  onChange={selectAll}
+                  className="w-4 h-4"
+                />
+                Select All
+              </label>
+            </div>
+          </div>
+
+          {/* Parents List */}
+          {filteredUsers.length === 0 ? (
+            <div className="bg-white rounded-xl shadow p-12 text-center text-gray-500">
+              <p className="text-4xl mb-4">👨‍👩‍👧</p>
+              <p>{users.length === 0 ? 'No parents have registered yet' : 'No parents match your search'}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredUsers.map(parent => {
+                const regs = getParentRegs(parent.email);
+                const parentMsgs = getParentMessages(parent.email);
+                const isExpanded = expandedParent === parent.email;
+                const approvedRegs = regs.filter(r => r.status === 'approved').length;
+                const pendingRegs = regs.filter(r => r.status === 'pending').length;
+
+                return (
+                  <div key={parent.email} className="bg-white rounded-xl shadow overflow-hidden">
+                    {/* Parent Header */}
+                    <div className="p-4 flex items-center gap-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedParents.includes(parent.email)}
+                        onChange={() => toggleSelectParent(parent.email)}
+                        className="w-5 h-5"
+                      />
+
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => setExpandedParent(isExpanded ? null : parent.email)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-green-200 flex items-center justify-center text-xl font-bold text-green-700">
+                            {parent.name?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-800">{parent.name}</div>
+                            <div className="text-sm text-gray-500">{parent.email}</div>
+                            {parent.phone && <div className="text-sm text-gray-500">{parent.phone}</div>}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex gap-4 text-center">
+                        <div>
+                          <div className="text-lg font-bold text-blue-600">{parent.children?.length || 0}</div>
+                          <div className="text-xs text-gray-500">Campers</div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-bold text-green-600">{approvedRegs}</div>
+                          <div className="text-xs text-gray-500">Approved</div>
+                        </div>
+                        {pendingRegs > 0 && (
+                          <div>
+                            <div className="text-lg font-bold text-yellow-600">{pendingRegs}</div>
+                            <div className="text-xs text-gray-500">Pending</div>
+                          </div>
+                        )}
+                        <div>
+                          <div className="text-lg font-bold text-purple-600">{parentMsgs.length}</div>
+                          <div className="text-xs text-gray-500">Messages</div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openComposer('single', parent); }}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
+                        >
+                          ✉️ Message
+                        </button>
+                        <button
+                          onClick={() => setExpandedParent(isExpanded ? null : parent.email)}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm"
+                        >
+                          {isExpanded ? '▲ Less' : '▼ More'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded Details */}
+                    {isExpanded && (
+                      <div className="border-t bg-gray-50 p-4">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {/* Children */}
+                          <div>
+                            <h4 className="font-bold text-gray-700 mb-3">👧 Campers ({parent.children?.length || 0})</h4>
+                            {!parent.children?.length ? (
+                              <p className="text-gray-500 text-sm">No campers added yet</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {parent.children.map(child => (
+                                  <div key={child.id} className="flex items-center gap-3 p-2 bg-white rounded-lg">
+                                    {child.photo ? (
+                                      <img src={child.photo} className="w-10 h-10 rounded-full object-cover" />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-full bg-green-200 flex items-center justify-center text-sm">
+                                        {child.name?.[0]}
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="font-medium">{child.name}</div>
+                                      <div className="text-xs text-gray-500">
+                                        {child.grade && `Grade ${child.grade}`}
+                                        {child.birthdate && ` • ${calculateAge(child.birthdate)} years old`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Message History */}
+                          <div>
+                            <h4 className="font-bold text-gray-700 mb-3">💬 Recent Messages</h4>
+                            {parentMsgs.length === 0 ? (
+                              <p className="text-gray-500 text-sm">No messages yet</p>
+                            ) : (
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {parentMsgs.slice(0, 5).map(msg => (
+                                  <div
+                                    key={msg.id}
+                                    onClick={() => setViewingThread({ parentEmail: parent.email, parent })}
+                                    className="p-2 bg-white rounded-lg cursor-pointer hover:bg-blue-50"
+                                  >
+                                    <div className="flex justify-between text-xs text-gray-500">
+                                      <span>{msg.from === 'admin' ? '📤 You' : '📥 ' + parent.name}</span>
+                                      <span>{formatTimestamp(msg.sentAt)}</span>
+                                    </div>
+                                    <div className="text-sm truncate">{msg.subject || msg.body}</div>
+                                  </div>
+                                ))}
+                                {parentMsgs.length > 5 && (
+                                  <button
+                                    onClick={() => setViewingThread({ parentEmail: parent.email, parent })}
+                                    className="text-sm text-blue-600 hover:underline"
+                                  >
+                                    View all {parentMsgs.length} messages →
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Message Composer Modal */}
+          {showComposer && (
+            <MessageComposer
+              mode={composerMode}
+              recipient={composerRecipient}
+              selectedParents={composerMode === 'selected' ? users.filter(u => selectedParents.includes(u.email)) : []}
+              allParents={users}
+              onSend={(msg) => {
+                onSendMessage(msg);
+                const recipientDesc = composerMode === 'all' ? 'all parents' :
+                  composerMode === 'selected' ? `${selectedParents.length} parents` :
+                  composerRecipient?.name;
+                addToHistory('Message Sent', `Sent message to ${recipientDesc}: "${msg.subject}"`);
+                showToast('Message sent!');
+                setShowComposer(false);
+                setSelectedParents([]);
+              }}
+              onCancel={() => setShowComposer(false)}
+            />
+          )}
+
+          {/* Thread Viewer Modal */}
+          {viewingThread && (
+            <ThreadViewer
+              parent={viewingThread.parent}
+              messages={messages}
+              onSendReply={(msg) => {
+                onSendMessage(msg);
+                addToHistory('Message Sent', `Replied to ${viewingThread.parent.name}`);
+                showToast('Reply sent!');
+              }}
+              onClose={() => setViewingThread(null)}
+            />
+          )}
+        </div>
+      );
+    };
+
+    // ==================== MESSAGE COMPOSER ====================
+    const MessageComposer = ({ mode, recipient, selectedParents, allParents, onSend, onCancel }) => {
+      const [subject, setSubject] = useState('');
+      const [body, setBody] = useState('');
+      const mouseDownTarget = useRef(null);
+
+      const getRecipientText = () => {
+        if (mode === 'all') return `All Parents (${allParents.length})`;
+        if (mode === 'selected') return selectedParents.map(p => p.name).join(', ');
+        return recipient?.name || '';
+      };
+
+      const getRecipientEmails = () => {
+        if (mode === 'all') return 'all';
+        if (mode === 'selected') return selectedParents.map(p => p.email);
+        return [recipient?.email];
+      };
+
+      const handleSend = () => {
+        if (!subject.trim() || !body.trim()) return;
+        const msg = {
+          id: 'msg_' + Date.now(),
+          threadId: mode === 'single' ? recipient?.email : 'broadcast_' + Date.now(),
+          from: 'admin',
+          to: getRecipientEmails(),
+          subject: subject.trim(),
+          body: body.trim(),
+          sentAt: new Date().toISOString(),
+          readBy: ['admin']
+        };
+        onSend(msg);
+      };
+
+      const handleBackdropMouseDown = (e) => { mouseDownTarget.current = e.target; };
+      const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
+          onCancel();
+        }
+      };
+
+      return (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onMouseDown={handleBackdropMouseDown}
+          onClick={handleBackdropClick}
+        >
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4 flex justify-between items-center">
+              <h2 className="font-display text-2xl">✉️ New Message</h2>
+              <button onClick={onCancel} className="text-2xl hover:bg-blue-500 rounded px-2">×</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
+                <div className="px-4 py-2 bg-gray-100 rounded-lg text-gray-700">
+                  {mode === 'all' && <span className="text-blue-600 font-medium">📢 </span>}
+                  {getRecipientText()}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subject:</label>
+                <input
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  placeholder="Message subject..."
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Message:</label>
+                <textarea
+                  value={body}
+                  onChange={e => setBody(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-lg"
+                  rows={6}
+                  placeholder="Type your message here..."
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSend}
+                  disabled={!subject.trim() || !body.trim()}
+                  className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+                >
+                  Send Message
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== THREAD VIEWER ====================
+    const ThreadViewer = ({ parent, messages, onSendReply, onClose }) => {
+      const [replyText, setReplyText] = useState('');
+      const messagesEndRef = useRef(null);
+      const mouseDownTarget = useRef(null);
+
+      const threadMessages = messages
+        .filter(m => m.to === 'all' || m.to?.includes(parent.email) || m.from === parent.email)
+        .sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+
+      useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [threadMessages.length]);
+
+      const handleSendReply = () => {
+        if (!replyText.trim()) return;
+        const msg = {
+          id: 'msg_' + Date.now(),
+          threadId: parent.email,
+          from: 'admin',
+          to: [parent.email],
+          subject: '',
+          body: replyText.trim(),
+          sentAt: new Date().toISOString(),
+          readBy: ['admin']
+        };
+        onSendReply(msg);
+        setReplyText('');
+      };
+
+      const handleBackdropMouseDown = (e) => { mouseDownTarget.current = e.target; };
+      const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
+          onClose();
+        }
+      };
+
+      return (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onMouseDown={handleBackdropMouseDown}
+          onClick={handleBackdropClick}
+        >
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="bg-green-700 text-white px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="font-display text-2xl">💬 Conversation</h2>
+                <p className="text-green-200 text-sm">with {parent.name}</p>
+              </div>
+              <button onClick={onClose} className="text-2xl hover:bg-green-600 rounded px-2">×</button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50" style={{ maxHeight: '50vh' }}>
+              {threadMessages.length === 0 ? (
+                <p className="text-center text-gray-500 py-8">No messages yet. Start the conversation!</p>
+              ) : (
+                threadMessages.map(msg => (
+                  <div
+                    key={msg.id}
+                    className={`flex ${msg.from === 'admin' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-lg p-3 ${
+                        msg.from === 'admin'
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white border'
+                      }`}
+                    >
+                      {msg.subject && <div className="font-bold text-sm mb-1">{msg.subject}</div>}
+                      <div className="whitespace-pre-wrap">{msg.body}</div>
+                      <div className={`text-xs mt-1 ${msg.from === 'admin' ? 'text-blue-200' : 'text-gray-400'}`}>
+                        {formatTimestamp(msg.sentAt)}
+                        {msg.to === 'all' && <span className="ml-2">📢 Broadcast</span>}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Reply Input */}
+            <div className="border-t p-4 bg-white">
+              <div className="flex gap-2">
+                <textarea
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  className="flex-1 px-4 py-2 border rounded-lg resize-none"
+                  rows={2}
+                  placeholder="Type your reply..."
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendReply();
+                    }
+                  }}
+                />
+                <button
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim()}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+                >
+                  Send
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Press Enter to send, Shift+Enter for new line</p>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== PARENT MESSAGES TAB ====================
+    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast }) => {
+      const [replyText, setReplyText] = useState('');
+      const [selectedMsg, setSelectedMsg] = useState(null);
+      const messagesEndRef = useRef(null);
+
+      // Get messages for this parent (sent to them or to all, or from them)
+      const myMessages = messages
+        .filter(m => m.to === 'all' || m.to?.includes(userEmail) || m.from === userEmail)
+        .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+      const unreadMessages = myMessages.filter(m => m.from !== userEmail && !m.readBy?.includes(userEmail));
+
+      useEffect(() => {
+        // Mark messages as read when viewing
+        if (selectedMsg && !selectedMsg.readBy?.includes(userEmail)) {
+          markAsRead(selectedMsg.id, userEmail);
+        }
+      }, [selectedMsg]);
+
+      const handleSendReply = () => {
+        if (!replyText.trim() || !selectedMsg) return;
+        const msg = {
+          id: 'msg_' + Date.now(),
+          threadId: selectedMsg.threadId || selectedMsg.from === 'admin' ? userEmail : selectedMsg.threadId,
+          from: userEmail,
+          to: ['admin'],
+          subject: selectedMsg.subject ? `Re: ${selectedMsg.subject}` : '',
+          body: replyText.trim(),
+          sentAt: new Date().toISOString(),
+          readBy: [userEmail]
+        };
+        onSendReply(msg);
+        setReplyText('');
+        showToast('Reply sent!');
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Unread Alert */}
+          {unreadMessages.length > 0 && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-4">
+              <div className="text-3xl">📬</div>
+              <div>
+                <div className="font-bold text-blue-800">You have {unreadMessages.length} unread message{unreadMessages.length > 1 ? 's' : ''}</div>
+                <div className="text-sm text-blue-600">Click on a message to read and reply</div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Message List */}
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-bold text-lg text-green-800 mb-4">💬 Messages from Camp</h3>
+              {myMessages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-4xl mb-2">📭</p>
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {myMessages.map(msg => {
+                    const isUnread = msg.from !== userEmail && !msg.readBy?.includes(userEmail);
+                    const isSelected = selectedMsg?.id === msg.id;
+                    const isFromMe = msg.from === userEmail;
+
+                    return (
+                      <div
+                        key={msg.id}
+                        onClick={() => setSelectedMsg(msg)}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                          isSelected ? 'bg-green-100 border-2 border-green-500' :
+                          isUnread ? 'bg-blue-50 border-2 border-blue-300' :
+                          'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`text-sm ${isUnread ? 'font-bold text-blue-800' : 'text-gray-600'}`}>
+                            {isFromMe ? '📤 You' : '📥 Camp Admin'}
+                            {msg.to === 'all' && !isFromMe && <span className="ml-1 text-xs text-purple-600">(Broadcast)</span>}
+                          </span>
+                          <span className="text-xs text-gray-400">{formatTimestamp(msg.sentAt)}</span>
+                        </div>
+                        {msg.subject && <div className={`text-sm ${isUnread ? 'font-bold' : 'font-medium'}`}>{msg.subject}</div>}
+                        <div className="text-sm text-gray-600 truncate">{msg.body}</div>
+                        {isUnread && <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded">New</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Message Detail / Reply */}
+            <div className="bg-white rounded-xl shadow p-6">
+              {!selectedMsg ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-4xl mb-2">👈</p>
+                  <p>Select a message to read</p>
+                </div>
+              ) : (
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-lg">
+                        {selectedMsg.from === userEmail ? '📤 You sent' : '📥 From Camp Admin'}
+                      </span>
+                      <span className="text-sm text-gray-500">{formatTimestamp(selectedMsg.sentAt)}</span>
+                    </div>
+                    {selectedMsg.subject && (
+                      <div className="font-medium text-gray-800 mb-2">{selectedMsg.subject}</div>
+                    )}
+                    {selectedMsg.to === 'all' && selectedMsg.from !== userEmail && (
+                      <span className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded mb-2">
+                        📢 Sent to all parents
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 bg-gray-50 rounded-lg p-4 mb-4 whitespace-pre-wrap overflow-y-auto max-h-48">
+                    {selectedMsg.body}
+                  </div>
+
+                  {/* Reply section - only show for messages from admin */}
+                  {selectedMsg.from !== userEmail && (
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reply:</label>
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg resize-none"
+                        rows={3}
+                        placeholder="Type your reply..."
+                        autoComplete="off"
+                        data-1p-ignore="true"
+                      />
+                      <button
+                        onClick={handleSendReply}
+                        disabled={!replyText.trim()}
+                        className="mt-2 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+                      >
+                        Send Reply
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     // ==================== VERSION BANNER ====================
     const VersionBanner = ({ isVisible, isDev }) => {
       const [elapsed, setElapsed] = useState('0s');
@@ -630,6 +1289,7 @@
       const [users, setUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
+      const [messages, setMessages] = useState([]);
       
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -654,6 +1314,8 @@
             if (av?.[0]?.data) setAvailability(av[0].data);
             const ch = await storage.get('camp_change_history');
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
+            const ms = await storage.get('camp_messages');
+            if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -697,6 +1359,32 @@
 
       const saveUsers = async (u) => { setUsers(u); await storage.set('camp_registered_users', 'main', u); };
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
+
+      const saveMessage = async (msg) => {
+        const newMsgs = [...messages, msg];
+        setMessages(newMsgs);
+        await storage.set('camp_messages', msg.id, msg);
+      };
+
+      const markMessageRead = async (msgId, readerEmail) => {
+        const updated = messages.map(m => {
+          if (m.id === msgId && !m.readBy?.includes(readerEmail)) {
+            return { ...m, readBy: [...(m.readBy || []), readerEmail] };
+          }
+          return m;
+        });
+        setMessages(updated);
+        const msg = updated.find(m => m.id === msgId);
+        if (msg) await storage.set('camp_messages', msg.id, msg);
+      };
+
+      const getUnreadCount = (email) => {
+        return messages.filter(m =>
+          (m.to === 'all' || m.to?.includes(email)) &&
+          m.from !== email &&
+          !m.readBy?.includes(email)
+        ).length;
+      };
 
       const getPending = () => registrations.filter(r => r.status === 'pending').length;
       const getApproved = () => registrations.filter(r => r.status === 'approved').length;
@@ -921,9 +1609,11 @@
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'registrations', 'counselors', 'content', 'history'].map(t => (
+                {['dashboard', 'registrations', 'parents', 'counselors', 'content', 'history'].map(t => (
                   <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 capitalize border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'history' ? '📜 History' : t}{t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
+                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t}
+                    {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
+                    {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
                   </button>
                 ))}
               </div>
@@ -1137,6 +1827,17 @@
                 </div>
               )}
 
+              {adminTab === 'parents' && (
+                <ParentsTab
+                  users={users}
+                  registrations={registrations}
+                  messages={messages}
+                  onSendMessage={saveMessage}
+                  showToast={showToast}
+                  addToHistory={addToHistory}
+                />
+              )}
+
               {adminTab === 'history' && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="font-bold text-lg text-green-800 mb-4">📜 Change History</h3>
@@ -1258,8 +1959,13 @@
             
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1">
-                {['dashboard', 'register', 'children'].map(t => (
-                  <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 capitalize border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>{t}</button>
+                {['dashboard', 'register', 'children', 'messages'].map(t => (
+                  <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 capitalize border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    {t === 'messages' ? '💬 Messages' : t}
+                    {t === 'messages' && getUnreadCount(user?.email) > 0 && (
+                      <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
+                    )}
+                  </button>
                 ))}
               </div>
             </div>
@@ -1373,6 +2079,17 @@
                   )}
                   <AddChildForm onAdd={addChild} />
                 </div>
+              )}
+
+              {parentTab === 'messages' && (
+                <ParentMessagesTab
+                  userEmail={user?.email}
+                  userName={user?.name}
+                  messages={messages}
+                  onSendReply={saveMessage}
+                  markAsRead={markMessageRead}
+                  showToast={showToast}
+                />
               )}
             </div>
 
