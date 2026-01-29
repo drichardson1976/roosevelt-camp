@@ -43,10 +43,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.063";
+    const VERSION = "12.064";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.064", date: "2026-01-29", changes: [
+        "Fixed modal closing when selecting text in edit forms",
+        "Enhanced photo editing: adjust zoom/position, delete, or upload new",
+        "Added counselor reordering with up/down arrows",
+        "Counselor order persists and displays on public website"
+      ]},
       { version: "12.063", date: "2026-01-29", changes: [
         "Fixed 1Password popup with data-1p-ignore attributes",
         "Admin shows as 'Admin' - click to go to admin portal",
@@ -273,6 +279,7 @@
       const inputRef = useRef(null);
       const [tempImg, setTempImg] = useState(null);
       const [showCrop, setShowCrop] = useState(false);
+      const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
       const update = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -282,14 +289,20 @@
         const file = e.target.files?.[0];
         if (file) {
           const reader = new FileReader();
-          reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); };
+          reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); setShowPhotoOptions(false); };
           reader.readAsDataURL(file);
         }
         if (e.target) e.target.value = '';
       };
 
+      const handleAdjustPhoto = () => {
+        setTempImg(form.photo);
+        setShowCrop(true);
+        setShowPhotoOptions(false);
+      };
+
       if (showCrop && tempImg) {
-        return <ImageCropper image={tempImg} onSave={(img) => { update('photo', img); setShowCrop(false); }} onCancel={() => setShowCrop(false)} />;
+        return <ImageCropper image={tempImg} onSave={(img) => { update('photo', img); setShowCrop(false); setTempImg(null); }} onCancel={() => { setShowCrop(false); setTempImg(null); }} />;
       }
 
       return (
@@ -297,9 +310,28 @@
           <div className="flex items-center gap-4">
             {form.photo ? (
               <div className="relative">
-                <img src={form.photo} className="w-20 h-20 rounded-full object-cover border-2 border-green-600" />
-                <button onClick={() => inputRef.current?.click()} className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
-                <button onClick={() => update('photo', null)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">×</button>
+                <img
+                  src={form.photo}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-green-600 cursor-pointer hover:opacity-80"
+                  onClick={() => setShowPhotoOptions(true)}
+                />
+                {showPhotoOptions && (
+                  <div className="absolute top-0 left-24 bg-white rounded-lg shadow-lg border p-2 z-10 min-w-[140px]">
+                    <button onClick={handleAdjustPhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm flex items-center gap-2">
+                      <span>🔍</span> Adjust Photo
+                    </button>
+                    <button onClick={() => { inputRef.current?.click(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm flex items-center gap-2">
+                      <span>📷</span> Upload New
+                    </button>
+                    <button onClick={() => { update('photo', null); setShowPhotoOptions(false); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded text-sm flex items-center gap-2">
+                      <span>🗑️</span> Delete Photo
+                    </button>
+                    <hr className="my-1" />
+                    <button onClick={() => setShowPhotoOptions(false)} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm text-gray-500">
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div onClick={() => inputRef.current?.click()} className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
@@ -310,7 +342,7 @@
               </div>
             )}
             <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-            <div className="flex-1 text-sm text-gray-500">Click to add/change photo</div>
+            <div className="flex-1 text-sm text-gray-500">{form.photo ? 'Click photo for options' : 'Click to add photo'}</div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -466,13 +498,28 @@
     };
 
     const Modal = ({ isOpen, onClose, title, children }) => {
+      const mouseDownTarget = useRef(null);
+
       if (!isOpen) return null;
+
+      const handleMouseDown = (e) => {
+        mouseDownTarget.current = e.target;
+      };
+
+      const handleClick = (e) => {
+        // Only close if both mousedown and click happened on the backdrop itself
+        if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
+          onClose();
+        }
+        mouseDownTarget.current = null;
+      };
+
       return (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onMouseDown={handleMouseDown} onClick={handleClick}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
             <div className="bg-green-800 text-white px-6 py-4 flex justify-between items-center">
               <h2 className="font-display text-2xl">{title}</h2>
-              <button onClick={onClose} className="text-2xl">×</button>
+              <button onClick={onClose} className="text-2xl hover:bg-green-700 rounded px-2">×</button>
             </div>
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
           </div>
@@ -943,23 +990,70 @@
 
               {adminTab === 'counselors' && (
                 <div>
-                  <div className="flex justify-between mb-4">
-                    <h2 className="font-bold text-xl">Counselors</h2>
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h2 className="font-bold text-xl">Counselors</h2>
+                      <p className="text-sm text-gray-500">Use arrows to reorder • Changes save automatically</p>
+                    </div>
                     <button onClick={() => { setEditCounselor({ name: '', email: '', phone: '', position: '', year: '', bio: '', photo: null, visible: true }); setShowModal(true); }} className="bg-green-600 text-white px-4 py-2 rounded-lg">+ Add</button>
                   </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {counselors.map(c => (
+                  <div className="space-y-3">
+                    {counselors.map((c, idx) => (
                       <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
-                        {c.photo ? <img src={c.photo} className="w-16 h-16 rounded-full object-cover" /> : <div className="w-16 h-16 rounded-full bg-green-200 flex items-center justify-center text-2xl">{c.name[0]}</div>}
+                        {/* Reorder buttons */}
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => {
+                              if (idx === 0) return;
+                              const newOrder = [...counselors];
+                              [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+                              const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
+                              saveCounselors(reordered, `Moved ${c.name} up`);
+                            }}
+                            disabled={idx === 0}
+                            className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === 0 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
+                            title="Move up"
+                          >▲</button>
+                          <button
+                            onClick={() => {
+                              if (idx === counselors.length - 1) return;
+                              const newOrder = [...counselors];
+                              [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                              const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
+                              saveCounselors(reordered, `Moved ${c.name} down`);
+                            }}
+                            disabled={idx === counselors.length - 1}
+                            className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === counselors.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
+                            title="Move down"
+                          >▼</button>
+                        </div>
+
+                        {/* Position number */}
+                        <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm">
+                          {idx + 1}
+                        </div>
+
+                        {/* Photo */}
+                        {c.photo ? <img src={c.photo} className="w-14 h-14 rounded-full object-cover" /> : <div className="w-14 h-14 rounded-full bg-green-200 flex items-center justify-center text-xl">{c.name[0]}</div>}
+
+                        {/* Info */}
                         <div className="flex-1">
                           <div className="font-bold">{c.name}</div>
                           <div className="text-sm text-gray-600">{c.position} • {c.year}</div>
+                          {!c.visible && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Hidden</span>}
                         </div>
-                        <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="text-blue-600 text-sm">Edit</button>
-                        <button onClick={() => { if (confirm('Delete?')) saveCounselors(counselors.filter(x => x.id !== c.id), `Deleted counselor ${c.name}`); }} className="text-red-600 text-sm">Delete</button>
+
+                        {/* Actions */}
+                        <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit</button>
+                        <button onClick={() => { if (confirm('Delete ' + c.name + '?')) saveCounselors(counselors.filter(x => x.id !== c.id).map((co, i) => ({ ...co, order: i })), `Deleted counselor ${c.name}`); }} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
                       </div>
                     ))}
                   </div>
+                  {counselors.length === 0 && (
+                    <div className="text-center py-12 text-gray-500">
+                      <p>No counselors yet. Click "+ Add" to add your first counselor.</p>
+                    </div>
+                  )}
                 </div>
               )}
 
