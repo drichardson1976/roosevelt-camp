@@ -43,10 +43,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.069";
+    const VERSION = "12.070";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.070", date: "2026-01-29", changes: [
+        "Standalone campers: Campers are now separate entities from parents",
+        "Many-to-many relationships: A camper can have multiple parents, and a parent can have multiple campers",
+        "Admin can add/edit/delete campers from Campers tab",
+        "Admin can add/edit/delete parents from Parents tab",
+        "Manage camper-parent associations from either tab",
+        "Backward compatible with legacy children data",
+        "Counselors tab has full CRUD (add/edit/delete/reorder)",
+        "Camper can only be assigned to ONE counselor per session (enforced)"
+      ]},
       { version: "12.069", date: "2026-01-29", changes: [
         "Admin management: Create, edit, delete admin accounts",
         "At least one admin always required",
@@ -598,7 +608,7 @@
     };
 
     // ==================== PARENTS TAB ====================
-    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory }) => {
+    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedParents, setSelectedParents] = useState([]);
       const [expandedParent, setExpandedParent] = useState(null);
@@ -611,6 +621,64 @@
       const [editingChild, setEditingChild] = useState(null);
       const [editingReg, setEditingReg] = useState(null);
       const [confirmDelete, setConfirmDelete] = useState(null); // { type: 'parent'|'child'|'registration', data: ... }
+      // Add parent state
+      const [showAddParent, setShowAddParent] = useState(false);
+      const [addParentForm, setAddParentForm] = useState({ name: '', email: '', password: '', phone: '' });
+      // Manage campers for parent
+      const [managingCampers, setManagingCampers] = useState(null);
+
+      // Get all campers (standalone + legacy)
+      const getAllCampers = () => {
+        const standaloneCampers = campers || [];
+        const legacyCampers = users.flatMap(u =>
+          (u.children || []).filter(c => !standaloneCampers.some(sc => sc.id === c.id))
+        );
+        return [...standaloneCampers, ...legacyCampers];
+      };
+
+      // Get campers linked to a parent
+      const getParentCampers = (parentEmail) => {
+        const linkedCamperIds = (camperParentLinks || [])
+          .filter(l => l.parentEmail === parentEmail)
+          .map(l => l.camperId);
+        const linkedCampers = (campers || []).filter(c => linkedCamperIds.includes(c.id));
+        // Also include legacy children
+        const parent = users.find(u => u.email === parentEmail);
+        const legacyChildren = (parent?.children || []).filter(c => !linkedCampers.some(lc => lc.id === c.id));
+        return [...linkedCampers, ...legacyChildren];
+      };
+
+      const handleAddParent = () => {
+        if (!addParentForm.name || !addParentForm.email || !addParentForm.password) {
+          showToast('Name, email, and password are required', 'error');
+          return;
+        }
+        if (users.some(u => u.email === addParentForm.email)) {
+          showToast('A parent with this email already exists', 'error');
+          return;
+        }
+        const newParent = {
+          ...addParentForm,
+          phone: formatPhone(addParentForm.phone),
+          role: 'parent',
+          children: [],
+          createdAt: new Date().toISOString()
+        };
+        onUpdateUsers([...users, newParent]);
+        addToHistory('Parent', `Added parent ${addParentForm.name}`);
+        setShowAddParent(false);
+        setAddParentForm({ name: '', email: '', password: '', phone: '' });
+        showToast('Parent added!');
+      };
+
+      const toggleCamperLink = (parentEmail, camperId) => {
+        const exists = (camperParentLinks || []).some(l => l.camperId === camperId && l.parentEmail === parentEmail);
+        if (exists) {
+          onSaveLinks(camperParentLinks.filter(l => !(l.camperId === camperId && l.parentEmail === parentEmail)));
+        } else {
+          onSaveLinks([...(camperParentLinks || []), { camperId, parentEmail }]);
+        }
+      };
 
       const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -665,6 +733,12 @@
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   📢 Message All Parents
+                </button>
+                <button
+                  onClick={() => setShowAddParent(true)}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  + Add Parent
                 </button>
               </div>
             </div>
@@ -794,12 +868,20 @@
                         <div className="grid md:grid-cols-2 gap-6">
                           {/* Children */}
                           <div>
-                            <h4 className="font-bold text-gray-700 mb-3">👧 Campers ({parent.children?.length || 0})</h4>
-                            {!parent.children?.length ? (
-                              <p className="text-gray-500 text-sm">No campers added yet</p>
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-bold text-gray-700">👧 Campers ({getParentCampers(parent.email).length})</h4>
+                              <button
+                                onClick={() => setManagingCampers(parent)}
+                                className="text-xs text-blue-600 hover:underline"
+                              >
+                                Manage Campers
+                              </button>
+                            </div>
+                            {getParentCampers(parent.email).length === 0 ? (
+                              <p className="text-gray-500 text-sm">No campers linked yet. Click "Manage Campers" to add.</p>
                             ) : (
                               <div className="space-y-2">
-                                {parent.children.map(child => (
+                                {getParentCampers(parent.email).map(child => (
                                   <div key={child.id} className="flex items-center gap-3 p-2 bg-white rounded-lg">
                                     {child.photo ? (
                                       <img src={child.photo} className="w-10 h-10 rounded-full object-cover" />
@@ -1139,6 +1221,119 @@
                 setConfirmDelete(null);
               }}
             />
+          )}
+
+          {/* Add Parent Modal */}
+          {showAddParent && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6">
+                <h3 className="font-bold text-xl mb-4">Add New Parent</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Full Name *</label>
+                    <input
+                      value={addParentForm.name}
+                      onChange={e => setAddParentForm({ ...addParentForm, name: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Parent's full name"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      value={addParentForm.email}
+                      onChange={e => setAddParentForm({ ...addParentForm, email: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="parent@email.com"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Password *</label>
+                    <input
+                      type="text"
+                      value={addParentForm.password}
+                      onChange={e => setAddParentForm({ ...addParentForm, password: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg font-mono"
+                      placeholder="password"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Phone (optional)</label>
+                    <input
+                      value={addParentForm.phone}
+                      onChange={e => setAddParentForm({ ...addParentForm, phone: formatPhone(e.target.value) })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="(555) 555-5555"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button onClick={() => { setShowAddParent(false); setAddParentForm({ name: '', email: '', password: '', phone: '' }); }} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleAddParent} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Add Parent</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Manage Campers for Parent Modal */}
+          {managingCampers && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 className="font-bold text-xl mb-2">Manage Campers for {managingCampers.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">Select which campers belong to this parent. A camper can have multiple parents.</p>
+
+                {getAllCampers().length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No campers exist yet. Add campers in the Campers tab first.</p>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    {getAllCampers().map(camper => {
+                      const isLinked = (camperParentLinks || []).some(l => l.camperId === camper.id && l.parentEmail === managingCampers.email);
+                      const isLegacy = (managingCampers.children || []).some(c => c.id === camper.id);
+                      return (
+                        <label key={camper.id} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${isLinked || isLegacy ? 'border-green-500 bg-green-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={isLinked || isLegacy}
+                            onChange={() => toggleCamperLink(managingCampers.email, camper.id)}
+                            className="w-5 h-5"
+                            disabled={isLegacy && !isLinked}
+                          />
+                          <div className="flex items-center gap-3">
+                            {camper.photo ? (
+                              <img src={camper.photo} alt={camper.name} className="w-8 h-8 rounded-full object-cover" />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                                {camper.name?.charAt(0)}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-medium">{camper.name}</div>
+                              <div className="text-xs text-gray-500">{camper.grade || 'No grade'} {camper.birthdate ? `• Age ${calculateAge(camper.birthdate)}` : ''}</div>
+                            </div>
+                          </div>
+                          {isLegacy && !isLinked && (
+                            <span className="ml-auto text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">Legacy</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <button onClick={() => setManagingCampers(null)} className="w-full px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  Done
+                </button>
+              </div>
+            </div>
           )}
         </div>
       );
@@ -1674,24 +1869,55 @@
     };
 
     // ==================== CAMPERS TAB ====================
-    const CampersTab = ({ users, registrations }) => {
+    const CampersTab = ({ users, registrations, campers, camperParentLinks, onSaveCampers, onSaveLinks, showToast, addToHistory }) => {
       const [searchTerm, setSearchTerm] = useState('');
-      const [sortBy, setSortBy] = useState('name'); // name, age, grade, registrations
+      const [sortBy, setSortBy] = useState('name');
+      const [editingCamper, setEditingCamper] = useState(null);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [confirmDelete, setConfirmDelete] = useState(null);
+      const [deleteConfirmText, setDeleteConfirmText] = useState('');
+      const [managingParents, setManagingParents] = useState(null);
 
-      // Get all unique children from all users
-      const allCampers = users.flatMap(u =>
-        (u.children || []).map(child => ({
-          ...child,
-          parentName: u.name,
-          parentEmail: u.email,
-          parentPhone: u.phone,
-          registrations: registrations.filter(r => r.childId === child.id)
-        }))
-      );
+      const [formData, setFormData] = useState({
+        name: '', birthdate: '', grade: '', phone: '', photo: null
+      });
+
+      // Merge standalone campers with legacy children from users
+      const getAllCampers = () => {
+        // Start with standalone campers
+        const standaloneCampers = campers.map(c => ({
+          ...c,
+          isStandalone: true,
+          parents: camperParentLinks
+            .filter(link => link.camperId === c.id)
+            .map(link => users.find(u => u.email === link.parentEmail))
+            .filter(Boolean),
+          registrations: registrations.filter(r => r.childId === c.id)
+        }));
+
+        // Add legacy children from users (for backward compatibility)
+        const legacyCampers = users.flatMap(u =>
+          (u.children || [])
+            .filter(child => !campers.some(c => c.id === child.id)) // Don't duplicate if migrated
+            .map(child => ({
+              ...child,
+              isStandalone: false,
+              parents: [u],
+              parentName: u.name,
+              parentEmail: u.email,
+              parentPhone: u.phone,
+              registrations: registrations.filter(r => r.childId === child.id)
+            }))
+        );
+
+        return [...standaloneCampers, ...legacyCampers];
+      };
+
+      const allCampers = getAllCampers();
 
       const filteredCampers = allCampers.filter(c =>
         c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        c.parentName?.toLowerCase().includes(searchTerm.toLowerCase())
+        c.parents?.some(p => p?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
 
       const sortedCampers = [...filteredCampers].sort((a, b) => {
@@ -1714,46 +1940,124 @@
         return age;
       };
 
+      const resetForm = () => {
+        setFormData({ name: '', birthdate: '', grade: '', phone: '', photo: null });
+        setShowAddForm(false);
+        setEditingCamper(null);
+      };
+
+      const handleSave = () => {
+        if (!formData.name) {
+          showToast('Name is required', 'error');
+          return;
+        }
+
+        if (editingCamper) {
+          // Update existing camper
+          if (editingCamper.isStandalone) {
+            const updated = campers.map(c => c.id === editingCamper.id ? { ...c, ...formData } : c);
+            onSaveCampers(updated, `Updated camper ${formData.name}`);
+          } else {
+            // Legacy camper - migrate to standalone
+            const newCamper = { id: editingCamper.id, ...formData, createdAt: new Date().toISOString() };
+            onSaveCampers([...campers, newCamper], `Migrated and updated camper ${formData.name}`);
+            // Add link to original parent
+            if (editingCamper.parentEmail) {
+              onSaveLinks([...camperParentLinks, { camperId: editingCamper.id, parentEmail: editingCamper.parentEmail }]);
+            }
+          }
+        } else {
+          // Add new camper
+          const newCamper = {
+            id: 'camper_' + Date.now(),
+            ...formData,
+            createdAt: new Date().toISOString()
+          };
+          onSaveCampers([...campers, newCamper], `Added camper ${formData.name}`);
+        }
+        resetForm();
+        showToast(editingCamper ? 'Camper updated!' : 'Camper added!');
+      };
+
+      const handleDelete = () => {
+        if (deleteConfirmText !== 'DELETE') {
+          showToast('Please type DELETE to confirm', 'error');
+          return;
+        }
+        const camper = confirmDelete;
+        if (camper.isStandalone) {
+          onSaveCampers(campers.filter(c => c.id !== camper.id), `Deleted camper ${camper.name}`);
+          onSaveLinks(camperParentLinks.filter(l => l.camperId !== camper.id));
+        }
+        setConfirmDelete(null);
+        setDeleteConfirmText('');
+        showToast('Camper deleted');
+      };
+
+      const startEdit = (camper) => {
+        setFormData({
+          name: camper.name || '',
+          birthdate: camper.birthdate || '',
+          grade: camper.grade || '',
+          phone: camper.phone || '',
+          photo: camper.photo || null
+        });
+        setEditingCamper(camper);
+        setShowAddForm(true);
+      };
+
+      const toggleParentLink = (camperId, parentEmail) => {
+        const exists = camperParentLinks.some(l => l.camperId === camperId && l.parentEmail === parentEmail);
+        if (exists) {
+          onSaveLinks(camperParentLinks.filter(l => !(l.camperId === camperId && l.parentEmail === parentEmail)));
+        } else {
+          onSaveLinks([...camperParentLinks, { camperId, parentEmail }]);
+        }
+      };
+
+      const getCamperParents = (camperId) => {
+        return camperParentLinks
+          .filter(l => l.camperId === camperId)
+          .map(l => users.find(u => u.email === l.parentEmail))
+          .filter(Boolean);
+      };
+
       return (
         <div className="space-y-6">
           <div className="bg-white rounded-xl shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-bold text-xl text-green-800">🧒 All Campers</h3>
-                <p className="text-sm text-gray-500">{allCampers.length} registered campers</p>
+                <p className="text-sm text-gray-500">{allCampers.length} campers total</p>
               </div>
               <div className="flex gap-2 items-center">
-                <span className="text-sm text-gray-500">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                  className="px-3 py-1 border rounded-lg"
-                >
-                  <option value="name">Name</option>
-                  <option value="age">Age (youngest first)</option>
-                  <option value="grade">Grade</option>
-                  <option value="registrations">Registrations</option>
+                <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="px-3 py-2 border rounded-lg">
+                  <option value="name">Sort by Name</option>
+                  <option value="age">Sort by Age</option>
+                  <option value="grade">Sort by Grade</option>
+                  <option value="registrations">Sort by Registrations</option>
                 </select>
+                <button onClick={() => setShowAddForm(true)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  + Add Camper
+                </button>
               </div>
             </div>
 
-            {/* Search */}
             <div className="mb-4">
               <input
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search campers by name or parent name..."
+                placeholder="Search campers or parents..."
                 className="w-full px-4 py-2 border rounded-lg"
                 autoComplete="off"
                 data-1p-ignore="true"
               />
             </div>
 
-            {/* Campers Table */}
             {sortedCampers.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <p className="text-4xl mb-4">🧒</p>
-                <p>{allCampers.length === 0 ? 'No campers registered yet' : 'No campers match your search'}</p>
+                <p>{allCampers.length === 0 ? 'No campers yet. Click "+ Add Camper" to add one.' : 'No campers match your search'}</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -1764,9 +2068,9 @@
                       <th className="p-3">Name</th>
                       <th className="p-3">Age</th>
                       <th className="p-3">Grade</th>
-                      <th className="p-3">Parent</th>
-                      <th className="p-3">Contact</th>
+                      <th className="p-3">Parents</th>
                       <th className="p-3">Registrations</th>
+                      <th className="p-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1787,17 +2091,39 @@
                         <td className="p-3">{getAge(camper.birthdate) ? `${getAge(camper.birthdate)} yrs` : '-'}</td>
                         <td className="p-3">{camper.grade || '-'}</td>
                         <td className="p-3">
-                          <div className="font-medium">{camper.parentName}</div>
-                          <div className="text-sm text-gray-500">{camper.parentEmail}</div>
-                        </td>
-                        <td className="p-3 text-sm">
-                          {camper.phone && <div>Child: {camper.phone}</div>}
-                          {camper.parentPhone && <div>Parent: {camper.parentPhone}</div>}
+                          {camper.parents?.length > 0 ? (
+                            <div className="space-y-1">
+                              {camper.parents.map(p => (
+                                <div key={p?.email} className="text-sm">
+                                  <span className="font-medium">{p?.name}</span>
+                                  <span className="text-gray-400 ml-1 text-xs">{p?.email}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">No parents linked</span>
+                          )}
+                          <button
+                            onClick={() => setManagingParents(camper)}
+                            className="text-xs text-blue-600 hover:underline mt-1"
+                          >
+                            Manage Parents
+                          </button>
                         </td>
                         <td className="p-3">
                           <span className={`px-2 py-1 rounded text-sm ${camper.registrations.length > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                             {camper.registrations.length} session{camper.registrations.length !== 1 ? 's' : ''}
                           </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button onClick={() => startEdit(camper)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm">
+                              Edit
+                            </button>
+                            <button onClick={() => setConfirmDelete(camper)} className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1826,6 +2152,155 @@
               <div className="text-gray-600">Parent Accounts</div>
             </div>
           </div>
+
+          {/* Add/Edit Camper Modal */}
+          {showAddForm && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 className="font-bold text-xl mb-4">{editingCamper ? 'Edit Camper' : 'Add New Camper'}</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Name *</label>
+                    <input
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Camper's full name"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Birthdate</label>
+                    <input
+                      type="date"
+                      value={formData.birthdate}
+                      onChange={e => setFormData({ ...formData, birthdate: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    {formData.birthdate && (
+                      <p className="text-sm text-gray-500 mt-1">Age: {getAge(formData.birthdate)} years old</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Grade (Fall 2026)</label>
+                    <select
+                      value={formData.grade}
+                      onChange={e => setFormData({ ...formData, grade: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Select grade...</option>
+                      <option value="3rd">3rd Grade</option>
+                      <option value="4th">4th Grade</option>
+                      <option value="5th">5th Grade</option>
+                      <option value="6th">6th Grade</option>
+                      <option value="7th">7th Grade</option>
+                      <option value="8th">8th Grade</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Phone (optional)</label>
+                    <input
+                      value={formData.phone}
+                      onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="(555) 555-5555"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button onClick={resetForm} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleSave} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    {editingCamper ? 'Save Changes' : 'Add Camper'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {confirmDelete && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h3 className="font-bold text-xl text-red-600 mb-2">Delete Camper</h3>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+                  <br />This will also remove all their registrations.
+                </p>
+                <p className="text-sm text-gray-500 mb-2">Type DELETE to confirm:</p>
+                <input
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-center font-mono mb-4"
+                  placeholder="DELETE"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => { setConfirmDelete(null); setDeleteConfirmText(''); }} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleDelete} disabled={deleteConfirmText !== 'DELETE'} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300">
+                    Delete Camper
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Manage Parents Modal */}
+          {managingParents && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+                <h3 className="font-bold text-xl mb-2">Manage Parents for {managingParents.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">Select which parents are associated with this camper. A camper can have multiple parents.</p>
+
+                {users.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No parent accounts exist yet.</p>
+                ) : (
+                  <div className="space-y-2 mb-4">
+                    {users.map(parent => {
+                      const isLinked = managingParents.isStandalone
+                        ? camperParentLinks.some(l => l.camperId === managingParents.id && l.parentEmail === parent.email)
+                        : managingParents.parentEmail === parent.email;
+                      return (
+                        <label key={parent.email} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${isLinked ? 'border-green-500 bg-green-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={isLinked}
+                            onChange={() => {
+                              if (managingParents.isStandalone) {
+                                toggleParentLink(managingParents.id, parent.email);
+                              } else {
+                                showToast('Migrate camper to standalone first by editing', 'error');
+                              }
+                            }}
+                            className="w-5 h-5"
+                            disabled={!managingParents.isStandalone}
+                          />
+                          <div>
+                            <div className="font-medium">{parent.name}</div>
+                            <div className="text-sm text-gray-500">{parent.email}</div>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {!managingParents.isStandalone && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-sm text-yellow-800">
+                    ⚠️ This is a legacy camper. Edit and save to enable multi-parent support.
+                  </div>
+                )}
+
+                <button onClick={() => setManagingParents(null)} className="w-full px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -2548,6 +3023,8 @@
       const [messages, setMessages] = useState([]);
       const [admins, setAdmins] = useState(DEFAULT_ADMINS);
       const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
+      const [campers, setCampers] = useState([]); // Standalone campers collection
+      const [camperParentLinks, setCamperParentLinks] = useState([]); // { camperId, parentEmail } associations
       
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -2578,6 +3055,10 @@
             if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
             const as = await storage.get('camp_assignments');
             if (as?.[0]?.data) setAssignments(as[0].data);
+            const cp = await storage.get('camp_campers');
+            if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
+            const cpl = await storage.get('camp_camper_parent_links');
+            if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -2630,6 +3111,15 @@
         setAssignments(a);
         await storage.set('camp_assignments', 'main', a);
         if (action) addToHistory('Assignment', action);
+      };
+      const saveCampers = async (c, action = null) => {
+        setCampers(c);
+        await storage.set('camp_campers', 'main', c);
+        if (action) addToHistory('Camper', action);
+      };
+      const saveCamperParentLinks = async (links) => {
+        setCamperParentLinks(links);
+        await storage.set('camp_camper_parent_links', 'main', links);
       };
 
       const saveMessage = async (msg) => {
@@ -3258,6 +3748,9 @@
                   }}
                   showToast={showToast}
                   addToHistory={addToHistory}
+                  campers={campers}
+                  camperParentLinks={camperParentLinks}
+                  onSaveLinks={saveCamperParentLinks}
                 />
               )}
 
@@ -3274,6 +3767,12 @@
                 <CampersTab
                   users={users}
                   registrations={registrations}
+                  campers={campers}
+                  camperParentLinks={camperParentLinks}
+                  onSaveCampers={saveCampers}
+                  onSaveLinks={saveCamperParentLinks}
+                  showToast={showToast}
+                  addToHistory={addToHistory}
                 />
               )}
 
