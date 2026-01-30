@@ -43,10 +43,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.075";
+    const VERSION = "12.076";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.076", date: "2026-01-30", changes: [
+        "Terminology update: Parents have 'children', registered children become 'campers'",
+        "Parent dashboard: 'My Children' tab with clear profile management",
+        "Registration confirmation now says 'Your children are now campers!'",
+        "Clear messaging throughout: profiles vs registrations",
+        "Admin tabs updated with clearer camper/children terminology"
+      ]},
       { version: "12.075", date: "2026-01-29", changes: [
         "Food/snack/drink images are now perfectly square (aspect-square)",
         "Image cropper preview exactly matches how photos appear on website",
@@ -755,8 +762,8 @@
           <div className="bg-white rounded-xl shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
-                <h3 className="font-bold text-xl text-green-800">👨‍👩‍👧 Parents & Campers</h3>
-                <p className="text-sm text-gray-500">{users.length} registered parents</p>
+                <h3 className="font-bold text-xl text-green-800">👨‍👩‍👧 Parents & Their Children</h3>
+                <p className="text-sm text-gray-500">{users.length} registered parents (children become campers when registered for sessions)</p>
               </div>
               <div className="flex gap-2">
                 {selectedParents.length > 0 && (
@@ -908,16 +915,16 @@
                           {/* Children */}
                           <div>
                             <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-bold text-gray-700">👧 Campers ({getParentCampers(parent.email).length})</h4>
+                              <h4 className="font-bold text-gray-700">👧 Children ({getParentCampers(parent.email).length})</h4>
                               <button
                                 onClick={() => setManagingCampers(parent)}
                                 className="text-xs text-blue-600 hover:underline"
                               >
-                                Manage Campers
+                                Manage Children
                               </button>
                             </div>
                             {getParentCampers(parent.email).length === 0 ? (
-                              <p className="text-gray-500 text-sm">No campers linked yet. Click "Manage Campers" to add.</p>
+                              <p className="text-gray-500 text-sm">No children linked yet. Click "Manage Children" to add.</p>
                             ) : (
                               <div className="space-y-2">
                                 {getParentCampers(parent.email).map(child => (
@@ -1327,15 +1334,15 @@
             </div>
           )}
 
-          {/* Manage Campers for Parent Modal */}
+          {/* Manage Children for Parent Modal */}
           {managingCampers && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-                <h3 className="font-bold text-xl mb-2">Manage Campers for {managingCampers.name}</h3>
-                <p className="text-sm text-gray-500 mb-4">Select which campers belong to this parent. A camper can have multiple parents.</p>
+                <h3 className="font-bold text-xl mb-2">Manage Children for {managingCampers.name}</h3>
+                <p className="text-sm text-gray-500 mb-4">Select which children belong to this parent. A child can have multiple parents.</p>
 
                 {getAllCampers().length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No campers exist yet. Add campers in the Campers tab first.</p>
+                  <p className="text-gray-500 text-center py-8">No children exist yet. Add children in the Campers tab first.</p>
                 ) : (
                   <div className="space-y-2 mb-4">
                     {getAllCampers().map(camper => {
@@ -2072,7 +2079,7 @@
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-bold text-xl text-green-800">🧒 All Campers</h3>
-                <p className="text-sm text-gray-500">{allCampers.length} campers total</p>
+                <p className="text-sm text-gray-500">{allCampers.length} campers total (children with camp profiles)</p>
               </div>
               <div className="flex gap-2 items-center">
                 <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="px-3 py-2 border rounded-lg">
@@ -2354,6 +2361,7 @@
       const [selectedDate, setSelectedDate] = useState(CAMP_DATES[0] || '');
       const [selectedSession, setSelectedSession] = useState('morning');
       const [draggedCamper, setDraggedCamper] = useState(null);
+      const [viewMode, setViewMode] = useState('list'); // 'list' | 'pods'
 
       // Get approved registrations for the selected date/session
       const getSessionRegs = () => {
@@ -2493,7 +2501,23 @@
         <div className="space-y-6">
           {/* Date/Session Selector */}
           <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="font-bold text-xl text-green-800 mb-4">📋 Camper Assignments</h3>
+            <div className="flex justify-between items-start mb-4">
+              <h3 className="font-bold text-xl text-green-800">📋 Camper Assignments</h3>
+              <div className="flex rounded-lg overflow-hidden border">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 text-sm ${viewMode === 'list' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  📋 List View
+                </button>
+                <button
+                  onClick={() => setViewMode('pods')}
+                  className={`px-3 py-1.5 text-sm ${viewMode === 'pods' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  👥 Pod View
+                </button>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-4">
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Date</label>
@@ -2557,7 +2581,131 @@
             </div>
           )}
 
-          {/* Assignment Area */}
+          {/* Pod Visualization View */}
+          {viewMode === 'pods' && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <h4 className="font-bold text-lg text-green-800 mb-4">
+                👥 Pods for {formatDate(selectedDate)} - {selectedSession === 'morning' ? '☀️ Morning' : '🌙 Afternoon'}
+              </h4>
+              <p className="text-sm text-gray-500 mb-6">Each pod shows a counselor with their assigned campers (1-5 per pod).</p>
+
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {getAvailableCounselors().map(counselor => {
+                  const assignedIds = getCurrentAssignments()[counselor.id] || [];
+                  const camperCount = assignedIds.length;
+                  const podStatus = camperCount === 0 ? 'empty' : camperCount <= 3 ? 'light' : camperCount <= 5 ? 'ideal' : 'over';
+                  const statusColor = {
+                    empty: 'bg-gray-100 border-gray-300',
+                    light: 'bg-green-50 border-green-300',
+                    ideal: 'bg-blue-50 border-blue-400',
+                    over: 'bg-red-50 border-red-400'
+                  }[podStatus];
+                  const statusLabel = {
+                    empty: 'No campers',
+                    light: `${camperCount} camper${camperCount !== 1 ? 's' : ''} - OK`,
+                    ideal: `${camperCount} campers - IDEAL`,
+                    over: `${camperCount} campers - OVER CAPACITY`
+                  }[podStatus];
+
+                  return (
+                    <div key={counselor.id} className={`rounded-xl border-2 p-4 ${statusColor}`}>
+                      {/* Counselor Header */}
+                      <div className="flex items-center gap-3 mb-4 pb-3 border-b">
+                        {counselor.photo ? (
+                          <img src={counselor.photo} alt={counselor.name} className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" />
+                        ) : (
+                          <div className="w-14 h-14 rounded-full bg-green-600 flex items-center justify-center text-white text-xl font-bold border-2 border-white shadow">
+                            {counselor.name?.charAt(0)}
+                          </div>
+                        )}
+                        <div>
+                          <h5 className="font-bold text-lg">{counselor.name}</h5>
+                          <p className="text-sm text-gray-600">{counselor.position} • {counselor.year}</p>
+                        </div>
+                      </div>
+
+                      {/* Connected Campers */}
+                      {camperCount === 0 ? (
+                        <div className="text-center py-4 text-gray-400">
+                          <p className="text-3xl mb-2">👤</p>
+                          <p className="text-sm">No campers assigned</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {assignedIds.map(childId => {
+                            const info = getCamperInfo(childId);
+                            const child = info?.child;
+                            return (
+                              <div key={childId} className="flex items-center gap-2 p-2 bg-white rounded-lg shadow-sm">
+                                {child?.photo ? (
+                                  <img src={child.photo} className="w-8 h-8 rounded-full object-cover" />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">
+                                    {getCamperName(childId)?.charAt(0)}
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-sm truncate">{getCamperName(childId)}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {child?.grade && `${child.grade} Grade`}
+                                    {child?.birthdate && ` • Age ${calculateAge(child.birthdate)}`}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Pod Status */}
+                      <div className={`mt-4 pt-3 border-t text-center text-sm font-medium ${
+                        podStatus === 'empty' ? 'text-gray-500' :
+                        podStatus === 'light' ? 'text-green-600' :
+                        podStatus === 'ideal' ? 'text-blue-600' :
+                        'text-red-600'
+                      }`}>
+                        {statusLabel}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Unassigned Campers Section */}
+              {getUnassignedCampers().length > 0 && (
+                <div className="mt-6 pt-6 border-t">
+                  <h5 className="font-bold text-orange-700 mb-3">⚠️ Unassigned Campers ({getUnassignedCampers().length})</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {getUnassignedCampers().map(reg => (
+                      <div key={reg.id} className="px-3 py-2 bg-orange-100 border border-orange-300 rounded-lg text-sm">
+                        <span className="font-medium">{reg.childName}</span>
+                        <span className="text-gray-500 ml-1">({reg.parentName})</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pod Legend */}
+              <div className="mt-6 pt-4 border-t flex flex-wrap gap-4 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-green-100 border-2 border-green-300"></div>
+                  <span>1-3 campers (Light)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-blue-100 border-2 border-blue-400"></div>
+                  <span>4-5 campers (Ideal)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-red-100 border-2 border-red-400"></div>
+                  <span>6+ campers (Over)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* List View - Assignment Area */}
+          {viewMode === 'list' && (
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Unassigned Campers */}
             <div
@@ -2652,6 +2800,7 @@
               );
             })}
           </div>
+          )}
 
           {/* Quick Actions */}
           <div className="bg-white rounded-xl shadow p-4">
@@ -3312,7 +3461,16 @@
       const [campers, setCampers] = useState([]); // Standalone campers collection
       const [camperParentLinks, setCamperParentLinks] = useState([]); // { camperId, parentEmail } associations
       const [foodPhotos, setFoodPhotos] = useState({}); // Admin-uploadable food photos { snack_fruit: base64, ... }
-      
+
+      // New state for onboarding system
+      const [children, setChildren] = useState([]); // Child profiles (separate from campers/registrations)
+      const [childParentLinks, setChildParentLinks] = useState([]); // { childId, parentEmail, relationship }
+      const [emergencyContacts, setEmergencyContacts] = useState([]); // Emergency contact records
+      const [onboardingProgress, setOnboardingProgress] = useState({}); // { email: { step, complete, ... } }
+      const [pendingCounselors, setPendingCounselors] = useState([]); // Counselors awaiting admin approval
+      const [availabilityChangeRequests, setAvailabilityChangeRequests] = useState([]); // Counselor availability change requests
+      const [profileChangeRequests, setProfileChangeRequests] = useState([]); // Counselor profile change requests
+
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
       
@@ -3348,6 +3506,20 @@
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
             const fp = await storage.get('camp_food_photos');
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
+
+            // Load new onboarding system data
+            const ch2 = await storage.get('camp_children');
+            if (ch2?.[0]?.data) setChildren(Array.isArray(ch2[0].data) ? ch2[0].data : []);
+            const cpl2 = await storage.get('camp_child_parent_links');
+            if (cpl2?.[0]?.data) setChildParentLinks(Array.isArray(cpl2[0].data) ? cpl2[0].data : []);
+            const ec = await storage.get('camp_emergency_contacts');
+            if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
+            const op = await storage.get('camp_onboarding_progress');
+            if (op?.[0]?.data) setOnboardingProgress(op[0].data || {});
+            const acr = await storage.get('camp_availability_change_requests');
+            if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
+            const pcr = await storage.get('camp_profile_change_requests');
+            if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -3483,6 +3655,40 @@
       const saveCamperParentLinks = async (links) => {
         setCamperParentLinks(links);
         await storage.set('camp_camper_parent_links', 'main', links);
+      };
+
+      // New save functions for onboarding system
+      const saveChildren = async (c, action = null) => {
+        setChildren(c);
+        await storage.set('camp_children', 'main', c);
+        if (action) addToHistory('Children', action);
+      };
+
+      const saveChildParentLinks = async (links) => {
+        setChildParentLinks(links);
+        await storage.set('camp_child_parent_links', 'main', links);
+      };
+
+      const saveEmergencyContacts = async (contacts) => {
+        setEmergencyContacts(contacts);
+        await storage.set('camp_emergency_contacts', 'main', contacts);
+      };
+
+      const saveOnboardingProgress = async (progress) => {
+        setOnboardingProgress(progress);
+        await storage.set('camp_onboarding_progress', 'main', progress);
+      };
+
+      const saveAvailabilityChangeRequests = async (requests, action = null) => {
+        setAvailabilityChangeRequests(requests);
+        await storage.set('camp_availability_change_requests', 'main', requests);
+        if (action) addToHistory('Availability', action);
+      };
+
+      const saveProfileChangeRequests = async (requests, action = null) => {
+        setProfileChangeRequests(requests);
+        await storage.set('camp_profile_change_requests', 'main', requests);
+        if (action) addToHistory('Profile', action);
       };
 
       const saveMessage = async (msg) => {
@@ -3912,12 +4118,1166 @@
         </div>
       );
 
+      // ==================== ROLE SELECTOR ====================
+      const RoleSelector = ({ onSelect, onBack }) => (
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+          <div className="max-w-lg mx-auto px-4">
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <h2 className="font-display text-3xl text-green-800 text-center mb-2">Join Roosevelt Camp</h2>
+              <p className="text-gray-600 text-center mb-8">How would you like to participate?</p>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => onSelect('parent')}
+                  className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">👨‍👩‍👧</div>
+                    <div>
+                      <h3 className="font-bold text-xl text-green-800 group-hover:text-green-600">I'm a Parent</h3>
+                      <p className="text-gray-600 mt-1">Register your children for basketball camp sessions</p>
+                      <ul className="text-sm text-gray-500 mt-2 space-y-1">
+                        <li>• Add your children's profiles</li>
+                        <li>• Set up emergency contacts</li>
+                        <li>• Register for camp sessions</li>
+                      </ul>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => onSelect('counselor')}
+                  className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="text-4xl">🏀</div>
+                    <div>
+                      <h3 className="font-bold text-xl text-blue-800 group-hover:text-blue-600">I'm a Counselor</h3>
+                      <p className="text-gray-600 mt-1">Apply to be a camp counselor and work with campers</p>
+                      <ul className="text-sm text-gray-500 mt-2 space-y-1">
+                        <li>• Create your counselor profile</li>
+                        <li>• Set your availability</li>
+                        <li>• Pending admin approval</li>
+                      </ul>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={onBack}
+                className="w-full mt-6 text-gray-500 hover:text-gray-700 text-sm"
+              >
+                ← Back to login
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      // ==================== ONBOARDING CONSTANTS ====================
+      const COUNSELOR_RESPONSIBILITIES = [
+        "Supervise campers during all activities",
+        "Lead basketball drills and games appropriate for age group",
+        "Ensure camper safety at all times",
+        "Report any incidents or concerns to camp director",
+        "Arrive 15 minutes before session start",
+        "Maintain positive and encouraging attitude",
+        "Be a role model for campers on and off the court"
+      ];
+
+      const PAY_DISCLOSURE = `
+Pay Rate: $25 per session (morning or afternoon)
+Payment Schedule: Twice monthly (1st and 15th)
+Employment Status: 1099 Independent Contractor
+
+As a 1099 contractor, you are responsible for:
+• Reporting this income on your tax return
+• Paying self-employment taxes
+• We will provide a 1099 form at year end for income over $600
+      `.trim();
+
+      const PICKUP_POLICY = `
+Only authorized emergency contacts may pick up your child.
+Photo ID is required for all pickups.
+If someone not on the authorized list needs to pick up,
+parents must notify camp staff in advance by phone or email.
+      `.trim();
+
+      const DROPOFF_POLICY = `
+Morning sessions: Drop-off is between 8:45 AM - 9:00 AM
+Afternoon sessions: Drop-off is between 12:45 PM - 1:00 PM
+Please sign in your child with the counselor on duty at the main gym entrance.
+      `.trim();
+
+      // ==================== PARENT ONBOARDING WIZARD ====================
+      const ParentOnboarding = ({ onComplete, onBack, users, saveUsers, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress }) => {
+        const [step, setStep] = useState(1);
+        const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
+        const [childrenData, setChildrenData] = useState([]);
+        const [emergencyData, setEmergencyData] = useState([]);
+        const [policiesAccepted, setPoliciesAccepted] = useState({ pickup: false, dropoff: false });
+        const [error, setError] = useState('');
+
+        const totalSteps = 5;
+
+        const steps = [
+          { num: 1, title: 'Your Account', icon: '👤' },
+          { num: 2, title: 'Add Children', icon: '👧' },
+          { num: 3, title: 'Emergency Contacts', icon: '📞' },
+          { num: 4, title: 'Policies', icon: '📋' },
+          { num: 5, title: 'Complete', icon: '✅' }
+        ];
+
+        // Step 1: Account Setup
+        const AccountStep = () => (
+          <div className="space-y-4">
+            <p className="text-gray-600 mb-4">Let's start by creating your account.</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+              <input
+                value={userData.name}
+                onChange={e => setUserData({ ...userData, name: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
+                placeholder="Your full name"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+              <input
+                type="email"
+                value={userData.email}
+                onChange={e => setUserData({ ...userData, email: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
+                placeholder="your@email.com"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+              <input
+                value={userData.phone}
+                onChange={e => setUserData({ ...userData, phone: formatPhone(e.target.value) })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
+                placeholder="(555) 555-1234"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+              <input
+                type="password"
+                value={userData.password}
+                onChange={e => setUserData({ ...userData, password: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
+                placeholder="Create a password"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+          </div>
+        );
+
+        // Step 2: Add Children
+        const ChildrenStep = () => {
+          const [showAddChild, setShowAddChild] = useState(false);
+          const [newChild, setNewChild] = useState({ name: '', birthdate: '', grade: '', phone: '' });
+
+          const addChild = () => {
+            if (!newChild.name || !newChild.birthdate || !newChild.grade) return;
+            setChildrenData([...childrenData, { ...newChild, id: 'child_' + Date.now() }]);
+            setNewChild({ name: '', birthdate: '', grade: '', phone: '' });
+            setShowAddChild(false);
+          };
+
+          const removeChild = (id) => {
+            setChildrenData(childrenData.filter(c => c.id !== id));
+          };
+
+          const getEligibility = (grade, birthdate) => {
+            const gradeNum = parseInt(grade);
+            const age = calculateAge(birthdate);
+            if (gradeNum >= 3 && gradeNum <= 8) return { eligible: true, status: 'Eligible', color: 'green' };
+            if (gradeNum < 3) return { eligible: false, status: 'Too young - must be in 3rd grade or higher', color: 'yellow' };
+            return { eligible: false, status: 'Too old - camp is for grades 3-8', color: 'orange' };
+          };
+
+          return (
+            <div className="space-y-4">
+              <p className="text-gray-600 mb-4">Add your children's profiles. You'll register them for camp sessions after setup.</p>
+
+              {childrenData.length > 0 && (
+                <div className="space-y-3 mb-4">
+                  {childrenData.map(child => {
+                    const elig = getEligibility(child.grade, child.birthdate);
+                    return (
+                      <div key={child.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                        <div>
+                          <div className="font-medium">{child.name}</div>
+                          <div className="text-sm text-gray-500">
+                            {child.grade} Grade • Age {calculateAge(child.birthdate)}
+                          </div>
+                          <span className={`text-xs px-2 py-0.5 rounded ${elig.eligible ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                            {elig.status}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeChild(child.id)}
+                          className="text-red-500 hover:text-red-700 p-2"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {showAddChild ? (
+                <div className="border-2 border-dashed border-green-300 rounded-lg p-4 bg-green-50">
+                  <h4 className="font-medium mb-3">Add Child</h4>
+                  <div className="space-y-3">
+                    <input
+                      value={newChild.name}
+                      onChange={e => setNewChild({ ...newChild, name: e.target.value })}
+                      placeholder="Child's full name"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      autoComplete="off" data-1p-ignore="true"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <input
+                        type="date"
+                        value={newChild.birthdate}
+                        onChange={e => setNewChild({ ...newChild, birthdate: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                      <select
+                        value={newChild.grade}
+                        onChange={e => setNewChild({ ...newChild, grade: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                      >
+                        <option value="">Grade (Fall 2026)</option>
+                        <option value="K">Kindergarten</option>
+                        <option value="1st">1st Grade</option>
+                        <option value="2nd">2nd Grade</option>
+                        <option value="3rd">3rd Grade</option>
+                        <option value="4th">4th Grade</option>
+                        <option value="5th">5th Grade</option>
+                        <option value="6th">6th Grade</option>
+                        <option value="7th">7th Grade</option>
+                        <option value="8th">8th Grade</option>
+                        <option value="9th">9th Grade</option>
+                      </select>
+                    </div>
+                    <input
+                      value={newChild.phone}
+                      onChange={e => setNewChild({ ...newChild, phone: formatPhone(e.target.value) })}
+                      placeholder="Child's phone (optional)"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      autoComplete="off" data-1p-ignore="true"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={addChild}
+                        disabled={!newChild.name || !newChild.birthdate || !newChild.grade}
+                        className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300"
+                      >
+                        Add Child
+                      </button>
+                      <button
+                        onClick={() => setShowAddChild(false)}
+                        className="px-4 py-2 border rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddChild(true)}
+                  className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-green-500 hover:text-green-600"
+                >
+                  + Add a Child
+                </button>
+              )}
+
+              {childrenData.length === 0 && (
+                <p className="text-sm text-gray-500 text-center mt-4">
+                  Add at least one child to continue. You can add more children later.
+                </p>
+              )}
+            </div>
+          );
+        };
+
+        // Step 3: Emergency Contacts
+        const EmergencyStep = () => {
+          const [showAddContact, setShowAddContact] = useState(false);
+          const [newContact, setNewContact] = useState({ name: '', phone: '', relationship: '' });
+
+          // Parents are automatically emergency contacts 1 & 2
+          const parentContact = {
+            id: 'parent_1',
+            name: userData.name,
+            phone: userData.phone,
+            relationship: 'Parent',
+            isParent: true,
+            priority: 1
+          };
+
+          const addContact = () => {
+            if (!newContact.name || !newContact.phone || !newContact.relationship) return;
+            setEmergencyData([...emergencyData, {
+              ...newContact,
+              id: 'contact_' + Date.now(),
+              isParent: false,
+              priority: emergencyData.length + 2
+            }]);
+            setNewContact({ name: '', phone: '', relationship: '' });
+            setShowAddContact(false);
+          };
+
+          const removeContact = (id) => {
+            setEmergencyData(emergencyData.filter(c => c.id !== id));
+          };
+
+          const hasNonParentContact = emergencyData.some(c => !c.isParent);
+
+          return (
+            <div className="space-y-4">
+              <p className="text-gray-600 mb-2">Emergency contacts are people we can call if we can't reach you.</p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent (grandparent, neighbor, etc.)
+              </div>
+
+              {/* Parent auto-contact */}
+              <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+                  <div>
+                    <div className="font-medium">{parentContact.name}</div>
+                    <div className="text-sm text-gray-500">{parentContact.phone} • Parent (you)</div>
+                  </div>
+                  <span className="ml-auto text-green-600 text-sm">✓ Auto-added</span>
+                </div>
+              </div>
+
+              {/* Additional contacts */}
+              {emergencyData.map((contact, idx) => (
+                <div key={contact.id} className="p-4 bg-gray-50 rounded-lg border flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gray-600 text-white rounded-full flex items-center justify-center font-bold">{idx + 2}</div>
+                  <div>
+                    <div className="font-medium">{contact.name}</div>
+                    <div className="text-sm text-gray-500">{contact.phone} • {contact.relationship}</div>
+                  </div>
+                  <button
+                    onClick={() => removeContact(contact.id)}
+                    className="ml-auto text-red-500 hover:text-red-700 p-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+
+              {showAddContact ? (
+                <div className="border-2 border-dashed border-blue-300 rounded-lg p-4 bg-blue-50">
+                  <h4 className="font-medium mb-3">Add Emergency Contact</h4>
+                  <div className="space-y-3">
+                    <input
+                      value={newContact.name}
+                      onChange={e => setNewContact({ ...newContact, name: e.target.value })}
+                      placeholder="Contact's full name"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      autoComplete="off" data-1p-ignore="true"
+                    />
+                    <input
+                      value={newContact.phone}
+                      onChange={e => setNewContact({ ...newContact, phone: formatPhone(e.target.value) })}
+                      placeholder="Phone number"
+                      className="w-full px-3 py-2 border rounded-lg"
+                      autoComplete="off" data-1p-ignore="true"
+                    />
+                    <select
+                      value={newContact.relationship}
+                      onChange={e => setNewContact({ ...newContact, relationship: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      <option value="">Relationship to child</option>
+                      <option value="Grandparent">Grandparent</option>
+                      <option value="Aunt/Uncle">Aunt/Uncle</option>
+                      <option value="Family Friend">Family Friend</option>
+                      <option value="Neighbor">Neighbor</option>
+                      <option value="Other Parent">Other Parent/Guardian</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={addContact}
+                        disabled={!newContact.name || !newContact.phone || !newContact.relationship}
+                        className="flex-1 py-2 bg-blue-600 text-white rounded-lg disabled:bg-gray-300"
+                      >
+                        Add Contact
+                      </button>
+                      <button
+                        onClick={() => setShowAddContact(false)}
+                        className="px-4 py-2 border rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowAddContact(true)}
+                  className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-600"
+                >
+                  + Add Emergency Contact
+                </button>
+              )}
+
+              {!hasNonParentContact && (
+                <p className="text-sm text-orange-600 text-center">
+                  Please add at least one non-parent contact (grandparent, neighbor, etc.)
+                </p>
+              )}
+            </div>
+          );
+        };
+
+        // Step 4: Policies
+        const PoliciesStep = () => (
+          <div className="space-y-6">
+            <p className="text-gray-600">Please review and acknowledge our camp policies.</p>
+
+            <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="bg-green-100 px-4 py-2 font-medium text-green-800">📥 Drop-off Policy</div>
+              <div className="p-4">
+                <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">{DROPOFF_POLICY}</pre>
+                <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={policiesAccepted.dropoff}
+                    onChange={e => setPoliciesAccepted({ ...policiesAccepted, dropoff: e.target.checked })}
+                    className="w-5 h-5 text-green-600"
+                  />
+                  <span className="text-sm">I have read and agree to the drop-off policy</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="bg-blue-100 px-4 py-2 font-medium text-blue-800">📤 Pick-up Policy</div>
+              <div className="p-4">
+                <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">{PICKUP_POLICY}</pre>
+                <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={policiesAccepted.pickup}
+                    onChange={e => setPoliciesAccepted({ ...policiesAccepted, pickup: e.target.checked })}
+                    className="w-5 h-5 text-blue-600"
+                  />
+                  <span className="text-sm">I have read and agree to the pick-up policy</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+
+        // Step 5: Complete
+        const CompleteStep = () => (
+          <div className="text-center space-y-6">
+            <div className="text-6xl">🎉</div>
+            <h3 className="font-display text-2xl text-green-800">You're All Set!</h3>
+            <p className="text-gray-600">
+              Your account is ready. You can now register your children for camp sessions!
+            </p>
+
+            <div className="bg-gray-50 rounded-lg p-4 text-left">
+              <h4 className="font-medium mb-2">Account Summary:</h4>
+              <p className="text-sm text-gray-600">• {userData.name} ({userData.email})</p>
+              <p className="text-sm text-gray-600">• {childrenData.length} child{childrenData.length !== 1 ? 'ren' : ''} added</p>
+              <p className="text-sm text-gray-600">• {emergencyData.length + 1} emergency contact{emergencyData.length !== 0 ? 's' : ''}</p>
+            </div>
+
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-800 font-medium">Next Step: Register for Sessions</p>
+              <p className="text-sm text-green-700 mt-1">
+                Go to the Register tab to sign up your children for camp dates!
+              </p>
+            </div>
+          </div>
+        );
+
+        const validateStep = () => {
+          setError('');
+          if (step === 1) {
+            if (!userData.name || !userData.email || !userData.phone || !userData.password) {
+              setError('Please fill in all required fields');
+              return false;
+            }
+            if (!isValidPhone(userData.phone)) {
+              setError('Please enter a valid phone number');
+              return false;
+            }
+            if (users.some(u => u.email === userData.email)) {
+              setError('An account with this email already exists');
+              return false;
+            }
+          }
+          if (step === 2 && childrenData.length === 0) {
+            setError('Please add at least one child');
+            return false;
+          }
+          if (step === 3) {
+            if (emergencyData.length < 2) {
+              setError('Please add at least 2 additional emergency contacts');
+              return false;
+            }
+            if (!emergencyData.some(c => !c.isParent)) {
+              setError('Please add at least one non-parent emergency contact');
+              return false;
+            }
+          }
+          if (step === 4) {
+            if (!policiesAccepted.pickup || !policiesAccepted.dropoff) {
+              setError('Please acknowledge both policies to continue');
+              return false;
+            }
+          }
+          return true;
+        };
+
+        const handleNext = async () => {
+          if (!validateStep()) return;
+
+          if (step === totalSteps) {
+            // Complete registration
+            const newUser = {
+              email: userData.email,
+              name: userData.name,
+              password: userData.password,
+              phone: userData.phone,
+              role: 'parent',
+              roles: ['parent'],
+              children: childrenData,
+              onboardingComplete: true,
+              onboardingCompletedAt: new Date().toISOString(),
+              policiesAccepted: {
+                pickup: true,
+                dropoff: true,
+                acceptedAt: new Date().toISOString()
+              }
+            };
+            await saveUsers([...users, newUser]);
+
+            // Save emergency contacts
+            const allContacts = [
+              { id: 'ec_' + Date.now(), name: userData.name, phone: userData.phone, relationship: 'Parent', isParent: true, priority: 1, userEmail: userData.email },
+              ...emergencyData.map((c, i) => ({ ...c, userEmail: userData.email, priority: i + 2 }))
+            ];
+            await saveEmergencyContacts([...emergencyContacts, ...allContacts]);
+
+            onComplete(newUser);
+            return;
+          }
+
+          setStep(step + 1);
+        };
+
+        const handleBack = () => {
+          if (step === 1) {
+            onBack();
+          } else {
+            setStep(step - 1);
+          }
+        };
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8">
+            <div className="max-w-lg mx-auto px-4">
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  {steps.map((s) => (
+                    <div
+                      key={s.num}
+                      className={`flex flex-col items-center ${s.num <= step ? 'text-green-600' : 'text-gray-400'}`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                        s.num < step ? 'bg-green-600 text-white' :
+                        s.num === step ? 'bg-green-100 border-2 border-green-600' : 'bg-gray-200'
+                      }`}>
+                        {s.num < step ? '✓' : s.icon}
+                      </div>
+                      <span className="text-xs mt-1 hidden sm:block">{s.title}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full">
+                  <div
+                    className="h-2 bg-green-600 rounded-full transition-all"
+                    style={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Content Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-8">
+                <h2 className="font-display text-2xl text-green-800 mb-6">
+                  {steps[step - 1].title}
+                </h2>
+
+                {error && (
+                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {step === 1 && <AccountStep />}
+                {step === 2 && <ChildrenStep />}
+                {step === 3 && <EmergencyStep />}
+                {step === 4 && <PoliciesStep />}
+                {step === 5 && <CompleteStep />}
+
+                {/* Navigation */}
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={handleBack}
+                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    {step === 1 ? '← Back' : '← Previous'}
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="flex-1 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-lg"
+                  >
+                    {step === totalSteps ? 'Complete Setup' : 'Continue →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== COUNSELOR ONBOARDING WIZARD ====================
+      const CounselorOnboarding = ({ onComplete, onBack, users, saveUsers, counselors, saveCounselors, availability, saveAvailability }) => {
+        const [step, setStep] = useState(1);
+        const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
+        const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
+        const [availData, setAvailData] = useState(() => {
+          // Default: available for all sessions
+          const defaultAvail = {};
+          CAMP_DATES.forEach(date => {
+            defaultAvail[date] = ['morning', 'afternoon'];
+          });
+          return defaultAvail;
+        });
+        const [responsibilitiesAcked, setResponsibilitiesAcked] = useState(false);
+        const [payAcked, setPayAcked] = useState(false);
+        const [error, setError] = useState('');
+        const [showCropper, setShowCropper] = useState(false);
+        const [tempImage, setTempImage] = useState(null);
+        const photoInputRef = useRef(null);
+
+        const totalSteps = 5;
+
+        const steps = [
+          { num: 1, title: 'Account', icon: '👤' },
+          { num: 2, title: 'Profile', icon: '🏀' },
+          { num: 3, title: 'Availability', icon: '📅' },
+          { num: 4, title: 'Responsibilities', icon: '📋' },
+          { num: 5, title: 'Submit', icon: '✅' }
+        ];
+
+        const handlePhotoUpload = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setTempImage(reader.result);
+              setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
+          }
+          if (e.target) e.target.value = '';
+        };
+
+        // Step 1: Account Setup
+        const AccountStep = () => (
+          <div className="space-y-4">
+            <p className="text-gray-600 mb-4">Create your counselor account to get started.</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+              <input
+                value={userData.name}
+                onChange={e => setUserData({ ...userData, name: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="Your full name"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+              <input
+                type="email"
+                value={userData.email}
+                onChange={e => setUserData({ ...userData, email: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="your@email.com"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+              <input
+                value={userData.phone}
+                onChange={e => setUserData({ ...userData, phone: formatPhone(e.target.value) })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="(555) 555-1234"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+              <input
+                type="password"
+                value={userData.password}
+                onChange={e => setUserData({ ...userData, password: e.target.value })}
+                className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none"
+                placeholder="Create a password"
+                autoComplete="off" data-1p-ignore="true"
+              />
+            </div>
+          </div>
+        );
+
+        // Step 2: Profile
+        const ProfileStep = () => (
+          <div className="space-y-4">
+            <p className="text-gray-600 mb-4">Tell us about your basketball background. This will appear on the camp website once approved.</p>
+
+            {/* Photo Upload */}
+            <div className="flex justify-center mb-4">
+              {profileData.photo ? (
+                <div className="relative">
+                  <img src={profileData.photo} className="w-32 h-32 rounded-full object-cover border-4 border-blue-600" />
+                  <button
+                    onClick={() => photoInputRef.current?.click()}
+                    className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full text-white flex items-center justify-center hover:bg-blue-700"
+                  >
+                    ✎
+                  </button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => photoInputRef.current?.click()}
+                  className="w-32 h-32 rounded-full bg-gray-200 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300"
+                >
+                  <span className="text-4xl mb-1">📷</span>
+                  <span className="text-xs text-gray-500">Add Photo</span>
+                </div>
+              )}
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
+                <select
+                  value={profileData.position}
+                  onChange={e => setProfileData({ ...profileData, position: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="Point Guard">Point Guard</option>
+                  <option value="Shooting Guard">Shooting Guard</option>
+                  <option value="Small Forward">Small Forward</option>
+                  <option value="Power Forward">Power Forward</option>
+                  <option value="Center">Center</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+                <select
+                  value={profileData.year}
+                  onChange={e => setProfileData({ ...profileData, year: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="Freshman">Freshman</option>
+                  <option value="Sophomore">Sophomore</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Senior">Senior</option>
+                  <option value="Alumni">Alumni</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Bio *</label>
+              <textarea
+                value={profileData.bio}
+                onChange={e => setProfileData({ ...profileData, bio: e.target.value })}
+                className="w-full px-3 py-2 border rounded-lg h-24"
+                placeholder="Tell us about your basketball experience and why you want to be a counselor..."
+              />
+              <p className="text-xs text-gray-500 mt-1">{profileData.bio.length}/200 characters</p>
+            </div>
+          </div>
+        );
+
+        // Step 3: Availability
+        const AvailabilityStep = () => {
+          const toggleSession = (date, session) => {
+            const current = availData[date] || [];
+            if (current.includes(session)) {
+              setAvailData({ ...availData, [date]: current.filter(s => s !== session) });
+            } else {
+              setAvailData({ ...availData, [date]: [...current, session] });
+            }
+          };
+
+          const selectAllSessions = () => {
+            const newAvail = {};
+            CAMP_DATES.forEach(date => {
+              newAvail[date] = ['morning', 'afternoon'];
+            });
+            setAvailData(newAvail);
+          };
+
+          const clearAllSessions = () => {
+            setAvailData({});
+          };
+
+          const getTotalSessions = () => {
+            return Object.values(availData).flat().length;
+          };
+
+          return (
+            <div className="space-y-4">
+              <p className="text-gray-600 mb-2">Select the sessions you're available to work. All sessions are selected by default.</p>
+
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={selectAllSessions}
+                  className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearAllSessions}
+                  className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                >
+                  Clear All
+                </button>
+                <span className="ml-auto text-sm text-gray-500">{getTotalSessions()} sessions selected</span>
+              </div>
+
+              <div className="max-h-64 overflow-y-auto border rounded-lg">
+                {CAMP_WEEKS.slice(0, 4).map((week, weekIdx) => (
+                  <div key={weekIdx} className="border-b last:border-b-0">
+                    <div className="bg-gray-100 px-3 py-2 text-sm font-medium">Week {weekIdx + 1}</div>
+                    <div className="grid grid-cols-5 gap-1 p-2">
+                      {week.dates.map(date => {
+                        const d = new Date(date + 'T12:00:00');
+                        const sessions = availData[date] || [];
+                        return (
+                          <div key={date} className="text-center p-1">
+                            <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                            <div className="text-xs">{d.getDate()}</div>
+                            <div className="flex flex-col gap-1 mt-1">
+                              <button
+                                onClick={() => toggleSession(date, 'morning')}
+                                className={`text-xs px-1 py-0.5 rounded ${sessions.includes('morning') ? 'bg-yellow-500 text-white' : 'bg-gray-200'}`}
+                              >
+                                AM
+                              </button>
+                              <button
+                                onClick={() => toggleSession(date, 'afternoon')}
+                                className={`text-xs px-1 py-0.5 rounded ${sessions.includes('afternoon') ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                              >
+                                PM
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">Scroll to see more weeks. You can update your availability later.</p>
+            </div>
+          );
+        };
+
+        // Step 4: Responsibilities & Pay
+        const ResponsibilitiesStep = () => (
+          <div className="space-y-6">
+            <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="bg-blue-100 px-4 py-2 font-medium text-blue-800">📋 Counselor Responsibilities</div>
+              <div className="p-4">
+                <ul className="space-y-2">
+                  {COUNSELOR_RESPONSIBILITIES.map((resp, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                      <span className="text-blue-500">•</span>
+                      {resp}
+                    </li>
+                  ))}
+                </ul>
+                <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={responsibilitiesAcked}
+                    onChange={e => setResponsibilitiesAcked(e.target.checked)}
+                    className="w-5 h-5 text-blue-600"
+                  />
+                  <span className="text-sm">I understand and accept these responsibilities</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="bg-white border rounded-lg overflow-hidden">
+              <div className="bg-green-100 px-4 py-2 font-medium text-green-800">💵 Pay Information</div>
+              <div className="p-4">
+                <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">{PAY_DISCLOSURE}</pre>
+                <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={payAcked}
+                    onChange={e => setPayAcked(e.target.checked)}
+                    className="w-5 h-5 text-green-600"
+                  />
+                  <span className="text-sm">I understand and accept the pay terms and 1099 status</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        );
+
+        // Step 5: Submit
+        const SubmitStep = () => (
+          <div className="text-center space-y-6">
+            <div className="text-6xl">📨</div>
+            <h3 className="font-display text-2xl text-blue-800">Ready to Submit!</h3>
+            <p className="text-gray-600">
+              Your application will be reviewed by a camp administrator. You'll be notified once approved.
+            </p>
+
+            <div className="bg-gray-50 rounded-lg p-4 text-left">
+              <h4 className="font-medium mb-2">Application Summary:</h4>
+              <p className="text-sm text-gray-600">• {userData.name}</p>
+              <p className="text-sm text-gray-600">• {profileData.position} • {profileData.year}</p>
+              <p className="text-sm text-gray-600">• {Object.values(availData).flat().length} sessions available</p>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-800 font-medium">⏳ Pending Admin Approval</p>
+              <p className="text-sm text-yellow-700 mt-1">
+                Your profile won't appear on the website until approved by an administrator.
+              </p>
+            </div>
+          </div>
+        );
+
+        const validateStep = () => {
+          setError('');
+          if (step === 1) {
+            if (!userData.name || !userData.email || !userData.phone || !userData.password) {
+              setError('Please fill in all required fields');
+              return false;
+            }
+            if (!isValidPhone(userData.phone)) {
+              setError('Please enter a valid phone number');
+              return false;
+            }
+            if (users.some(u => u.email === userData.email) || counselors.some(c => c.email === userData.email)) {
+              setError('An account with this email already exists');
+              return false;
+            }
+          }
+          if (step === 2) {
+            if (!profileData.bio || profileData.bio.length < 20) {
+              setError('Please write a bio (at least 20 characters)');
+              return false;
+            }
+          }
+          if (step === 3) {
+            if (Object.values(availData).flat().length === 0) {
+              setError('Please select at least one available session');
+              return false;
+            }
+          }
+          if (step === 4) {
+            if (!responsibilitiesAcked || !payAcked) {
+              setError('Please acknowledge both the responsibilities and pay terms');
+              return false;
+            }
+          }
+          return true;
+        };
+
+        const handleNext = async () => {
+          if (!validateStep()) return;
+
+          if (step === totalSteps) {
+            // Create user account
+            const newUser = {
+              email: userData.email,
+              name: userData.name,
+              password: userData.password,
+              phone: userData.phone,
+              role: 'counselor',
+              roles: ['counselor'],
+              onboardingComplete: true,
+              onboardingCompletedAt: new Date().toISOString()
+            };
+            await saveUsers([...users, newUser]);
+
+            // Create counselor profile (pending approval)
+            const newCounselor = {
+              id: 'counselor_' + Date.now(),
+              name: userData.name,
+              email: userData.email,
+              phone: userData.phone,
+              position: profileData.position,
+              year: profileData.year,
+              bio: profileData.bio,
+              photo: profileData.photo,
+              visible: false, // Hidden until approved
+              approvedByAdmin: false,
+              responsibilitiesAcknowledged: true,
+              payDisclosureAcknowledged: true,
+              createdAt: new Date().toISOString(),
+              order: counselors.length
+            };
+            await saveCounselors([...counselors, newCounselor]);
+
+            // Save availability
+            const newAvail = { ...availability, [newCounselor.id]: availData };
+            await saveAvailability(newAvail);
+
+            onComplete(newUser);
+            return;
+          }
+
+          setStep(step + 1);
+        };
+
+        const handleBack = () => {
+          if (step === 1) {
+            onBack();
+          } else {
+            setStep(step - 1);
+          }
+        };
+
+        // Image cropper modal
+        if (showCropper && tempImage) {
+          return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6">
+                <h3 className="font-bold text-lg mb-4">Crop Your Photo</h3>
+                <ImageCropper
+                  image={tempImage}
+                  shape="circle"
+                  onSave={(img) => {
+                    setProfileData({ ...profileData, photo: img });
+                    setShowCropper(false);
+                    setTempImage(null);
+                  }}
+                  onCancel={() => {
+                    setShowCropper(false);
+                    setTempImage(null);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8">
+            <div className="max-w-lg mx-auto px-4">
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  {steps.map((s) => (
+                    <div
+                      key={s.num}
+                      className={`flex flex-col items-center ${s.num <= step ? 'text-blue-600' : 'text-gray-400'}`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                        s.num < step ? 'bg-blue-600 text-white' :
+                        s.num === step ? 'bg-blue-100 border-2 border-blue-600' : 'bg-gray-200'
+                      }`}>
+                        {s.num < step ? '✓' : s.icon}
+                      </div>
+                      <span className="text-xs mt-1 hidden sm:block">{s.title}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full">
+                  <div
+                    className="h-2 bg-blue-600 rounded-full transition-all"
+                    style={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Content Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-8">
+                <h2 className="font-display text-2xl text-blue-800 mb-6">
+                  {steps[step - 1].title}
+                </h2>
+
+                {error && (
+                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {step === 1 && <AccountStep />}
+                {step === 2 && <ProfileStep />}
+                {step === 3 && <AvailabilityStep />}
+                {step === 4 && <ResponsibilitiesStep />}
+                {step === 5 && <SubmitStep />}
+
+                {/* Navigation */}
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={handleBack}
+                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    {step === 1 ? '← Back' : '← Previous'}
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="flex-1 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg"
+                  >
+                    {step === totalSteps ? 'Submit Application' : 'Continue →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       // ==================== LOGIN ====================
       const Login = () => {
         const [email, setEmail] = useState('');
         const [password, setPassword] = useState('');
         const [error, setError] = useState('');
-        const [mode, setMode] = useState('login');
+        const [mode, setMode] = useState('login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor'
         const [name, setName] = useState('');
         const [phone, setPhone] = useState('');
 
@@ -3932,42 +5292,70 @@
           setError('Invalid credentials');
         };
 
-        const handleRegister = async () => {
-          if (!name || !email || !phone || !password) { setError('All fields required'); return; }
-          if (!isValidPhone(phone)) { setError('Valid phone required'); return; }
-          if (users.some(u => u.email === email)) { setError('Email exists'); return; }
-          const newUser = { email, name, password, phone: formatPhone(phone), role: 'parent', children: [] };
-          await saveUsers([...users, newUser]);
-          setUser(newUser);
-          setPage('parent');
-          showToast('Account created!');
-        };
+        // Show role selector
+        if (mode === 'selectRole') {
+          return (
+            <RoleSelector
+              onSelect={(role) => setMode(role === 'parent' ? 'onboardParent' : 'onboardCounselor')}
+              onBack={() => setMode('login')}
+            />
+          );
+        }
+
+        // Show parent onboarding wizard
+        if (mode === 'onboardParent') {
+          return (
+            <ParentOnboarding
+              onComplete={(newUser) => {
+                setUser(newUser);
+                setPage('parent');
+                showToast('Welcome to Roosevelt Camp!');
+              }}
+              onBack={() => setMode('selectRole')}
+              users={users}
+              saveUsers={saveUsers}
+              saveEmergencyContacts={saveEmergencyContacts}
+              emergencyContacts={emergencyContacts}
+              saveOnboardingProgress={saveOnboardingProgress}
+            />
+          );
+        }
+
+        // Show counselor onboarding wizard
+        if (mode === 'onboardCounselor') {
+          return (
+            <CounselorOnboarding
+              onComplete={(newUser) => {
+                setUser(newUser);
+                setPage('counselor');
+                showToast('Application submitted! Awaiting admin approval.');
+              }}
+              onBack={() => setMode('selectRole')}
+              users={users}
+              saveUsers={saveUsers}
+              counselors={counselors}
+              saveCounselors={saveCounselors}
+              availability={availability}
+              saveAvailability={saveAvail}
+            />
+          );
+        }
 
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
             <div className="max-w-md mx-auto px-4">
               <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="font-display text-3xl text-green-800 text-center mb-6">{mode === 'login' ? 'Welcome Back' : 'Create Account'}</h2>
+                <h2 className="font-display text-3xl text-green-800 text-center mb-6">Welcome Back</h2>
                 {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-center">{error}</div>}
-                
-                {mode === 'login' ? (
-                  <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
-                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
-                  </form>
-                ) : (
-                  <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
-                    <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Full Name" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Phone" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <button type="button" onClick={handleRegister} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Create Account</button>
-                  </form>
-                )}
-                
-                <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); }} className="w-full mt-4 text-green-600 hover:underline">
-                  {mode === 'login' ? 'New? Create account →' : '← Back to login'}
+
+                <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
+                  <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                  <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
+                </form>
+
+                <button onClick={() => { setMode('selectRole'); setError(''); }} className="w-full mt-4 text-green-600 hover:underline">
+                  New? Create account →
                 </button>
                 <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 text-center">Admin: admin / admin</div>
               </div>
@@ -3999,12 +5387,15 @@
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'registrations', 'assignments', 'campers', 'parents', 'counselors', 'admins', 'content', 'history'].map(t => (
-                  <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 capitalize border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🧒 Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t}
+                {['dashboard', 'registrations', 'assignments', 'campers', 'parents', 'counselors', 'approval', 'admins', 'content', 'history'].map(t => (
+                  <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🧒 Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
                     {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                     {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
                     {t === 'admins' && <span className="ml-2 bg-purple-500 text-white text-xs px-2 rounded-full">{admins.length}</span>}
+                    {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
+                      <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -4135,6 +5526,231 @@
                       <p>No counselors yet. Click "+ Add" to add your first counselor.</p>
                     </div>
                   )}
+                </div>
+              )}
+
+              {adminTab === 'approval' && (
+                <div className="space-y-6">
+                  {/* Pending Counselor Approvals */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-xl text-orange-800 mb-4">🏀 Pending Counselor Approvals</h3>
+                    <p className="text-sm text-gray-500 mb-4">New counselor applications awaiting your approval. Approved counselors will appear on the public website.</p>
+
+                    {counselors.filter(c => c.approvedByAdmin === false).length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-4xl mb-2">✓</p>
+                        <p>No pending counselor approvals</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {counselors.filter(c => c.approvedByAdmin === false).map(counselor => (
+                          <div key={counselor.id} className="border-2 border-orange-200 rounded-xl p-4 bg-orange-50">
+                            <div className="flex items-start gap-4">
+                              {counselor.photo ? (
+                                <img src={counselor.photo} className="w-20 h-20 rounded-full object-cover border-2 border-white shadow" />
+                              ) : (
+                                <div className="w-20 h-20 rounded-full bg-orange-200 flex items-center justify-center text-2xl">
+                                  {counselor.name?.[0]}
+                                </div>
+                              )}
+                              <div className="flex-1">
+                                <h4 className="font-bold text-lg">{counselor.name}</h4>
+                                <p className="text-gray-600">{counselor.position} • {counselor.year}</p>
+                                <p className="text-sm text-gray-500 mt-1">{counselor.email} • {counselor.phone}</p>
+                                <p className="text-sm text-gray-700 mt-2 bg-white rounded p-2">"{counselor.bio}"</p>
+                                <p className="text-xs text-gray-400 mt-2">Applied: {counselor.createdAt ? new Date(counselor.createdAt).toLocaleDateString() : 'Unknown'}</p>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <button
+                                  onClick={async () => {
+                                    const updated = counselors.map(c =>
+                                      c.id === counselor.id
+                                        ? { ...c, approvedByAdmin: true, visible: true, approvedAt: new Date().toISOString(), approvedBy: user?.name }
+                                        : c
+                                    );
+                                    await saveCounselors(updated, `Approved counselor ${counselor.name}`);
+                                    showToast(`${counselor.name} approved! Now visible on website.`);
+                                  }}
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                                >
+                                  ✓ Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Reject ${counselor.name}'s application? This will delete their profile.`)) return;
+                                    const updated = counselors.filter(c => c.id !== counselor.id);
+                                    await saveCounselors(updated, `Rejected counselor ${counselor.name}`);
+                                    // Also remove their user account
+                                    const updatedUsers = users.filter(u => u.email !== counselor.email);
+                                    await saveUsers(updatedUsers);
+                                    showToast(`${counselor.name}'s application rejected.`);
+                                  }}
+                                  className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium"
+                                >
+                                  ✗ Reject
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Profile Change Requests */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-xl text-blue-800 mb-4">📝 Profile Change Requests</h3>
+                    <p className="text-sm text-gray-500 mb-4">Counselors who want to update their public profile information.</p>
+
+                    {profileChangeRequests.filter(r => r.status === 'pending').length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-4xl mb-2">✓</p>
+                        <p>No pending profile change requests</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {profileChangeRequests.filter(r => r.status === 'pending').map(request => {
+                          const counselor = counselors.find(c => c.id === request.counselorId);
+                          return (
+                            <div key={request.id} className="border-2 border-blue-200 rounded-xl p-4 bg-blue-50">
+                              <div className="flex justify-between items-start mb-3">
+                                <div>
+                                  <h4 className="font-bold">{counselor?.name || 'Unknown'}</h4>
+                                  <p className="text-sm text-gray-500">Requested: {new Date(request.requestedAt).toLocaleDateString()}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={async () => {
+                                      // Apply changes to counselor
+                                      const updated = counselors.map(c =>
+                                        c.id === request.counselorId
+                                          ? { ...c, ...request.pendingChanges }
+                                          : c
+                                      );
+                                      await saveCounselors(updated, `Approved profile changes for ${counselor?.name}`);
+                                      // Update request status
+                                      const updatedReqs = profileChangeRequests.map(r =>
+                                        r.id === request.id
+                                          ? { ...r, status: 'approved', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
+                                          : r
+                                      );
+                                      await saveProfileChangeRequests(updatedReqs);
+                                      showToast('Profile changes approved!');
+                                    }}
+                                    className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      const updatedReqs = profileChangeRequests.map(r =>
+                                        r.id === request.id
+                                          ? { ...r, status: 'rejected', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
+                                          : r
+                                      );
+                                      await saveProfileChangeRequests(updatedReqs);
+                                      showToast('Profile changes rejected.');
+                                    }}
+                                    className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                {Object.entries(request.pendingChanges || {}).map(([field, value]) => (
+                                  <div key={field} className="bg-white p-2 rounded">
+                                    <span className="text-gray-500">{field}:</span>
+                                    <div className="font-medium">{typeof value === 'string' && value.startsWith('data:') ? '[Photo]' : value}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Availability Change Requests */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-xl text-purple-800 mb-4">📅 Availability Change Requests</h3>
+                    <p className="text-sm text-gray-500 mb-4">Counselors who want to change which sessions they can work.</p>
+
+                    {availabilityChangeRequests.filter(r => r.status === 'pending').length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p className="text-4xl mb-2">✓</p>
+                        <p>No pending availability change requests</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {availabilityChangeRequests.filter(r => r.status === 'pending').map(request => (
+                          <div key={request.id} className="border-2 border-purple-200 rounded-xl p-4 bg-purple-50">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-bold">{request.counselorName}</h4>
+                                <p className="text-sm text-gray-500">Requested: {new Date(request.requestedAt).toLocaleDateString()}</p>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={async () => {
+                                    // Apply new availability
+                                    const newAvail = { ...availability, [request.counselorId]: request.requestedAvailability };
+                                    await saveAvail(newAvail);
+                                    // Update request status
+                                    const updatedReqs = availabilityChangeRequests.map(r =>
+                                      r.id === request.id
+                                        ? { ...r, status: 'approved', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
+                                        : r
+                                    );
+                                    await saveAvailabilityChangeRequests(updatedReqs);
+                                    showToast('Availability changes approved!');
+                                  }}
+                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    const updatedReqs = availabilityChangeRequests.map(r =>
+                                      r.id === request.id
+                                        ? { ...r, status: 'rejected', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
+                                        : r
+                                    );
+                                    await saveAvailabilityChangeRequests(updatedReqs);
+                                    showToast('Availability changes rejected.');
+                                  }}
+                                  className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </div>
+                            {request.changes && (
+                              <div className="text-sm">
+                                <p className="font-medium mb-1">Changes:</p>
+                                <ul className="list-disc list-inside text-gray-600">
+                                  {request.changes.slice(0, 5).map((change, idx) => (
+                                    <li key={idx}>
+                                      {change.action === 'add' ? '+ Adding' : '- Removing'} {change.session} on {change.date}
+                                    </li>
+                                  ))}
+                                  {request.changes.length > 5 && (
+                                    <li className="text-gray-400">...and {request.changes.length - 5} more changes</li>
+                                  )}
+                                </ul>
+                              </div>
+                            )}
+                            {request.impactAnalysis?.affectedCampers?.length > 0 && (
+                              <div className="mt-3 p-2 bg-yellow-100 rounded text-sm text-yellow-800">
+                                ⚠️ {request.impactAnalysis.affectedCampers.length} camper(s) would need reassignment
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -4480,7 +6096,7 @@
         const addChild = async (child) => {
           const updated = { ...myUser, children: [...(myUser.children || []), { ...child, id: 'child_' + Date.now() }] };
           await saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-          showToast('Child added!');
+          showToast('Child profile added! Go to Register tab to sign them up for camp.');
         };
 
         return (
@@ -4495,8 +6111,8 @@
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1">
                 {['dashboard', 'register', 'children', 'messages'].map(t => (
-                  <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 capitalize border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'messages' ? '💬 Messages' : t}
+                  <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t}
                     {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                       <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                     )}
@@ -4537,14 +6153,46 @@
                       ))}</div>
                     )}
                   </div>
+
+                  {/* Share with Friends */}
+                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl shadow p-6 border border-purple-200">
+                    <div className="flex items-center gap-4">
+                      <div className="text-4xl">📢</div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg text-purple-800">Invite Friends to Camp!</h3>
+                        <p className="text-sm text-purple-600">Know other families who might be interested? Share Roosevelt Camp with them!</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const shareText = `Join us at Roosevelt Girls Basketball Day Camp this summer! Great coaching, fun activities, and skill development for grades 3-8. ${window.location.origin}`;
+                          if (navigator.share) {
+                            navigator.share({
+                              title: 'Roosevelt Girls Basketball Day Camp',
+                              text: shareText,
+                              url: window.location.origin
+                            }).catch(() => {});
+                          } else {
+                            navigator.clipboard.writeText(shareText).then(() => {
+                              showToast('Link copied to clipboard!');
+                            });
+                          }
+                        }}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 flex items-center gap-2"
+                      >
+                        <span>Share</span>
+                        <span>📤</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               )}
 
               {parentTab === 'register' && (
                 <div className="space-y-6">
                   <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-4">Select Children</h3>
-                    {myChildren.length === 0 ? <p className="text-gray-500">Add children in the Children tab first</p> : (
+                    <h3 className="font-bold text-lg mb-2">Select Children to Register</h3>
+                    <p className="text-sm text-gray-500 mb-4">Choose which of your children to register for camp sessions. Once registered, they become campers!</p>
+                    {myChildren.length === 0 ? <p className="text-gray-500">Add children in the "My Children" tab first</p> : (
                       <div className="flex flex-wrap gap-2">{myChildren.map(c => (
                         <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'px-4 py-2 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50' : 'border-gray-200')}>{c.name}</button>
                       ))}</div>
@@ -4674,7 +6322,8 @@
 
               {parentTab === 'children' && (
                 <div className="bg-white rounded-xl shadow p-6">
-                  <h3 className="font-bold text-lg mb-4">My Children</h3>
+                  <h3 className="font-bold text-lg mb-2">My Children</h3>
+                  <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Register tab to make them campers!</p>
                   {myChildren.length > 0 && (
                     <div className="space-y-4 mb-6">{myChildren.map(c => (
                       <ChildCard
@@ -4712,9 +6361,10 @@
             {showConfirm && (
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
-                  <div className="text-6xl mb-4">✅</div>
-                  <h2 className="font-display text-2xl text-green-800 mb-4">Registration Submitted!</h2>
-                  <p className="mb-2">Children: {showConfirm.children?.join(', ')}</p>
+                  <div className="text-6xl mb-4">🎉</div>
+                  <h2 className="font-display text-2xl text-green-800 mb-2">Registration Submitted!</h2>
+                  <p className="text-green-600 font-medium mb-4">Your children are now campers!</p>
+                  <p className="mb-2">Registered: {showConfirm.children?.join(', ')}</p>
                   <p className="text-2xl font-bold text-green-700 mb-2">Amount Due: ${showConfirm.total}</p>
                   {showConfirm.savings > 0 && (
                     <p className="text-green-600 text-sm mb-4">🎉 You saved ${showConfirm.savings} with your bulk discount!</p>
@@ -4778,7 +6428,8 @@
 
         return (
           <div className="border-t pt-4 space-y-4">
-            <h4 className="font-medium text-lg">Add Child</h4>
+            <h4 className="font-medium text-lg">Add Child Profile</h4>
+            <p className="text-sm text-gray-500 -mt-2">Create a profile for your child. You'll register them for camp sessions separately.</p>
 
             {/* Photo Upload with Face Silhouette Placeholder */}
             <div className="flex justify-center">
