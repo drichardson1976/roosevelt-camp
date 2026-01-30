@@ -43,10 +43,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.078";
+    const VERSION = "12.079";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.079", date: "2026-01-30", changes: [
+        "Added Children tab in admin dashboard to view all child profiles",
+        "Children tab separates registered (campers) from unregistered children",
+        "Hidden 'Coming Soon' badges on Google/Apple login buttons",
+        "Content tab has text editing and photo management (scroll down)",
+        "Site Photos section in Content tab for hero image and activity photos"
+      ]},
       { version: "12.078", date: "2026-01-30", changes: [
         "Removed admin credentials display from login page",
         "Added Google and Apple login buttons (Coming Soon)",
@@ -1926,6 +1933,138 @@
               </div>
             </div>
           )}
+        </div>
+      );
+    };
+
+    // ==================== CHILDREN TAB (Profiles, not yet registered) ====================
+    const ChildrenTab = ({ children, childParentLinks, users, registrations, onSaveChildren, onSaveLinks, showToast }) => {
+      const [searchTerm, setSearchTerm] = useState('');
+
+      // Get all children profiles with their parent info
+      const getAllChildren = () => {
+        return children.map(child => ({
+          ...child,
+          parents: childParentLinks
+            .filter(link => link.childId === child.id)
+            .map(link => users.find(u => u.email === link.parentEmail))
+            .filter(Boolean),
+          hasRegistrations: registrations.some(r => r.childId === child.id)
+        }));
+      };
+
+      const allChildren = getAllChildren();
+      const filteredChildren = allChildren.filter(c =>
+        c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.parents?.some(p => p?.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+
+      // Separate into registered (campers) and not registered (children)
+      const unregisteredChildren = filteredChildren.filter(c => !c.hasRegistrations);
+      const registeredChildren = filteredChildren.filter(c => c.hasRegistrations);
+
+      const getAge = (birthdate) => {
+        if (!birthdate) return null;
+        const today = new Date();
+        const birth = new Date(birthdate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age;
+      };
+
+      const ChildCard = ({ child }) => {
+        const age = getAge(child.birthdate);
+        return (
+          <div className="border rounded-xl p-4 hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-4">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden flex-shrink-0">
+                {child.photo ? (
+                  <img src={child.photo} alt={child.name} className="w-full h-full object-cover" />
+                ) : (
+                  child.name?.charAt(0)?.toUpperCase() || '?'
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-bold text-gray-800 truncate">{child.name}</h4>
+                <div className="text-sm text-gray-600">
+                  {age && <span>Age {age}</span>}
+                  {child.grade && <span className="ml-2">• Grade {child.grade}</span>}
+                </div>
+                {child.parents?.length > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Parents: {child.parents.map(p => p.name).join(', ')}
+                  </div>
+                )}
+              </div>
+              <div className="flex-shrink-0">
+                {child.hasRegistrations ? (
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                    ✓ Registered
+                  </span>
+                ) : (
+                  <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
+                    Not Registered
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+            <p className="text-blue-800">
+              <strong>Children vs Campers:</strong> This tab shows all child profiles. Children become "campers" when registered for sessions.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-lg text-green-800">👶 All Children Profiles ({allChildren.length})</h3>
+              <input
+                type="text"
+                placeholder="Search children or parents..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 border rounded-lg w-64"
+              />
+            </div>
+
+            {unregisteredChildren.length > 0 && (
+              <div className="mb-6">
+                <h4 className="font-medium text-yellow-700 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 bg-yellow-400 rounded-full"></span>
+                  Not Yet Registered ({unregisteredChildren.length})
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {unregisteredChildren.map(child => (
+                    <ChildCard key={child.id} child={child} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {registeredChildren.length > 0 && (
+              <div>
+                <h4 className="font-medium text-green-700 mb-3 flex items-center gap-2">
+                  <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                  Registered Campers ({registeredChildren.length})
+                </h4>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {registeredChildren.map(child => (
+                    <ChildCard key={child.id} child={child} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {allChildren.length === 0 && (
+              <p className="text-gray-500 text-center py-8">No children profiles found. Children are created when parents complete onboarding.</p>
+            )}
+          </div>
         </div>
       );
     };
@@ -5670,7 +5809,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <div className="space-y-3">
                   <button
                     onClick={() => showToast('Google login coming soon!')}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors relative"
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -5679,18 +5818,16 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                     </svg>
                     <span className="font-medium text-gray-700">Continue with Google</span>
-                    <span className="absolute right-3 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Coming Soon</span>
                   </button>
 
                   <button
                     onClick={() => showToast('Apple login coming soon!')}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors relative"
+                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
                     </svg>
                     <span className="font-medium text-gray-700">Continue with Apple</span>
-                    <span className="absolute right-3 text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full">Coming Soon</span>
                   </button>
                 </div>
 
@@ -5726,9 +5863,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'registrations', 'assignments', 'campers', 'parents', 'counselors', 'approval', 'admins', 'content', 'history'].map(t => (
+                {['dashboard', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'content', 'history'].map(t => (
                   <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🧒 Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
+                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
                     {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                     {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
                     {t === 'admins' && <span className="ml-2 bg-purple-500 text-white text-xs px-2 rounded-full">{admins.length}</span>}
@@ -6212,6 +6349,18 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   admins={admins}
                   currentAdminId={user?.adminId}
                   onSave={saveAdmins}
+                  showToast={showToast}
+                />
+              )}
+
+              {adminTab === 'children' && (
+                <ChildrenTab
+                  children={children}
+                  childParentLinks={childParentLinks}
+                  users={users}
+                  registrations={registrations}
+                  onSaveChildren={saveChildren}
+                  onSaveLinks={saveChildParentLinks}
                   showToast={showToast}
                 />
               )}
