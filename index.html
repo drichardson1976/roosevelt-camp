@@ -1993,7 +1993,7 @@
         showToast(editingCamper ? 'Camper updated!' : 'Camper added!');
       };
 
-      const handleDelete = () => {
+      const handleDelete = async () => {
         if (deleteConfirmText !== 'DELETE') {
           showToast('Please type DELETE to confirm', 'error');
           return;
