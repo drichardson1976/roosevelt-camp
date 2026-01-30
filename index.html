@@ -43,10 +43,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.068";
+    const VERSION = "12.069";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.069", date: "2026-01-29", changes: [
+        "Admin management: Create, edit, delete admin accounts",
+        "At least one admin always required",
+        "Campers tab: View all registered campers with details",
+        "Camper search, sort by name/age/grade/registrations",
+        "Assignments tab: Drag-and-drop camper-counselor assignments",
+        "View assignments by date and session (AM/PM)",
+        "Capacity tracking: 5 campers max per counselor",
+        "Auto-assign feature distributes campers evenly",
+        "Empty spots summary to see available capacity"
+      ]},
       { version: "12.068", date: "2026-01-29", changes: [
         "Enhanced counselor availability signup with bulk actions",
         "Camp dates auto-generated: Monday after school ends → Friday before school starts",
@@ -200,6 +211,10 @@
       { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', phone: '(206) 555-0102', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
       { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', phone: '(206) 555-0103', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
       { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', phone: '(206) 555-0104', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
+    ];
+
+    const DEFAULT_ADMINS = [
+      { id: 'admin_1', username: 'admin', password: 'admin', name: 'Camp Director', email: 'director@rooseveltcamp.com', createdAt: new Date().toISOString() }
     ];
 
     // ==================== STORAGE ====================
@@ -1434,6 +1449,756 @@
       );
     };
 
+    // ==================== ADMINS TAB ====================
+    const AdminsTab = ({ admins, currentAdminId, onSave, showToast }) => {
+      const [editingAdmin, setEditingAdmin] = useState(null);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [confirmDelete, setConfirmDelete] = useState(null);
+      const [deleteConfirmText, setDeleteConfirmText] = useState('');
+
+      const [formData, setFormData] = useState({
+        username: '', password: '', name: '', email: ''
+      });
+
+      const resetForm = () => {
+        setFormData({ username: '', password: '', name: '', email: '' });
+        setShowAddForm(false);
+        setEditingAdmin(null);
+      };
+
+      const handleSave = () => {
+        if (!formData.username || !formData.password || !formData.name) {
+          showToast('Username, password, and name are required', 'error');
+          return;
+        }
+        // Check for duplicate username
+        if (admins.some(a => a.username === formData.username && a.id !== editingAdmin?.id)) {
+          showToast('Username already exists', 'error');
+          return;
+        }
+
+        if (editingAdmin) {
+          const updated = admins.map(a => a.id === editingAdmin.id ? { ...a, ...formData } : a);
+          onSave(updated, `Updated admin ${formData.name}`);
+        } else {
+          const newAdmin = {
+            id: 'admin_' + Date.now(),
+            ...formData,
+            createdAt: new Date().toISOString()
+          };
+          onSave([...admins, newAdmin], `Added admin ${formData.name}`);
+        }
+        resetForm();
+        showToast(editingAdmin ? 'Admin updated!' : 'Admin added!');
+      };
+
+      const handleDelete = (admin) => {
+        if (admins.length <= 1) {
+          showToast('Cannot delete the last admin!', 'error');
+          return;
+        }
+        if (admin.id === currentAdminId) {
+          showToast('Cannot delete yourself!', 'error');
+          return;
+        }
+        setConfirmDelete(admin);
+      };
+
+      const confirmDeleteAdmin = () => {
+        if (deleteConfirmText !== 'DELETE') {
+          showToast('Please type DELETE to confirm', 'error');
+          return;
+        }
+        const updated = admins.filter(a => a.id !== confirmDelete.id);
+        onSave(updated, `Deleted admin ${confirmDelete.name}`);
+        setConfirmDelete(null);
+        setDeleteConfirmText('');
+        showToast('Admin deleted');
+      };
+
+      const startEdit = (admin) => {
+        setFormData({
+          username: admin.username,
+          password: admin.password,
+          name: admin.name,
+          email: admin.email || ''
+        });
+        setEditingAdmin(admin);
+        setShowAddForm(true);
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="font-bold text-xl text-purple-800">👑 Admin Accounts</h3>
+                <p className="text-sm text-gray-500">{admins.length} admin{admins.length !== 1 ? 's' : ''} • At least 1 admin required</p>
+              </div>
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+              >
+                + Add Admin
+              </button>
+            </div>
+
+            {/* Admin List */}
+            <div className="space-y-3">
+              {admins.map(admin => (
+                <div key={admin.id} className="border rounded-lg p-4 flex justify-between items-center hover:bg-gray-50">
+                  <div>
+                    <div className="font-bold text-lg">{admin.name}</div>
+                    <div className="text-sm text-gray-600">
+                      Username: <span className="font-mono bg-gray-100 px-2 rounded">{admin.username}</span>
+                      {admin.email && <span className="ml-3">• {admin.email}</span>}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      Created: {new Date(admin.createdAt).toLocaleDateString()}
+                      {admin.id === currentAdminId && <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-700 rounded">You</span>}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => startEdit(admin)}
+                      className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(admin)}
+                      disabled={admins.length <= 1 || admin.id === currentAdminId}
+                      className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Add/Edit Form Modal */}
+          {showAddForm && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6">
+                <h3 className="font-bold text-xl mb-4">{editingAdmin ? 'Edit Admin' : 'Add New Admin'}</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Name *</label>
+                    <input
+                      value={formData.name}
+                      onChange={e => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="Full Name"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Username *</label>
+                    <input
+                      value={formData.username}
+                      onChange={e => setFormData({ ...formData, username: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg font-mono"
+                      placeholder="login_username"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Password *</label>
+                    <input
+                      type="text"
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg font-mono"
+                      placeholder="password"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Email (optional)</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={e => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="admin@example.com"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-6">
+                  <button onClick={resetForm} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleSave} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    {editingAdmin ? 'Save Changes' : 'Add Admin'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Delete Confirmation Modal */}
+          {confirmDelete && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h3 className="font-bold text-xl text-red-600 mb-2">Delete Admin Account</h3>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+                  <br />This cannot be undone.
+                </p>
+                <p className="text-sm text-gray-500 mb-2">Type DELETE to confirm:</p>
+                <input
+                  value={deleteConfirmText}
+                  onChange={e => setDeleteConfirmText(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-center font-mono mb-4"
+                  placeholder="DELETE"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                />
+                <div className="flex gap-3">
+                  <button onClick={() => { setConfirmDelete(null); setDeleteConfirmText(''); }} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={confirmDeleteAdmin} disabled={deleteConfirmText !== 'DELETE'} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300">
+                    Delete Admin
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== CAMPERS TAB ====================
+    const CampersTab = ({ users, registrations }) => {
+      const [searchTerm, setSearchTerm] = useState('');
+      const [sortBy, setSortBy] = useState('name'); // name, age, grade, registrations
+
+      // Get all unique children from all users
+      const allCampers = users.flatMap(u =>
+        (u.children || []).map(child => ({
+          ...child,
+          parentName: u.name,
+          parentEmail: u.email,
+          parentPhone: u.phone,
+          registrations: registrations.filter(r => r.childId === child.id)
+        }))
+      );
+
+      const filteredCampers = allCampers.filter(c =>
+        c.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.parentName?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      const sortedCampers = [...filteredCampers].sort((a, b) => {
+        switch (sortBy) {
+          case 'name': return (a.name || '').localeCompare(b.name || '');
+          case 'age': return (a.birthdate || '').localeCompare(b.birthdate || '');
+          case 'grade': return (a.grade || '').localeCompare(b.grade || '');
+          case 'registrations': return b.registrations.length - a.registrations.length;
+          default: return 0;
+        }
+      });
+
+      const getAge = (birthdate) => {
+        if (!birthdate) return null;
+        const today = new Date();
+        const birth = new Date(birthdate);
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age;
+      };
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="font-bold text-xl text-green-800">🧒 All Campers</h3>
+                <p className="text-sm text-gray-500">{allCampers.length} registered campers</p>
+              </div>
+              <div className="flex gap-2 items-center">
+                <span className="text-sm text-gray-500">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value)}
+                  className="px-3 py-1 border rounded-lg"
+                >
+                  <option value="name">Name</option>
+                  <option value="age">Age (youngest first)</option>
+                  <option value="grade">Grade</option>
+                  <option value="registrations">Registrations</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="mb-4">
+              <input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search campers by name or parent name..."
+                className="w-full px-4 py-2 border rounded-lg"
+                autoComplete="off"
+                data-1p-ignore="true"
+              />
+            </div>
+
+            {/* Campers Table */}
+            {sortedCampers.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <p className="text-4xl mb-4">🧒</p>
+                <p>{allCampers.length === 0 ? 'No campers registered yet' : 'No campers match your search'}</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left text-sm text-gray-600 border-b">
+                      <th className="p-3">Photo</th>
+                      <th className="p-3">Name</th>
+                      <th className="p-3">Age</th>
+                      <th className="p-3">Grade</th>
+                      <th className="p-3">Parent</th>
+                      <th className="p-3">Contact</th>
+                      <th className="p-3">Registrations</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedCampers.map(camper => (
+                      <tr key={camper.id} className="border-b hover:bg-gray-50">
+                        <td className="p-3">
+                          {camper.photo ? (
+                            <img src={camper.photo} alt={camper.name} className="w-10 h-10 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                              </svg>
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3 font-medium">{camper.name}</td>
+                        <td className="p-3">{getAge(camper.birthdate) ? `${getAge(camper.birthdate)} yrs` : '-'}</td>
+                        <td className="p-3">{camper.grade || '-'}</td>
+                        <td className="p-3">
+                          <div className="font-medium">{camper.parentName}</div>
+                          <div className="text-sm text-gray-500">{camper.parentEmail}</div>
+                        </td>
+                        <td className="p-3 text-sm">
+                          {camper.phone && <div>Child: {camper.phone}</div>}
+                          {camper.parentPhone && <div>Parent: {camper.parentPhone}</div>}
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded text-sm ${camper.registrations.length > 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                            {camper.registrations.length} session{camper.registrations.length !== 1 ? 's' : ''}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-3xl font-bold text-green-600">{allCampers.length}</div>
+              <div className="text-gray-600">Total Campers</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-3xl font-bold text-blue-600">{allCampers.filter(c => c.registrations.length > 0).length}</div>
+              <div className="text-gray-600">With Registrations</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-3xl font-bold text-yellow-600">{allCampers.filter(c => c.registrations.length === 0).length}</div>
+              <div className="text-gray-600">No Sessions Yet</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-3xl font-bold text-purple-600">{users.length}</div>
+              <div className="text-gray-600">Parent Accounts</div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== ASSIGNMENTS TAB ====================
+    const AssignmentsTab = ({ registrations, counselors, users, assignments, onSaveAssignments, showToast }) => {
+      const [selectedDate, setSelectedDate] = useState(CAMP_DATES[0] || '');
+      const [selectedSession, setSelectedSession] = useState('morning');
+      const [draggedCamper, setDraggedCamper] = useState(null);
+
+      // Get approved registrations for the selected date/session
+      const getSessionRegs = () => {
+        return registrations.filter(r =>
+          r.date === selectedDate &&
+          r.sessions?.includes(selectedSession) &&
+          r.status === 'approved'
+        );
+      };
+
+      // Get assignment key for current date/session
+      const getAssignmentKey = () => `${selectedDate}_${selectedSession}`;
+
+      // Get current assignments for this session
+      const getCurrentAssignments = () => assignments[getAssignmentKey()] || {};
+
+      // Get all assigned camper IDs for this session
+      const getAssignedCamperIds = () => {
+        const current = getCurrentAssignments();
+        return Object.values(current).flat();
+      };
+
+      // Get unassigned campers
+      const getUnassignedCampers = () => {
+        const assigned = getAssignedCamperIds();
+        return getSessionRegs().filter(r => !assigned.includes(r.childId));
+      };
+
+      // Get available counselors (those who are available on this date)
+      const getAvailableCounselors = () => {
+        return counselors.filter(c => c.visible);
+      };
+
+      // Calculate summary stats
+      const getSummary = () => {
+        const regs = getSessionRegs();
+        const current = getCurrentAssignments();
+        const availableCounselors = getAvailableCounselors();
+        const totalCapacity = availableCounselors.length * KIDS_PER_COUNSELOR;
+        const assignedCount = Object.values(current).flat().length;
+        const emptySpots = availableCounselors.reduce((acc, c) => {
+          const assigned = current[c.id]?.length || 0;
+          return acc + (KIDS_PER_COUNSELOR - assigned);
+        }, 0);
+
+        return {
+          totalCampers: regs.length,
+          assignedCount,
+          unassignedCount: regs.length - assignedCount,
+          totalCapacity,
+          emptySpots,
+          counselorCount: availableCounselors.length,
+          overCapacity: regs.length > totalCapacity
+        };
+      };
+
+      // Handle drag start
+      const handleDragStart = (e, camper) => {
+        setDraggedCamper(camper);
+        e.dataTransfer.effectAllowed = 'move';
+      };
+
+      // Handle drop on counselor
+      const handleDrop = (e, counselorId) => {
+        e.preventDefault();
+        if (!draggedCamper) return;
+
+        const key = getAssignmentKey();
+        const current = { ...assignments };
+        if (!current[key]) current[key] = {};
+
+        // Check if counselor is at capacity
+        const counselorCampers = current[key][counselorId] || [];
+        if (counselorCampers.length >= KIDS_PER_COUNSELOR) {
+          showToast(`Counselor already has ${KIDS_PER_COUNSELOR} campers (max)`, 'error');
+          setDraggedCamper(null);
+          return;
+        }
+
+        // Remove from any existing assignment
+        Object.keys(current[key]).forEach(cId => {
+          current[key][cId] = current[key][cId].filter(id => id !== draggedCamper.childId);
+        });
+
+        // Add to new counselor
+        if (!current[key][counselorId]) current[key][counselorId] = [];
+        current[key][counselorId].push(draggedCamper.childId);
+
+        onSaveAssignments(current, `Assigned ${draggedCamper.childName} to counselor`);
+        setDraggedCamper(null);
+        showToast('Camper assigned!');
+      };
+
+      // Handle drop on unassigned area
+      const handleDropUnassigned = (e) => {
+        e.preventDefault();
+        if (!draggedCamper) return;
+
+        const key = getAssignmentKey();
+        const current = { ...assignments };
+        if (!current[key]) current[key] = {};
+
+        // Remove from any existing assignment
+        Object.keys(current[key]).forEach(cId => {
+          current[key][cId] = current[key][cId].filter(id => id !== draggedCamper.childId);
+        });
+
+        onSaveAssignments(current, `Unassigned ${draggedCamper.childName}`);
+        setDraggedCamper(null);
+        showToast('Camper unassigned');
+      };
+
+      // Get camper name from childId
+      const getCamperName = (childId) => {
+        const reg = registrations.find(r => r.childId === childId);
+        return reg?.childName || 'Unknown';
+      };
+
+      // Get camper info for display
+      const getCamperInfo = (childId) => {
+        const reg = registrations.find(r => r.childId === childId);
+        if (!reg) return null;
+        const parent = users.find(u => u.email === reg.parentEmail);
+        const child = parent?.children?.find(c => c.id === childId);
+        return { ...reg, child, parent };
+      };
+
+      const summary = getSummary();
+      const formatDate = (dateStr) => {
+        const d = new Date(dateStr + 'T12:00:00');
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}`;
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Date/Session Selector */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold text-xl text-green-800 mb-4">📋 Camper Assignments</h3>
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Date</label>
+                <select
+                  value={selectedDate}
+                  onChange={e => setSelectedDate(e.target.value)}
+                  className="px-4 py-2 border rounded-lg min-w-48"
+                >
+                  {CAMP_DATES.map(date => (
+                    <option key={date} value={date}>{formatDate(date)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Session</label>
+                <div className="flex">
+                  <button
+                    onClick={() => setSelectedSession('morning')}
+                    className={`px-4 py-2 border rounded-l-lg ${selectedSession === 'morning' ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white'}`}
+                  >
+                    ☀️ Morning
+                  </button>
+                  <button
+                    onClick={() => setSelectedSession('afternoon')}
+                    className={`px-4 py-2 border rounded-r-lg border-l-0 ${selectedSession === 'afternoon' ? 'bg-blue-500 text-white border-blue-500' : 'bg-white'}`}
+                  >
+                    🌙 Afternoon
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid md:grid-cols-5 gap-4">
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{summary.totalCampers}</div>
+              <div className="text-sm text-gray-600">Registered</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{summary.assignedCount}</div>
+              <div className="text-sm text-gray-600">Assigned</div>
+            </div>
+            <div className={`rounded-xl shadow p-4 text-center ${summary.unassignedCount > 0 ? 'bg-yellow-50' : 'bg-white'}`}>
+              <div className={`text-2xl font-bold ${summary.unassignedCount > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{summary.unassignedCount}</div>
+              <div className="text-sm text-gray-600">Unassigned</div>
+            </div>
+            <div className="bg-white rounded-xl shadow p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">{summary.counselorCount}</div>
+              <div className="text-sm text-gray-600">Counselors</div>
+            </div>
+            <div className={`rounded-xl shadow p-4 text-center ${summary.emptySpots > 0 ? 'bg-green-50' : 'bg-white'}`}>
+              <div className={`text-2xl font-bold ${summary.emptySpots > 0 ? 'text-green-600' : 'text-gray-400'}`}>{summary.emptySpots}</div>
+              <div className="text-sm text-gray-600">Empty Spots</div>
+            </div>
+          </div>
+
+          {summary.overCapacity && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+              ⚠️ <strong>Over Capacity:</strong> You have {summary.totalCampers} campers but only {summary.totalCapacity} spots ({summary.counselorCount} counselors × {KIDS_PER_COUNSELOR} each)
+            </div>
+          )}
+
+          {/* Assignment Area */}
+          <div className="grid lg:grid-cols-4 gap-6">
+            {/* Unassigned Campers */}
+            <div
+              className="bg-white rounded-xl shadow p-4"
+              onDragOver={e => e.preventDefault()}
+              onDrop={handleDropUnassigned}
+            >
+              <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
+                Unassigned ({getUnassignedCampers().length})
+              </h4>
+              <div className="space-y-2 min-h-32">
+                {getUnassignedCampers().length === 0 ? (
+                  <div className="text-gray-400 text-sm text-center py-4">
+                    {getSessionRegs().length === 0 ? 'No registrations for this session' : 'All campers assigned! 🎉'}
+                  </div>
+                ) : (
+                  getUnassignedCampers().map(reg => (
+                    <div
+                      key={reg.id}
+                      draggable
+                      onDragStart={e => handleDragStart(e, reg)}
+                      className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg cursor-move hover:bg-yellow-100 transition-colors"
+                    >
+                      <div className="font-medium text-sm">{reg.childName}</div>
+                      <div className="text-xs text-gray-500">{reg.parentName}</div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Counselor Columns */}
+            {getAvailableCounselors().map(counselor => {
+              const assignedIds = getCurrentAssignments()[counselor.id] || [];
+              const spotsFilled = assignedIds.length;
+              const isFull = spotsFilled >= KIDS_PER_COUNSELOR;
+
+              return (
+                <div
+                  key={counselor.id}
+                  className={`bg-white rounded-xl shadow p-4 ${isFull ? 'ring-2 ring-green-500' : ''}`}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => handleDrop(e, counselor.id)}
+                >
+                  <div className="flex items-center gap-3 mb-3">
+                    {counselor.photo ? (
+                      <img src={counselor.photo} alt={counselor.name} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold">
+                        {counselor.name?.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-sm">{counselor.name}</h4>
+                      <div className="flex items-center gap-1">
+                        {[...Array(KIDS_PER_COUNSELOR)].map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-2 h-2 rounded-full ${i < spotsFilled ? 'bg-green-500' : 'bg-gray-200'}`}
+                          />
+                        ))}
+                        <span className="text-xs text-gray-500 ml-1">{spotsFilled}/{KIDS_PER_COUNSELOR}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 min-h-32">
+                    {assignedIds.length === 0 ? (
+                      <div className="text-gray-400 text-sm text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">
+                        Drop campers here
+                      </div>
+                    ) : (
+                      assignedIds.map(childId => {
+                        const info = getCamperInfo(childId);
+                        const reg = getSessionRegs().find(r => r.childId === childId);
+                        return (
+                          <div
+                            key={childId}
+                            draggable
+                            onDragStart={e => handleDragStart(e, reg || { childId, childName: getCamperName(childId) })}
+                            className="p-2 bg-green-50 border border-green-200 rounded-lg cursor-move hover:bg-green-100 transition-colors"
+                          >
+                            <div className="font-medium text-sm">{getCamperName(childId)}</div>
+                            <div className="text-xs text-gray-500">{info?.parentName || ''}</div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow p-4">
+            <h4 className="font-bold text-gray-700 mb-3">Quick Actions</h4>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => {
+                  // Auto-assign unassigned campers
+                  const unassigned = getUnassignedCampers();
+                  if (unassigned.length === 0) {
+                    showToast('No unassigned campers');
+                    return;
+                  }
+
+                  const key = getAssignmentKey();
+                  const current = { ...assignments };
+                  if (!current[key]) current[key] = {};
+
+                  const availableCounselors = getAvailableCounselors();
+                  let camperIdx = 0;
+
+                  for (const camper of unassigned) {
+                    // Find counselor with fewest campers
+                    let minCounselor = null;
+                    let minCount = KIDS_PER_COUNSELOR;
+
+                    for (const c of availableCounselors) {
+                      const count = current[key][c.id]?.length || 0;
+                      if (count < minCount) {
+                        minCount = count;
+                        minCounselor = c;
+                      }
+                    }
+
+                    if (!minCounselor || minCount >= KIDS_PER_COUNSELOR) break;
+
+                    if (!current[key][minCounselor.id]) current[key][minCounselor.id] = [];
+                    current[key][minCounselor.id].push(camper.childId);
+                    camperIdx++;
+                  }
+
+                  onSaveAssignments(current, `Auto-assigned ${camperIdx} campers`);
+                  showToast(`Auto-assigned ${camperIdx} campers!`);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                ✨ Auto-Assign All
+              </button>
+              <button
+                onClick={() => {
+                  const key = getAssignmentKey();
+                  const current = { ...assignments };
+                  delete current[key];
+                  onSaveAssignments(current, `Cleared all assignments for ${formatDate(selectedDate)} ${selectedSession}`);
+                  showToast('Assignments cleared');
+                }}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+              >
+                🗑️ Clear All
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     // ==================== PARENT MESSAGES TAB ====================
     const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast }) => {
       const [replyText, setReplyText] = useState('');
@@ -1781,6 +2546,8 @@
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
       const [messages, setMessages] = useState([]);
+      const [admins, setAdmins] = useState(DEFAULT_ADMINS);
+      const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
       
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -1807,6 +2574,10 @@
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
             const ms = await storage.get('camp_messages');
             if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
+            const ad = await storage.get('camp_admins');
+            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
+            const as = await storage.get('camp_assignments');
+            if (as?.[0]?.data) setAssignments(as[0].data);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -1850,6 +2621,16 @@
 
       const saveUsers = async (u) => { setUsers(u); await storage.set('camp_registered_users', 'main', u); };
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
+      const saveAdmins = async (a, action = null) => {
+        setAdmins(a);
+        await storage.set('camp_admins', 'main', a);
+        if (action) addToHistory('Admin', action);
+      };
+      const saveAssignments = async (a, action = null) => {
+        setAssignments(a);
+        await storage.set('camp_assignments', 'main', a);
+        if (action) addToHistory('Assignment', action);
+      };
 
       const saveMessage = async (msg) => {
         const newMsgs = [...messages, msg];
@@ -2169,7 +2950,9 @@
         const [phone, setPhone] = useState('');
 
         const handleLogin = () => {
-          if (email === 'admin' && password === 'admin') { setUser({ name: 'Admin', role: 'admin' }); setPage('admin'); showToast('Welcome, Admin!'); return; }
+          // Check if logging in as admin
+          const admin = admins.find(a => a.username === email && a.password === password);
+          if (admin) { setUser({ name: admin.name, role: 'admin', adminId: admin.id }); setPage('admin'); showToast(`Welcome, ${admin.name}!`); return; }
           const u = users.find(x => x.email === email && x.password === password);
           if (u) { setUser(u); setPage(u.role === 'counselor' ? 'counselor' : 'parent'); showToast('Welcome!'); return; }
           const c = counselors.find(x => x.email === email);
@@ -2242,11 +3025,12 @@
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'registrations', 'parents', 'counselors', 'content', 'history'].map(t => (
+                {['dashboard', 'registrations', 'assignments', 'campers', 'parents', 'counselors', 'admins', 'content', 'history'].map(t => (
                   <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 capitalize border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t}
+                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🧒 Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t}
                     {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                     {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
+                    {t === 'admins' && <span className="ml-2 bg-purple-500 text-white text-xs px-2 rounded-full">{admins.length}</span>}
                   </button>
                 ))}
               </div>
@@ -2474,6 +3258,33 @@
                   }}
                   showToast={showToast}
                   addToHistory={addToHistory}
+                />
+              )}
+
+              {adminTab === 'admins' && (
+                <AdminsTab
+                  admins={admins}
+                  currentAdminId={user?.adminId}
+                  onSave={saveAdmins}
+                  showToast={showToast}
+                />
+              )}
+
+              {adminTab === 'campers' && (
+                <CampersTab
+                  users={users}
+                  registrations={registrations}
+                />
+              )}
+
+              {adminTab === 'assignments' && (
+                <AssignmentsTab
+                  registrations={registrations}
+                  counselors={counselors}
+                  users={users}
+                  assignments={assignments}
+                  onSaveAssignments={saveAssignments}
+                  showToast={showToast}
                 />
               )}
 
