@@ -43,10 +43,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.073";
+    const VERSION = "12.074";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.074", date: "2026-01-29", changes: [
+        "Image cropper now supports shapes: circle (counselors), square (food photos)",
+        "Added rotation slider and 90° rotate button to image editor",
+        "Click any food photo to see 'Edit' overlay - opens edit modal",
+        "Edit modal has: Upload New Photo, Adjust Position/Zoom/Rotate, Reset to Default",
+        "Food/snack photos on Schedule page are now 2x larger",
+        "Green dot indicator shows which photos have custom uploads"
+      ]},
       { version: "12.073", date: "2026-01-29", changes: [
         "Food photo uploads now include zoom, crop, and pan controls",
         "Hover over any food photo to see upload and adjust buttons",
@@ -2946,13 +2954,20 @@
       );
     };
 
-    const ImageCropper = ({ image, onSave, onCancel }) => {
+    // shape: 'circle' | 'square' | 'rectangle'
+    // aspectRatio: only used for rectangle (width/height ratio, e.g. 16/9)
+    const ImageCropper = ({ image, onSave, onCancel, shape = 'circle', aspectRatio = 1 }) => {
       const canvasRef = useRef(null);
       const [zoom, setZoom] = useState(1);
       const [pos, setPos] = useState({ x: 0, y: 0 });
+      const [rotation, setRotation] = useState(0);
       const [dragging, setDragging] = useState(false);
       const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
       const [img, setImg] = useState(null);
+
+      // Canvas dimensions based on shape
+      const canvasW = shape === 'rectangle' ? 300 : 250;
+      const canvasH = shape === 'rectangle' ? Math.round(300 / aspectRatio) : 250;
 
       useEffect(() => {
         const i = new Image();
@@ -2964,35 +2979,71 @@
         if (!img || !canvasRef.current) return;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
-        canvas.width = 250;
-        canvas.height = 250;
-        ctx.clearRect(0, 0, 250, 250);
+        canvas.width = canvasW;
+        canvas.height = canvasH;
+        ctx.clearRect(0, 0, canvasW, canvasH);
         ctx.save();
+
+        // Clip based on shape
         ctx.beginPath();
-        ctx.arc(125, 125, 125, 0, Math.PI * 2);
+        if (shape === 'circle') {
+          ctx.arc(canvasW / 2, canvasH / 2, Math.min(canvasW, canvasH) / 2, 0, Math.PI * 2);
+        } else {
+          ctx.rect(0, 0, canvasW, canvasH);
+        }
         ctx.clip();
-        const scale = zoom * 250 / Math.max(img.width, img.height);
+
+        // Draw image with rotation
+        ctx.translate(canvasW / 2, canvasH / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        const scale = zoom * Math.min(canvasW, canvasH) / Math.max(img.width, img.height);
         const w = img.width * scale, h = img.height * scale;
-        ctx.drawImage(img, (250 - w) / 2 + pos.x, (250 - h) / 2 + pos.y, w, h);
+        ctx.drawImage(img, -w / 2 + pos.x, -h / 2 + pos.y, w, h);
         ctx.restore();
+
+        // Draw border
         ctx.beginPath();
-        ctx.arc(125, 125, 123, 0, Math.PI * 2);
+        if (shape === 'circle') {
+          ctx.arc(canvasW / 2, canvasH / 2, Math.min(canvasW, canvasH) / 2 - 2, 0, Math.PI * 2);
+        } else {
+          ctx.rect(2, 2, canvasW - 4, canvasH - 4);
+        }
         ctx.strokeStyle = '#16a34a';
         ctx.lineWidth = 4;
         ctx.stroke();
-      }, [img, zoom, pos]);
+      }, [img, zoom, pos, rotation, shape, canvasW, canvasH]);
 
       const onMouseDown = (e) => { setDragging(true); setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y }); };
       const onMouseMove = (e) => { if (dragging) setPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); };
       const onMouseUp = () => setDragging(false);
+      const rotate90 = () => setRotation((r) => (r + 90) % 360);
+
+      const containerClass = shape === 'circle' ? 'rounded-full' : 'rounded-lg';
 
       return (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-sm text-gray-500">Drag to position, slider to zoom</p>
-          <div className="w-[250px] h-[250px] rounded-full overflow-hidden cursor-move bg-gray-100" onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+          <p className="text-sm text-gray-500">Drag to position, use sliders to zoom & rotate</p>
+          <div
+            className={`overflow-hidden cursor-move bg-gray-100 ${containerClass}`}
+            style={{ width: canvasW, height: canvasH }}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
             <canvas ref={canvasRef} />
           </div>
-          <input type="range" min="0.5" max="3" step="0.1" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="w-48" />
+          <div className="flex flex-col gap-2 w-64">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">Zoom</span>
+              <input type="range" min="0.5" max="3" step="0.1" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="flex-1" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">Rotate</span>
+              <input type="range" min="0" max="360" step="1" value={rotation} onChange={e => setRotation(parseInt(e.target.value))} className="flex-1" />
+              <button onClick={rotate90} className="px-2 py-1 bg-gray-200 rounded text-xs" title="Rotate 90°">↻</button>
+            </div>
+          </div>
           <div className="flex gap-3">
             <button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
             <button onClick={() => onSave(canvasRef.current.toDataURL('image/jpeg', 0.9))} className="px-4 py-2 bg-green-600 text-white rounded-lg">Save</button>
@@ -3037,8 +3088,10 @@
 
     // ==================== FOOD PHOTOS MANAGER ====================
     const FoodPhotosManager = ({ foodPhotos, getFoodPhoto, onSave }) => {
-      const [cropImage, setCropImage] = useState(null); // { key, image }
-      const inputRefs = useRef({});
+      const [editingPhoto, setEditingPhoto] = useState(null); // { key, label }
+      const [showCropper, setShowCropper] = useState(false);
+      const [cropImage, setCropImage] = useState(null);
+      const inputRef = useRef(null);
 
       const FOOD_ITEMS = {
         snacks: [
@@ -3055,43 +3108,41 @@
         ]
       };
 
-      const handleFileSelect = (key, e) => {
+      const handleUploadClick = () => {
+        inputRef.current?.click();
+      };
+
+      const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
         if (file) {
           const reader = new FileReader();
-          reader.onloadend = () => setCropImage({ key, image: reader.result });
+          reader.onloadend = () => {
+            setCropImage(reader.result);
+            setShowCropper(true);
+          };
           reader.readAsDataURL(file);
         }
         e.target.value = '';
       };
 
+      const handleEditClick = () => {
+        setCropImage(getFoodPhoto(editingPhoto.key));
+        setShowCropper(true);
+      };
+
       const handleCropSave = (croppedImage) => {
-        onSave({ ...foodPhotos, [cropImage.key]: croppedImage });
+        onSave({ ...foodPhotos, [editingPhoto.key]: croppedImage });
+        setShowCropper(false);
         setCropImage(null);
+        setEditingPhoto(null);
       };
 
-      const handleReset = (key) => {
+      const handleDelete = () => {
         const updated = { ...foodPhotos };
-        delete updated[key];
+        delete updated[editingPhoto.key];
         onSave(updated);
+        setEditingPhoto(null);
       };
-
-      const handleAdjust = (key) => {
-        setCropImage({ key, image: getFoodPhoto(key) });
-      };
-
-      if (cropImage) {
-        return (
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="font-bold mb-4">🖼️ Adjust Photo</h3>
-            <ImageCropper
-              image={cropImage.image}
-              onSave={handleCropSave}
-              onCancel={() => setCropImage(null)}
-            />
-          </div>
-        );
-      }
 
       const renderPhotoGrid = (items, title, colorClass) => (
         <div className={title === 'Snacks' ? 'mb-6' : ''}>
@@ -3099,46 +3150,24 @@
           <div className="grid grid-cols-4 gap-4">
             {items.map(item => (
               <div key={item.key} className="text-center">
-                <div className="relative group">
+                <div
+                  className="relative group cursor-pointer"
+                  onClick={() => setEditingPhoto(item)}
+                >
                   <img
                     src={getFoodPhoto(item.key)}
                     alt={item.label}
                     className="w-full h-24 object-cover rounded-lg mb-1"
                     onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
                   />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
-                    <button
-                      onClick={() => inputRefs.current[item.key]?.click()}
-                      className="bg-white text-gray-800 px-2 py-1 rounded text-xs hover:bg-gray-100"
-                      title="Upload new photo"
-                    >
-                      📷
-                    </button>
-                    <button
-                      onClick={() => handleAdjust(item.key)}
-                      className="bg-white text-gray-800 px-2 py-1 rounded text-xs hover:bg-gray-100"
-                      title="Adjust/crop current photo"
-                    >
-                      ✂️
-                    </button>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                    <span className="text-white font-medium text-sm">Edit</span>
                   </div>
+                  {foodPhotos[item.key] && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full" title="Custom photo" />
+                  )}
                 </div>
-                <input
-                  ref={el => inputRefs.current[item.key] = el}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleFileSelect(item.key, e)}
-                />
                 <span className="text-xs text-gray-600 block">{item.label}</span>
-                {foodPhotos[item.key] && (
-                  <button
-                    onClick={() => handleReset(item.key)}
-                    className="text-xs text-red-600 hover:text-red-800"
-                  >
-                    Reset
-                  </button>
-                )}
               </div>
             ))}
           </div>
@@ -3149,10 +3178,87 @@
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Hover over any image to upload a new photo or adjust the current one with zoom, crop, and pan controls.
+            Click any photo to edit. Green dot indicates a custom uploaded photo.
           </p>
           {renderPhotoGrid(FOOD_ITEMS.snacks, 'Snacks', 'text-green-700')}
           {renderPhotoGrid(FOOD_ITEMS.drinks, 'Beverages', 'text-blue-700')}
+
+          {/* Photo Edit Modal */}
+          {editingPhoto && !showCropper && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-sm w-full overflow-hidden">
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">Edit: {editingPhoto.label}</h2>
+                  <button onClick={() => setEditingPhoto(null)} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  <div className="mb-4">
+                    <img
+                      src={getFoodPhoto(editingPhoto.key)}
+                      alt={editingPhoto.label}
+                      className="w-full h-40 object-cover rounded-lg"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x150/gray/white?text=No+Image'; }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleUploadClick}
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      📷 Upload New Photo
+                    </button>
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                    >
+                      ✂️ Adjust Position, Zoom & Rotate
+                    </button>
+                    {foodPhotos[editingPhoto.key] && (
+                      <button
+                        onClick={handleDelete}
+                        className="w-full py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center justify-center gap-2"
+                      >
+                        🗑️ Reset to Default
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setEditingPhoto(null)}
+                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {/* Image Cropper Modal */}
+          {showCropper && cropImage && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full overflow-hidden">
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">Adjust: {editingPhoto.label}</h2>
+                  <button onClick={() => { setShowCropper(false); setCropImage(null); }} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  <ImageCropper
+                    image={cropImage}
+                    shape="square"
+                    onSave={handleCropSave}
+                    onCancel={() => { setShowCropper(false); setCropImage(null); }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -3543,26 +3649,26 @@
                 <p className="text-gray-700 mb-4">
                   We provide healthy snacks during camp to keep your campers energized! Fresh fruit, granola bars, and other nutritious options are included.
                 </p>
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="text-center">
-                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full h-20 object-cover rounded-lg mb-1"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=🍎'; }} />
-                    <span className="text-xs text-gray-600">Fresh Fruit</span>
+                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=🍎'; }} />
+                    <span className="text-sm font-medium text-gray-700">Fresh Fruit</span>
                   </div>
                   <div className="text-center">
-                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full h-20 object-cover rounded-lg mb-1"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f59e0b/white?text=🥜'; }} />
-                    <span className="text-xs text-gray-600">Granola Bars</span>
+                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f59e0b/white?text=🥜'; }} />
+                    <span className="text-sm font-medium text-gray-700">Granola Bars</span>
                   </div>
                   <div className="text-center">
-                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full h-20 object-cover rounded-lg mb-1"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/fbbf24/white?text=🧀'; }} />
-                    <span className="text-xs text-gray-600">Cheese & Crackers</span>
+                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/fbbf24/white?text=🧀'; }} />
+                    <span className="text-sm font-medium text-gray-700">Cheese & Crackers</span>
                   </div>
                   <div className="text-center">
-                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full h-20 object-cover rounded-lg mb-1"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/84cc16/white?text=🥕'; }} />
-                    <span className="text-xs text-gray-600">Veggie Sticks</span>
+                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/84cc16/white?text=🥕'; }} />
+                    <span className="text-sm font-medium text-gray-700">Veggie Sticks</span>
                   </div>
                 </div>
               </div>
@@ -3570,26 +3676,26 @@
               {/* Drinks */}
               <div className="mb-6">
                 <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages Available</h3>
-                <div className="grid grid-cols-4 gap-3">
-                  <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full h-20 object-cover rounded-lg mb-2"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/3b82f6/white?text=💧'; }} />
-                    <span className="text-sm font-medium">Water</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/3b82f6/white?text=💧'; }} />
+                    <span className="text-sm font-medium text-gray-700">Water</span>
                   </div>
-                  <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full h-20 object-cover rounded-lg mb-2"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=⚡'; }} />
-                    <span className="text-sm font-medium">Gatorade</span>
+                  <div className="text-center p-4 bg-green-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=⚡'; }} />
+                    <span className="text-sm font-medium text-gray-700">Gatorade</span>
                   </div>
-                  <div className="text-center p-3 bg-orange-50 rounded-lg">
-                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full h-20 object-cover rounded-lg mb-2"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f97316/white?text=🍊'; }} />
-                    <span className="text-sm font-medium">Orange Juice</span>
+                  <div className="text-center p-4 bg-orange-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f97316/white?text=🍊'; }} />
+                    <span className="text-sm font-medium text-gray-700">Orange Juice</span>
                   </div>
-                  <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full h-20 object-cover rounded-lg mb-2"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/ef4444/white?text=🍎'; }} />
-                    <span className="text-sm font-medium">Apple Juice</span>
+                  <div className="text-center p-4 bg-red-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full h-40 object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/ef4444/white?text=🍎'; }} />
+                    <span className="text-sm font-medium text-gray-700">Apple Juice</span>
                   </div>
                 </div>
               </div>
