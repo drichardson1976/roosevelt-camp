@@ -3378,6 +3378,114 @@
               <p className="text-sm text-gray-500 mt-4">Discounts applied automatically at checkout. You can always add more sessions later!</p>
             </div>
 
+            {/* Snacks & Lunch */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="font-bold text-xl text-green-800 mb-4">🍎 Snacks & Lunch Options</h2>
+
+              {/* Healthy Snacks */}
+              <div className="mb-6">
+                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Healthy Snacks Provided</h3>
+                <p className="text-gray-700 mb-4">
+                  We provide healthy snacks during camp to keep your campers energized! Fresh fruit, granola bars, and other nutritious options are included.
+                </p>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="text-center">
+                    <img src="https://images.unsplash.com/photo-1568702846914-96b305d2uj8b?w=150&h=150&fit=crop" alt="Fresh fruits" className="w-full h-20 object-cover rounded-lg mb-1"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=🍎'; }} />
+                    <span className="text-xs text-gray-600">Fresh Fruit</span>
+                  </div>
+                  <div className="text-center">
+                    <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=150&h=150&fit=crop" alt="Granola bars" className="w-full h-20 object-cover rounded-lg mb-1"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f59e0b/white?text=🥜'; }} />
+                    <span className="text-xs text-gray-600">Granola Bars</span>
+                  </div>
+                  <div className="text-center">
+                    <img src="https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=150&h=150&fit=crop" alt="Cheese and crackers" className="w-full h-20 object-cover rounded-lg mb-1"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/fbbf24/white?text=🧀'; }} />
+                    <span className="text-xs text-gray-600">Cheese & Crackers</span>
+                  </div>
+                  <div className="text-center">
+                    <img src="https://images.unsplash.com/photo-1622484212850-eb596d769edc?w=150&h=150&fit=crop" alt="Veggie sticks" className="w-full h-20 object-cover rounded-lg mb-1"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/84cc16/white?text=🥕'; }} />
+                    <span className="text-xs text-gray-600">Veggie Sticks</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Drinks */}
+              <div className="mb-6">
+                <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages Available</h3>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <img src="https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=150&h=150&fit=crop" alt="Water bottles" className="w-full h-20 object-cover rounded-lg mb-2"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/3b82f6/white?text=💧'; }} />
+                    <span className="text-sm font-medium">Water</span>
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <img src="https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=150&h=150&fit=crop" alt="Gatorade" className="w-full h-20 object-cover rounded-lg mb-2"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=⚡'; }} />
+                    <span className="text-sm font-medium">Gatorade</span>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 rounded-lg">
+                    <img src="https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop" alt="Orange juice" className="w-full h-20 object-cover rounded-lg mb-2"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f97316/white?text=🍊'; }} />
+                    <span className="text-sm font-medium">Orange Juice</span>
+                  </div>
+                  <div className="text-center p-3 bg-red-50 rounded-lg">
+                    <img src="https://images.unsplash.com/photo-1576673442511-7e39b6545c87?w=150&h=150&fit=crop" alt="Apple juice" className="w-full h-20 object-cover rounded-lg mb-2"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/ef4444/white?text=🍎'; }} />
+                    <span className="text-sm font-medium">Apple Juice</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lunch Options */}
+              <div>
+                <h3 className="font-bold text-lg text-orange-700 mb-3">🍽️ Pre-Order Lunch Options</h3>
+                <p className="text-gray-700 mb-4">
+                  Want to pre-order lunch for your camper? We partner with these local restaurants for convenient lunch delivery:
+                </p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Subway_2016_logo.svg/200px-Subway_2016_logo.svg.png" alt="Subway" className="w-16 h-12 object-contain"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/22c55e/white?text=SUBWAY'; }} />
+                    <div>
+                      <h4 className="font-bold text-green-800">Subway</h4>
+                      <p className="text-sm text-gray-600">Fresh subs, wraps & salads</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-red-50 rounded-lg border border-red-200 hover:shadow-md transition-shadow">
+                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/3/3b/Chipotle_Mexican_Grill_logo.svg/200px-Chipotle_Mexican_Grill_logo.svg.png" alt="Chipotle" className="w-16 h-12 object-contain"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/dc2626/white?text=CHIPOTLE'; }} />
+                    <div>
+                      <h4 className="font-bold text-red-800">Chipotle</h4>
+                      <p className="text-sm text-gray-600">Burritos, bowls & tacos</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-lg border border-amber-200 hover:shadow-md transition-shadow">
+                    <div className="w-16 h-12 bg-amber-600 rounded flex items-center justify-center text-white font-bold text-xs text-center">TRINITY<br/>MARKET</div>
+                    <div>
+                      <h4 className="font-bold text-amber-800">Trinity Market</h4>
+                      <p className="text-sm text-gray-600">Sandwiches & fresh deli</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 hover:shadow-md transition-shadow">
+                    <img src="https://www.grandcentralbakery.com/wp-content/themes/starter/images/gcb-logo.svg" alt="Grand Central Bakery" className="w-16 h-12 object-contain"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/ca8a04/white?text=GCB'; }} />
+                    <div>
+                      <h4 className="font-bold text-yellow-800">Grand Central Bakery</h4>
+                      <p className="text-sm text-gray-600">Artisan sandwiches & pastries</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    <strong>📝 How to order:</strong> Lunch orders can be placed through your Parent Dashboard after registration. Orders must be placed at least 24 hours in advance.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Policies */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="font-bold text-xl text-green-800 mb-4">📋 Camp Policies</h2>
