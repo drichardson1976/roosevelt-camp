@@ -43,10 +43,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.072";
+    const VERSION = "12.073";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.073", date: "2026-01-29", changes: [
+        "Food photo uploads now include zoom, crop, and pan controls",
+        "Hover over any food photo to see upload and adjust buttons",
+        "Adjust button opens the image cropper for existing photos",
+        "Same image editor used for counselor photos"
+      ]},
       { version: "12.072", date: "2026-01-29", changes: [
         "Fixed parent editing bug - changes now save properly",
         "Fixed child editing bug - changes now save properly",
@@ -3029,6 +3035,128 @@
       );
     };
 
+    // ==================== FOOD PHOTOS MANAGER ====================
+    const FoodPhotosManager = ({ foodPhotos, getFoodPhoto, onSave }) => {
+      const [cropImage, setCropImage] = useState(null); // { key, image }
+      const inputRefs = useRef({});
+
+      const FOOD_ITEMS = {
+        snacks: [
+          { key: 'snack_fruit', label: 'Fresh Fruit' },
+          { key: 'snack_granola', label: 'Granola Bars' },
+          { key: 'snack_cheese', label: 'Cheese & Crackers' },
+          { key: 'snack_veggie', label: 'Veggie Sticks' }
+        ],
+        drinks: [
+          { key: 'drink_water', label: 'Water' },
+          { key: 'drink_gatorade', label: 'Gatorade' },
+          { key: 'drink_orange', label: 'Orange Juice' },
+          { key: 'drink_apple', label: 'Apple Juice' }
+        ]
+      };
+
+      const handleFileSelect = (key, e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => setCropImage({ key, image: reader.result });
+          reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+      };
+
+      const handleCropSave = (croppedImage) => {
+        onSave({ ...foodPhotos, [cropImage.key]: croppedImage });
+        setCropImage(null);
+      };
+
+      const handleReset = (key) => {
+        const updated = { ...foodPhotos };
+        delete updated[key];
+        onSave(updated);
+      };
+
+      const handleAdjust = (key) => {
+        setCropImage({ key, image: getFoodPhoto(key) });
+      };
+
+      if (cropImage) {
+        return (
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold mb-4">🖼️ Adjust Photo</h3>
+            <ImageCropper
+              image={cropImage.image}
+              onSave={handleCropSave}
+              onCancel={() => setCropImage(null)}
+            />
+          </div>
+        );
+      }
+
+      const renderPhotoGrid = (items, title, colorClass) => (
+        <div className={title === 'Snacks' ? 'mb-6' : ''}>
+          <h4 className={`font-medium ${colorClass} mb-3`}>{title}</h4>
+          <div className="grid grid-cols-4 gap-4">
+            {items.map(item => (
+              <div key={item.key} className="text-center">
+                <div className="relative group">
+                  <img
+                    src={getFoodPhoto(item.key)}
+                    alt={item.label}
+                    className="w-full h-24 object-cover rounded-lg mb-1"
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-1">
+                    <button
+                      onClick={() => inputRefs.current[item.key]?.click()}
+                      className="bg-white text-gray-800 px-2 py-1 rounded text-xs hover:bg-gray-100"
+                      title="Upload new photo"
+                    >
+                      📷
+                    </button>
+                    <button
+                      onClick={() => handleAdjust(item.key)}
+                      className="bg-white text-gray-800 px-2 py-1 rounded text-xs hover:bg-gray-100"
+                      title="Adjust/crop current photo"
+                    >
+                      ✂️
+                    </button>
+                  </div>
+                </div>
+                <input
+                  ref={el => inputRefs.current[item.key] = el}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleFileSelect(item.key, e)}
+                />
+                <span className="text-xs text-gray-600 block">{item.label}</span>
+                {foodPhotos[item.key] && (
+                  <button
+                    onClick={() => handleReset(item.key)}
+                    className="text-xs text-red-600 hover:text-red-800"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Hover over any image to upload a new photo or adjust the current one with zoom, crop, and pan controls.
+          </p>
+          {renderPhotoGrid(FOOD_ITEMS.snacks, 'Snacks', 'text-green-700')}
+          {renderPhotoGrid(FOOD_ITEMS.drinks, 'Beverages', 'text-blue-700')}
+        </div>
+      );
+    };
+
     // ==================== MAIN APP ====================
     function RooseveltCamp() {
       const [page, setPage] = useState('home');
@@ -3954,112 +4082,11 @@
                   </div>
 
                   {/* Food Photos Management */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
-                    <p className="text-sm text-gray-600 mb-4">Upload custom photos for the snacks and drinks shown on the Schedule page. Click any image to upload a replacement.</p>
-
-                    <div className="mb-6">
-                      <h4 className="font-medium text-green-700 mb-3">Snacks</h4>
-                      <div className="grid grid-cols-4 gap-4">
-                        {[
-                          { key: 'snack_fruit', label: 'Fresh Fruit' },
-                          { key: 'snack_granola', label: 'Granola Bars' },
-                          { key: 'snack_cheese', label: 'Cheese & Crackers' },
-                          { key: 'snack_veggie', label: 'Veggie Sticks' }
-                        ].map(item => (
-                          <div key={item.key} className="text-center">
-                            <label className="cursor-pointer group">
-                              <div className="relative">
-                                <img
-                                  src={getFoodPhoto(item.key)}
-                                  alt={item.label}
-                                  className="w-full h-24 object-cover rounded-lg mb-1 group-hover:opacity-75 transition-opacity"
-                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">📷 Upload</span>
-                                </div>
-                              </div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => saveFoodPhotos({ ...foodPhotos, [item.key]: reader.result });
-                                    reader.readAsDataURL(file);
-                                  }
-                                  e.target.value = '';
-                                }}
-                              />
-                            </label>
-                            <span className="text-xs text-gray-600">{item.label}</span>
-                            {foodPhotos[item.key] && (
-                              <button
-                                onClick={() => { const updated = { ...foodPhotos }; delete updated[item.key]; saveFoodPhotos(updated); }}
-                                className="text-xs text-red-600 hover:text-red-800 ml-1"
-                              >
-                                Reset
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="font-medium text-blue-700 mb-3">Beverages</h4>
-                      <div className="grid grid-cols-4 gap-4">
-                        {[
-                          { key: 'drink_water', label: 'Water' },
-                          { key: 'drink_gatorade', label: 'Gatorade' },
-                          { key: 'drink_orange', label: 'Orange Juice' },
-                          { key: 'drink_apple', label: 'Apple Juice' }
-                        ].map(item => (
-                          <div key={item.key} className="text-center">
-                            <label className="cursor-pointer group">
-                              <div className="relative">
-                                <img
-                                  src={getFoodPhoto(item.key)}
-                                  alt={item.label}
-                                  className="w-full h-24 object-cover rounded-lg mb-1 group-hover:opacity-75 transition-opacity"
-                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">📷 Upload</span>
-                                </div>
-                              </div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => saveFoodPhotos({ ...foodPhotos, [item.key]: reader.result });
-                                    reader.readAsDataURL(file);
-                                  }
-                                  e.target.value = '';
-                                }}
-                              />
-                            </label>
-                            <span className="text-xs text-gray-600">{item.label}</span>
-                            {foodPhotos[item.key] && (
-                              <button
-                                onClick={() => { const updated = { ...foodPhotos }; delete updated[item.key]; saveFoodPhotos(updated); }}
-                                className="text-xs text-red-600 hover:text-red-800 ml-1"
-                              >
-                                Reset
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <FoodPhotosManager
+                    foodPhotos={foodPhotos}
+                    getFoodPhoto={getFoodPhoto}
+                    onSave={saveFoodPhotos}
+                  />
                 </div>
               )}
 
