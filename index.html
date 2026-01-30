@@ -43,10 +43,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.066";
+    const VERSION = "12.067";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.067", date: "2026-01-29", changes: [
+        "Admin can edit/delete parents, children, and registrations",
+        "Type 'DELETE' confirmation for all deletions",
+        "Location page with Roosevelt HS map, address, GPS links",
+        "Schedule page shows pricing tiers and bulk discounts",
+        "Cancellation policy (2 weeks advance notice)",
+        "Late pickup policy (Starbucks gift card suggestion)",
+        "Added Apple Maps and Google Maps direct links"
+      ]},
       { version: "12.066", date: "2026-01-29", changes: [
         "Parents can now edit child details (name, birthdate, grade, phone, photo)",
         "Parents can delete children from their account (e.g., duplicates)",
@@ -130,8 +139,20 @@
       sessionCost: "$60",
       campDates: "June 22 - August 28, 2026",
       ageRange: "Completed 3rd - 8th Grade",
-      locationAddress: "Roosevelt High School Gymnasium\n1410 NE 66th St\nSeattle, WA 98115",
-      cancellationPolicy: "We require at least 14 days notice for cancellations to receive a full refund.",
+      // Location details
+      locationName: "Roosevelt High School",
+      locationAddress: "1410 NE 66th St",
+      locationCity: "Seattle",
+      locationState: "WA",
+      locationZip: "98115",
+      locationDetails: "Roosevelt High School Gymnasium - Enter through the main gym entrance on the east side of the building.",
+      // Pricing tiers
+      singleSessionCost: 60,
+      weekDiscount: 10, // percent off for booking full week (10 sessions)
+      multiWeekDiscount: 15, // percent off for 2+ weeks
+      // Policies
+      cancellationPolicy: "All cancellation requests must be submitted at least 14 days (2 weeks) before the scheduled session to receive a full refund. Cancellations made less than 14 days in advance are non-refundable but may be credited toward a future session at the camp director's discretion. No-shows are non-refundable.",
+      latePickupPolicy: "Camp sessions end promptly at the scheduled time. Our counselors volunteer their time and have other commitments after camp. If you anticipate being late, please call us immediately. As a gesture of appreciation for counselors who stay late due to delayed pickups, we kindly suggest purchasing a small Starbucks gift card ($5-10) for the counselor who waited with your child. Repeated late pickups may result in dismissal from the camp.",
       scholarshipInfo: "We believe every child deserves the chance to experience our camp. Apply for scholarship assistance through your Parent Dashboard."
     };
 
@@ -451,7 +472,7 @@
     };
 
     // ==================== PARENTS TAB ====================
-    const ParentsTab = ({ users, registrations, messages, onSendMessage, showToast, addToHistory }) => {
+    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedParents, setSelectedParents] = useState([]);
       const [expandedParent, setExpandedParent] = useState(null);
@@ -459,6 +480,11 @@
       const [composerMode, setComposerMode] = useState('single'); // 'single', 'selected', 'all'
       const [composerRecipient, setComposerRecipient] = useState(null);
       const [viewingThread, setViewingThread] = useState(null);
+      // Admin edit/delete state
+      const [editingParent, setEditingParent] = useState(null);
+      const [editingChild, setEditingChild] = useState(null);
+      const [editingReg, setEditingReg] = useState(null);
+      const [confirmDelete, setConfirmDelete] = useState(null); // { type: 'parent'|'child'|'registration', data: ... }
 
       const filteredUsers = users.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -623,6 +649,22 @@
                     {/* Expanded Details */}
                     {isExpanded && (
                       <div className="border-t bg-gray-50 p-4">
+                        {/* Admin Actions Bar */}
+                        <div className="flex gap-2 mb-4 pb-4 border-b">
+                          <button
+                            onClick={() => setEditingParent({ ...parent })}
+                            className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
+                          >
+                            ✏️ Edit Parent
+                          </button>
+                          <button
+                            onClick={() => setConfirmDelete({ type: 'parent', data: parent })}
+                            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
+                          >
+                            🗑️ Delete Parent
+                          </button>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-6">
                           {/* Children */}
                           <div>
@@ -640,12 +682,24 @@
                                         {child.name?.[0]}
                                       </div>
                                     )}
-                                    <div>
+                                    <div className="flex-1">
                                       <div className="font-medium">{child.name}</div>
                                       <div className="text-xs text-gray-500">
                                         {child.grade && `Grade ${child.grade}`}
                                         {child.birthdate && ` • ${calculateAge(child.birthdate)} years old`}
                                       </div>
+                                    </div>
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => setEditingChild({ child, parentEmail: parent.email })}
+                                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                        title="Edit child"
+                                      >✏️</button>
+                                      <button
+                                        onClick={() => setConfirmDelete({ type: 'child', data: { child, parentEmail: parent.email } })}
+                                        className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                        title="Delete child"
+                                      >🗑️</button>
                                     </div>
                                   </div>
                                 ))}
@@ -653,37 +707,56 @@
                             )}
                           </div>
 
-                          {/* Message History */}
+                          {/* Registrations */}
                           <div>
-                            <h4 className="font-bold text-gray-700 mb-3">💬 Recent Messages</h4>
-                            {parentMsgs.length === 0 ? (
-                              <p className="text-gray-500 text-sm">No messages yet</p>
+                            <h4 className="font-bold text-gray-700 mb-3">📋 Registrations ({regs.length})</h4>
+                            {regs.length === 0 ? (
+                              <p className="text-gray-500 text-sm">No registrations yet</p>
                             ) : (
                               <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {parentMsgs.slice(0, 5).map(msg => (
-                                  <div
-                                    key={msg.id}
-                                    onClick={() => setViewingThread({ parentEmail: parent.email, parent })}
-                                    className="p-2 bg-white rounded-lg cursor-pointer hover:bg-blue-50"
-                                  >
-                                    <div className="flex justify-between text-xs text-gray-500">
-                                      <span>{msg.from === 'admin' ? '📤 You' : '📥 ' + parent.name}</span>
-                                      <span>{formatTimestamp(msg.sentAt)}</span>
+                                {regs.map(reg => (
+                                  <div key={reg.id} className="flex items-center gap-2 p-2 bg-white rounded-lg text-sm">
+                                    <div className="flex-1">
+                                      <div className="font-medium">{reg.childName}</div>
+                                      <div className="text-xs text-gray-500">{reg.date} • {reg.sessions?.join(', ')}</div>
                                     </div>
-                                    <div className="text-sm truncate">{msg.subject || msg.body}</div>
+                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                      reg.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                      reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>{reg.status}</span>
+                                    <button
+                                      onClick={() => setEditingReg(reg)}
+                                      className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                                      title="Edit registration"
+                                    >✏️</button>
+                                    <button
+                                      onClick={() => setConfirmDelete({ type: 'registration', data: reg })}
+                                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                      title="Delete registration"
+                                    >🗑️</button>
                                   </div>
                                 ))}
-                                {parentMsgs.length > 5 && (
-                                  <button
-                                    onClick={() => setViewingThread({ parentEmail: parent.email, parent })}
-                                    className="text-sm text-blue-600 hover:underline"
-                                  >
-                                    View all {parentMsgs.length} messages →
-                                  </button>
-                                )}
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        {/* Message History */}
+                        <div className="mt-4 pt-4 border-t">
+                          <h4 className="font-bold text-gray-700 mb-3">💬 Messages ({parentMsgs.length})</h4>
+                          {parentMsgs.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No messages yet</p>
+                          ) : (
+                            <div className="flex gap-2 flex-wrap">
+                              <button
+                                onClick={() => setViewingThread({ parentEmail: parent.email, parent })}
+                                className="text-sm text-blue-600 hover:underline"
+                              >
+                                View conversation ({parentMsgs.length} messages) →
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -727,6 +800,307 @@
               onClose={() => setViewingThread(null)}
             />
           )}
+
+          {/* Edit Parent Modal */}
+          {editingParent && (
+            <AdminEditModal
+              title="Edit Parent"
+              onClose={() => setEditingParent(null)}
+              onSave={(updated) => {
+                onUpdateUsers(users.map(u => u.email === editingParent.email ? { ...u, ...updated } : u));
+                addToHistory('Admin Edit', `Updated parent: ${updated.name}`);
+                showToast('Parent updated!');
+                setEditingParent(null);
+              }}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    value={editingParent.name || ''}
+                    onChange={e => setEditingParent({ ...editingParent, name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    autoComplete="off" data-1p-ignore="true"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    value={editingParent.email || ''}
+                    onChange={e => setEditingParent({ ...editingParent, email: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    autoComplete="off" data-1p-ignore="true"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    value={editingParent.phone || ''}
+                    onChange={e => setEditingParent({ ...editingParent, phone: formatPhone(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    autoComplete="off" data-1p-ignore="true"
+                  />
+                </div>
+              </div>
+            </AdminEditModal>
+          )}
+
+          {/* Edit Child Modal */}
+          {editingChild && (
+            <AdminEditModal
+              title="Edit Child"
+              onClose={() => setEditingChild(null)}
+              onSave={(updated) => {
+                const parent = users.find(u => u.email === editingChild.parentEmail);
+                if (parent) {
+                  const updatedChildren = parent.children.map(c => c.id === editingChild.child.id ? { ...c, ...updated } : c);
+                  onUpdateUsers(users.map(u => u.email === editingChild.parentEmail ? { ...u, children: updatedChildren } : u));
+                  addToHistory('Admin Edit', `Updated child: ${updated.name}`);
+                  showToast('Child updated!');
+                }
+                setEditingChild(null);
+              }}
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    value={editingChild.child.name || ''}
+                    onChange={e => setEditingChild({ ...editingChild, child: { ...editingChild.child, name: e.target.value } })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    autoComplete="off" data-1p-ignore="true"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate</label>
+                  <input
+                    type="date"
+                    value={editingChild.child.birthdate || ''}
+                    onChange={e => setEditingChild({ ...editingChild, child: { ...editingChild.child, birthdate: e.target.value } })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    data-1p-ignore="true"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                  <select
+                    value={editingChild.child.grade || ''}
+                    onChange={e => setEditingChild({ ...editingChild, child: { ...editingChild.child, grade: e.target.value } })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="">Select grade</option>
+                    {['3rd', '4th', '5th', '6th', '7th', '8th'].map(g => <option key={g} value={g}>{g} Grade</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone (optional)</label>
+                  <input
+                    value={editingChild.child.phone || ''}
+                    onChange={e => setEditingChild({ ...editingChild, child: { ...editingChild.child, phone: formatPhone(e.target.value) } })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    autoComplete="off" data-1p-ignore="true"
+                  />
+                </div>
+              </div>
+            </AdminEditModal>
+          )}
+
+          {/* Edit Registration Modal */}
+          {editingReg && (
+            <AdminEditModal
+              title="Edit Registration"
+              onClose={() => setEditingReg(null)}
+              onSave={(updated) => {
+                onUpdateRegistrations({ ...editingReg, ...updated });
+                addToHistory('Admin Edit', `Updated registration for ${editingReg.childName} on ${editingReg.date}`);
+                showToast('Registration updated!');
+                setEditingReg(null);
+              }}
+            >
+              <div className="space-y-4">
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <p className="font-medium">{editingReg.childName}</p>
+                  <p className="text-sm text-gray-500">{editingReg.date}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    value={editingReg.status || ''}
+                    onChange={e => setEditingReg({ ...editingReg, status: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Status</label>
+                  <select
+                    value={editingReg.paymentStatus || 'unpaid'}
+                    onChange={e => setEditingReg({ ...editingReg, paymentStatus: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                  >
+                    <option value="unpaid">Unpaid</option>
+                    <option value="paid">Paid</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sessions</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editingReg.sessions?.includes('morning')}
+                        onChange={e => {
+                          const sessions = e.target.checked
+                            ? [...(editingReg.sessions || []), 'morning']
+                            : (editingReg.sessions || []).filter(s => s !== 'morning');
+                          setEditingReg({ ...editingReg, sessions });
+                        }}
+                        className="w-4 h-4"
+                      />
+                      Morning
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editingReg.sessions?.includes('afternoon')}
+                        onChange={e => {
+                          const sessions = e.target.checked
+                            ? [...(editingReg.sessions || []), 'afternoon']
+                            : (editingReg.sessions || []).filter(s => s !== 'afternoon');
+                          setEditingReg({ ...editingReg, sessions });
+                        }}
+                        className="w-4 h-4"
+                      />
+                      Afternoon
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </AdminEditModal>
+          )}
+
+          {/* Confirm Delete Modal */}
+          {confirmDelete && (
+            <AdminConfirmDelete
+              type={confirmDelete.type}
+              data={confirmDelete.data}
+              onCancel={() => setConfirmDelete(null)}
+              onConfirm={() => {
+                if (confirmDelete.type === 'parent') {
+                  onUpdateUsers(users.filter(u => u.email !== confirmDelete.data.email));
+                  addToHistory('Admin Delete', `Deleted parent: ${confirmDelete.data.name}`);
+                  showToast('Parent deleted');
+                  setExpandedParent(null);
+                } else if (confirmDelete.type === 'child') {
+                  const { child, parentEmail } = confirmDelete.data;
+                  const parent = users.find(u => u.email === parentEmail);
+                  if (parent) {
+                    const updatedChildren = parent.children.filter(c => c.id !== child.id);
+                    onUpdateUsers(users.map(u => u.email === parentEmail ? { ...u, children: updatedChildren } : u));
+                    addToHistory('Admin Delete', `Deleted child: ${child.name}`);
+                    showToast('Child deleted');
+                  }
+                } else if (confirmDelete.type === 'registration') {
+                  onDeleteRegistration(confirmDelete.data.id);
+                  addToHistory('Admin Delete', `Deleted registration: ${confirmDelete.data.childName} on ${confirmDelete.data.date}`);
+                  showToast('Registration deleted');
+                }
+                setConfirmDelete(null);
+              }}
+            />
+          )}
+        </div>
+      );
+    };
+
+    // ==================== ADMIN EDIT MODAL ====================
+    const AdminEditModal = ({ title, children, onClose, onSave }) => {
+      const mouseDownTarget = useRef(null);
+      const [formData, setFormData] = useState({});
+
+      return (
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onMouseDown={e => mouseDownTarget.current = e.target}
+          onClick={e => e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget && onClose()}
+        >
+          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden">
+            <div className="bg-blue-600 text-white px-6 py-4 flex justify-between items-center">
+              <h2 className="font-display text-xl">✏️ {title}</h2>
+              <button onClick={onClose} className="text-2xl hover:bg-blue-500 rounded px-2">×</button>
+            </div>
+            <div className="p-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                <p className="text-sm text-yellow-800">⚠️ <strong>Warning:</strong> Changes made here cannot be automatically undone. Please verify all information before saving.</p>
+              </div>
+              {children}
+              <div className="flex gap-4 mt-6">
+                <button onClick={onClose} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button onClick={() => onSave(formData)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== ADMIN CONFIRM DELETE ====================
+    const AdminConfirmDelete = ({ type, data, onCancel, onConfirm }) => {
+      const [confirmText, setConfirmText] = useState('');
+      const requiredText = 'DELETE';
+
+      const getDescription = () => {
+        if (type === 'parent') return `parent account "${data.name}" and all their data`;
+        if (type === 'child') return `child "${data.child.name}" from ${data.parentEmail}`;
+        if (type === 'registration') return `registration for ${data.childName} on ${data.date}`;
+        return 'this item';
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full overflow-hidden">
+            <div className="bg-red-600 text-white px-6 py-4">
+              <h2 className="font-display text-xl">⚠️ Confirm Deletion</h2>
+            </div>
+            <div className="p-6">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-red-800 font-medium mb-2">You are about to permanently delete:</p>
+                <p className="text-red-700">{getDescription()}</p>
+              </div>
+
+              <p className="text-gray-700 mb-4">This action <strong>cannot be undone</strong>. All associated data will be permanently removed.</p>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Type <span className="font-mono bg-gray-100 px-1">DELETE</span> to confirm:
+                </label>
+                <input
+                  value={confirmText}
+                  onChange={e => setConfirmText(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="DELETE"
+                  autoComplete="off"
+                  data-1p-ignore="true"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button
+                  onClick={onConfirm}
+                  disabled={confirmText !== requiredText}
+                  className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                >
+                  Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       );
     };
@@ -1403,7 +1777,7 @@
           <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="font-display text-2xl cursor-pointer" onClick={() => { setPage('home'); setUser(null); }} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
             <div className="flex gap-2 items-center">
-              {['home', 'schedule', 'counselors'].map(p => (
+              {['home', 'schedule', 'location', 'counselors'].map(p => (
                 <button key={p} onClick={() => setPage(p)} className={'px-3 py-1 rounded text-sm capitalize ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
               ))}
               {user ? (
@@ -1492,22 +1866,164 @@
         <div className="min-h-screen bg-amber-50 py-12">
           <div className="max-w-4xl mx-auto px-4">
             <h1 className="font-display text-4xl text-green-800 text-center mb-8">Camp Schedule</h1>
-            <div className="bg-white rounded-xl shadow-lg p-6">
+
+            {/* Sessions */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="font-bold text-xl text-green-800 mb-4">Daily Sessions</h2>
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                  <h3 className="font-bold text-yellow-700">🌅 Morning</h3>
-                  <p>{content.sessionMorning}</p>
+                  <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
+                  <p className="text-lg">{content.sessionMorning}</p>
+                  <p className="text-green-600 font-bold">${content.singleSessionCost || 60}/session</p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <h3 className="font-bold text-blue-700">☀️ Afternoon</h3>
-                  <p>{content.sessionAfternoon}</p>
+                  <h3 className="font-bold text-blue-700">☀️ Afternoon Session</h3>
+                  <p className="text-lg">{content.sessionAfternoon}</p>
+                  <p className="text-green-600 font-bold">${content.singleSessionCost || 60}/session</p>
                 </div>
               </div>
-              <p className="text-gray-700">{content.campDates} • {content.sessionCost}/session</p>
+              <p className="text-gray-700 font-medium">{content.campDates}</p>
+              <p className="text-sm text-gray-500 mt-2">Camp runs Monday through Friday, starting the Monday after school ends through the Friday before school starts.</p>
+            </div>
+
+            {/* Pricing & Discounts */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="font-bold text-xl text-green-800 mb-4">💰 Pricing & Discounts</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span>Single Session</span>
+                  <span className="font-bold">${content.singleSessionCost || 60}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                  <div>
+                    <span className="font-medium">Full Week (10 sessions)</span>
+                    <span className="ml-2 text-green-600 text-sm">Save {content.weekDiscount || 10}%!</span>
+                  </div>
+                  <span className="font-bold text-green-700">${Math.round((content.singleSessionCost || 60) * 10 * (1 - (content.weekDiscount || 10) / 100))}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-green-100 rounded-lg border border-green-300">
+                  <div>
+                    <span className="font-medium">2+ Weeks</span>
+                    <span className="ml-2 text-green-700 text-sm">Save {content.multiWeekDiscount || 15}%!</span>
+                  </div>
+                  <span className="font-bold text-green-800">{content.multiWeekDiscount || 15}% off total</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 mt-4">Discounts applied automatically at checkout. You can always add more sessions later!</p>
+            </div>
+
+            {/* Policies */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="font-bold text-xl text-green-800 mb-4">📋 Camp Policies</h2>
+
+              <div className="space-y-4">
+                <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
+                  <h3 className="font-bold text-red-800 mb-2">🚫 Cancellation Policy</h3>
+                  <p className="text-gray-700 text-sm">{content.cancellationPolicy}</p>
+                </div>
+
+                <div className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                  <h3 className="font-bold text-orange-800 mb-2">⏰ Late Pickup Policy</h3>
+                  <p className="text-gray-700 text-sm">{content.latePickupPolicy}</p>
+                </div>
+
+                <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-400">
+                  <h3 className="font-bold text-purple-800 mb-2">💜 Scholarship Assistance</h3>
+                  <p className="text-gray-700 text-sm">{content.scholarshipInfo}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       );
+
+      // ==================== LOCATION PAGE ====================
+      const Location = () => {
+        const fullAddress = `${content.locationAddress}, ${content.locationCity}, ${content.locationState} ${content.locationZip}`;
+        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(content.locationName + ' ' + fullAddress)}`;
+        const mapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(content.locationName + ' ' + fullAddress)}`;
+
+        return (
+          <div className="min-h-screen bg-amber-50 py-12">
+            <div className="max-w-4xl mx-auto px-4">
+              <h1 className="font-display text-4xl text-green-800 text-center mb-8">📍 Camp Location</h1>
+
+              {/* Location Card */}
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
+                {/* Map */}
+                <div className="h-64 bg-gray-200 relative">
+                  <iframe
+                    width="100%"
+                    height="100%"
+                    frameBorder="0"
+                    style={{ border: 0 }}
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(content.locationName + ' ' + fullAddress)}&output=embed`}
+                    allowFullScreen
+                  />
+                </div>
+
+                {/* Details */}
+                <div className="p-6">
+                  <h2 className="font-display text-3xl text-green-800 mb-2">{content.locationName || 'Roosevelt High School'}</h2>
+
+                  <div className="space-y-3 mb-6">
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl">🏫</span>
+                      <div>
+                        <p className="font-medium">{content.locationAddress || '1410 NE 66th St'}</p>
+                        <p className="text-gray-600">{content.locationCity || 'Seattle'}, {content.locationState || 'WA'} {content.locationZip || '98115'}</p>
+                      </div>
+                    </div>
+
+                    {content.locationDetails && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">ℹ️</span>
+                        <p className="text-gray-700">{content.locationDetails}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Copy-friendly address box */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-gray-500 mb-2">📋 Copy this address for GPS/Maps:</p>
+                    <p className="font-mono text-gray-800 select-all">{fullAddress}</p>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      href={mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[200px] py-3 bg-blue-600 text-white rounded-lg text-center font-medium hover:bg-blue-700"
+                    >
+                      🗺️ Open in Google Maps
+                    </a>
+                    <a
+                      href={`https://maps.apple.com/?q=${encodeURIComponent(fullAddress)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-1 min-w-[200px] py-3 bg-gray-800 text-white rounded-lg text-center font-medium hover:bg-gray-900"
+                    >
+                      🍎 Open in Apple Maps
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parking & Directions */}
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="font-bold text-xl text-green-800 mb-4">🚗 Parking & Drop-off</h2>
+                <div className="space-y-3 text-gray-700">
+                  <p>• <strong>Parking:</strong> Free parking is available in the school parking lot off NE 66th St.</p>
+                  <p>• <strong>Drop-off:</strong> Please drop off campers at the main gymnasium entrance on the east side of the building.</p>
+                  <p>• <strong>Pick-up:</strong> Campers should be picked up at the same location promptly at the end of their session.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
 
       // ==================== COUNSELORS PAGE ====================
       const Counselors = () => (
@@ -1839,6 +2355,12 @@
                   registrations={registrations}
                   messages={messages}
                   onSendMessage={saveMessage}
+                  onUpdateUsers={saveUsers}
+                  onUpdateRegistrations={saveReg}
+                  onDeleteRegistration={async (regId) => {
+                    setRegistrations(registrations.filter(r => r.id !== regId));
+                    await supabase.from('camp_registrations').delete().eq('id', regId);
+                  }}
                   showToast={showToast}
                   addToHistory={addToHistory}
                 />
@@ -2609,6 +3131,7 @@
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
           {page === 'home' && <Home />}
           {page === 'schedule' && <Schedule />}
+          {page === 'location' && <Location />}
           {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
           {page === 'admin' && user?.role === 'admin' && <Admin />}
