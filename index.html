@@ -43,10 +43,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.071";
+    const VERSION = "12.072";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.072", date: "2026-01-29", changes: [
+        "Fixed parent editing bug - changes now save properly",
+        "Fixed child editing bug - changes now save properly",
+        "Fixed registration editing bug - changes now save properly",
+        "Admin can upload custom photos for snacks and drinks (Content tab)",
+        "Food photos persist to database",
+        "Reset button to restore default photos"
+      ]},
       { version: "12.071", date: "2026-01-29", changes: [
         "All changes persist to database immediately",
         "Proper delete functions remove records from database",
@@ -862,7 +870,7 @@
                         {/* Admin Actions Bar */}
                         <div className="flex gap-2 mb-4 pb-4 border-b">
                           <button
-                            onClick={() => setEditingParent({ ...parent })}
+                            onClick={() => setEditingParent({ ...parent, originalEmail: parent.email })}
                             className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
                           >
                             ✏️ Edit Parent
@@ -909,7 +917,7 @@
                                     </div>
                                     <div className="flex gap-1">
                                       <button
-                                        onClick={() => setEditingChild({ child, parentEmail: parent.email })}
+                                        onClick={() => setEditingChild({ child: { ...child }, parentEmail: parent.email, originalChildId: child.id })}
                                         className="p-1 text-blue-600 hover:bg-blue-50 rounded"
                                         title="Edit child"
                                       >✏️</button>
@@ -1024,9 +1032,9 @@
             <AdminEditModal
               title="Edit Parent"
               onClose={() => setEditingParent(null)}
-              onSave={(updated) => {
-                onUpdateUsers(users.map(u => u.email === editingParent.email ? { ...u, ...updated } : u));
-                addToHistory('Admin Edit', `Updated parent: ${updated.name}`);
+              onSave={() => {
+                onUpdateUsers(users.map(u => u.email === editingParent.originalEmail ? { ...u, name: editingParent.name, email: editingParent.email, phone: editingParent.phone } : u));
+                addToHistory('Admin Edit', `Updated parent: ${editingParent.name}`);
                 showToast('Parent updated!');
                 setEditingParent(null);
               }}
@@ -1068,12 +1076,12 @@
             <AdminEditModal
               title="Edit Child"
               onClose={() => setEditingChild(null)}
-              onSave={(updated) => {
+              onSave={() => {
                 const parent = users.find(u => u.email === editingChild.parentEmail);
                 if (parent) {
-                  const updatedChildren = parent.children.map(c => c.id === editingChild.child.id ? { ...c, ...updated } : c);
+                  const updatedChildren = parent.children.map(c => c.id === editingChild.originalChildId ? { ...editingChild.child } : c);
                   onUpdateUsers(users.map(u => u.email === editingChild.parentEmail ? { ...u, children: updatedChildren } : u));
-                  addToHistory('Admin Edit', `Updated child: ${updated.name}`);
+                  addToHistory('Admin Edit', `Updated child: ${editingChild.child.name}`);
                   showToast('Child updated!');
                 }
                 setEditingChild(null);
@@ -1128,8 +1136,8 @@
             <AdminEditModal
               title="Edit Registration"
               onClose={() => setEditingReg(null)}
-              onSave={(updated) => {
-                onUpdateRegistrations({ ...editingReg, ...updated });
+              onSave={() => {
+                onUpdateRegistrations(editingReg);
                 addToHistory('Admin Edit', `Updated registration for ${editingReg.childName} on ${editingReg.date}`);
                 showToast('Registration updated!');
                 setEditingReg(null);
@@ -1356,7 +1364,6 @@
     // ==================== ADMIN EDIT MODAL ====================
     const AdminEditModal = ({ title, children, onClose, onSave }) => {
       const mouseDownTarget = useRef(null);
-      const [formData, setFormData] = useState({});
 
       return (
         <div
@@ -1376,7 +1383,7 @@
               {children}
               <div className="flex gap-4 mt-6">
                 <button onClick={onClose} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-                <button onClick={() => onSave(formData)} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                <button onClick={onSave} className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
               </div>
             </div>
           </div>
@@ -3041,6 +3048,7 @@
       const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
       const [campers, setCampers] = useState([]); // Standalone campers collection
       const [camperParentLinks, setCamperParentLinks] = useState([]); // { camperId, parentEmail } associations
+      const [foodPhotos, setFoodPhotos] = useState({}); // Admin-uploadable food photos { snack_fruit: base64, ... }
       
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -3075,6 +3083,8 @@
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
             const cpl = await storage.get('camp_camper_parent_links');
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
+            const fp = await storage.get('camp_food_photos');
+            if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -3176,6 +3186,12 @@
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
+      };
+      const saveFoodPhotos = async (photos) => {
+        setFoodPhotos(photos);
+        await storage.set('camp_food_photos', 'main', photos);
+        addToHistory('Content', 'Updated food photos');
+        showToast('Photo updated!');
       };
 
       const deleteCamper = async (camperId, camperName) => {
@@ -3328,6 +3344,17 @@
       );
 
       // ==================== SCHEDULE ====================
+      const DEFAULT_FOOD_PHOTOS = {
+        snack_fruit: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=150&h=150&fit=crop',
+        snack_granola: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=150&h=150&fit=crop',
+        snack_cheese: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=150&h=150&fit=crop',
+        snack_veggie: 'https://images.unsplash.com/photo-1640719028782-8230f1bdc5d1?w=150&h=150&fit=crop',
+        drink_water: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=150&h=150&fit=crop',
+        drink_gatorade: 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=150&h=150&fit=crop',
+        drink_orange: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop',
+        drink_apple: 'https://images.unsplash.com/photo-1576673442511-7e39b6545c87?w=150&h=150&fit=crop'
+      };
+      const getFoodPhoto = (key) => foodPhotos[key] || DEFAULT_FOOD_PHOTOS[key] || '';
       const Schedule = () => (
         <div className="min-h-screen bg-amber-50 py-12">
           <div className="max-w-4xl mx-auto px-4">
@@ -3390,22 +3417,22 @@
                 </p>
                 <div className="grid grid-cols-4 gap-3">
                   <div className="text-center">
-                    <img src="https://images.unsplash.com/photo-1568702846914-96b305d2uj8b?w=150&h=150&fit=crop" alt="Fresh fruits" className="w-full h-20 object-cover rounded-lg mb-1"
+                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full h-20 object-cover rounded-lg mb-1"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=🍎'; }} />
                     <span className="text-xs text-gray-600">Fresh Fruit</span>
                   </div>
                   <div className="text-center">
-                    <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=150&h=150&fit=crop" alt="Granola bars" className="w-full h-20 object-cover rounded-lg mb-1"
+                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full h-20 object-cover rounded-lg mb-1"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f59e0b/white?text=🥜'; }} />
                     <span className="text-xs text-gray-600">Granola Bars</span>
                   </div>
                   <div className="text-center">
-                    <img src="https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=150&h=150&fit=crop" alt="Cheese and crackers" className="w-full h-20 object-cover rounded-lg mb-1"
+                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full h-20 object-cover rounded-lg mb-1"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/fbbf24/white?text=🧀'; }} />
                     <span className="text-xs text-gray-600">Cheese & Crackers</span>
                   </div>
                   <div className="text-center">
-                    <img src="https://images.unsplash.com/photo-1622484212850-eb596d769edc?w=150&h=150&fit=crop" alt="Veggie sticks" className="w-full h-20 object-cover rounded-lg mb-1"
+                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full h-20 object-cover rounded-lg mb-1"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/84cc16/white?text=🥕'; }} />
                     <span className="text-xs text-gray-600">Veggie Sticks</span>
                   </div>
@@ -3417,22 +3444,22 @@
                 <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages Available</h3>
                 <div className="grid grid-cols-4 gap-3">
                   <div className="text-center p-3 bg-blue-50 rounded-lg">
-                    <img src="https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=150&h=150&fit=crop" alt="Water bottles" className="w-full h-20 object-cover rounded-lg mb-2"
+                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full h-20 object-cover rounded-lg mb-2"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/3b82f6/white?text=💧'; }} />
                     <span className="text-sm font-medium">Water</span>
                   </div>
                   <div className="text-center p-3 bg-green-50 rounded-lg">
-                    <img src="https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=150&h=150&fit=crop" alt="Gatorade" className="w-full h-20 object-cover rounded-lg mb-2"
+                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full h-20 object-cover rounded-lg mb-2"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/22c55e/white?text=⚡'; }} />
                     <span className="text-sm font-medium">Gatorade</span>
                   </div>
                   <div className="text-center p-3 bg-orange-50 rounded-lg">
-                    <img src="https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop" alt="Orange juice" className="w-full h-20 object-cover rounded-lg mb-2"
+                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full h-20 object-cover rounded-lg mb-2"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/f97316/white?text=🍊'; }} />
                     <span className="text-sm font-medium">Orange Juice</span>
                   </div>
                   <div className="text-center p-3 bg-red-50 rounded-lg">
-                    <img src="https://images.unsplash.com/photo-1576673442511-7e39b6545c87?w=150&h=150&fit=crop" alt="Apple juice" className="w-full h-20 object-cover rounded-lg mb-2"
+                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full h-20 object-cover rounded-lg mb-2"
                       onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/ef4444/white?text=🍎'; }} />
                     <span className="text-sm font-medium">Apple Juice</span>
                   </div>
@@ -3924,6 +3951,114 @@
                     <h3 className="font-bold mb-4">About</h3>
                     <label className="block text-sm text-gray-600 mb-1">About Text</label>
                     <StableTextarea value={content.aboutText} onSave={(v) => updateContent('aboutText', v)} className="w-full px-3 py-2 border rounded-lg" rows={4} />
+                  </div>
+
+                  {/* Food Photos Management */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
+                    <p className="text-sm text-gray-600 mb-4">Upload custom photos for the snacks and drinks shown on the Schedule page. Click any image to upload a replacement.</p>
+
+                    <div className="mb-6">
+                      <h4 className="font-medium text-green-700 mb-3">Snacks</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {[
+                          { key: 'snack_fruit', label: 'Fresh Fruit' },
+                          { key: 'snack_granola', label: 'Granola Bars' },
+                          { key: 'snack_cheese', label: 'Cheese & Crackers' },
+                          { key: 'snack_veggie', label: 'Veggie Sticks' }
+                        ].map(item => (
+                          <div key={item.key} className="text-center">
+                            <label className="cursor-pointer group">
+                              <div className="relative">
+                                <img
+                                  src={getFoodPhoto(item.key)}
+                                  alt={item.label}
+                                  className="w-full h-24 object-cover rounded-lg mb-1 group-hover:opacity-75 transition-opacity"
+                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">📷 Upload</span>
+                                </div>
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => saveFoodPhotos({ ...foodPhotos, [item.key]: reader.result });
+                                    reader.readAsDataURL(file);
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                            <span className="text-xs text-gray-600">{item.label}</span>
+                            {foodPhotos[item.key] && (
+                              <button
+                                onClick={() => { const updated = { ...foodPhotos }; delete updated[item.key]; saveFoodPhotos(updated); }}
+                                className="text-xs text-red-600 hover:text-red-800 ml-1"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-medium text-blue-700 mb-3">Beverages</h4>
+                      <div className="grid grid-cols-4 gap-4">
+                        {[
+                          { key: 'drink_water', label: 'Water' },
+                          { key: 'drink_gatorade', label: 'Gatorade' },
+                          { key: 'drink_orange', label: 'Orange Juice' },
+                          { key: 'drink_apple', label: 'Apple Juice' }
+                        ].map(item => (
+                          <div key={item.key} className="text-center">
+                            <label className="cursor-pointer group">
+                              <div className="relative">
+                                <img
+                                  src={getFoodPhoto(item.key)}
+                                  alt={item.label}
+                                  className="w-full h-24 object-cover rounded-lg mb-1 group-hover:opacity-75 transition-opacity"
+                                  onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <span className="bg-black/70 text-white px-2 py-1 rounded text-xs">📷 Upload</span>
+                                </div>
+                              </div>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => saveFoodPhotos({ ...foodPhotos, [item.key]: reader.result });
+                                    reader.readAsDataURL(file);
+                                  }
+                                  e.target.value = '';
+                                }}
+                              />
+                            </label>
+                            <span className="text-xs text-gray-600">{item.label}</span>
+                            {foodPhotos[item.key] && (
+                              <button
+                                onClick={() => { const updated = { ...foodPhotos }; delete updated[item.key]; saveFoodPhotos(updated); }}
+                                className="text-xs text-red-600 hover:text-red-800 ml-1"
+                              >
+                                Reset
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
