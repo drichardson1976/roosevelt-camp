@@ -43,10 +43,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.070";
+    const VERSION = "12.071";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.071", date: "2026-01-29", changes: [
+        "All changes persist to database immediately",
+        "Proper delete functions remove records from database",
+        "Delete counselor: Removes from DB, cleans up assignments and availability",
+        "Delete camper: Removes from DB, cleans up parent links and assignments",
+        "Delete parent: Removes from DB, cleans up camper links",
+        "DELETE confirmation modal for counselors (replaces browser confirm)",
+        "UI updates instantly on all add/edit/delete operations",
+        "All dynamic data stored in Supabase for persistence across builds"
+      ]},
       { version: "12.070", date: "2026-01-29", changes: [
         "Standalone campers: Campers are now separate entities from parents",
         "Many-to-many relationships: A camper can have multiple parents, and a parent can have multiple campers",
@@ -608,7 +618,7 @@
     };
 
     // ==================== PARENTS TAB ====================
-    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks }) => {
+    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onDeleteParent, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedParents, setSelectedParents] = useState([]);
       const [expandedParent, setExpandedParent] = useState(null);
@@ -1198,11 +1208,15 @@
               type={confirmDelete.type}
               data={confirmDelete.data}
               onCancel={() => setConfirmDelete(null)}
-              onConfirm={() => {
+              onConfirm={async () => {
                 if (confirmDelete.type === 'parent') {
-                  onUpdateUsers(users.filter(u => u.email !== confirmDelete.data.email));
-                  addToHistory('Admin Delete', `Deleted parent: ${confirmDelete.data.name}`);
-                  showToast('Parent deleted');
+                  if (onDeleteParent) {
+                    await onDeleteParent(confirmDelete.data.email, confirmDelete.data.name);
+                  } else {
+                    onUpdateUsers(users.filter(u => u.email !== confirmDelete.data.email));
+                    addToHistory('Admin Delete', `Deleted parent: ${confirmDelete.data.name}`);
+                    showToast('Parent deleted');
+                  }
                   setExpandedParent(null);
                 } else if (confirmDelete.type === 'child') {
                   const { child, parentEmail } = confirmDelete.data;
@@ -1869,7 +1883,7 @@
     };
 
     // ==================== CAMPERS TAB ====================
-    const CampersTab = ({ users, registrations, campers, camperParentLinks, onSaveCampers, onSaveLinks, showToast, addToHistory }) => {
+    const CampersTab = ({ users, registrations, campers, camperParentLinks, onSaveCampers, onSaveLinks, onDeleteCamper, showToast, addToHistory }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [sortBy, setSortBy] = useState('name');
       const [editingCamper, setEditingCamper] = useState(null);
@@ -1985,13 +1999,15 @@
           return;
         }
         const camper = confirmDelete;
-        if (camper.isStandalone) {
+        if (onDeleteCamper) {
+          await onDeleteCamper(camper.id, camper.name);
+        } else if (camper.isStandalone) {
           onSaveCampers(campers.filter(c => c.id !== camper.id), `Deleted camper ${camper.name}`);
           onSaveLinks(camperParentLinks.filter(l => l.camperId !== camper.id));
+          showToast('Camper deleted');
         }
         setConfirmDelete(null);
         setDeleteConfirmText('');
-        showToast('Camper deleted');
       };
 
       const startEdit = (camper) => {
@@ -3093,6 +3109,32 @@
         showToast('Saved!');
       };
 
+      const deleteCounselor = async (counselorId, counselorName) => {
+        // Remove from state
+        const updated = counselors.filter(c => c.id !== counselorId).map((c, i) => ({ ...c, order: i }));
+        setCounselors(updated);
+        // Remove from database
+        try {
+          await supabase.from('camp_counselors').delete().eq('id', counselorId);
+        } catch (e) { console.error('Error deleting counselor:', e); }
+        // Clean up assignments that reference this counselor
+        const cleanedAssignments = { ...assignments };
+        Object.keys(cleanedAssignments).forEach(key => {
+          if (cleanedAssignments[key][counselorId]) {
+            delete cleanedAssignments[key][counselorId];
+          }
+        });
+        await saveAssignments(cleanedAssignments);
+        // Clean up availability
+        const cleanedAvail = { ...availability };
+        if (cleanedAvail[counselorId]) {
+          delete cleanedAvail[counselorId];
+          await saveAvail(cleanedAvail);
+        }
+        addToHistory('Counselor', `Deleted counselor ${counselorName}`);
+        showToast('Counselor deleted');
+      };
+
       const saveReg = async (r, action = null) => {
         const newRegs = registrations.some(x => x.id === r.id) ? registrations.map(x => x.id === r.id ? r : x) : [...registrations, r];
         setRegistrations(newRegs);
@@ -3100,7 +3142,25 @@
         if (action) addToHistory('Registration', action);
       };
 
-      const saveUsers = async (u) => { setUsers(u); await storage.set('camp_registered_users', 'main', u); };
+      const saveUsers = async (u, action = null) => {
+        setUsers(u);
+        await storage.set('camp_registered_users', 'main', u);
+        if (action) addToHistory('Parent', action);
+      };
+
+      const deleteParent = async (parentEmail, parentName) => {
+        // Remove from users state
+        const updatedUsers = users.filter(u => u.email !== parentEmail);
+        setUsers(updatedUsers);
+        await storage.set('camp_registered_users', 'main', updatedUsers);
+        // Remove camper-parent links for this parent
+        const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
+        setCamperParentLinks(updatedLinks);
+        await storage.set('camp_camper_parent_links', 'main', updatedLinks);
+        // Note: We don't delete registrations - they're historical records
+        addToHistory('Parent', `Deleted parent ${parentName}`);
+        showToast('Parent deleted');
+      };
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
       const saveAdmins = async (a, action = null) => {
         setAdmins(a);
@@ -3117,6 +3177,30 @@
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
       };
+
+      const deleteCamper = async (camperId, camperName) => {
+        // Remove from campers state
+        const updatedCampers = campers.filter(c => c.id !== camperId);
+        setCampers(updatedCampers);
+        await storage.set('camp_campers', 'main', updatedCampers);
+        // Remove camper-parent links
+        const updatedLinks = camperParentLinks.filter(l => l.camperId !== camperId);
+        setCamperParentLinks(updatedLinks);
+        await storage.set('camp_camper_parent_links', 'main', updatedLinks);
+        // Clean up assignments that reference this camper
+        const cleanedAssignments = { ...assignments };
+        Object.keys(cleanedAssignments).forEach(key => {
+          Object.keys(cleanedAssignments[key]).forEach(counselorId => {
+            cleanedAssignments[key][counselorId] = cleanedAssignments[key][counselorId].filter(id => id !== camperId);
+          });
+        });
+        setAssignments(cleanedAssignments);
+        await storage.set('camp_assignments', 'main', cleanedAssignments);
+        // Note: We don't delete registrations - they're historical records
+        addToHistory('Camper', `Deleted camper ${camperName}`);
+        showToast('Camper deleted');
+      };
+
       const saveCamperParentLinks = async (links) => {
         setCamperParentLinks(links);
         await storage.set('camp_camper_parent_links', 'main', links);
@@ -3498,6 +3582,8 @@
       const Admin = () => {
         const [editCounselor, setEditCounselor] = useState(null);
         const [showModal, setShowModal] = useState(false);
+        const [confirmDeleteCounselor, setConfirmDeleteCounselor] = useState(null);
+        const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
         const updateContent = (field, value) => {
           const newContent = { ...content, [field]: value };
@@ -3642,7 +3728,7 @@
 
                         {/* Actions */}
                         <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit</button>
-                        <button onClick={() => { if (confirm('Delete ' + c.name + '?')) saveCounselors(counselors.filter(x => x.id !== c.id).map((co, i) => ({ ...co, order: i })), `Deleted counselor ${c.name}`); }} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
+                        <button onClick={() => setConfirmDeleteCounselor(c)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
                       </div>
                     ))}
                   </div>
@@ -3741,6 +3827,7 @@
                   messages={messages}
                   onSendMessage={saveMessage}
                   onUpdateUsers={saveUsers}
+                  onDeleteParent={deleteParent}
                   onUpdateRegistrations={saveReg}
                   onDeleteRegistration={async (regId) => {
                     setRegistrations(registrations.filter(r => r.id !== regId));
@@ -3771,6 +3858,7 @@
                   camperParentLinks={camperParentLinks}
                   onSaveCampers={saveCampers}
                   onSaveLinks={saveCamperParentLinks}
+                  onDeleteCamper={deleteCamper}
                   showToast={showToast}
                   addToHistory={addToHistory}
                 />
@@ -3828,6 +3916,47 @@
                 />
               )}
             </Modal>
+
+            {/* Delete Counselor Confirmation Modal */}
+            {confirmDeleteCounselor && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
+                  <div className="text-5xl mb-4">⚠️</div>
+                  <h3 className="font-bold text-xl text-red-600 mb-2">Delete Counselor</h3>
+                  <p className="text-gray-600 mb-4">
+                    Are you sure you want to delete <strong>{confirmDeleteCounselor.name}</strong>?
+                    <br />This will also remove them from all session assignments.
+                  </p>
+                  <p className="text-sm text-gray-500 mb-2">Type DELETE to confirm:</p>
+                  <input
+                    value={deleteConfirmText}
+                    onChange={e => setDeleteConfirmText(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg text-center font-mono mb-4"
+                    placeholder="DELETE"
+                    autoComplete="off"
+                    data-1p-ignore="true"
+                  />
+                  <div className="flex gap-3">
+                    <button onClick={() => { setConfirmDeleteCounselor(null); setDeleteConfirmText(''); }} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                    <button
+                      onClick={async () => {
+                        if (deleteConfirmText !== 'DELETE') {
+                          showToast('Please type DELETE to confirm', 'error');
+                          return;
+                        }
+                        await deleteCounselor(confirmDeleteCounselor.id, confirmDeleteCounselor.name);
+                        setConfirmDeleteCounselor(null);
+                        setDeleteConfirmText('');
+                      }}
+                      disabled={deleteConfirmText !== 'DELETE'}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:bg-gray-300"
+                    >
+                      Delete Counselor
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       };
