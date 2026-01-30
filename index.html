@@ -43,10 +43,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.079";
+    const VERSION = "12.080";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.080", date: "2026-01-30", changes: [
+        "Parent dashboard: 'Add Another Child' button replaces always-visible form",
+        "New 'Camp Schedule' tab shows visual schedule with counselor & pod info",
+        "Schedule tab displays pod mates and other campers at each session",
+        "Counselor headshots shown in pod assignments",
+        "Children remain as children even when registered as campers",
+        "Admin Children tab now shows ALL children from both data sources",
+        "Clear distinction: children are profiles, campers are registered children"
+      ]},
       { version: "12.079", date: "2026-01-30", changes: [
         "Added Children tab in admin dashboard to view all child profiles",
         "Children tab separates registered (campers) from unregistered children",
@@ -1937,20 +1946,40 @@
       );
     };
 
-    // ==================== CHILDREN TAB (Profiles, not yet registered) ====================
+    // ==================== CHILDREN TAB (All Child Profiles) ====================
     const ChildrenTab = ({ children, childParentLinks, users, registrations, onSaveChildren, onSaveLinks, showToast }) => {
       const [searchTerm, setSearchTerm] = useState('');
 
-      // Get all children profiles with their parent info
+      // Get all children profiles from BOTH sources:
+      // 1. Standalone children from camp_children table
+      // 2. Legacy children embedded in user accounts
       const getAllChildren = () => {
-        return children.map(child => ({
+        // Start with standalone children
+        const standaloneChildren = children.map(child => ({
           ...child,
+          source: 'standalone',
           parents: childParentLinks
             .filter(link => link.childId === child.id)
             .map(link => users.find(u => u.email === link.parentEmail))
             .filter(Boolean),
           hasRegistrations: registrations.some(r => r.childId === child.id)
         }));
+
+        // Add legacy children from users (avoid duplicates)
+        const legacyChildren = users.flatMap(user =>
+          (user.children || [])
+            .filter(child => !children.some(c => c.id === child.id)) // Don't duplicate
+            .map(child => ({
+              ...child,
+              source: 'legacy',
+              parents: [user],
+              parentEmail: user.email,
+              parentName: user.name,
+              hasRegistrations: registrations.some(r => r.childId === child.id)
+            }))
+        );
+
+        return [...standaloneChildren, ...legacyChildren];
       };
 
       const allChildren = getAllChildren();
@@ -2017,7 +2046,7 @@
         <div className="space-y-6">
           <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
             <p className="text-blue-800">
-              <strong>Children vs Campers:</strong> This tab shows all child profiles. Children become "campers" when registered for sessions.
+              <strong>Children &amp; Campers:</strong> All child profiles are shown here. When children register for camp sessions, they become "campers" but remain in this list. Children are never deleted when they become campers - they simply gain registered status.
             </p>
           </div>
 
@@ -2051,7 +2080,7 @@
               <div>
                 <h4 className="font-medium text-green-700 mb-3 flex items-center gap-2">
                   <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                  Registered Campers ({registeredChildren.length})
+                  🏕️ Registered as Campers ({registeredChildren.length})
                 </h4>
                 <div className="grid md:grid-cols-2 gap-4">
                   {registeredChildren.map(child => (
@@ -6476,6 +6505,350 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         );
       };
 
+    // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
+    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations }) => {
+      const [showAddForm, setShowAddForm] = useState(false);
+
+      // Check if child has any registrations (is a camper)
+      const isCamper = (childId) => registrations?.some(r => r.childId === childId);
+
+      return (
+        <div className="space-y-4">
+          {children.map(child => (
+            <div key={child.id} className="relative">
+              <ChildCard
+                child={child}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+              />
+              {isCamper(child.id) && (
+                <div className="absolute top-2 right-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                    🏕️ Registered Camper
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {showAddForm ? (
+            <div className="border-t pt-4 mt-4">
+              <AddChildForm
+                onAdd={(child) => {
+                  onAdd(child);
+                  setShowAddForm(false);
+                }}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 hover:bg-green-50 hover:border-green-400 transition-colors flex items-center justify-center gap-2 font-medium"
+            >
+              <span className="text-xl">+</span>
+              <span>Add Another Child</span>
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== CAMPER SCHEDULE TAB (Visual Schedule for Parents) ====================
+    const CamperScheduleTab = ({ myChildren, registrations, allRegistrations, assignments, counselors, campers, users }) => {
+      const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || null);
+
+      // Get registrations for selected child
+      const childRegs = registrations.filter(r => r.childId === selectedChild);
+
+      // Group registrations by date
+      const regsByDate = {};
+      childRegs.forEach(reg => {
+        if (!regsByDate[reg.date]) regsByDate[reg.date] = [];
+        regsByDate[reg.date].push(reg);
+      });
+
+      // Sort dates
+      const sortedDates = Object.keys(regsByDate).sort();
+
+      // Get counselor for a specific session
+      const getCounselorForSession = (childId, date, session) => {
+        const assignment = assignments.find(a =>
+          a.camperId === childId && a.date === date && a.session === session
+        );
+        if (assignment) {
+          return counselors.find(c => c.id === assignment.counselorId);
+        }
+        return null;
+      };
+
+      // Get pod mates (other campers with same counselor for a session)
+      const getPodMates = (childId, date, session, counselorId) => {
+        if (!counselorId) return [];
+        const podAssignments = assignments.filter(a =>
+          a.counselorId === counselorId && a.date === date && a.session === session && a.camperId !== childId
+        );
+        return podAssignments.map(a => {
+          // Try to find in campers first, then in users' children
+          const camper = campers.find(c => c.id === a.camperId);
+          if (camper) return camper;
+
+          for (const user of users) {
+            const child = user.children?.find(c => c.id === a.camperId);
+            if (child) return child;
+          }
+          return null;
+        }).filter(Boolean);
+      };
+
+      // Get all campers at camp for a session (not just pod)
+      const getAllCampersForSession = (date, session, excludeChildId) => {
+        const sessionRegs = allRegistrations.filter(r =>
+          r.date === date &&
+          r.sessions?.includes(session) &&
+          r.childId !== excludeChildId &&
+          (r.status === 'approved' || r.status === 'pending')
+        );
+        return sessionRegs.map(r => {
+          const camper = campers.find(c => c.id === r.childId);
+          if (camper) return { ...camper, status: r.status };
+
+          for (const user of users) {
+            const child = user.children?.find(c => c.id === r.childId);
+            if (child) return { ...child, status: r.status };
+          }
+          return { name: r.childName, status: r.status };
+        }).filter(Boolean);
+      };
+
+      const selectedChildData = myChildren.find(c => c.id === selectedChild);
+
+      if (myChildren.length === 0) {
+        return (
+          <div className="bg-white rounded-xl shadow p-8 text-center">
+            <div className="text-6xl mb-4">👶</div>
+            <h3 className="font-bold text-lg text-gray-800 mb-2">No Children Yet</h3>
+            <p className="text-gray-500">Add children in the "My Children" tab, then register them for camp.</p>
+          </div>
+        );
+      }
+
+      if (childRegs.length === 0) {
+        return (
+          <div className="space-y-6">
+            {myChildren.length > 1 && (
+              <div className="bg-white rounded-xl shadow p-4">
+                <div className="flex gap-2 flex-wrap">
+                  {myChildren.map(child => (
+                    <button
+                      key={child.id}
+                      onClick={() => setSelectedChild(child.id)}
+                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                        selectedChild === child.id
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {child.photo ? (
+                        <img src={child.photo} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-xs font-bold text-green-700">
+                          {child.name?.charAt(0)}
+                        </div>
+                      )}
+                      {child.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="bg-white rounded-xl shadow p-8 text-center">
+              <div className="text-6xl mb-4">📅</div>
+              <h3 className="font-bold text-lg text-gray-800 mb-2">No Sessions Registered</h3>
+              <p className="text-gray-500">{selectedChildData?.name || 'Your child'} hasn't been registered for any camp sessions yet.</p>
+              <p className="text-sm text-gray-400 mt-2">Go to the "Register" tab to sign up for sessions.</p>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="space-y-6">
+          {/* Child Selector */}
+          {myChildren.length > 1 && (
+            <div className="bg-white rounded-xl shadow p-4">
+              <div className="flex gap-2 flex-wrap">
+                {myChildren.map(child => {
+                  const hasRegs = registrations.some(r => r.childId === child.id);
+                  return (
+                    <button
+                      key={child.id}
+                      onClick={() => setSelectedChild(child.id)}
+                      className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                        selectedChild === child.id
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {child.photo ? (
+                        <img src={child.photo} className="w-6 h-6 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-green-200 flex items-center justify-center text-xs font-bold text-green-700">
+                          {child.name?.charAt(0)}
+                        </div>
+                      )}
+                      {child.name}
+                      {hasRegs && <span className="text-xs opacity-75">🏕️</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Selected Child Header */}
+          <div className="bg-gradient-to-r from-green-600 to-green-700 rounded-xl shadow p-6 text-white">
+            <div className="flex items-center gap-4">
+              {selectedChildData?.photo ? (
+                <img src={selectedChildData.photo} className="w-20 h-20 rounded-full object-cover border-4 border-white/30" />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center text-3xl font-bold">
+                  {selectedChildData?.name?.charAt(0)}
+                </div>
+              )}
+              <div>
+                <h2 className="font-display text-2xl">{selectedChildData?.name}'s Camp Schedule</h2>
+                <p className="text-green-100">{childRegs.length} session{childRegs.length !== 1 ? 's' : ''} registered</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Schedule by Date */}
+          <div className="space-y-4">
+            {sortedDates.map(date => {
+              const dateRegs = regsByDate[date];
+              const d = new Date(date + 'T12:00:00');
+              const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][d.getDay()];
+              const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+
+              return (
+                <div key={date} className="bg-white rounded-xl shadow overflow-hidden">
+                  <div className="bg-gray-100 px-6 py-3 border-b">
+                    <h3 className="font-bold text-gray-800">{dayName}, {monthName} {d.getDate()}</h3>
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {dateRegs.flatMap(reg => reg.sessions || []).sort().map(session => {
+                      const reg = dateRegs.find(r => r.sessions?.includes(session));
+                      const counselor = getCounselorForSession(selectedChild, date, session);
+                      const podMates = counselor ? getPodMates(selectedChild, date, session, counselor.id) : [];
+                      const otherCampers = getAllCampersForSession(date, session, selectedChild);
+                      const isPending = reg?.status === 'pending';
+
+                      return (
+                        <div key={session} className={`border rounded-xl p-4 ${isPending ? 'border-yellow-300 bg-yellow-50' : 'border-green-200 bg-green-50'}`}>
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl ${session === 'morning' ? 'bg-yellow-400' : 'bg-blue-400'}`}>
+                                {session === 'morning' ? '🌅' : '🌆'}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-800">{session === 'morning' ? 'Morning Session' : 'Afternoon Session'}</h4>
+                                <p className="text-sm text-gray-500">{session === 'morning' ? '9:00 AM - 12:00 PM' : '1:00 PM - 4:00 PM'}</p>
+                              </div>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              isPending
+                                ? 'bg-yellow-200 text-yellow-800'
+                                : 'bg-green-200 text-green-800'
+                            }`}>
+                              {isPending ? '⏳ Pending Approval' : '✓ Approved'}
+                            </span>
+                          </div>
+
+                          {/* Counselor/Pod Section */}
+                          {counselor ? (
+                            <div className="mb-4">
+                              <h5 className="text-sm font-medium text-gray-600 mb-2">Your Pod</h5>
+                              <div className="bg-white rounded-lg p-4 border">
+                                <div className="flex items-center gap-4 mb-3">
+                                  {counselor.photo ? (
+                                    <img src={counselor.photo} className="w-16 h-16 rounded-full object-cover border-2 border-green-400" />
+                                  ) : (
+                                    <div className="w-16 h-16 rounded-full bg-green-600 flex items-center justify-center text-white text-xl font-bold">
+                                      {counselor.name?.charAt(0)}
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="font-bold text-gray-800">{counselor.name}</p>
+                                    <p className="text-sm text-green-600">Your Counselor</p>
+                                    {counselor.position && <p className="text-xs text-gray-500">{counselor.position}</p>}
+                                  </div>
+                                </div>
+
+                                {podMates.length > 0 && (
+                                  <div>
+                                    <p className="text-xs text-gray-500 mb-2">Pod Mates ({podMates.length}):</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      {podMates.map((mate, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg px-2 py-1">
+                                          {mate.photo ? (
+                                            <img src={mate.photo} className="w-8 h-8 rounded-full object-cover" />
+                                          ) : (
+                                            <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center text-xs font-bold text-green-700">
+                                              {mate.name?.charAt(0)}
+                                            </div>
+                                          )}
+                                          <span className="text-sm">{mate.name}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mb-4 p-4 bg-gray-100 rounded-lg text-center text-gray-500">
+                              <p className="text-sm">Pod assignment pending</p>
+                              <p className="text-xs">Counselor will be assigned soon!</p>
+                            </div>
+                          )}
+
+                          {/* Other Campers at Camp */}
+                          {otherCampers.length > 0 && (
+                            <div>
+                              <h5 className="text-sm font-medium text-gray-600 mb-2">Other Campers at Camp ({otherCampers.length})</h5>
+                              <div className="flex flex-wrap gap-2">
+                                {otherCampers.slice(0, 12).map((camper, idx) => (
+                                  <div key={idx} className="flex items-center gap-1 bg-white rounded-full px-2 py-1 border">
+                                    {camper.photo ? (
+                                      <img src={camper.photo} className="w-6 h-6 rounded-full object-cover" />
+                                    ) : (
+                                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                        {camper.name?.charAt(0)}
+                                      </div>
+                                    )}
+                                    <span className="text-xs">{camper.name?.split(' ')[0]}</span>
+                                  </div>
+                                ))}
+                                {otherCampers.length > 12 && (
+                                  <span className="text-xs text-gray-500 self-center">+{otherCampers.length - 12} more</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
       // ==================== PARENT ====================
       const Parent = () => {
         const [selectedDates, setSelectedDates] = useState({});
@@ -6604,9 +6977,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1">
-                {['dashboard', 'register', 'children', 'messages'].map(t => (
+                {['dashboard', 'schedule', 'register', 'children', 'messages'].map(t => (
                   <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t}
+                    {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 Camp Schedule' : t}
                     {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                       <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                     )}
@@ -6814,29 +7187,41 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
+              {parentTab === 'schedule' && (
+                <CamperScheduleTab
+                  myChildren={myChildren}
+                  registrations={myRegs}
+                  allRegistrations={registrations}
+                  assignments={assignments}
+                  counselors={counselors}
+                  campers={campers}
+                  users={users}
+                />
+              )}
+
               {parentTab === 'children' && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="font-bold text-lg mb-2">My Children</h3>
                   <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Register tab to make them campers!</p>
-                  {myChildren.length > 0 && (
-                    <div className="space-y-4 mb-6">{myChildren.map(c => (
-                      <ChildCard
-                        key={c.id}
-                        child={c}
-                        onUpdate={(updatedChild) => {
-                          const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
-                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-                          showToast('Child updated!');
-                        }}
-                        onDelete={(childId) => {
-                          const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
-                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-                          showToast('Child removed');
-                        }}
-                      />
-                    ))}</div>
+                  {myChildren.length > 0 ? (
+                    <ChildrenManager
+                      children={myChildren}
+                      onUpdate={(updatedChild) => {
+                        const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
+                        saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                        showToast('Child updated!');
+                      }}
+                      onDelete={(childId) => {
+                        const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
+                        saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                        showToast('Child removed');
+                      }}
+                      onAdd={addChild}
+                      registrations={myRegs}
+                    />
+                  ) : (
+                    <AddChildForm onAdd={addChild} />
                   )}
-                  <AddChildForm onAdd={addChild} />
                 </div>
               )}
 
