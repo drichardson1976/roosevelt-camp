@@ -43,10 +43,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.067";
+    const VERSION = "12.068";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.068", date: "2026-01-29", changes: [
+        "Enhanced counselor availability signup with bulk actions",
+        "Camp dates auto-generated: Monday after school ends → Friday before school starts",
+        "Flexible registration with bulk discounts:",
+        "  - 10% off for booking full week (all 5 days, AM & PM)",
+        "  - 15% off for booking 2+ full weeks",
+        "Quick 'Full Week' selection buttons for easy booking",
+        "Order summary shows discount breakdown and savings",
+        "Registrations store discount info for accounting"
+      ]},
       { version: "12.067", date: "2026-01-29", changes: [
         "Admin can edit/delete parents, children, and registrations",
         "Type 'DELETE' confirmation for all deletions",
@@ -92,17 +102,46 @@
 
     // ==================== CONSTANTS ====================
     const KIDS_PER_COUNSELOR = 5;
-    
+
+    // Seattle Public Schools 2025-2026: Last day of school is June 19, 2026 (Friday)
+    // First day of school 2026-2027: September 2, 2026 (Wednesday)
+    // Camp runs: Monday June 22, 2026 through Friday August 28, 2026
+    const SCHOOL_YEAR_END = new Date(2026, 5, 19); // June 19, 2026 (Friday)
+    const SCHOOL_YEAR_START = new Date(2026, 8, 2); // September 2, 2026 (Wednesday)
+
     const generateCampDates = () => {
       const dates = [];
-      const start = new Date(2026, 5, 22);
-      const end = new Date(2026, 7, 28);
+      // Start on Monday after school ends
+      const start = new Date(SCHOOL_YEAR_END);
+      // Find next Monday after school ends
+      while (start.getDay() !== 1) {
+        start.setDate(start.getDate() + 1);
+      }
+      // End on Friday before school starts
+      const end = new Date(SCHOOL_YEAR_START);
+      // Find previous Friday before school starts
+      while (end.getDay() !== 5) {
+        end.setDate(end.getDate() - 1);
+      }
+      // Generate all weekdays (Mon-Fri) between start and end
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() >= 1 && d.getDay() <= 5) dates.push(new Date(d).toISOString().split('T')[0]);
+        if (d.getDay() >= 1 && d.getDay() <= 5) {
+          dates.push(new Date(d).toISOString().split('T')[0]);
+        }
       }
       return dates;
     };
     const CAMP_DATES = generateCampDates();
+
+    // Format camp date range for display
+    const getCampDateRange = () => {
+      if (CAMP_DATES.length === 0) return '';
+      const start = new Date(CAMP_DATES[0] + 'T12:00:00');
+      const end = new Date(CAMP_DATES[CAMP_DATES.length - 1] + 'T12:00:00');
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${months[start.getMonth()]} ${start.getDate()} - ${months[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    };
+    const CAMP_DATE_RANGE = getCampDateRange();
     
     const getWeeks = () => {
       const weeks = [];
@@ -214,6 +253,78 @@
     };
 
     const getSessionCost = (content) => parseInt((content.sessionCost || '$60').replace(/[^0-9]/g, '')) || 60;
+
+    // Calculate discounted total based on sessions selected
+    // - 10% discount for booking a full week (both AM and PM for all 5 days = 10 sessions)
+    // - 15% discount for booking 2+ full weeks
+    const calculateDiscountedTotal = (selectedDates, numChildren, content) => {
+      const basePrice = content.singleSessionCost || 60;
+      const weekDiscount = (content.weekDiscount || 10) / 100;
+      const multiWeekDiscount = (content.multiWeekDiscount || 15) / 100;
+
+      // Group sessions by week
+      const sessionsByWeek = {};
+      Object.entries(selectedDates).forEach(([date, sessions]) => {
+        if (!sessions?.length) return;
+        // Find which week this date belongs to
+        const weekIdx = CAMP_WEEKS.findIndex(w => w.dates.includes(date));
+        if (weekIdx >= 0) {
+          if (!sessionsByWeek[weekIdx]) sessionsByWeek[weekIdx] = { dates: {}, totalSessions: 0 };
+          sessionsByWeek[weekIdx].dates[date] = sessions;
+          sessionsByWeek[weekIdx].totalSessions += sessions.length;
+        }
+      });
+
+      // Count full weeks (5 days with both AM and PM = 10 sessions)
+      let fullWeeks = 0;
+      let fullWeekSessions = 0;
+      let partialSessions = 0;
+
+      Object.values(sessionsByWeek).forEach(week => {
+        const daysCount = Object.keys(week.dates).length;
+        const hasBothSessions = Object.values(week.dates).every(s => s.includes('morning') && s.includes('afternoon'));
+
+        if (daysCount === 5 && hasBothSessions && week.totalSessions === 10) {
+          fullWeeks++;
+          fullWeekSessions += 10;
+        } else {
+          partialSessions += week.totalSessions;
+        }
+      });
+
+      // Calculate pricing
+      const children = Math.max(1, numChildren);
+      let subtotal = 0;
+      let discount = 0;
+
+      if (fullWeeks >= 2) {
+        // Multi-week discount applies to all full weeks
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * multiWeekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else if (fullWeeks === 1) {
+        // Single week discount
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * weekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else {
+        // No discount - partial weeks only
+        subtotal = (fullWeekSessions + partialSessions) * basePrice * children;
+      }
+
+      const totalSessions = fullWeekSessions + partialSessions;
+      const originalTotal = totalSessions * basePrice * children;
+
+      return {
+        totalSessions,
+        fullWeeks,
+        partialSessions,
+        originalTotal,
+        discount,
+        discountPercent: fullWeeks >= 2 ? multiWeekDiscount * 100 : fullWeeks === 1 ? weekDiscount * 100 : 0,
+        finalTotal: Math.round(subtotal)
+      };
+    };
 
     const calculateAge = (birthdate) => {
       if (!birthdate) return null;
@@ -2443,29 +2554,81 @@
           });
         };
 
-        const calcTotal = () => Object.values(selectedDates).flat().length * sessionCost * Math.max(1, selectedChildren.length);
+        // Use discount calculation
+        const getPricingBreakdown = () => calculateDiscountedTotal(selectedDates, selectedChildren.length, content);
+        const calcTotal = () => getPricingBreakdown().finalTotal;
+
+        // Quick action to select entire week (both AM and PM for all days)
+        const selectFullWeek = (weekDates) => {
+          setSelectedDates(p => {
+            const newDates = { ...p };
+            weekDates.forEach(date => {
+              newDates[date] = ['morning', 'afternoon'];
+            });
+            return newDates;
+          });
+        };
+
+        // Check if a week is fully selected
+        const isWeekFullySelected = (weekDates) => {
+          return weekDates.every(date => {
+            const sel = selectedDates[date] || [];
+            return sel.includes('morning') && sel.includes('afternoon');
+          });
+        };
+
+        // Clear a week's selection
+        const clearWeek = (weekDates) => {
+          setSelectedDates(p => {
+            const newDates = { ...p };
+            weekDates.forEach(date => {
+              delete newDates[date];
+            });
+            return newDates;
+          });
+        };
 
         const handleRegister = async () => {
           if (!selectedChildren.length) { showToast('Select children', 'error'); return; }
           const dates = Object.entries(selectedDates).filter(([, s]) => s.length);
           if (!dates.length) { showToast('Select sessions', 'error'); return; }
-          
+
+          // Calculate discount info for the entire order
+          const pricing = getPricingBreakdown();
+          const orderId = `order_${Date.now()}`;
+
+          // Calculate proportional discount per session
+          const discountRatio = pricing.originalTotal > 0 ? pricing.discount / pricing.originalTotal : 0;
+
           for (const childId of selectedChildren) {
             const child = myChildren.find(c => c.id === childId);
             for (const [date, sessions] of dates) {
+              const baseAmount = sessions.length * sessionCost;
+              const discountAmount = Math.round(baseAmount * discountRatio * 100) / 100;
+              const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
+
               await saveReg({
                 id: `reg_${Date.now()}_${childId}_${date}`,
+                orderId, // Group registrations from same order
                 childId, childName: child?.name,
                 parentEmail: user?.email, parentName: user?.name,
                 date, sessions,
                 status: 'pending', paymentStatus: 'unpaid',
-                totalAmount: sessions.length * sessionCost,
+                baseAmount, // Original price before discount
+                discountAmount, // How much was discounted
+                discountPercent: pricing.discountPercent,
+                totalAmount: finalAmount, // Final price to pay
                 registeredAt: new Date().toISOString()
               });
             }
           }
-          
-          setShowConfirm({ children: selectedChildren.map(id => myChildren.find(c => c.id === id)?.name), total: calcTotal(), venmoCode });
+
+          setShowConfirm({
+            children: selectedChildren.map(id => myChildren.find(c => c.id === id)?.name),
+            total: pricing.finalTotal,
+            savings: pricing.discount > 0 ? Math.round(pricing.discount) : null,
+            venmoCode
+          });
           setSelectedDates({});
           setSelectedChildren([]);
         };
@@ -2559,11 +2722,27 @@
                           <span>{name}</span><span>{expandedMonths[mKey] ? '▼' : '▶'}</span>
                         </button>
                         {expandedMonths[mKey] && (
-                          <div className="mt-2 pl-4 space-y-2">{weeks.map(({ idx, start, dates }) => (
+                          <div className="mt-2 pl-4 space-y-2">{weeks.map(({ idx, start, dates }) => {
+                            const isFullWeek = dates.length === 5 && isWeekFullySelected(dates);
+                            return (
                             <div key={idx}>
-                              <button onClick={() => setExpandedWeeks(p => ({ ...p, [idx]: !p[idx] }))} className="w-full flex justify-between p-2 bg-gray-100 rounded-lg text-gray-700">
-                                <span>Week {idx + 1}</span><span>{expandedWeeks[idx] ? '▼' : '▶'}</span>
-                              </button>
+                              <div className="flex gap-2 items-center">
+                                <button onClick={() => setExpandedWeeks(p => ({ ...p, [idx]: !p[idx] }))} className="flex-1 flex justify-between p-2 bg-gray-100 rounded-lg text-gray-700">
+                                  <span>Week {idx + 1} {isFullWeek && <span className="text-green-600 text-sm ml-2">✓ Full week</span>}</span>
+                                  <span>{expandedWeeks[idx] ? '▼' : '▶'}</span>
+                                </button>
+                                {dates.length === 5 && (
+                                  isFullWeek ? (
+                                    <button onClick={() => clearWeek(dates)} className="px-3 py-2 text-xs bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
+                                      Clear
+                                    </button>
+                                  ) : (
+                                    <button onClick={() => selectFullWeek(dates)} className="px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                      Full Week
+                                    </button>
+                                  )
+                                )}
+                              </div>
                               {expandedWeeks[idx] && (
                                 <div className="grid grid-cols-5 gap-2 mt-2 pl-4">{dates.map(date => {
                                   const d = new Date(date + 'T12:00:00');
@@ -2581,15 +2760,70 @@
                                 })}</div>
                               )}
                             </div>
-                          ))}</div>
+                          );})}</div>
                         )}
                       </div>
                     ))}
                   </div>
                   
                   <div className="bg-white rounded-xl shadow p-6">
-                    <div className="text-2xl font-bold text-green-700 mb-4">Total: ${calcTotal()}</div>
-                    <button onClick={handleRegister} disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length} className="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
+                    <h3 className="font-bold text-lg mb-4">Order Summary</h3>
+                    {(() => {
+                      const pricing = getPricingBreakdown();
+                      const hasSelections = pricing.totalSessions > 0;
+                      return hasSelections ? (
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-gray-600">
+                            <span>{pricing.totalSessions} session{pricing.totalSessions !== 1 ? 's' : ''} × ${content.singleSessionCost || 60}</span>
+                            <span>${pricing.originalTotal}</span>
+                          </div>
+                          {selectedChildren.length > 1 && (
+                            <div className="text-sm text-gray-500">
+                              ({selectedChildren.length} children)
+                            </div>
+                          )}
+                          {pricing.fullWeeks > 0 && (
+                            <div className="flex justify-between text-green-600">
+                              <span>
+                                {pricing.fullWeeks >= 2
+                                  ? `🎉 Multi-week discount (${pricing.discountPercent}% off ${pricing.fullWeeks} full weeks)`
+                                  : `✓ Full week discount (${pricing.discountPercent}% off)`}
+                              </span>
+                              <span>-${Math.round(pricing.discount)}</span>
+                            </div>
+                          )}
+                          {pricing.partialSessions > 0 && pricing.fullWeeks > 0 && (
+                            <div className="text-sm text-gray-500">
+                              + {pricing.partialSessions} additional session{pricing.partialSessions !== 1 ? 's' : ''} at full price
+                            </div>
+                          )}
+                          <div className="border-t pt-3 flex justify-between items-center">
+                            <span className="font-bold text-lg">Total</span>
+                            <div className="text-right">
+                              {pricing.discount > 0 && (
+                                <span className="text-gray-400 line-through text-sm mr-2">${pricing.originalTotal}</span>
+                              )}
+                              <span className="text-2xl font-bold text-green-700">${pricing.finalTotal}</span>
+                            </div>
+                          </div>
+                          {pricing.discount > 0 && (
+                            <div className="bg-green-50 text-green-700 text-sm p-2 rounded-lg text-center">
+                              You save ${Math.round(pricing.discount)}!
+                            </div>
+                          )}
+                          {pricing.fullWeeks === 0 && pricing.totalSessions >= 5 && (
+                            <div className="bg-yellow-50 text-yellow-700 text-sm p-2 rounded-lg">
+                              💡 Tip: Book both AM & PM for all 5 days of a week to get {content.weekDiscount || 10}% off!
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-center py-4">
+                          Select sessions above to see pricing
+                        </div>
+                      );
+                    })()}
+                    <button onClick={handleRegister} disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length} className="w-full mt-4 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
                   </div>
                 </div>
               )}
@@ -2637,7 +2871,10 @@
                   <div className="text-6xl mb-4">✅</div>
                   <h2 className="font-display text-2xl text-green-800 mb-4">Registration Submitted!</h2>
                   <p className="mb-2">Children: {showConfirm.children?.join(', ')}</p>
-                  <p className="text-2xl font-bold text-green-700 mb-4">Amount Due: ${showConfirm.total}</p>
+                  <p className="text-2xl font-bold text-green-700 mb-2">Amount Due: ${showConfirm.total}</p>
+                  {showConfirm.savings > 0 && (
+                    <p className="text-green-600 text-sm mb-4">🎉 You saved ${showConfirm.savings} with your bulk discount!</p>
+                  )}
                   <div className="bg-blue-50 rounded-lg p-4 mb-4">
                     <p className="font-medium">Venmo: {content.venmoUsername}</p>
                     <p className="text-sm">Code: <span className="font-mono bg-white px-2 rounded">{showConfirm.venmoCode}</span></p>
@@ -3038,10 +3275,11 @@
       // ==================== COUNSELOR ====================
       const CounselorDash = () => {
         const [month, setMonth] = useState(5);
+        const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
         const myAvail = availability[user?.email] || {};
-        
+
         const getMonthDates = (m) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === m);
-        
+
         const getState = (date, session) => {
           const data = myAvail[date];
           if (!data) return null;
@@ -3054,11 +3292,11 @@
         const cycle = async (date, session) => {
           const newAvail = JSON.parse(JSON.stringify(myAvail));
           const state = getState(date, session);
-          
+
           if (!newAvail[date] || Array.isArray(newAvail[date])) {
             newAvail[date] = { available: Array.isArray(newAvail[date]) ? [...newAvail[date]] : [], unavailable: [] };
           }
-          
+
           if (state === null) {
             newAvail[date].available.push(session);
           } else if (state === 'available') {
@@ -3067,11 +3305,57 @@
           } else {
             newAvail[date].unavailable = newAvail[date].unavailable.filter(s => s !== session);
           }
-          
+
           if (!newAvail[date].available?.length && !newAvail[date].unavailable?.length) delete newAvail[date];
-          
+
           await saveAvail({ ...availability, [user?.email]: newAvail });
+          showToast('Availability updated!');
         };
+
+        // Bulk actions
+        const markWeekAvailable = async (weekDates) => {
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          weekDates.forEach(date => {
+            newAvail[date] = { available: ['morning', 'afternoon'], unavailable: [] };
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          showToast('Week marked as available!');
+        };
+
+        const markMonthAvailable = async (monthNum) => {
+          const monthDates = getMonthDates(monthNum);
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          monthDates.forEach(date => {
+            newAvail[date] = { available: ['morning', 'afternoon'], unavailable: [] };
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          showToast('Month marked as available!');
+        };
+
+        const clearMonth = async (monthNum) => {
+          const monthDates = getMonthDates(monthNum);
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          monthDates.forEach(date => {
+            delete newAvail[date];
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          showToast('Month cleared!');
+        };
+
+        // Calculate stats
+        const getStats = () => {
+          let available = 0, unavailable = 0, notSet = 0;
+          CAMP_DATES.forEach(date => {
+            ['morning', 'afternoon'].forEach(session => {
+              const state = getState(date, session);
+              if (state === 'available') available++;
+              else if (state === 'unavailable') unavailable++;
+              else notSet++;
+            });
+          });
+          return { available, unavailable, notSet, total: CAMP_DATES.length * 2 };
+        };
+        const stats = getStats();
 
         return (
           <div className="min-h-screen bg-amber-50">
@@ -3081,18 +3365,51 @@
                 <p className="text-green-200">Welcome, {user?.name}</p>
               </div>
             </div>
-            
+
             <div className="max-w-6xl mx-auto px-4 py-6">
-              <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
-                <p className="text-green-800"><strong>Set availability:</strong> Click to cycle: Available (green) → Unavailable (red) → Not set (gray)</p>
+              {/* Stats Overview */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{stats.available}</div>
+                  <div className="text-sm text-gray-600">Sessions Available</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">{stats.unavailable}</div>
+                  <div className="text-sm text-gray-600">Unavailable</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-600">{stats.notSet}</div>
+                  <div className="text-sm text-gray-600">Not Set</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                  <div className="text-sm text-gray-600">Total Sessions</div>
+                </div>
               </div>
-              
-              <div className="flex gap-2 mb-6">
+
+              {/* Instructions */}
+              <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
+                <h3 className="font-bold text-green-800 mb-2">📅 Sign Up for Sessions</h3>
+                <p className="text-green-800 text-sm mb-2">Click on AM or PM to cycle through: <span className="font-medium">Available</span> → <span className="font-medium">Unavailable</span> → <span className="font-medium">Not Set</span></p>
+                <p className="text-green-700 text-sm">Camp runs {CAMP_DATE_RANGE} (Monday after school ends through Friday before school starts)</p>
+              </div>
+
+              {/* Month Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
                 {[{ m: 5, n: 'June' }, { m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
                   <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
                 ))}
+                <div className="flex-1" />
+                {/* Bulk Actions */}
+                <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
+                  ✓ Mark All Available
+                </button>
+                <button onClick={() => clearMonth(month)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
+                  Clear Month
+                </button>
               </div>
-              
+
+              {/* Calendar Grid */}
               <div className="bg-white rounded-xl shadow p-6">
                 <div className="grid grid-cols-5 gap-3">
                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <div key={d} className="text-center font-bold text-green-800">{d}</div>)}
@@ -3100,20 +3417,58 @@
                     const d = new Date(date + 'T12:00:00');
                     const mState = getState(date, 'morning');
                     const aState = getState(date, 'afternoon');
-                    const style = (s) => s === 'available' ? 'bg-green-500 text-white' : s === 'unavailable' ? 'bg-red-500 text-white' : 'bg-gray-200 text-gray-600';
+                    const style = (s) => s === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : s === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
                     return (
-                      <div key={date} className="border rounded-lg p-2">
+                      <div key={date} className="border rounded-lg p-2 hover:shadow-md transition-shadow">
                         <div className="text-center font-bold text-green-800 mb-2">{d.getDate()}</div>
-                        <button onClick={() => cycle(date, 'morning')} className={'w-full py-1 rounded text-xs mb-1 ' + style(mState)}>AM</button>
-                        <button onClick={() => cycle(date, 'afternoon')} className={'w-full py-1 rounded text-xs ' + style(aState)}>PM</button>
+                        <button onClick={() => cycle(date, 'morning')} className={'w-full py-1.5 rounded text-xs mb-1 font-medium transition-colors ' + style(mState)}>
+                          {mState === 'available' ? '✓ AM' : mState === 'unavailable' ? '✗ AM' : 'AM'}
+                        </button>
+                        <button onClick={() => cycle(date, 'afternoon')} className={'w-full py-1.5 rounded text-xs font-medium transition-colors ' + style(aState)}>
+                          {aState === 'available' ? '✓ PM' : aState === 'unavailable' ? '✗ PM' : 'PM'}
+                        </button>
                       </div>
                     );
                   })}
                 </div>
-                <div className="mt-4 flex gap-4 justify-center text-sm">
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" />Available</div>
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" />Unavailable</div>
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" />Not Set</div>
+
+                {/* Legend */}
+                <div className="mt-6 pt-4 border-t flex flex-wrap gap-4 justify-center text-sm">
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available - I can work</span></div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" /><span>Unavailable - Can't work</span></div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" /><span>Not Set - Haven't decided</span></div>
+                </div>
+              </div>
+
+              {/* Quick Actions by Week */}
+              <div className="bg-white rounded-xl shadow p-6 mt-6">
+                <h3 className="font-bold text-green-800 mb-4">⚡ Quick Actions by Week</h3>
+                <div className="space-y-2">
+                  {CAMP_WEEKS.filter(w => new Date(w.start + 'T12:00:00').getMonth() === month).map((week, idx) => {
+                    const weekStart = new Date(week.start + 'T12:00:00');
+                    const weekEnd = new Date(week.dates[week.dates.length - 1] + 'T12:00:00');
+                    const availableCount = week.dates.reduce((sum, date) => {
+                      return sum + (getState(date, 'morning') === 'available' ? 1 : 0) + (getState(date, 'afternoon') === 'available' ? 1 : 0);
+                    }, 0);
+
+                    return (
+                      <div key={week.start} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <span className="font-medium">Week {idx + 1}: </span>
+                          <span className="text-gray-600">
+                            {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className="ml-2 text-sm text-green-600">({availableCount}/{week.dates.length * 2} sessions)</span>
+                        </div>
+                        <button
+                          onClick={() => markWeekAvailable(week.dates)}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
+                        >
+                          Mark Week Available
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
