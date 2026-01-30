@@ -43,7 +43,7 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.082";
+    const VERSION = "12.083";
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
@@ -5925,7 +5925,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'content', 'history'].map(t => (
+                {['dashboard', 'content', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'history'].map(t => (
                   <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                     {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
                     {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
