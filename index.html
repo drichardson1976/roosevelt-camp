@@ -43,10 +43,22 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.088";
-    const BUILD_DATE = new Date("2026-01-31T18:21:17");
+    const VERSION = "12.090";
+    const BUILD_DATE = new Date("2026-01-31T18:35:00");
 
     const RELEASE_NOTES = [
+      { version: "12.090", date: "2026-01-31", changes: [
+        "Moved counselors section up on homepage with larger circular headshots",
+        "Removed green rectangle frames from counselor photos",
+        "Changed to 'Easy Pick-up & Drop-off' text"
+      ]},
+      { version: "12.089", date: "2026-01-31", changes: [
+        "Hero image now edge-to-edge",
+        "New Pricing tab with pricing, discounts, and scholarship info",
+        "Removed pre-order lunch options - campers bring their own lunch",
+        "Updated snacks section with clearer messaging",
+        "Simplified cancellation and late pickup policies"
+      ]},
       { version: "12.088", date: "2026-01-31", changes: [
         "Mobile responsive improvements across entire site",
         "Navigation wraps and scales properly on small screens",
@@ -4292,7 +4304,7 @@
           <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center justify-between gap-2">
             <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => { setPage('home'); setUser(null); }} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
             <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
-              {['home', 'schedule', 'location', 'counselors'].map(p => (
+              {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
                 <button key={p} onClick={() => setPage(p)} className={'px-2 sm:px-3 py-1.5 sm:py-1 rounded text-xs sm:text-sm capitalize ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
               ))}
               {user ? (
@@ -4323,9 +4335,9 @@
       };
 
       const Home = () => (
-        <div>
-          {/* Hero Section with Large Background Image */}
-          <div className="relative min-h-[400px] sm:min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
+        <div className="w-full">
+          {/* Hero Section with Large Background Image - Edge to Edge */}
+          <div className="relative w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
             {/* Background Image or Gradient Fallback */}
             {getSitePhoto('hero') ? (
               <div
@@ -4367,6 +4379,26 @@
             </div>
           </div>
 
+          {/* Counselors Section - Large circular headshots */}
+          <div className="bg-green-50 py-8 sm:py-12">
+            <div className="max-w-6xl mx-auto px-4">
+              <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h2>
+              <div className="flex flex-wrap justify-center gap-6 sm:gap-8 md:gap-10">
+                {counselors.filter(c => c.visible).map(c => (
+                  <div key={c.id} className="text-center">
+                    {c.photo ? (
+                      <img src={c.photo} className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full object-cover shadow-lg border-4 border-white mx-auto" alt={c.name} />
+                    ) : (
+                      <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full bg-green-200 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl shadow-lg border-4 border-white mx-auto">{c.name[0]}</div>
+                    )}
+                    <h3 className="font-bold text-sm sm:text-base md:text-lg text-green-800 mt-3">{c.name}</h3>
+                    <p className="text-green-600 text-xs sm:text-sm">{c.position}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Drop-off Photo Section */}
           {getSitePhoto('dropoff') && (
             <div className="bg-green-50 py-12">
@@ -4381,7 +4413,7 @@
                     />
                   </div>
                   <div>
-                    <h2 className="font-display text-3xl text-green-800 mb-4">Easy Drop-Off & Pick-Up</h2>
+                    <h2 className="font-display text-3xl text-green-800 mb-4">Easy Pick-up & Drop-off</h2>
                     <p className="text-gray-700 text-lg mb-4">Our convenient location at Roosevelt High School makes drop-off and pick-up a breeze. Counselors greet every camper at the gym entrance.</p>
                     <ul className="space-y-2 text-gray-600">
                       <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Morning drop-off: 8:45 - 9:00 AM</li>
@@ -4428,25 +4460,6 @@
               </div>
             </div>
           )}
-
-          {/* Counselors Section */}
-          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
-            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-              {counselors.filter(c => c.visible).map(c => (
-                <div key={c.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="h-24 sm:h-32 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
-                    {c.photo ? <img src={c.photo} className="w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover border-2 sm:border-4 border-white" /> : <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-green-200 flex items-center justify-center text-2xl sm:text-4xl border-2 sm:border-4 border-white">{c.name[0]}</div>}
-                  </div>
-                  <div className="p-2 sm:p-4 text-center">
-                    <h3 className="font-bold text-sm sm:text-base text-green-800">{c.name}</h3>
-                    <p className="text-green-600 text-xs sm:text-sm">{c.position} • {c.year}</p>
-                    <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2 hidden sm:block">{c.bio}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           {/* Lunch Photo Section */}
           {getSitePhoto('lunch') && (
@@ -4498,32 +4511,142 @@
       };
       const getFoodPhoto = (key) => foodPhotos[key] || DEFAULT_FOOD_PHOTOS[key] || '';
       const Schedule = () => (
-        <div className="min-h-screen bg-amber-50 py-12">
+        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
           <div className="max-w-4xl mx-auto px-4">
-            <h1 className="font-display text-4xl text-green-800 text-center mb-8">Camp Schedule</h1>
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Camp Schedule</h1>
 
             {/* Sessions */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h2 className="font-bold text-xl text-green-800 mb-4">Daily Sessions</h2>
-              <div className="grid md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">Daily Sessions</h2>
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
                   <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
-                  <p className="text-lg">{content.sessionMorning}</p>
-                  <p className="text-green-600 font-bold">${content.singleSessionCost || 60}/session</p>
+                  <p className="text-base sm:text-lg">{content.sessionMorning}</p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                   <h3 className="font-bold text-blue-700">☀️ Afternoon Session</h3>
-                  <p className="text-lg">{content.sessionAfternoon}</p>
-                  <p className="text-green-600 font-bold">${content.singleSessionCost || 60}/session</p>
+                  <p className="text-base sm:text-lg">{content.sessionAfternoon}</p>
                 </div>
               </div>
               <p className="text-gray-700 font-medium">{content.campDates}</p>
-              <p className="text-sm text-gray-500 mt-2">Camp runs Monday through Friday, starting the Monday after school ends through the Friday before school starts.</p>
+              <p className="text-sm text-gray-500 mt-2">Camp runs Monday through Friday.</p>
+              <button onClick={() => setPage('pricing')} className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">View Pricing →</button>
             </div>
 
-            {/* Pricing & Discounts */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h2 className="font-bold text-xl text-green-800 mb-4">💰 Pricing & Discounts</h2>
+            {/* Lunch & Snacks */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🍎 Lunch & Snacks</h2>
+
+              {/* Lunch Info */}
+              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200 mb-6">
+                <h3 className="font-bold text-orange-800 mb-2">🍽️ Bring Your Own Lunch</h3>
+                <p className="text-gray-700">
+                  Campers attending both morning and afternoon sessions should bring their own lunch. We have a supervised lunch break between sessions where kids can eat together.
+                </p>
+              </div>
+
+              {/* Snacks Provided */}
+              <div className="mb-6">
+                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Snacks Provided</h3>
+                <p className="text-gray-700 mb-4">
+                  We provide healthy snacks to keep campers energized! If your child needs extra snacks, we're happy to help.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="text-center">
+                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=🍎'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Fresh Fruit</span>
+                  </div>
+                  <div className="text-center">
+                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f59e0b/white?text=🥜'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Granola Bars</span>
+                  </div>
+                  <div className="text-center">
+                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/fbbf24/white?text=🧀'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Cheese & Crackers</span>
+                  </div>
+                  <div className="text-center">
+                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/84cc16/white?text=🥕'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Veggie Sticks</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Drinks */}
+              <div>
+                <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                  <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/3b82f6/white?text=💧'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Water</span>
+                  </div>
+                  <div className="text-center p-3 sm:p-4 bg-green-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=⚡'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Gatorade</span>
+                  </div>
+                  <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f97316/white?text=🍊'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Orange Juice</span>
+                  </div>
+                  <div className="text-center p-3 sm:p-4 bg-red-50 rounded-xl">
+                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/ef4444/white?text=🍎'; }} />
+                    <span className="text-xs sm:text-sm font-medium text-gray-700">Apple Juice</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Policies */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">📋 Policies</h2>
+              <div className="space-y-3">
+                <div className="p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                  <h3 className="font-bold text-red-800 text-sm">🚫 Cancellations</h3>
+                  <p className="text-gray-700 text-sm">Cancel 14+ days ahead for full refund. Later cancellations may receive credit for future sessions.</p>
+                </div>
+                <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
+                  <h3 className="font-bold text-orange-800 text-sm">⏰ Late Pickup</h3>
+                  <p className="text-gray-700 text-sm">Please pick up on time - our volunteer counselors have commitments after camp. Call if you'll be late.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
+      // ==================== PRICING PAGE ====================
+      const Pricing = () => (
+        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
+          <div className="max-w-4xl mx-auto px-4">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">💰 Pricing & Registration</h1>
+
+            {/* Session Pricing */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">Session Pricing</h2>
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+                  <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
+                  <p className="text-base sm:text-lg">{content.sessionMorning}</p>
+                  <p className="text-green-600 font-bold text-lg">${content.singleSessionCost || 60}/session</p>
+                </div>
+                <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                  <h3 className="font-bold text-blue-700">☀️ Afternoon Session</h3>
+                  <p className="text-base sm:text-lg">{content.sessionAfternoon}</p>
+                  <p className="text-green-600 font-bold text-lg">${content.singleSessionCost || 60}/session</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Discounts */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🎉 Discounts</h2>
               <div className="space-y-3">
                 <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <span>Single Session</span>
@@ -4544,135 +4667,25 @@
                   <span className="font-bold text-green-800">{content.multiWeekDiscount || 15}% off total</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-500 mt-4">Discounts applied automatically at checkout. You can always add more sessions later!</p>
+              <p className="text-sm text-gray-500 mt-4">Discounts applied automatically at checkout.</p>
             </div>
 
-            {/* Snacks & Lunch */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-              <h2 className="font-bold text-xl text-green-800 mb-4">🍎 Snacks & Lunch Options</h2>
-
-              {/* Healthy Snacks */}
-              <div className="mb-6">
-                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Healthy Snacks Provided</h3>
-                <p className="text-gray-700 mb-4">
-                  We provide healthy snacks during camp to keep your campers energized! Fresh fruit, granola bars, and other nutritious options are included.
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=🍎'; }} />
-                    <span className="text-sm font-medium text-gray-700">Fresh Fruit</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f59e0b/white?text=🥜'; }} />
-                    <span className="text-sm font-medium text-gray-700">Granola Bars</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/fbbf24/white?text=🧀'; }} />
-                    <span className="text-sm font-medium text-gray-700">Cheese & Crackers</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/84cc16/white?text=🥕'; }} />
-                    <span className="text-sm font-medium text-gray-700">Veggie Sticks</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drinks */}
-              <div className="mb-6">
-                <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages Available</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 bg-blue-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/3b82f6/white?text=💧'; }} />
-                    <span className="text-sm font-medium text-gray-700">Water</span>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=⚡'; }} />
-                    <span className="text-sm font-medium text-gray-700">Gatorade</span>
-                  </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f97316/white?text=🍊'; }} />
-                    <span className="text-sm font-medium text-gray-700">Orange Juice</span>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/ef4444/white?text=🍎'; }} />
-                    <span className="text-sm font-medium text-gray-700">Apple Juice</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Lunch Options */}
-              <div>
-                <h3 className="font-bold text-lg text-orange-700 mb-3">🍽️ Pre-Order Lunch Options</h3>
-                <p className="text-gray-700 mb-4">
-                  Want to pre-order lunch for your camper? We partner with these local restaurants for convenient lunch delivery:
-                </p>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-4 p-4 bg-green-50 rounded-lg border border-green-200 hover:shadow-md transition-shadow">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Subway_2016_logo.svg/200px-Subway_2016_logo.svg.png" alt="Subway" className="w-16 h-12 object-contain"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/22c55e/white?text=SUBWAY'; }} />
-                    <div>
-                      <h4 className="font-bold text-green-800">Subway</h4>
-                      <p className="text-sm text-gray-600">Fresh subs, wraps & salads</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 bg-red-50 rounded-lg border border-red-200 hover:shadow-md transition-shadow">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/3/3b/Chipotle_Mexican_Grill_logo.svg/200px-Chipotle_Mexican_Grill_logo.svg.png" alt="Chipotle" className="w-16 h-12 object-contain"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/dc2626/white?text=CHIPOTLE'; }} />
-                    <div>
-                      <h4 className="font-bold text-red-800">Chipotle</h4>
-                      <p className="text-sm text-gray-600">Burritos, bowls & tacos</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 bg-amber-50 rounded-lg border border-amber-200 hover:shadow-md transition-shadow">
-                    <div className="w-16 h-12 bg-amber-600 rounded flex items-center justify-center text-white font-bold text-xs text-center">TRINITY<br/>MARKET</div>
-                    <div>
-                      <h4 className="font-bold text-amber-800">Trinity Market</h4>
-                      <p className="text-sm text-gray-600">Sandwiches & fresh deli</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200 hover:shadow-md transition-shadow">
-                    <img src="https://www.grandcentralbakery.com/wp-content/themes/starter/images/gcb-logo.svg" alt="Grand Central Bakery" className="w-16 h-12 object-contain"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/100x60/ca8a04/white?text=GCB'; }} />
-                    <div>
-                      <h4 className="font-bold text-yellow-800">Grand Central Bakery</h4>
-                      <p className="text-sm text-gray-600">Artisan sandwiches & pastries</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800">
-                    <strong>📝 How to order:</strong> Lunch orders can be placed through your Parent Dashboard after registration. Orders must be placed at least 24 hours in advance.
-                  </p>
-                </div>
-              </div>
+            {/* Scholarship */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
+              <h2 className="font-bold text-lg sm:text-xl text-purple-800 mb-4">💜 Scholarship Assistance</h2>
+              <p className="text-gray-700">{content.scholarshipInfo}</p>
+              <button onClick={() => setPage('login')} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Apply for Scholarship</button>
             </div>
 
-            {/* Policies */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="font-bold text-xl text-green-800 mb-4">📋 Camp Policies</h2>
-
-              <div className="space-y-4">
-                <div className="p-4 bg-red-50 rounded-lg border-l-4 border-red-400">
-                  <h3 className="font-bold text-red-800 mb-2">🚫 Cancellation Policy</h3>
-                  <p className="text-gray-700 text-sm">{content.cancellationPolicy}</p>
-                </div>
-
-                <div className="p-4 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-                  <h3 className="font-bold text-orange-800 mb-2">⏰ Late Pickup Policy</h3>
-                  <p className="text-gray-700 text-sm">{content.latePickupPolicy}</p>
-                </div>
-
-                <div className="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-400">
-                  <h3 className="font-bold text-purple-800 mb-2">💜 Scholarship Assistance</h3>
-                  <p className="text-gray-700 text-sm">{content.scholarshipInfo}</p>
+            {/* Payment Info */}
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">💳 Payment</h2>
+              <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+                <span className="text-3xl">📱</span>
+                <div>
+                  <p className="font-medium">Pay via Venmo</p>
+                  <p className="text-gray-600">Venmo: <span className="font-mono font-bold">{content.venmoUsername || '@CampDirector'}</span></p>
+                  <p className="text-sm text-gray-500">Include your child's name and dates in the memo</p>
                 </div>
               </div>
             </div>
@@ -8094,6 +8107,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
           {page === 'home' && <Home />}
           {page === 'schedule' && <Schedule />}
+          {page === 'pricing' && <Pricing />}
           {page === 'location' && <Location />}
           {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
