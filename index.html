@@ -43,10 +43,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.091";
-    const BUILD_DATE = new Date("2026-01-31T19:15:00");
+    const VERSION = "12.092";
+    // BUILD_DATE is set when the file is saved/deployed - update this timestamp when making changes
+    const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.092", date: "2026-01-31", changes: [
+        "Build timestamp now uses actual current time",
+        "Sessions tab: toggle individual AM/PM sessions or whole day",
+        "Sessions tab: stays in current month after changes",
+        "Sessions tab: shows counselor availability and camper counts per session",
+        "Parent registration: shows blocked AM/PM sessions individually"
+      ]},
       { version: "12.091", date: "2026-01-31", changes: [
         "Larger navigation buttons for easier mobile use",
         "Registration deletion now cascades to remove camper from assignments",
@@ -2001,9 +2009,16 @@
     };
 
     // ==================== SESSIONS TAB ====================
-    const SessionsTab = ({ blockedDates, availableDates, allDates, onSaveBlockedDates, registrations, showToast }) => {
-      const [selectedMonth, setSelectedMonth] = useState(null);
-      const [confirmUnblock, setConfirmUnblock] = useState(null);
+    const SessionsTab = ({ blockedSessions, allDates, onSaveBlockedSessions, registrations, counselors, availability, assignments, showToast }) => {
+      const [selectedMonth, setSelectedMonth] = useState(() => {
+        // Initialize to first month with camp dates
+        if (allDates.length > 0) {
+          const d = new Date(allDates[0] + 'T12:00:00');
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        }
+        return null;
+      });
+      const [confirmBlock, setConfirmBlock] = useState(null);
 
       // Get months that have camp dates
       const getMonths = () => {
@@ -2025,13 +2040,6 @@
 
       const months = getMonths();
 
-      // Initialize selected month if not set
-      React.useEffect(() => {
-        if (!selectedMonth && months.length > 0) {
-          setSelectedMonth(months[0].key);
-        }
-      }, [months]);
-
       // Get dates for selected month
       const getMonthDates = () => {
         if (!selectedMonth) return [];
@@ -2044,38 +2052,132 @@
 
       const monthDates = getMonthDates();
 
-      // Check if date has registrations
-      const getDateStats = (date) => {
-        const regs = registrations.filter(r => r.date === date && r.status !== 'cancelled');
-        return {
-          hasRegistrations: regs.length > 0,
-          count: regs.length
-        };
+      // Check if a session is blocked
+      const isSessionBlocked = (date, session) => {
+        return blockedSessions[date]?.[session] === true;
       };
 
-      // Toggle date blocked status
-      const toggleDate = (date) => {
-        const isBlocked = blockedDates.includes(date);
-        if (isBlocked) {
-          // Unblocking - just do it
-          onSaveBlockedDates(blockedDates.filter(d => d !== date), `Unblocked ${date}`);
-          showToast(`${date} is now available`);
-        } else {
-          // Blocking - check for registrations first
-          const stats = getDateStats(date);
-          if (stats.hasRegistrations) {
-            setConfirmUnblock({ date, count: stats.count });
-          } else {
-            onSaveBlockedDates([...blockedDates, date], `Blocked ${date}`);
-            showToast(`${date} is now blocked`);
+      // Check if whole day is blocked
+      const isDayFullyBlocked = (date) => {
+        return isSessionBlocked(date, 'morning') && isSessionBlocked(date, 'afternoon');
+      };
+
+      // Check if day is partially blocked
+      const isDayPartiallyBlocked = (date) => {
+        const am = isSessionBlocked(date, 'morning');
+        const pm = isSessionBlocked(date, 'afternoon');
+        return (am || pm) && !(am && pm);
+      };
+
+      // Get registration stats for a date/session
+      const getSessionStats = (date, session) => {
+        const regs = registrations.filter(r =>
+          r.date === date &&
+          r.sessions?.includes(session) &&
+          r.status !== 'cancelled'
+        );
+        return { count: regs.length };
+      };
+
+      // Get counselor availability for a date/session
+      const getCounselorStats = (date, session) => {
+        let available = 0;
+        let total = counselors.filter(c => c.visible).length;
+
+        Object.entries(availability).forEach(([email, avail]) => {
+          const counselor = counselors.find(c => c.email === email && c.visible);
+          if (!counselor) return;
+
+          const dateAvail = avail[date];
+          if (dateAvail?.available?.includes(session) ||
+              (Array.isArray(dateAvail) && dateAvail.includes(session))) {
+            available++;
           }
+        });
+
+        return { available, total };
+      };
+
+      // Get assigned campers for a date/session
+      const getAssignedStats = (date, session) => {
+        const key = `${date}_${session}`;
+        const sessionAssignments = assignments[key] || {};
+        const assigned = Object.values(sessionAssignments).flat().length;
+        return { assigned };
+      };
+
+      // Toggle a single session
+      const toggleSession = (date, session) => {
+        const isBlocked = isSessionBlocked(date, session);
+        const stats = getSessionStats(date, session);
+
+        if (!isBlocked && stats.count > 0) {
+          // Blocking with registrations - confirm first
+          setConfirmBlock({ date, session, count: stats.count });
+          return;
+        }
+
+        const newBlocked = { ...blockedSessions };
+        if (!newBlocked[date]) newBlocked[date] = {};
+
+        if (isBlocked) {
+          delete newBlocked[date][session];
+          if (Object.keys(newBlocked[date]).length === 0) {
+            delete newBlocked[date];
+          }
+          onSaveBlockedSessions(newBlocked, `Unblocked ${session} on ${date}`);
+          showToast(`${session} on ${date} is now available`);
+        } else {
+          newBlocked[date][session] = true;
+          onSaveBlockedSessions(newBlocked, `Blocked ${session} on ${date}`);
+          showToast(`${session} on ${date} is now blocked`);
         }
       };
 
-      const confirmBlock = () => {
-        onSaveBlockedDates([...blockedDates, confirmUnblock.date], `Blocked ${confirmUnblock.date} (had ${confirmUnblock.count} registrations)`);
-        showToast(`${confirmUnblock.date} is now blocked`);
-        setConfirmUnblock(null);
+      // Toggle whole day (both sessions)
+      const toggleDay = (date) => {
+        const fullyBlocked = isDayFullyBlocked(date);
+        const morningStats = getSessionStats(date, 'morning');
+        const afternoonStats = getSessionStats(date, 'afternoon');
+        const totalRegs = morningStats.count + afternoonStats.count;
+
+        if (!fullyBlocked && totalRegs > 0) {
+          // Blocking with registrations - confirm first
+          setConfirmBlock({ date, session: 'both', count: totalRegs });
+          return;
+        }
+
+        const newBlocked = { ...blockedSessions };
+
+        if (fullyBlocked) {
+          // Unblock whole day
+          delete newBlocked[date];
+          onSaveBlockedSessions(newBlocked, `Unblocked whole day ${date}`);
+          showToast(`${date} is now fully available`);
+        } else {
+          // Block whole day
+          newBlocked[date] = { morning: true, afternoon: true };
+          onSaveBlockedSessions(newBlocked, `Blocked whole day ${date}`);
+          showToast(`${date} is now fully blocked`);
+        }
+      };
+
+      // Handle confirm block
+      const handleConfirmBlock = () => {
+        const { date, session } = confirmBlock;
+        const newBlocked = { ...blockedSessions };
+        if (!newBlocked[date]) newBlocked[date] = {};
+
+        if (session === 'both') {
+          newBlocked[date] = { morning: true, afternoon: true };
+          onSaveBlockedSessions(newBlocked, `Blocked whole day ${date} (had registrations)`);
+          showToast(`${date} is now fully blocked`);
+        } else {
+          newBlocked[date][session] = true;
+          onSaveBlockedSessions(newBlocked, `Blocked ${session} on ${date} (had registrations)`);
+          showToast(`${session} on ${date} is now blocked`);
+        }
+        setConfirmBlock(null);
       };
 
       // Get week days for a date
@@ -2084,23 +2186,24 @@
         return d.toLocaleDateString('en-US', { weekday: 'short' });
       };
 
-      const formatDate = (date) => {
+      const formatDateShort = (date) => {
         const d = new Date(date + 'T12:00:00');
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       };
 
       // Stats
-      const totalDates = allDates.length;
-      const blockedCount = blockedDates.length;
-      const availableCount = totalDates - blockedCount;
+      const totalSessions = allDates.length * 2;
+      const blockedCount = Object.values(blockedSessions).reduce((sum, day) =>
+        sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0);
+      const availableCount = totalSessions - blockedCount;
 
       return (
         <div className="space-y-6">
           {/* Summary Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-blue-600">{totalDates}</div>
-              <div className="text-gray-600 text-sm">Total Days</div>
+              <div className="text-3xl font-bold text-blue-600">{totalSessions}</div>
+              <div className="text-gray-600 text-sm">Total Sessions</div>
             </div>
             <div className="bg-white rounded-xl shadow p-4 text-center">
               <div className="text-3xl font-bold text-green-600">{availableCount}</div>
@@ -2132,33 +2235,100 @@
 
             {/* Instructions */}
             <p className="text-sm text-gray-500 mb-4">
-              Click on a date to toggle availability. Blocked dates will not appear as options for registration.
+              Click AM/PM to toggle individual sessions, or the date header to toggle the whole day. Blocked sessions will not appear as options for registration.
             </p>
 
             {/* Date Grid */}
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {monthDates.map(date => {
-                const isBlocked = blockedDates.includes(date);
-                const stats = getDateStats(date);
+                const fullyBlocked = isDayFullyBlocked(date);
+                const partiallyBlocked = isDayPartiallyBlocked(date);
+                const amBlocked = isSessionBlocked(date, 'morning');
+                const pmBlocked = isSessionBlocked(date, 'afternoon');
+                const amStats = getSessionStats(date, 'morning');
+                const pmStats = getSessionStats(date, 'afternoon');
+                const amCounselors = getCounselorStats(date, 'morning');
+                const pmCounselors = getCounselorStats(date, 'afternoon');
+                const amAssigned = getAssignedStats(date, 'morning');
+                const pmAssigned = getAssignedStats(date, 'afternoon');
+
                 return (
-                  <button
+                  <div
                     key={date}
-                    onClick={() => toggleDate(date)}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      isBlocked
-                        ? 'bg-red-50 border-red-300 hover:bg-red-100'
-                        : 'bg-green-50 border-green-300 hover:bg-green-100'
+                    className={`rounded-lg border-2 overflow-hidden ${
+                      fullyBlocked ? 'border-red-300 bg-red-50' :
+                      partiallyBlocked ? 'border-yellow-300 bg-yellow-50' :
+                      'border-green-300 bg-green-50'
                     }`}
                   >
-                    <div className="text-xs text-gray-500">{getDayName(date)}</div>
-                    <div className="font-bold">{formatDate(date)}</div>
-                    {stats.hasRegistrations && (
-                      <div className="text-xs text-blue-600">{stats.count} reg{stats.count !== 1 ? 's' : ''}</div>
-                    )}
-                    <div className={`text-xs mt-1 ${isBlocked ? 'text-red-600' : 'text-green-600'}`}>
-                      {isBlocked ? '🚫 Blocked' : '✓ Available'}
+                    {/* Date Header - Click to toggle whole day */}
+                    <button
+                      onClick={() => toggleDay(date)}
+                      className={`w-full p-2 text-center font-bold transition-colors ${
+                        fullyBlocked ? 'bg-red-200 hover:bg-red-300' :
+                        partiallyBlocked ? 'bg-yellow-200 hover:bg-yellow-300' :
+                        'bg-green-200 hover:bg-green-300'
+                      }`}
+                    >
+                      <div className="text-xs text-gray-600">{getDayName(date)}</div>
+                      <div>{formatDateShort(date)}</div>
+                    </button>
+
+                    {/* Session Buttons */}
+                    <div className="p-2 space-y-2">
+                      {/* Morning Session */}
+                      <button
+                        onClick={() => toggleSession(date, 'morning')}
+                        className={`w-full p-2 rounded text-left text-sm transition-colors ${
+                          amBlocked ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">☀️ AM</span>
+                          <span className={amBlocked ? 'text-red-600' : 'text-green-600'}>
+                            {amBlocked ? '🚫' : '✓'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span title="Counselors available">👤 {amCounselors.available}/{amCounselors.total}</span>
+                          <span className="mx-1">•</span>
+                          <span title="Campers registered">🏕️ {amStats.count}</span>
+                          {amAssigned.assigned > 0 && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span title="Assigned">📋 {amAssigned.assigned}</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+
+                      {/* Afternoon Session */}
+                      <button
+                        onClick={() => toggleSession(date, 'afternoon')}
+                        className={`w-full p-2 rounded text-left text-sm transition-colors ${
+                          pmBlocked ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">🌙 PM</span>
+                          <span className={pmBlocked ? 'text-red-600' : 'text-green-600'}>
+                            {pmBlocked ? '🚫' : '✓'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          <span title="Counselors available">👤 {pmCounselors.available}/{pmCounselors.total}</span>
+                          <span className="mx-1">•</span>
+                          <span title="Campers registered">🏕️ {pmStats.count}</span>
+                          {pmAssigned.assigned > 0 && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span title="Assigned">📋 {pmAssigned.assigned}</span>
+                            </>
+                          )}
+                        </div>
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -2170,29 +2340,36 @@
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-green-50 border-2 border-green-300 rounded"></div>
-                <span>Available for registration</span>
+                <span>Fully available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-50 border-2 border-yellow-300 rounded"></div>
+                <span>Partially blocked</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-50 border-2 border-red-300 rounded"></div>
-                <span>Blocked (not available)</span>
+                <span>Fully blocked</span>
               </div>
+            </div>
+            <div className="mt-3 text-xs text-gray-500">
+              <strong>Stats:</strong> 👤 = Counselors available/total • 🏕️ = Campers registered • 📋 = Assigned to pods
             </div>
           </div>
 
           {/* Confirm Block Modal */}
-          {confirmUnblock && (
+          {confirmBlock && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
               <div className="bg-white rounded-xl max-w-md w-full p-6 text-center">
                 <div className="text-5xl mb-4">⚠️</div>
-                <h3 className="font-bold text-xl text-orange-600 mb-2">Block Date with Registrations?</h3>
+                <h3 className="font-bold text-xl text-orange-600 mb-2">Block Session with Registrations?</h3>
                 <p className="text-gray-600 mb-4">
-                  <strong>{confirmUnblock.date}</strong> has <strong>{confirmUnblock.count}</strong> existing registration{confirmUnblock.count !== 1 ? 's' : ''}.
+                  <strong>{confirmBlock.date}</strong> {confirmBlock.session === 'both' ? '(both sessions)' : `(${confirmBlock.session})`} has <strong>{confirmBlock.count}</strong> existing registration{confirmBlock.count !== 1 ? 's' : ''}.
                   <br /><br />
-                  Blocking this date will prevent new registrations but won't affect existing ones. You may want to cancel existing registrations separately.
+                  Blocking will prevent new registrations but won't affect existing ones.
                 </p>
                 <div className="flex gap-3">
-                  <button onClick={() => setConfirmUnblock(null)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
-                  <button onClick={confirmBlock} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                  <button onClick={() => setConfirmBlock(null)} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
+                  <button onClick={handleConfirmBlock} className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
                     Block Anyway
                   </button>
                 </div>
@@ -4247,7 +4424,7 @@
       const [pendingCounselors, setPendingCounselors] = useState([]); // Counselors awaiting admin approval
       const [availabilityChangeRequests, setAvailabilityChangeRequests] = useState([]); // Counselor availability change requests
       const [profileChangeRequests, setProfileChangeRequests] = useState([]); // Counselor profile change requests
-      const [blockedDates, setBlockedDates] = useState([]); // Dates that are blocked/unavailable for camp
+      const [blockedSessions, setBlockedSessions] = useState({}); // { date: { morning: bool, afternoon: bool } }
 
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -4300,8 +4477,8 @@
             if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
             const pcr = await storage.get('camp_profile_change_requests');
             if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
-            const bd = await storage.get('camp_blocked_dates');
-            if (bd?.[0]?.data) setBlockedDates(Array.isArray(bd[0].data) ? bd[0].data : []);
+            const bs = await storage.get('camp_blocked_sessions');
+            if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -4446,14 +4623,24 @@
         await storage.set('camp_camper_parent_links', 'main', links);
       };
 
-      const saveBlockedDates = async (dates, action = null) => {
-        setBlockedDates(dates);
-        await storage.set('camp_blocked_dates', 'main', dates);
+      const saveBlockedSessions = async (sessions, action = null) => {
+        setBlockedSessions(sessions);
+        await storage.set('camp_blocked_sessions', 'main', sessions);
         if (action) addToHistory('Sessions', action);
       };
 
-      // Compute available dates (CAMP_DATES minus blocked dates)
-      const availableDates = CAMP_DATES.filter(d => !blockedDates.includes(d));
+      // Helper to check if a session is blocked
+      const isSessionBlocked = (date, session) => {
+        return blockedSessions[date]?.[session] === true;
+      };
+
+      // Helper to check if a date is fully blocked (both sessions)
+      const isDateFullyBlocked = (date) => {
+        return isSessionBlocked(date, 'morning') && isSessionBlocked(date, 'afternoon');
+      };
+
+      // Compute available dates (dates where at least one session is available)
+      const availableDates = CAMP_DATES.filter(d => !isDateFullyBlocked(d));
 
       // New save functions for onboarding system
       const saveChildren = async (c, action = null) => {
@@ -6361,7 +6548,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                       {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
-                      {t === 'sessions' && blockedDates.length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{blockedDates.length}</span>}
+                      {t === 'sessions' && Object.keys(blockedSessions).length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{Object.values(blockedSessions).reduce((sum, day) => sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0)}</span>}
                       {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
                         <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
                       )}
@@ -6904,11 +7091,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
               {adminTab === 'sessions' && (
                 <SessionsTab
-                  blockedDates={blockedDates}
-                  availableDates={availableDates}
+                  blockedSessions={blockedSessions}
                   allDates={CAMP_DATES}
-                  onSaveBlockedDates={saveBlockedDates}
+                  onSaveBlockedSessions={saveBlockedSessions}
                   registrations={registrations}
+                  counselors={counselors}
+                  availability={availability}
+                  assignments={assignments}
                   showToast={showToast}
                 />
               )}
@@ -7383,25 +7572,36 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const selectFullWeek = (weekDates) => {
           setSelectedDates(p => {
             const newDates = { ...p };
-            weekDates.filter(date => !blockedDates.includes(date)).forEach(date => {
-              newDates[date] = ['morning', 'afternoon'];
+            weekDates.forEach(date => {
+              const sessions = [];
+              if (!isSessionBlocked(date, 'morning')) sessions.push('morning');
+              if (!isSessionBlocked(date, 'afternoon')) sessions.push('afternoon');
+              if (sessions.length > 0) newDates[date] = sessions;
             });
             return newDates;
           });
         };
 
-        // Check if a week is fully selected (only counting available dates)
+        // Check if a week is fully selected (only counting available sessions)
         const isWeekFullySelected = (weekDates) => {
-          const availableWeekDates = weekDates.filter(date => !blockedDates.includes(date));
-          if (availableWeekDates.length === 0) return false;
-          return availableWeekDates.every(date => {
+          const hasAvailable = weekDates.some(date =>
+            !isSessionBlocked(date, 'morning') || !isSessionBlocked(date, 'afternoon')
+          );
+          if (!hasAvailable) return false;
+          return weekDates.every(date => {
             const sel = selectedDates[date] || [];
-            return sel.includes('morning') && sel.includes('afternoon');
+            const amBlocked = isSessionBlocked(date, 'morning');
+            const pmBlocked = isSessionBlocked(date, 'afternoon');
+            const amOk = amBlocked || sel.includes('morning');
+            const pmOk = pmBlocked || sel.includes('afternoon');
+            return amOk && pmOk;
           });
         };
 
-        // Get count of available days in a week
-        const getAvailableDaysInWeek = (weekDates) => weekDates.filter(date => !blockedDates.includes(date)).length;
+        // Get count of available days in a week (days with at least one available session)
+        const getAvailableDaysInWeek = (weekDates) => weekDates.filter(date =>
+          !isSessionBlocked(date, 'morning') || !isSessionBlocked(date, 'afternoon')
+        ).length;
 
         // Clear a week's selection
         const clearWeek = (weekDates) => {
@@ -7607,17 +7807,27 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                 <div className="grid grid-cols-5 gap-2 mt-2 pl-4">{dates.map(date => {
                                   const d = new Date(date + 'T12:00:00');
                                   const sel = selectedDates[date] || [];
-                                  const isBlocked = blockedDates.includes(date);
+                                  const amBlocked = isSessionBlocked(date, 'morning');
+                                  const pmBlocked = isSessionBlocked(date, 'afternoon');
+                                  const fullyBlocked = amBlocked && pmBlocked;
                                   return (
-                                    <div key={date} className={'border rounded-lg p-2 text-center ' + (isBlocked ? 'bg-gray-100 opacity-60' : '')}>
+                                    <div key={date} className={'border rounded-lg p-2 text-center ' + (fullyBlocked ? 'bg-gray-100 opacity-60' : '')}>
                                       <div className="text-sm font-medium">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
                                       <div className="text-xs text-gray-500">{d.getDate()}</div>
-                                      {isBlocked ? (
+                                      {fullyBlocked ? (
                                         <div className="text-xs text-red-500 mt-1 py-2">Not Available</div>
                                       ) : (
                                         <div className="flex flex-col gap-1 mt-1">
-                                          <button onClick={() => toggleDate(date, 'morning')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('morning') ? 'bg-yellow-500 text-white' : 'bg-gray-200')}>AM</button>
-                                          <button onClick={() => toggleDate(date, 'afternoon')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('afternoon') ? 'bg-blue-500 text-white' : 'bg-gray-200')}>PM</button>
+                                          {amBlocked ? (
+                                            <div className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-400">AM ✗</div>
+                                          ) : (
+                                            <button onClick={() => toggleDate(date, 'morning')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('morning') ? 'bg-yellow-500 text-white' : 'bg-gray-200')}>AM</button>
+                                          )}
+                                          {pmBlocked ? (
+                                            <div className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-400">PM ✗</div>
+                                          ) : (
+                                            <button onClick={() => toggleDate(date, 'afternoon')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('afternoon') ? 'bg-blue-500 text-white' : 'bg-gray-200')}>PM</button>
+                                          )}
                                         </div>
                                       )}
                                     </div>
