@@ -43,10 +43,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.085";
-    const BUILD_DATE = new Date("2026-01-31T17:52:39");
+    const VERSION = "12.086";
+    const BUILD_DATE = new Date("2026-01-31T17:57:09");
 
     const RELEASE_NOTES = [
+      { version: "12.086", date: "2026-01-31", changes: [
+        "Version banner now shows build time in MM-DD-YYYY HH:MM format",
+        "Version banner shows both build time and time since upload",
+        "Release notes modal is now scrollable for long release histories"
+      ]},
       { version: "12.085", date: "2026-01-31", changes: [
         "Scrollable tabs with drag-to-scroll in Admin and Parent dashboards",
         "Visual indicators (fade + arrows) when more tabs are available to scroll",
@@ -3220,7 +3225,18 @@
       const [elapsed, setElapsed] = useState('0s');
       const [dbStatus, setDbStatus] = useState('checking');
       const [showNotes, setShowNotes] = useState(false);
-      
+
+      // Format BUILD_DATE as MM-DD-YYYY HH:MM
+      const formatBuildDate = () => {
+        const d = BUILD_DATE;
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${mm}-${dd}-${yyyy} ${hh}:${min}`;
+      };
+
       useEffect(() => {
         const update = () => {
           const diff = Math.floor((new Date() - BUILD_DATE) / 1000);
@@ -3232,9 +3248,9 @@
         supabase.from('camp_content').select('id').limit(1).then(({ error }) => setDbStatus(error ? 'error' : 'connected')).catch(() => setDbStatus('error'));
         return () => clearInterval(i);
       }, []);
-      
+
       if (!isVisible) return null;
-      
+
       return (
         <React.Fragment>
           <div className={(isDev ? 'bg-red-600' : 'bg-green-600') + ' text-white text-center py-2 text-sm font-mono'}>
@@ -3244,21 +3260,27 @@
             <span className="mx-2">•</span>
             <span>{dbStatus === 'connected' ? '✓ DB (' + SCHEMA + ')' : dbStatus === 'checking' ? '⏳...' : '✗ DB Error'}</span>
             <span className="mx-2">•</span>
-            <span>Running: {elapsed}</span>
+            <span>Built: {formatBuildDate()} ({elapsed} ago)</span>
             <span className="mx-2">•</span>
             <button onClick={() => setShowNotes(true)} className="underline">Notes</button>
           </div>
           {showNotes && (
             <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNotes(false)}>
-              <div className="bg-white rounded-xl max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
-                <h2 className="font-bold text-xl mb-4">Release Notes</h2>
-                {RELEASE_NOTES.map((r, i) => (
-                  <div key={r.version} className={i > 0 ? 'mt-3 pt-3 border-t' : ''}>
-                    <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}</span></div>
-                    <ul className="text-sm text-gray-600 mt-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
-                  </div>
-                ))}
-                <button onClick={() => setShowNotes(false)} className="mt-4 w-full py-2 bg-green-600 text-white rounded-lg">Close</button>
+              <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 pb-2">
+                  <h2 className="font-bold text-xl">Release Notes</h2>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 pb-2">
+                  {RELEASE_NOTES.map((r, i) => (
+                    <div key={r.version} className={i > 0 ? 'mt-3 pt-3 border-t' : ''}>
+                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}</span></div>
+                      <ul className="text-sm text-gray-600 mt-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-6 pt-2">
+                  <button onClick={() => setShowNotes(false)} className="w-full py-2 bg-green-600 text-white rounded-lg">Close</button>
+                </div>
               </div>
             </div>
           )}
