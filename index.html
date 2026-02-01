@@ -43,11 +43,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.097";
+    const VERSION = "12.098";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-01-31T19:44:00");
+    const BUILD_DATE = new Date("2026-01-31T19:53:00");
 
     const RELEASE_NOTES = [
+      { version: "12.098", date: "2026-01-31", changes: [
+        "Fixed counselor schedule modal staying open when toggling sessions",
+        "Unified day/session UI: ☀️ AM and 🌙 PM icons across all screens",
+        "Counselor schedule modal now matches Sessions tab layout",
+        "Parent registration date selector uses consistent styling",
+        "Counselor availability calendar uses same icons"
+      ]},
       { version: "12.097", date: "2026-01-31", changes: [
         "Counselors: renamed to Edit Profile/Edit Schedule, Delete moved inside profile",
         "Admin Add Parent now uses full parent onboarding wizard"
@@ -4564,6 +4571,8 @@
       const [parentTab, setParentTab] = useState('dashboard');
       const [sessionsTabMonth, setSessionsTabMonth] = useState(null); // Persist selected month in Sessions tab
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
+      const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
+      const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
       
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -6674,8 +6683,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const [showModal, setShowModal] = useState(false);
         const [confirmDeleteCounselor, setConfirmDeleteCounselor] = useState(null);
         const [deleteConfirmText, setDeleteConfirmText] = useState('');
-        const [managingSchedule, setManagingSchedule] = useState(null); // counselor being scheduled
-        const [scheduleMonth, setScheduleMonth] = useState(null);
+        // Use lifted state for schedule modal to prevent closing on state updates
+        const managingSchedule = counselorScheduleModal;
+        const setManagingSchedule = setCounselorScheduleModal;
+        const scheduleMonth = counselorScheduleMonth;
+        const setScheduleMonth = setCounselorScheduleMonth;
 
         // Helper: count sessions where counselor is marked eligible by admin
         const getCounselorEligibleCount = (counselorId) => {
@@ -7029,7 +7041,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                             })()}
                           </div>
 
-                          {/* Calendar grid */}
+                          {/* Date Grid - matches Sessions tab style */}
                           {scheduleMonth && (() => {
                             const [year, month] = scheduleMonth.split('-').map(Number);
                             const monthDates = CAMP_DATES.filter(d => {
@@ -7037,88 +7049,90 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                               return date.getFullYear() === year && date.getMonth() + 1 === month;
                             });
 
-                            // Group by week
-                            const weeks = [];
-                            let currentWeek = [];
-                            monthDates.forEach((d, i) => {
-                              currentWeek.push(d);
-                              const date = new Date(d + 'T12:00:00');
-                              const nextDate = monthDates[i + 1] ? new Date(monthDates[i + 1] + 'T12:00:00') : null;
-                              if (date.getDay() === 5 || !nextDate || nextDate.getDay() <= date.getDay()) {
-                                weeks.push([...currentWeek]);
-                                currentWeek = [];
-                              }
-                            });
-                            if (currentWeek.length > 0) weeks.push(currentWeek);
+                            const getDayName = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+                            const formatDateShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                             return (
-                              <div className="space-y-4">
-                                {weeks.map((weekDates, wi) => {
-                                  const weekStart = new Date(weekDates[0] + 'T12:00:00');
-                                  const weekEnd = new Date(weekDates[weekDates.length - 1] + 'T12:00:00');
-                                  const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                                {monthDates.map(d => {
+                                  const morningBlocked = isSessionBlocked(d, 'morning');
+                                  const afternoonBlocked = isSessionBlocked(d, 'afternoon');
+                                  const fullyBlocked = morningBlocked && afternoonBlocked;
+                                  const morningEligible = counselorSchedule[managingSchedule.id]?.[d]?.morning === true;
+                                  const afternoonEligible = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === true;
+                                  const bothEligible = morningEligible && afternoonEligible;
+                                  const partialEligible = (morningEligible || afternoonEligible) && !bothEligible;
 
-                                  // Check if entire week is set
-                                  let weekAllSet = true;
-                                  weekDates.forEach(d => {
-                                    if (!isSessionBlocked(d, 'morning') && counselorSchedule[managingSchedule.id]?.[d]?.morning !== true) weekAllSet = false;
-                                    if (!isSessionBlocked(d, 'afternoon') && counselorSchedule[managingSchedule.id]?.[d]?.afternoon !== true) weekAllSet = false;
-                                  });
+                                  // Check if counselor has campers assigned
+                                  const morningAssigned = (assignments[`${d}_morning`]?.[managingSchedule.id]?.length || 0) > 0;
+                                  const afternoonAssigned = (assignments[`${d}_afternoon`]?.[managingSchedule.id]?.length || 0) > 0;
 
                                   return (
-                                    <div key={wi} className="border rounded-lg p-3">
-                                      <div className="flex justify-between items-center mb-2">
-                                        <span className="font-medium text-gray-700">Week {wi + 1}: {weekLabel}</span>
+                                    <div
+                                      key={d}
+                                      className={`rounded-lg border-2 overflow-hidden ${
+                                        fullyBlocked ? 'border-gray-300 bg-gray-50' :
+                                        bothEligible ? 'border-green-300 bg-green-50' :
+                                        partialEligible ? 'border-yellow-300 bg-yellow-50' :
+                                        'border-gray-200 bg-white'
+                                      }`}
+                                    >
+                                      {/* Date Header - Click to toggle whole day */}
+                                      <button
+                                        onClick={() => !fullyBlocked && toggleCounselorDay(managingSchedule.id, d)}
+                                        disabled={fullyBlocked}
+                                        className={`w-full p-2 text-center font-bold transition-colors ${
+                                          fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
+                                          bothEligible ? 'bg-green-200 hover:bg-green-300' :
+                                          partialEligible ? 'bg-yellow-200 hover:bg-yellow-300' :
+                                          'bg-gray-100 hover:bg-gray-200'
+                                        }`}
+                                      >
+                                        <div className="text-xs text-gray-600">{getDayName(d)}</div>
+                                        <div>{formatDateShort(d)}</div>
+                                      </button>
+
+                                      {/* Session Buttons */}
+                                      <div className="p-2 space-y-2">
+                                        {/* Morning Session */}
                                         <button
-                                          onClick={() => toggleCounselorWeek(managingSchedule.id, weekDates)}
-                                          className={`px-3 py-1 rounded text-sm ${weekAllSet ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                          onClick={() => !morningBlocked && toggleCounselorEligibility(managingSchedule.id, d, 'morning')}
+                                          disabled={morningBlocked}
+                                          className={`w-full p-2 rounded text-left text-sm transition-colors ${
+                                            morningBlocked ? 'bg-gray-100 cursor-not-allowed' :
+                                            morningEligible ? 'bg-green-100 hover:bg-green-200' : 'bg-white hover:bg-gray-50'
+                                          }`}
                                         >
-                                          {weekAllSet ? '✓ Whole Week' : 'Select Week'}
+                                          <div className="flex justify-between items-center">
+                                            <span className="font-medium">☀️ AM</span>
+                                            <span className={morningBlocked ? 'text-gray-400' : morningEligible ? 'text-green-600' : 'text-gray-400'}>
+                                              {morningBlocked ? '🚫' : morningEligible ? '✓' : '○'}
+                                            </span>
+                                          </div>
+                                          {morningAssigned && (
+                                            <div className="text-xs text-green-600 mt-1">🏕️ Has campers</div>
+                                          )}
                                         </button>
-                                      </div>
-                                      <div className="grid grid-cols-5 gap-2">
-                                        {weekDates.map(d => {
-                                          const date = new Date(d + 'T12:00:00');
-                                          const dayLabel = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
-                                          const morningBlocked = isSessionBlocked(d, 'morning');
-                                          const afternoonBlocked = isSessionBlocked(d, 'afternoon');
-                                          const morningEligible = counselorSchedule[managingSchedule.id]?.[d]?.morning === true;
-                                          const afternoonEligible = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === true;
-                                          const bothSet = morningEligible && afternoonEligible;
 
-                                          // Check if counselor has campers assigned for these sessions
-                                          const morningAssigned = (assignments[`${d}_morning`]?.[managingSchedule.id]?.length || 0) > 0;
-                                          const afternoonAssigned = (assignments[`${d}_afternoon`]?.[managingSchedule.id]?.length || 0) > 0;
-
-                                          return (
-                                            <div key={d} className="text-center">
-                                              <div className="text-xs text-gray-500 mb-1">{dayLabel}</div>
-                                              <button
-                                                onClick={() => toggleCounselorDay(managingSchedule.id, d)}
-                                                className={`w-full py-1 rounded text-xs mb-1 ${bothSet ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                                                disabled={morningBlocked && afternoonBlocked}
-                                              >
-                                                {bothSet ? '✓ Day' : 'Day'}
-                                              </button>
-                                              <div className="space-y-1">
-                                                <button
-                                                  onClick={() => toggleCounselorEligibility(managingSchedule.id, d, 'morning')}
-                                                  disabled={morningBlocked}
-                                                  className={`w-full py-1 rounded text-xs ${morningBlocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : morningEligible ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                                                >
-                                                  AM {morningAssigned && '🏕️'}
-                                                </button>
-                                                <button
-                                                  onClick={() => toggleCounselorEligibility(managingSchedule.id, d, 'afternoon')}
-                                                  disabled={afternoonBlocked}
-                                                  className={`w-full py-1 rounded text-xs ${afternoonBlocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : afternoonEligible ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
-                                                >
-                                                  PM {afternoonAssigned && '🏕️'}
-                                                </button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
+                                        {/* Afternoon Session */}
+                                        <button
+                                          onClick={() => !afternoonBlocked && toggleCounselorEligibility(managingSchedule.id, d, 'afternoon')}
+                                          disabled={afternoonBlocked}
+                                          className={`w-full p-2 rounded text-left text-sm transition-colors ${
+                                            afternoonBlocked ? 'bg-gray-100 cursor-not-allowed' :
+                                            afternoonEligible ? 'bg-green-100 hover:bg-green-200' : 'bg-white hover:bg-gray-50'
+                                          }`}
+                                        >
+                                          <div className="flex justify-between items-center">
+                                            <span className="font-medium">🌙 PM</span>
+                                            <span className={afternoonBlocked ? 'text-gray-400' : afternoonEligible ? 'text-green-600' : 'text-gray-400'}>
+                                              {afternoonBlocked ? '🚫' : afternoonEligible ? '✓' : '○'}
+                                            </span>
+                                          </div>
+                                          {afternoonAssigned && (
+                                            <div className="text-xs text-green-600 mt-1">🏕️ Has campers</div>
+                                          )}
+                                        </button>
                                       </div>
                                     </div>
                                   );
@@ -7128,7 +7142,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                           })()}
 
                           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                            <strong>Legend:</strong> 🏕️ = Has campers assigned (scheduled to work)
+                            <strong>Legend:</strong> ✓ = Eligible to work • 🚫 = Session blocked • 🏕️ = Has campers assigned
                           </div>
                         </div>
                         <div className="p-4 border-t">
@@ -8271,23 +8285,37 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                   const amBlocked = isSessionBlocked(date, 'morning');
                                   const pmBlocked = isSessionBlocked(date, 'afternoon');
                                   const fullyBlocked = amBlocked && pmBlocked;
+                                  const amSelected = sel.includes('morning');
+                                  const pmSelected = sel.includes('afternoon');
+                                  const bothSelected = amSelected && pmSelected;
                                   return (
-                                    <div key={date} className={'border rounded-lg p-2 text-center ' + (fullyBlocked ? 'bg-gray-100 opacity-60' : '')}>
-                                      <div className="text-sm font-medium">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
-                                      <div className="text-xs text-gray-500">{d.getDate()}</div>
+                                    <div key={date} className={`rounded-lg border-2 overflow-hidden ${
+                                      fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                                      bothSelected ? 'border-green-300 bg-green-50' :
+                                      (amSelected || pmSelected) ? 'border-yellow-300 bg-yellow-50' :
+                                      'border-gray-200 bg-white'
+                                    }`}>
+                                      <div className="p-2 text-center bg-gray-100 font-medium">
+                                        <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                        <div className="text-sm">{d.getDate()}</div>
+                                      </div>
                                       {fullyBlocked ? (
-                                        <div className="text-xs text-red-500 mt-1 py-2">Not Available</div>
+                                        <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
                                       ) : (
-                                        <div className="flex flex-col gap-1 mt-1">
+                                        <div className="p-2 space-y-1">
                                           {amBlocked ? (
-                                            <div className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-400">AM ✗</div>
+                                            <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
                                           ) : (
-                                            <button onClick={() => toggleDate(date, 'morning')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('morning') ? 'bg-yellow-500 text-white' : 'bg-gray-200')}>AM</button>
+                                            <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                              ☀️ AM {amSelected ? '✓' : ''}
+                                            </button>
                                           )}
                                           {pmBlocked ? (
-                                            <div className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-400">PM ✗</div>
+                                            <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
                                           ) : (
-                                            <button onClick={() => toggleDate(date, 'afternoon')} className={'px-2 py-1 rounded text-xs ' + (sel.includes('afternoon') ? 'bg-blue-500 text-white' : 'bg-gray-200')}>PM</button>
+                                            <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                              🌙 PM {pmSelected ? '✓' : ''}
+                                            </button>
                                           )}
                                         </div>
                                       )}
@@ -8973,10 +9001,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <div key={date} className="border rounded-lg p-2 hover:shadow-md transition-shadow">
                         <div className="text-center font-bold text-green-800 mb-2">{d.getDate()}</div>
                         <button onClick={() => cycle(date, 'morning')} className={'w-full py-1.5 rounded text-xs mb-1 font-medium transition-colors ' + style(mState)}>
-                          {mState === 'available' ? '✓ AM' : mState === 'unavailable' ? '✗ AM' : 'AM'}
+                          {mState === 'available' ? '☀️ AM ✓' : mState === 'unavailable' ? '☀️ AM 🚫' : '☀️ AM'}
                         </button>
                         <button onClick={() => cycle(date, 'afternoon')} className={'w-full py-1.5 rounded text-xs font-medium transition-colors ' + style(aState)}>
-                          {aState === 'available' ? '✓ PM' : aState === 'unavailable' ? '✗ PM' : 'PM'}
+                          {aState === 'available' ? '🌙 PM ✓' : aState === 'unavailable' ? '🌙 PM 🚫' : '🌙 PM'}
                         </button>
                       </div>
                     );
