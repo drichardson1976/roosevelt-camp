@@ -43,10 +43,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.087";
-    const BUILD_DATE = new Date("2026-01-31T18:11:58");
+    const VERSION = "12.088";
+    const BUILD_DATE = new Date("2026-01-31T18:21:17");
 
     const RELEASE_NOTES = [
+      { version: "12.088", date: "2026-01-31", changes: [
+        "Mobile responsive improvements across entire site",
+        "Navigation wraps and scales properly on small screens",
+        "Hero section text sizes adjust for mobile devices",
+        "Info cards and counselor grids use responsive breakpoints",
+        "Admin/Parent dashboard tabs and headers scale for mobile",
+        "Tables have horizontal scroll on small screens",
+        "Footer contact info breaks properly on mobile",
+        "Role selector and forms use appropriate mobile sizing"
+      ]},
       { version: "12.087", date: "2026-01-31", changes: [
         "Version banner time now uses 12-hour format with AM/PM",
         "Photo re-editing preserves previous zoom, position, and rotation settings",
@@ -4279,25 +4289,25 @@
       // ==================== NAV ====================
       const Nav = () => (
         <nav className="bg-green-900 text-white shadow-lg">
-          <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <div className="font-display text-2xl cursor-pointer" onClick={() => { setPage('home'); setUser(null); }} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
-            <div className="flex gap-2 items-center">
+          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => { setPage('home'); setUser(null); }} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
+            <div className="flex flex-wrap gap-1 sm:gap-2 items-center">
               {['home', 'schedule', 'location', 'counselors'].map(p => (
-                <button key={p} onClick={() => setPage(p)} className={'px-3 py-1 rounded text-sm capitalize ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
+                <button key={p} onClick={() => setPage(p)} className={'px-2 sm:px-3 py-1.5 sm:py-1 rounded text-xs sm:text-sm capitalize ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
               ))}
               {user ? (
                 <React.Fragment>
                   {user.role === 'admin' ? (
-                    <button onClick={() => setPage('admin')} className="text-green-300 text-sm ml-2 hover:text-white hover:underline">
+                    <button onClick={() => setPage('admin')} className="text-green-300 text-xs sm:text-sm ml-1 sm:ml-2 hover:text-white hover:underline px-2 py-1.5">
                       Admin
                     </button>
                   ) : (
-                    <span className="text-green-300 text-sm ml-2">{user.name}</span>
+                    <span className="text-green-300 text-xs sm:text-sm ml-1 sm:ml-2 hidden sm:inline">{user.name}</span>
                   )}
-                  <button onClick={() => { setUser(null); setPage('home'); }} className="px-3 py-1 bg-red-600 rounded text-sm">Logout</button>
+                  <button onClick={() => { setUser(null); setPage('home'); }} className="px-2 sm:px-3 py-1.5 sm:py-1 bg-red-600 rounded text-xs sm:text-sm">Logout</button>
                 </React.Fragment>
               ) : (
-                <button onClick={() => setPage('login')} className={'px-3 py-1 rounded text-sm ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
+                <button onClick={() => setPage('login')} className={'px-2 sm:px-3 py-1.5 sm:py-1 rounded text-xs sm:text-sm ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
               )}
             </div>
           </div>
@@ -4315,7 +4325,7 @@
       const Home = () => (
         <div>
           {/* Hero Section with Large Background Image */}
-          <div className="relative min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
+          <div className="relative min-h-[400px] sm:min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
             {/* Background Image or Gradient Fallback */}
             {getSitePhoto('hero') ? (
               <div
@@ -4329,31 +4339,31 @@
             <div className="absolute inset-0 bg-black/40" />
             {/* Hero Content */}
             <div className="relative z-10 max-w-4xl mx-auto px-4 text-center text-white">
-              <h1 className="font-display text-5xl md:text-7xl mb-4 drop-shadow-lg">{content.heroTitle}</h1>
-              <h2 className="font-display text-3xl md:text-5xl text-green-200 mb-4 drop-shadow-md">{content.heroSubtitle}</h2>
-              <p className="text-xl md:text-2xl text-green-100 mb-8 drop-shadow">{content.heroTagline}</p>
-              <button onClick={() => setPage('login')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-xl px-8 py-4 rounded-lg shadow-lg transform hover:scale-105 transition-transform">Register Now →</button>
+              <h1 className="font-display text-3xl sm:text-5xl md:text-7xl mb-3 sm:mb-4 drop-shadow-lg">{content.heroTitle}</h1>
+              <h2 className="font-display text-xl sm:text-3xl md:text-5xl text-green-200 mb-3 sm:mb-4 drop-shadow-md">{content.heroSubtitle}</h2>
+              <p className="text-base sm:text-xl md:text-2xl text-green-100 mb-6 sm:mb-8 drop-shadow">{content.heroTagline}</p>
+              <button onClick={() => setPage('login')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-base sm:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-lg transform hover:scale-105 transition-transform">Register Now →</button>
             </div>
           </div>
 
           {/* Info Cards */}
-          <div className="max-w-6xl mx-auto px-4 py-12 grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-green-600">
-              <div className="text-4xl mb-2">📅</div>
-              <h3 className="font-bold text-xl text-green-800">Camp Dates</h3>
-              <p className="text-gray-700">{content.campDates}</p>
+          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-green-600">
+              <div className="text-3xl sm:text-4xl mb-2">📅</div>
+              <h3 className="font-bold text-lg sm:text-xl text-green-800">Camp Dates</h3>
+              <p className="text-sm sm:text-base text-gray-700">{content.campDates}</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-yellow-500">
-              <div className="text-4xl mb-2">⏰</div>
-              <h3 className="font-bold text-xl text-green-800">Sessions</h3>
-              <p className="text-gray-700">AM: {content.sessionMorning}</p>
-              <p className="text-gray-700">PM: {content.sessionAfternoon}</p>
-              <p className="text-green-600 font-bold mt-2">{content.sessionCost}/session</p>
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-yellow-500">
+              <div className="text-3xl sm:text-4xl mb-2">⏰</div>
+              <h3 className="font-bold text-lg sm:text-xl text-green-800">Sessions</h3>
+              <p className="text-sm sm:text-base text-gray-700">AM: {content.sessionMorning}</p>
+              <p className="text-sm sm:text-base text-gray-700">PM: {content.sessionAfternoon}</p>
+              <p className="text-green-600 font-bold mt-2 text-sm sm:text-base">{content.sessionCost}/session</p>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-6 border-t-4 border-orange-500">
-              <div className="text-4xl mb-2">👧</div>
-              <h3 className="font-bold text-xl text-green-800">Ages</h3>
-              <p className="text-gray-700">{content.ageRange}</p>
+            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-orange-500">
+              <div className="text-3xl sm:text-4xl mb-2">👧</div>
+              <h3 className="font-bold text-lg sm:text-xl text-green-800">Ages</h3>
+              <p className="text-sm sm:text-base text-gray-700">{content.ageRange}</p>
             </div>
           </div>
 
@@ -4420,18 +4430,18 @@
           )}
 
           {/* Counselors Section */}
-          <div className="max-w-6xl mx-auto px-4 py-12">
-            <h2 className="font-display text-4xl text-green-800 text-center mb-8">Our Counselors</h2>
-            <div className="grid md:grid-cols-4 gap-6">
+          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {counselors.filter(c => c.visible).map(c => (
                 <div key={c.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="h-32 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
-                    {c.photo ? <img src={c.photo} className="w-24 h-24 rounded-full object-cover border-4 border-white" /> : <div className="w-24 h-24 rounded-full bg-green-200 flex items-center justify-center text-4xl border-4 border-white">{c.name[0]}</div>}
+                  <div className="h-24 sm:h-32 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
+                    {c.photo ? <img src={c.photo} className="w-16 h-16 sm:w-24 sm:h-24 rounded-full object-cover border-2 sm:border-4 border-white" /> : <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-green-200 flex items-center justify-center text-2xl sm:text-4xl border-2 sm:border-4 border-white">{c.name[0]}</div>}
                   </div>
-                  <div className="p-4 text-center">
-                    <h3 className="font-bold text-green-800">{c.name}</h3>
-                    <p className="text-green-600 text-sm">{c.position} • {c.year}</p>
-                    <p className="text-gray-600 text-sm mt-2">{c.bio}</p>
+                  <div className="p-2 sm:p-4 text-center">
+                    <h3 className="font-bold text-sm sm:text-base text-green-800">{c.name}</h3>
+                    <p className="text-green-600 text-xs sm:text-sm">{c.position} • {c.year}</p>
+                    <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2 hidden sm:block">{c.bio}</p>
                   </div>
                 </div>
               ))}
@@ -4466,10 +4476,11 @@
           )}
 
           {/* Contact Footer */}
-          <div className="bg-green-900 text-white py-12 text-center">
-            <h2 className="font-display text-4xl mb-6">Contact Us</h2>
-            <p className="text-xl">{content.contactEmail} • {content.contactPhone}</p>
-            <p className="mt-4 text-green-200 whitespace-pre-line">{content.locationAddress}</p>
+          <div className="bg-green-900 text-white py-8 sm:py-12 text-center px-4">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-6">Contact Us</h2>
+            <p className="text-base sm:text-lg md:text-xl break-words">{content.contactEmail}</p>
+            <p className="text-base sm:text-lg md:text-xl">{content.contactPhone}</p>
+            <p className="mt-3 sm:mt-4 text-green-200 whitespace-pre-line text-sm sm:text-base">{content.locationAddress}</p>
           </div>
         </div>
       );
@@ -4759,19 +4770,19 @@
 
       // ==================== COUNSELORS PAGE ====================
       const Counselors = () => (
-        <div className="min-h-screen bg-amber-50 py-12">
+        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
           <div className="max-w-6xl mx-auto px-4">
-            <h1 className="font-display text-4xl text-green-800 text-center mb-8">Our Counselors</h1>
-            <div className="grid md:grid-cols-4 gap-6">
+            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h1>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {counselors.filter(c => c.visible).map(c => (
                 <div key={c.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="h-40 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
-                    {c.photo ? <img src={c.photo} className="w-32 h-32 rounded-full object-cover border-4 border-white" /> : <div className="w-32 h-32 rounded-full bg-green-200 flex items-center justify-center text-5xl border-4 border-white">{c.name[0]}</div>}
+                  <div className="h-28 sm:h-40 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center">
+                    {c.photo ? <img src={c.photo} className="w-20 h-20 sm:w-32 sm:h-32 rounded-full object-cover border-2 sm:border-4 border-white" /> : <div className="w-20 h-20 sm:w-32 sm:h-32 rounded-full bg-green-200 flex items-center justify-center text-3xl sm:text-5xl border-2 sm:border-4 border-white">{c.name[0]}</div>}
                   </div>
-                  <div className="p-4 text-center">
-                    <h3 className="font-bold text-xl text-green-800">{c.name}</h3>
-                    <p className="text-green-600">{c.position} • {c.year}</p>
-                    <p className="text-gray-600 text-sm mt-2">{c.bio}</p>
+                  <div className="p-3 sm:p-4 text-center">
+                    <h3 className="font-bold text-base sm:text-xl text-green-800">{c.name}</h3>
+                    <p className="text-green-600 text-xs sm:text-base">{c.position} • {c.year}</p>
+                    <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">{c.bio}</p>
                   </div>
                 </div>
               ))}
@@ -4782,23 +4793,23 @@
 
       // ==================== ROLE SELECTOR ====================
       const RoleSelector = ({ onSelect, onBack }) => (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+        <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8 sm:py-12">
           <div className="max-w-lg mx-auto px-4">
-            <div className="bg-white rounded-2xl shadow-xl p-8">
-              <h2 className="font-display text-3xl text-green-800 text-center mb-2">Join Roosevelt Camp</h2>
-              <p className="text-gray-600 text-center mb-8">How would you like to participate?</p>
+            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
+              <h2 className="font-display text-2xl sm:text-3xl text-green-800 text-center mb-2">Join Roosevelt Camp</h2>
+              <p className="text-gray-600 text-center mb-6 sm:mb-8 text-sm sm:text-base">How would you like to participate?</p>
 
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <button
                   onClick={() => onSelect('parent')}
-                  className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+                  className="w-full p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">👨‍👩‍👧</div>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="text-3xl sm:text-4xl">👨‍👩‍👧</div>
                     <div>
-                      <h3 className="font-bold text-xl text-green-800 group-hover:text-green-600">I'm a Parent</h3>
-                      <p className="text-gray-600 mt-1">Register your children for basketball camp sessions</p>
-                      <ul className="text-sm text-gray-500 mt-2 space-y-1">
+                      <h3 className="font-bold text-lg sm:text-xl text-green-800 group-hover:text-green-600">I'm a Parent</h3>
+                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Register your children for basketball camp sessions</p>
+                      <ul className="text-xs sm:text-sm text-gray-500 mt-2 space-y-1">
                         <li>• Add your children's profiles</li>
                         <li>• Set up emergency contacts</li>
                         <li>• Register for camp sessions</li>
@@ -4809,14 +4820,14 @@
 
                 <button
                   onClick={() => onSelect('counselor')}
-                  className="w-full p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+                  className="w-full p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="text-4xl">🏀</div>
+                  <div className="flex items-start gap-3 sm:gap-4">
+                    <div className="text-3xl sm:text-4xl">🏀</div>
                     <div>
-                      <h3 className="font-bold text-xl text-blue-800 group-hover:text-blue-600">I'm a Counselor</h3>
-                      <p className="text-gray-600 mt-1">Apply to be a camp counselor and work with campers</p>
-                      <ul className="text-sm text-gray-500 mt-2 space-y-1">
+                      <h3 className="font-bold text-lg sm:text-xl text-blue-800 group-hover:text-blue-600">I'm a Counselor</h3>
+                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Apply to be a camp counselor and work with campers</p>
+                      <ul className="text-xs sm:text-sm text-gray-500 mt-2 space-y-1">
                         <li>• Create your counselor profile</li>
                         <li>• Set your availability</li>
                         <li>• Pending admin approval</li>
@@ -6100,18 +6111,18 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
         return (
           <div className="min-h-screen bg-gray-100">
-            <div className="bg-green-800 text-white py-4">
+            <div className="bg-green-800 text-white py-3 sm:py-4">
               <div className="max-w-6xl mx-auto px-4">
-                <h1 className="font-display text-3xl">Admin Dashboard</h1>
-                <p className="text-green-200">Welcome, {user?.name}</p>
+                <h1 className="font-display text-2xl sm:text-3xl">Admin Dashboard</h1>
+                <p className="text-green-200 text-sm sm:text-base">Welcome, {user?.name}</p>
               </div>
             </div>
 
             <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4">
+              <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
                   {['dashboard', 'content', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'history'].map(t => (
-                    <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap select-none ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    <button key={t} onClick={() => setAdminTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                       {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                       {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
@@ -6155,30 +6166,32 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     )}
                   </div>
 
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg text-green-700 mb-4">Approved ({getApproved()})</h3>
+                  <div className="bg-white rounded-xl shadow p-4 sm:p-6">
+                    <h3 className="font-bold text-base sm:text-lg text-green-700 mb-4">Approved ({getApproved()})</h3>
                     {registrations.filter(r => r.status === 'approved').length === 0 ? <p className="text-gray-500">None</p> : (
-                      <table className="w-full">
-                        <thead><tr className="text-left text-sm text-gray-600"><th className="p-2">Child</th><th className="p-2">Parent</th><th className="p-2">Date</th><th className="p-2">Payment</th><th className="p-2">Actions</th></tr></thead>
-                        <tbody>{registrations.filter(r => r.status === 'approved').map(r => (
-                          <tr key={r.id} className={r.paymentStatus !== 'paid' ? 'bg-red-50' : ''}>
-                            <td className="p-2 font-medium">{r.childName}</td>
-                            <td className="p-2 text-gray-600">{r.parentName}</td>
-                            <td className="p-2 text-gray-600">{r.date}</td>
-                            <td className="p-2">
-                              <button onClick={() => {
-                                const newStatus = r.paymentStatus === 'paid' ? 'unpaid' : 'paid';
-                                saveReg({ ...r, paymentStatus: newStatus }, `Marked ${r.childName} as ${newStatus} for ${r.date}`);
-                              }} className={'px-2 py-1 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
-                                {r.paymentStatus || 'unpaid'}
-                              </button>
-                            </td>
-                            <td className="p-2">
-                              <button onClick={() => { saveReg({ ...r, status: 'cancelled', cancelledAt: new Date().toISOString() }, `Cancelled ${r.childName} for ${r.date}`); showToast('Cancelled'); }} className="text-red-600 text-sm">Cancel</button>
-                            </td>
-                          </tr>
-                        ))}</tbody>
-                      </table>
+                      <div className="overflow-x-auto -mx-4 sm:mx-0">
+                        <table className="w-full min-w-[500px]">
+                          <thead><tr className="text-left text-xs sm:text-sm text-gray-600"><th className="p-2">Child</th><th className="p-2">Parent</th><th className="p-2">Date</th><th className="p-2">Payment</th><th className="p-2">Actions</th></tr></thead>
+                          <tbody>{registrations.filter(r => r.status === 'approved').map(r => (
+                            <tr key={r.id} className={r.paymentStatus !== 'paid' ? 'bg-red-50' : ''}>
+                              <td className="p-2 font-medium text-sm">{r.childName}</td>
+                              <td className="p-2 text-gray-600 text-sm">{r.parentName}</td>
+                              <td className="p-2 text-gray-600 text-sm">{r.date}</td>
+                              <td className="p-2">
+                                <button onClick={() => {
+                                  const newStatus = r.paymentStatus === 'paid' ? 'unpaid' : 'paid';
+                                  saveReg({ ...r, paymentStatus: newStatus }, `Marked ${r.childName} as ${newStatus} for ${r.date}`);
+                                }} className={'px-2 py-1 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>
+                                  {r.paymentStatus || 'unpaid'}
+                                </button>
+                              </td>
+                              <td className="p-2">
+                                <button onClick={() => { saveReg({ ...r, status: 'cancelled', cancelledAt: new Date().toISOString() }, `Cancelled ${r.childName} for ${r.date}`); showToast('Cancelled'); }} className="text-red-600 text-sm">Cancel</button>
+                              </td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -7187,18 +7200,18 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
         return (
           <div className="min-h-screen bg-amber-50">
-            <div className="bg-green-800 text-white py-4">
+            <div className="bg-green-800 text-white py-3 sm:py-4">
               <div className="max-w-6xl mx-auto px-4">
-                <h1 className="font-display text-3xl">Parent Dashboard</h1>
-                <p className="text-green-200">Welcome, {user?.name}</p>
+                <h1 className="font-display text-2xl sm:text-3xl">Parent Dashboard</h1>
+                <p className="text-green-200 text-sm sm:text-base">Welcome, {user?.name}</p>
               </div>
             </div>
-            
+
             <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4">
+              <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
                   {['dashboard', 'schedule', 'register', 'children', 'messages'].map(t => (
-                    <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap select-none ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                       {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 Camp Schedule' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
@@ -7209,7 +7222,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-4 py-6">
+            <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
               {parentTab === 'dashboard' && (
                 <div className="space-y-6">
                   <div className={'rounded-xl shadow p-6 ' + (getAmountDue() > 0 ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50')}>
