@@ -43,11 +43,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.095";
+    const VERSION = "12.096";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-01-31T19:33:00");
+    const BUILD_DATE = new Date("2026-01-31T19:38:00");
 
     const RELEASE_NOTES = [
+      { version: "12.096", date: "2026-01-31", changes: [
+        "Login page auto-focuses email input for faster typing",
+        "Schedule eligibility modal now requires Done button to close",
+        "All schedule changes logged to history"
+      ]},
       { version: "12.095", date: "2026-01-31", changes: [
         "Dashboard stats now labeled as 'Registration Requests'",
         "Counselors tab: Schedule button to set work eligibility by week/day/session",
@@ -6664,7 +6669,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-center">{error}</div>}
 
                 <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
-                  <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                  <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" autoFocus />
                   <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
                   <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
                 </form>
@@ -7039,12 +7044,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   {managingSchedule && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
-                          <div>
-                            <h2 className="font-display text-xl">Set Work Eligibility</h2>
-                            <p className="text-purple-200 text-sm">{managingSchedule.name}</p>
-                          </div>
-                          <button onClick={() => setManagingSchedule(null)} className="text-2xl hover:bg-purple-500 rounded px-2">×</button>
+                        <div className="bg-purple-600 text-white px-6 py-4">
+                          <h2 className="font-display text-xl">Set Work Eligibility</h2>
+                          <p className="text-purple-200 text-sm">{managingSchedule.name}</p>
                         </div>
                         <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
                           <p className="text-sm text-gray-600 mb-4">
