@@ -47,6 +47,13 @@
     const BUILD_DATE = new Date();
 
     const RELEASE_NOTES = [
+      { version: "12.085", date: "2026-01-31", changes: [
+        "Scrollable tabs with drag-to-scroll in Admin and Parent dashboards",
+        "Visual indicators (fade + arrows) when more tabs are available to scroll",
+        "Admin content photos now display at correct aspect ratios matching website",
+        "Increased image export resolution from 300px to 1200px for sharper photos",
+        "Improved JPEG quality from 90% to 95% for uploaded images"
+      ]},
       { version: "12.084", date: "2026-01-30", changes: ["Version bump for dev build"] },
       { version: "12.081", date: "2026-01-30", changes: [
         "Fixed input focus issue in onboarding flows - text fields now maintain focus",
@@ -3298,6 +3305,97 @@
       );
     };
 
+    // ==================== SCROLLABLE TABS ====================
+    const ScrollableTabs = ({ children, className = '' }) => {
+      const containerRef = useRef(null);
+      const [canScrollLeft, setCanScrollLeft] = useState(false);
+      const [canScrollRight, setCanScrollRight] = useState(false);
+      const [isDragging, setIsDragging] = useState(false);
+      const [startX, setStartX] = useState(0);
+      const [scrollLeft, setScrollLeft] = useState(0);
+
+      const checkScroll = () => {
+        const el = containerRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 0);
+        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+      };
+
+      useEffect(() => {
+        checkScroll();
+        window.addEventListener('resize', checkScroll);
+        return () => window.removeEventListener('resize', checkScroll);
+      }, [children]);
+
+      const onMouseDown = (e) => {
+        setIsDragging(true);
+        setStartX(e.pageX - containerRef.current.offsetLeft);
+        setScrollLeft(containerRef.current.scrollLeft);
+      };
+
+      const onMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - containerRef.current.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        containerRef.current.scrollLeft = scrollLeft - walk;
+      };
+
+      const onMouseUp = () => setIsDragging(false);
+      const onMouseLeave = () => setIsDragging(false);
+
+      // Touch support
+      const onTouchStart = (e) => {
+        setIsDragging(true);
+        setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
+        setScrollLeft(containerRef.current.scrollLeft);
+      };
+
+      const onTouchMove = (e) => {
+        if (!isDragging) return;
+        const x = e.touches[0].pageX - containerRef.current.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        containerRef.current.scrollLeft = scrollLeft - walk;
+      };
+
+      const onTouchEnd = () => setIsDragging(false);
+
+      return (
+        <div className="relative">
+          {/* Left fade indicator */}
+          {canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none flex items-center">
+              <span className="text-gray-400 text-lg ml-1">‹</span>
+            </div>
+          )}
+
+          {/* Scrollable container */}
+          <div
+            ref={containerRef}
+            className={`flex gap-1 overflow-x-auto scrollbar-hide ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} ${className}`}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onScroll={checkScroll}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {children}
+          </div>
+
+          {/* Right fade indicator */}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none flex items-center justify-end">
+              <span className="text-gray-400 text-lg mr-1">›</span>
+            </div>
+          )}
+        </div>
+      );
+    };
+
     // shape: 'circle' | 'square' | 'rectangle'
     // aspectRatio: only used for rectangle (width/height ratio, e.g. 16/9)
     const ImageCropper = ({ image, onSave, onCancel, shape = 'circle', aspectRatio = 1 }) => {
@@ -3309,9 +3407,13 @@
       const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
       const [img, setImg] = useState(null);
 
-      // Canvas dimensions based on shape
-      const canvasW = shape === 'rectangle' ? 300 : 250;
-      const canvasH = shape === 'rectangle' ? Math.round(300 / aspectRatio) : 250;
+      // Canvas dimensions - high resolution for export, displayed smaller via CSS
+      const exportW = shape === 'rectangle' ? 1200 : 400;
+      const exportH = shape === 'rectangle' ? Math.round(1200 / aspectRatio) : 400;
+      const displayW = shape === 'rectangle' ? 300 : 250;
+      const displayH = shape === 'rectangle' ? Math.round(300 / aspectRatio) : 250;
+      const canvasW = exportW;
+      const canvasH = exportH;
 
       useEffect(() => {
         const i = new Image();
@@ -3378,8 +3480,10 @@
         ctx.stroke();
       }, [img, zoom, pos, rotation, shape, canvasW, canvasH]);
 
-      const onMouseDown = (e) => { setDragging(true); setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y }); };
-      const onMouseMove = (e) => { if (dragging) setPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); };
+      // Scale factor for mouse movements (display is smaller than export)
+      const scaleFactor = exportW / displayW;
+      const onMouseDown = (e) => { setDragging(true); setDragStart({ x: e.clientX - pos.x / scaleFactor, y: e.clientY - pos.y / scaleFactor }); };
+      const onMouseMove = (e) => { if (dragging) setPos({ x: (e.clientX - dragStart.x) * scaleFactor, y: (e.clientY - dragStart.y) * scaleFactor }); };
       const onMouseUp = () => setDragging(false);
       const rotate90 = () => setRotation((r) => (r + 90) % 360);
 
@@ -3390,13 +3494,13 @@
           <p className="text-xs text-gray-500 text-center">Preview exactly as it will appear on the website.<br/>Drag to position, use sliders to zoom & rotate.</p>
           <div
             className={`overflow-hidden cursor-move bg-gray-100 shadow-md ${containerClass}`}
-            style={{ width: canvasW, height: canvasH }}
+            style={{ width: displayW, height: displayH }}
             onMouseDown={onMouseDown}
             onMouseMove={onMouseMove}
             onMouseUp={onMouseUp}
             onMouseLeave={onMouseUp}
           >
-            <canvas ref={canvasRef} />
+            <canvas ref={canvasRef} style={{ width: displayW, height: displayH }} />
           </div>
           <div className="flex flex-col gap-2 w-64">
             <div className="flex items-center gap-2">
@@ -3411,7 +3515,7 @@
           </div>
           <div className="flex gap-3">
             <button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
-            <button onClick={() => onSave(canvasRef.current.toDataURL('image/jpeg', 0.9))} className="px-4 py-2 bg-green-600 text-white rounded-lg">Save</button>
+            <button onClick={() => onSave(canvasRef.current.toDataURL('image/jpeg', 0.95))} className="px-4 py-2 bg-green-600 text-white rounded-lg">Save</button>
           </div>
         </div>
       );
@@ -3637,10 +3741,10 @@
       const inputRef = useRef(null);
 
       const SITE_PHOTO_CONFIG = [
-        { key: 'hero', label: 'Hero Background', description: 'Large banner image behind the camp title', aspectRatio: 16/9, height: 'h-48' },
-        { key: 'dropoff', label: 'Drop-off Photo', description: 'Camper being dropped off at gym entrance', aspectRatio: 4/3, height: 'h-40' },
-        { key: 'layups', label: 'Skills Training Photo', description: 'Counselor working with kids on layups/drills', aspectRatio: 4/3, height: 'h-40' },
-        { key: 'lunch', label: 'Lunch Photo', description: 'Kids sitting together eating lunch', aspectRatio: 4/3, height: 'h-40' }
+        { key: 'hero', label: 'Hero Background', description: 'Large banner image behind the camp title', aspectRatio: 16/9 },
+        { key: 'dropoff', label: 'Drop-off Photo', description: 'Camper being dropped off at gym entrance', aspectRatio: 4/3 },
+        { key: 'layups', label: 'Skills Training Photo', description: 'Counselor working with kids on layups/drills', aspectRatio: 4/3 },
+        { key: 'lunch', label: 'Lunch Photo', description: 'Kids sitting together eating lunch', aspectRatio: 4/3 }
       ];
 
       const handleFileSelect = (e) => {
@@ -3690,7 +3794,8 @@
 
                 {sitePhotos?.[photo.key] ? (
                   <div
-                    className={`relative group cursor-pointer rounded-xl overflow-hidden ${photo.height}`}
+                    className="relative group cursor-pointer rounded-xl overflow-hidden"
+                    style={{ aspectRatio: photo.aspectRatio }}
                     onClick={() => setEditingPhoto(photo)}
                   >
                     <img
@@ -3704,7 +3809,8 @@
                   </div>
                 ) : (
                   <div
-                    className={`${photo.height} bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors`}
+                    className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                    style={{ aspectRatio: photo.aspectRatio }}
                     onClick={() => {
                       setEditingPhoto(photo);
                       setTimeout(() => inputRef.current?.click(), 100);
@@ -3733,7 +3839,8 @@
                       <img
                         src={sitePhotos[editingPhoto.key]}
                         alt={editingPhoto.label}
-                        className="w-full h-48 object-cover rounded-xl shadow"
+                        className="w-full object-cover rounded-xl shadow"
+                        style={{ aspectRatio: editingPhoto.aspectRatio }}
                       />
                     </div>
                   )}
@@ -5925,18 +6032,20 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             </div>
 
             <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-                {['dashboard', 'content', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'history'].map(t => (
-                  <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
-                    {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
-                    {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
-                    {t === 'admins' && <span className="ml-2 bg-purple-500 text-white text-xs px-2 rounded-full">{admins.length}</span>}
-                    {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
-                      <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
-                    )}
-                  </button>
-                ))}
+              <div className="max-w-6xl mx-auto px-4">
+                <ScrollableTabs>
+                  {['dashboard', 'content', 'registrations', 'assignments', 'children', 'campers', 'parents', 'counselors', 'approval', 'admins', 'history'].map(t => (
+                    <button key={t} onClick={() => setAdminTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap select-none ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'children' ? '👶 Children' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'admins' ? '👑 Admins' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
+                      {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
+                      {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
+                      {t === 'admins' && <span className="ml-2 bg-purple-500 text-white text-xs px-2 rounded-full">{admins.length}</span>}
+                      {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
+                        <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
+                      )}
+                    </button>
+                  ))}
+                </ScrollableTabs>
               </div>
             </div>
 
@@ -7010,15 +7119,17 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             </div>
             
             <div className="bg-white shadow">
-              <div className="max-w-6xl mx-auto px-4 flex gap-1">
-                {['dashboard', 'schedule', 'register', 'children', 'messages'].map(t => (
-                  <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 border-b-2 ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                    {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 Camp Schedule' : t}
-                    {t === 'messages' && getUnreadCount(user?.email) > 0 && (
-                      <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
-                    )}
-                  </button>
-                ))}
+              <div className="max-w-6xl mx-auto px-4">
+                <ScrollableTabs>
+                  {['dashboard', 'schedule', 'register', 'children', 'messages'].map(t => (
+                    <button key={t} onClick={() => setParentTab(t)} className={'px-4 py-3 border-b-2 whitespace-nowrap select-none ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                      {t === 'messages' ? '💬 Messages' : t === 'children' ? '👧 My Children' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 Camp Schedule' : t}
+                      {t === 'messages' && getUnreadCount(user?.email) > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
+                      )}
+                    </button>
+                  ))}
+                </ScrollableTabs>
               </div>
             </div>
 
