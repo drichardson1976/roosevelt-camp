@@ -43,11 +43,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.094";
+    const VERSION = "12.095";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-01-31T19:14:00");
+    const BUILD_DATE = new Date("2026-01-31T19:33:00");
 
     const RELEASE_NOTES = [
+      { version: "12.095", date: "2026-01-31", changes: [
+        "Dashboard stats now labeled as 'Registration Requests'",
+        "Counselors tab: Schedule button to set work eligibility by week/day/session",
+        "Counselors show eligible sessions count and scheduled (working) status",
+        "Sessions marked with camper icon when counselor has assignments"
+      ]},
       { version: "12.094", date: "2026-01-31", changes: [
         "Fixed popup/modal windows closing unexpectedly when clicking",
         "Added large navigation buttons to admin dashboard for quick access"
@@ -6712,6 +6718,85 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const [showModal, setShowModal] = useState(false);
         const [confirmDeleteCounselor, setConfirmDeleteCounselor] = useState(null);
         const [deleteConfirmText, setDeleteConfirmText] = useState('');
+        const [managingSchedule, setManagingSchedule] = useState(null); // counselor being scheduled
+        const [scheduleMonth, setScheduleMonth] = useState(null);
+
+        // Helper: count sessions where counselor is marked eligible by admin
+        const getCounselorEligibleCount = (counselorId) => {
+          const schedule = counselorSchedule[counselorId] || {};
+          let count = 0;
+          Object.values(schedule).forEach(day => {
+            if (day.morning) count++;
+            if (day.afternoon) count++;
+          });
+          return count;
+        };
+
+        // Helper: count sessions where counselor has campers assigned
+        const getCounselorScheduledCount = (counselorId) => {
+          let count = 0;
+          Object.entries(assignments).forEach(([key, counselorAssignments]) => {
+            if (counselorAssignments[counselorId]?.length > 0) {
+              count++;
+            }
+          });
+          return count;
+        };
+
+        // Toggle counselor eligibility for a specific session
+        const toggleCounselorEligibility = (counselorId, date, session) => {
+          const current = counselorSchedule[counselorId]?.[date]?.[session] === true;
+          const newSchedule = {
+            ...counselorSchedule,
+            [counselorId]: {
+              ...counselorSchedule[counselorId],
+              [date]: {
+                ...counselorSchedule[counselorId]?.[date],
+                [session]: !current
+              }
+            }
+          };
+          const counselor = counselors.find(c => c.id === counselorId);
+          saveCounselorSchedule(newSchedule, `${!current ? 'Added' : 'Removed'} ${counselor?.name} ${!current ? 'to' : 'from'} ${date} ${session}`);
+        };
+
+        // Toggle entire day for counselor
+        const toggleCounselorDay = (counselorId, date) => {
+          const currentMorning = counselorSchedule[counselorId]?.[date]?.morning === true;
+          const currentAfternoon = counselorSchedule[counselorId]?.[date]?.afternoon === true;
+          const allSet = currentMorning && currentAfternoon;
+          const newSchedule = {
+            ...counselorSchedule,
+            [counselorId]: {
+              ...counselorSchedule[counselorId],
+              [date]: {
+                morning: !allSet,
+                afternoon: !allSet
+              }
+            }
+          };
+          const counselor = counselors.find(c => c.id === counselorId);
+          saveCounselorSchedule(newSchedule, `${!allSet ? 'Added' : 'Removed'} ${counselor?.name} ${!allSet ? 'to' : 'from'} ${date} (full day)`);
+        };
+
+        // Toggle entire week for counselor
+        const toggleCounselorWeek = (counselorId, weekDates) => {
+          let allSet = true;
+          weekDates.forEach(date => {
+            if (counselorSchedule[counselorId]?.[date]?.morning !== true) allSet = false;
+            if (counselorSchedule[counselorId]?.[date]?.afternoon !== true) allSet = false;
+          });
+          const newSchedule = { ...counselorSchedule };
+          if (!newSchedule[counselorId]) newSchedule[counselorId] = {};
+          weekDates.forEach(date => {
+            newSchedule[counselorId][date] = {
+              morning: !allSet,
+              afternoon: !allSet
+            };
+          });
+          const counselor = counselors.find(c => c.id === counselorId);
+          saveCounselorSchedule(newSchedule, `${!allSet ? 'Added' : 'Removed'} ${counselor?.name} ${!allSet ? 'to' : 'from'} week`);
+        };
 
         const updateContent = (field, value) => {
           const newContent = { ...content, [field]: value };
@@ -6749,11 +6834,14 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               {adminTab === 'dashboard' && (
                 <div className="space-y-6">
                   {/* Stats Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl shadow p-6 text-center"><div className="text-3xl font-bold text-yellow-600">{getPending()}</div><div className="text-gray-600">Pending</div></div>
-                    <div className="bg-white rounded-xl shadow p-6 text-center"><div className="text-3xl font-bold text-green-600">{getApproved()}</div><div className="text-gray-600">Approved</div></div>
-                    <div className="bg-white rounded-xl shadow p-6 text-center"><div className="text-3xl font-bold text-red-600">{getUnpaid()}</div><div className="text-gray-600">Unpaid</div></div>
-                    <div className="bg-white rounded-xl shadow p-6 text-center"><div className="text-3xl font-bold text-gray-600">{getCancelled()}</div><div className="text-gray-600">Cancelled</div></div>
+                  <div className="bg-white rounded-xl shadow p-4">
+                    <h3 className="font-bold text-lg text-gray-700 mb-3">Registration Requests</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-yellow-50 rounded-lg p-4 text-center border border-yellow-200"><div className="text-3xl font-bold text-yellow-600">{getPending()}</div><div className="text-gray-600 text-sm">Pending</div></div>
+                      <div className="bg-green-50 rounded-lg p-4 text-center border border-green-200"><div className="text-3xl font-bold text-green-600">{getApproved()}</div><div className="text-gray-600 text-sm">Approved</div></div>
+                      <div className="bg-red-50 rounded-lg p-4 text-center border border-red-200"><div className="text-3xl font-bold text-red-600">{getUnpaid()}</div><div className="text-gray-600 text-sm">Unpaid</div></div>
+                      <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200"><div className="text-3xl font-bold text-gray-600">{getCancelled()}</div><div className="text-gray-600 text-sm">Cancelled</div></div>
+                    </div>
                   </div>
 
                   {/* Quick Navigation Buttons */}
@@ -6861,65 +6949,240 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   <div className="flex justify-between items-center mb-4">
                     <div>
                       <h2 className="font-bold text-xl">Counselors</h2>
-                      <p className="text-sm text-gray-500">Use arrows to reorder • Changes save automatically</p>
+                      <p className="text-sm text-gray-500">Manage counselor profiles and work eligibility</p>
                     </div>
                     <button onClick={() => { setEditCounselor({ name: '', email: '', phone: '', position: '', year: '', bio: '', photo: null, visible: true }); setShowModal(true); }} className="bg-green-600 text-white px-4 py-2 rounded-lg">+ Add</button>
                   </div>
                   <div className="space-y-3">
-                    {counselors.map((c, idx) => (
-                      <div key={c.id} className="bg-white rounded-xl shadow p-4 flex items-center gap-4">
-                        {/* Reorder buttons */}
-                        <div className="flex flex-col gap-1">
-                          <button
-                            onClick={() => {
-                              if (idx === 0) return;
-                              const newOrder = [...counselors];
-                              [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
-                              const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
-                              saveCounselors(reordered, `Moved ${c.name} up`);
-                            }}
-                            disabled={idx === 0}
-                            className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === 0 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
-                            title="Move up"
-                          >▲</button>
-                          <button
-                            onClick={() => {
-                              if (idx === counselors.length - 1) return;
-                              const newOrder = [...counselors];
-                              [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
-                              const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
-                              saveCounselors(reordered, `Moved ${c.name} down`);
-                            }}
-                            disabled={idx === counselors.length - 1}
-                            className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === counselors.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
-                            title="Move down"
-                          >▼</button>
+                    {counselors.map((c, idx) => {
+                      const eligibleCount = getCounselorEligibleCount(c.id);
+                      const scheduledCount = getCounselorScheduledCount(c.id);
+                      return (
+                      <div key={c.id} className="bg-white rounded-xl shadow p-4">
+                        <div className="flex items-center gap-4">
+                          {/* Reorder buttons */}
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => {
+                                if (idx === 0) return;
+                                const newOrder = [...counselors];
+                                [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+                                const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
+                                saveCounselors(reordered, `Moved ${c.name} up`);
+                              }}
+                              disabled={idx === 0}
+                              className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === 0 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
+                              title="Move up"
+                            >▲</button>
+                            <button
+                              onClick={() => {
+                                if (idx === counselors.length - 1) return;
+                                const newOrder = [...counselors];
+                                [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                                const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
+                                saveCounselors(reordered, `Moved ${c.name} down`);
+                              }}
+                              disabled={idx === counselors.length - 1}
+                              className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === counselors.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
+                              title="Move down"
+                            >▼</button>
+                          </div>
+
+                          {/* Position number */}
+                          <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm">
+                            {idx + 1}
+                          </div>
+
+                          {/* Photo */}
+                          {c.photo ? <img src={c.photo} className="w-14 h-14 rounded-full object-cover" /> : <div className="w-14 h-14 rounded-full bg-green-200 flex items-center justify-center text-xl">{c.name[0]}</div>}
+
+                          {/* Info */}
+                          <div className="flex-1">
+                            <div className="font-bold">{c.name}</div>
+                            <div className="text-sm text-gray-600">{c.position} • {c.year}</div>
+                            <div className="flex gap-2 mt-1 flex-wrap">
+                              {!c.visible && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Hidden</span>}
+                              {eligibleCount > 0 && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                  📅 {eligibleCount} session{eligibleCount !== 1 ? 's' : ''} eligible
+                                </span>
+                              )}
+                              {scheduledCount > 0 ? (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                  ✓ Working {scheduledCount} session{scheduledCount !== 1 ? 's' : ''}
+                                </span>
+                              ) : eligibleCount > 0 ? (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">
+                                  No campers assigned yet
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex gap-2 flex-wrap justify-end">
+                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); }} className="px-3 py-1 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 text-sm">Schedule</button>
+                            <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit</button>
+                            <button onClick={() => setConfirmDeleteCounselor(c)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
+                          </div>
                         </div>
-
-                        {/* Position number */}
-                        <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center font-bold text-sm">
-                          {idx + 1}
-                        </div>
-
-                        {/* Photo */}
-                        {c.photo ? <img src={c.photo} className="w-14 h-14 rounded-full object-cover" /> : <div className="w-14 h-14 rounded-full bg-green-200 flex items-center justify-center text-xl">{c.name[0]}</div>}
-
-                        {/* Info */}
-                        <div className="flex-1">
-                          <div className="font-bold">{c.name}</div>
-                          <div className="text-sm text-gray-600">{c.position} • {c.year}</div>
-                          {!c.visible && <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Hidden</span>}
-                        </div>
-
-                        {/* Actions */}
-                        <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit</button>
-                        <button onClick={() => setConfirmDeleteCounselor(c)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
                       </div>
-                    ))}
+                    )})}
                   </div>
                   {counselors.length === 0 && (
                     <div className="text-center py-12 text-gray-500">
                       <p>No counselors yet. Click "+ Add" to add your first counselor.</p>
+                    </div>
+                  )}
+
+                  {/* Schedule Modal */}
+                  {managingSchedule && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                        <div className="bg-purple-600 text-white px-6 py-4 flex justify-between items-center">
+                          <div>
+                            <h2 className="font-display text-xl">Set Work Eligibility</h2>
+                            <p className="text-purple-200 text-sm">{managingSchedule.name}</p>
+                          </div>
+                          <button onClick={() => setManagingSchedule(null)} className="text-2xl hover:bg-purple-500 rounded px-2">×</button>
+                        </div>
+                        <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
+                          <p className="text-sm text-gray-600 mb-4">
+                            Mark which sessions this counselor is eligible to work. They will only be scheduled if a camper is assigned to them.
+                          </p>
+
+                          {/* Month selector */}
+                          <div className="flex gap-2 mb-4">
+                            {(() => {
+                              const months = [...new Set(CAMP_DATES.map(d => {
+                                const date = new Date(d + 'T12:00:00');
+                                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                              }))];
+                              if (!scheduleMonth && months.length > 0) {
+                                setTimeout(() => setScheduleMonth(months[0]), 0);
+                              }
+                              return months.map(m => {
+                                const [year, month] = m.split('-');
+                                const label = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short' });
+                                return (
+                                  <button
+                                    key={m}
+                                    onClick={() => setScheduleMonth(m)}
+                                    className={`px-4 py-2 rounded-lg font-medium ${scheduleMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                  >
+                                    {label}
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+
+                          {/* Calendar grid */}
+                          {scheduleMonth && (() => {
+                            const [year, month] = scheduleMonth.split('-').map(Number);
+                            const monthDates = CAMP_DATES.filter(d => {
+                              const date = new Date(d + 'T12:00:00');
+                              return date.getFullYear() === year && date.getMonth() + 1 === month;
+                            });
+
+                            // Group by week
+                            const weeks = [];
+                            let currentWeek = [];
+                            monthDates.forEach((d, i) => {
+                              currentWeek.push(d);
+                              const date = new Date(d + 'T12:00:00');
+                              const nextDate = monthDates[i + 1] ? new Date(monthDates[i + 1] + 'T12:00:00') : null;
+                              if (date.getDay() === 5 || !nextDate || nextDate.getDay() <= date.getDay()) {
+                                weeks.push([...currentWeek]);
+                                currentWeek = [];
+                              }
+                            });
+                            if (currentWeek.length > 0) weeks.push(currentWeek);
+
+                            return (
+                              <div className="space-y-4">
+                                {weeks.map((weekDates, wi) => {
+                                  const weekStart = new Date(weekDates[0] + 'T12:00:00');
+                                  const weekEnd = new Date(weekDates[weekDates.length - 1] + 'T12:00:00');
+                                  const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+                                  // Check if entire week is set
+                                  let weekAllSet = true;
+                                  weekDates.forEach(d => {
+                                    if (!isSessionBlocked(d, 'morning') && counselorSchedule[managingSchedule.id]?.[d]?.morning !== true) weekAllSet = false;
+                                    if (!isSessionBlocked(d, 'afternoon') && counselorSchedule[managingSchedule.id]?.[d]?.afternoon !== true) weekAllSet = false;
+                                  });
+
+                                  return (
+                                    <div key={wi} className="border rounded-lg p-3">
+                                      <div className="flex justify-between items-center mb-2">
+                                        <span className="font-medium text-gray-700">Week {wi + 1}: {weekLabel}</span>
+                                        <button
+                                          onClick={() => toggleCounselorWeek(managingSchedule.id, weekDates)}
+                                          className={`px-3 py-1 rounded text-sm ${weekAllSet ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                        >
+                                          {weekAllSet ? '✓ Whole Week' : 'Select Week'}
+                                        </button>
+                                      </div>
+                                      <div className="grid grid-cols-5 gap-2">
+                                        {weekDates.map(d => {
+                                          const date = new Date(d + 'T12:00:00');
+                                          const dayLabel = date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' });
+                                          const morningBlocked = isSessionBlocked(d, 'morning');
+                                          const afternoonBlocked = isSessionBlocked(d, 'afternoon');
+                                          const morningEligible = counselorSchedule[managingSchedule.id]?.[d]?.morning === true;
+                                          const afternoonEligible = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === true;
+                                          const bothSet = morningEligible && afternoonEligible;
+
+                                          // Check if counselor has campers assigned for these sessions
+                                          const morningAssigned = (assignments[`${d}_morning`]?.[managingSchedule.id]?.length || 0) > 0;
+                                          const afternoonAssigned = (assignments[`${d}_afternoon`]?.[managingSchedule.id]?.length || 0) > 0;
+
+                                          return (
+                                            <div key={d} className="text-center">
+                                              <div className="text-xs text-gray-500 mb-1">{dayLabel}</div>
+                                              <button
+                                                onClick={() => toggleCounselorDay(managingSchedule.id, d)}
+                                                className={`w-full py-1 rounded text-xs mb-1 ${bothSet ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                                                disabled={morningBlocked && afternoonBlocked}
+                                              >
+                                                {bothSet ? '✓ Day' : 'Day'}
+                                              </button>
+                                              <div className="space-y-1">
+                                                <button
+                                                  onClick={() => toggleCounselorEligibility(managingSchedule.id, d, 'morning')}
+                                                  disabled={morningBlocked}
+                                                  className={`w-full py-1 rounded text-xs ${morningBlocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : morningEligible ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
+                                                >
+                                                  AM {morningAssigned && '🏕️'}
+                                                </button>
+                                                <button
+                                                  onClick={() => toggleCounselorEligibility(managingSchedule.id, d, 'afternoon')}
+                                                  disabled={afternoonBlocked}
+                                                  className={`w-full py-1 rounded text-xs ${afternoonBlocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : afternoonEligible ? 'bg-orange-500 text-white' : 'bg-orange-100 text-orange-700 hover:bg-orange-200'}`}
+                                                >
+                                                  PM {afternoonAssigned && '🏕️'}
+                                                </button>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+
+                          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
+                            <strong>Legend:</strong> 🏕️ = Has campers assigned (scheduled to work)
+                          </div>
+                        </div>
+                        <div className="p-4 border-t">
+                          <button onClick={() => setManagingSchedule(null)} className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Done</button>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
