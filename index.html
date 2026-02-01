@@ -43,11 +43,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.096";
+    const VERSION = "12.097";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-01-31T19:38:00");
+    const BUILD_DATE = new Date("2026-01-31T19:44:00");
 
     const RELEASE_NOTES = [
+      { version: "12.097", date: "2026-01-31", changes: [
+        "Counselors: renamed to Edit Profile/Edit Schedule, Delete moved inside profile",
+        "Admin Add Parent now uses full parent onboarding wizard"
+      ]},
       { version: "12.096", date: "2026-01-31", changes: [
         "Login page auto-focuses email input for faster typing",
         "Schedule eligibility modal now requires Done button to close",
@@ -596,7 +600,7 @@
     });
 
     // ==================== COUNSELOR EDIT FORM ====================
-    const CounselorEditForm = ({ counselor, onSave, onCancel }) => {
+    const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
       const [form, setForm] = useState({ ...counselor });
       const inputRef = useRef(null);
       const [tempImg, setTempImg] = useState(null);
@@ -755,12 +759,20 @@
             <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
             <button onClick={() => onSave(form)} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Save</button>
           </div>
+
+          {onDelete && counselor?.id && (
+            <div className="pt-4 mt-4 border-t">
+              <button onClick={() => onDelete(counselor)} className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200">
+                Delete Counselor
+              </button>
+            </div>
+          )}
         </div>
       );
     };
 
     // ==================== PARENTS TAB ====================
-    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onDeleteParent, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks }) => {
+    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onDeleteParent, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks, emergencyContacts, saveEmergencyContacts, saveOnboardingProgress }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedParents, setSelectedParents] = useState([]);
       const [expandedParent, setExpandedParent] = useState(null);
@@ -773,9 +785,8 @@
       const [editingChild, setEditingChild] = useState(null);
       const [editingReg, setEditingReg] = useState(null);
       const [confirmDelete, setConfirmDelete] = useState(null); // { type: 'parent'|'child'|'registration', data: ... }
-      // Add parent state
+      // Add parent state - use full onboarding flow
       const [showAddParent, setShowAddParent] = useState(false);
-      const [addParentForm, setAddParentForm] = useState({ name: '', email: '', password: '', phone: '' });
       // Manage campers for parent
       const [managingCampers, setManagingCampers] = useState(null);
 
@@ -800,29 +811,7 @@
         return [...linkedCampers, ...legacyChildren];
       };
 
-      const handleAddParent = () => {
-        if (!addParentForm.name || !addParentForm.email || !addParentForm.password) {
-          showToast('Name, email, and password are required', 'error');
-          return;
-        }
-        if (users.some(u => u.email === addParentForm.email)) {
-          showToast('A parent with this email already exists', 'error');
-          return;
-        }
-        const newParent = {
-          ...addParentForm,
-          phone: formatPhone(addParentForm.phone),
-          role: 'parent',
-          children: [],
-          createdAt: new Date().toISOString()
-        };
-        onUpdateUsers([...users, newParent]);
-        addToHistory('Parent', `Added parent ${addParentForm.name}`);
-        setShowAddParent(false);
-        setAddParentForm({ name: '', email: '', password: '', phone: '' });
-        showToast('Parent added!');
-      };
-
+      
       const toggleCamperLink = (parentEmail, camperId) => {
         const exists = (camperParentLinks || []).some(l => l.camperId === camperId && l.parentEmail === parentEmail);
         if (exists) {
@@ -1379,64 +1368,26 @@
             />
           )}
 
-          {/* Add Parent Modal */}
+          {/* Add Parent - Full Onboarding Flow */}
           {showAddParent && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-xl mb-4">Add New Parent</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Full Name *</label>
-                    <input
-                      value={addParentForm.name}
-                      onChange={e => setAddParentForm({ ...addParentForm, name: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      placeholder="Parent's full name"
-                      autoComplete="off"
-                      data-1p-ignore="true"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      value={addParentForm.email}
-                      onChange={e => setAddParentForm({ ...addParentForm, email: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      placeholder="parent@email.com"
-                      autoComplete="off"
-                      data-1p-ignore="true"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Password *</label>
-                    <input
-                      type="text"
-                      value={addParentForm.password}
-                      onChange={e => setAddParentForm({ ...addParentForm, password: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg font-mono"
-                      placeholder="password"
-                      autoComplete="off"
-                      data-1p-ignore="true"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Phone (optional)</label>
-                    <input
-                      value={addParentForm.phone}
-                      onChange={e => setAddParentForm({ ...addParentForm, phone: formatPhone(e.target.value) })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      placeholder="(555) 555-5555"
-                      autoComplete="off"
-                      data-1p-ignore="true"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-6">
-                  <button onClick={() => { setShowAddParent(false); setAddParentForm({ name: '', email: '', password: '', phone: '' }); }} className="flex-1 px-4 py-2 border rounded-lg">Cancel</button>
-                  <button onClick={handleAddParent} className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Add Parent</button>
-                </div>
+            <div className="fixed inset-0 z-50 bg-white overflow-auto">
+              <div className="sticky top-0 bg-purple-600 text-white px-4 py-3 flex items-center justify-between z-10">
+                <h2 className="font-display text-xl">Add New Parent (Admin)</h2>
+                <button onClick={() => setShowAddParent(false)} className="px-4 py-1 bg-purple-500 hover:bg-purple-400 rounded">Cancel</button>
               </div>
+              <ParentOnboarding
+                onComplete={(newUser) => {
+                  addToHistory('Parent', `Added parent ${newUser.name} via onboarding`);
+                  setShowAddParent(false);
+                  showToast(`Parent ${newUser.name} added successfully!`);
+                }}
+                onBack={() => setShowAddParent(false)}
+                users={users}
+                saveUsers={onUpdateUsers}
+                saveEmergencyContacts={saveEmergencyContacts}
+                emergencyContacts={emergencyContacts}
+                saveOnboardingProgress={saveOnboardingProgress}
+              />
             </div>
           )}
 
@@ -7026,9 +6977,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
                           {/* Actions */}
                           <div className="flex gap-2 flex-wrap justify-end">
-                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); }} className="px-3 py-1 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 text-sm">Schedule</button>
-                            <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit</button>
-                            <button onClick={() => setConfirmDeleteCounselor(c)} className="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100 text-sm">Delete</button>
+                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); }} className="px-3 py-1 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 text-sm">Edit Schedule</button>
+                            <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit Profile</button>
                           </div>
                         </div>
                       </div>
@@ -7542,6 +7492,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   campers={campers}
                   camperParentLinks={camperParentLinks}
                   onSaveLinks={saveCamperParentLinks}
+                  emergencyContacts={emergencyContacts}
+                  saveEmergencyContacts={saveEmergencyContacts}
+                  saveOnboardingProgress={saveOnboardingProgress}
                 />
               )}
 
@@ -7633,7 +7586,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               )}
             </div>
 
-            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editCounselor?.id ? 'Edit Counselor' : 'Add Counselor'}>
+            <Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editCounselor?.id ? 'Edit Counselor Profile' : 'Add Counselor'}>
               {editCounselor && (
                 <CounselorEditForm
                   counselor={editCounselor}
@@ -7647,6 +7600,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     setShowModal(false);
                   }}
                   onCancel={() => setShowModal(false)}
+                  onDelete={(c) => { setShowModal(false); setConfirmDeleteCounselor(c); }}
                 />
               )}
             </Modal>
