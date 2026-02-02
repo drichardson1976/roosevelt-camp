@@ -29,7 +29,9 @@
 
     const getEnvironment = () => {
       const hostname = window.location.hostname;
-      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev')) ? 'development' : 'production';
+      // GitHub Pages and localhost = development (uses dev schema)
+      // Netlify production = production (uses public schema)
+      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev') || hostname.includes('github.io')) ? 'development' : 'production';
     };
     
     const ENV = getEnvironment();
