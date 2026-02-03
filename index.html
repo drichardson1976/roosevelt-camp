@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.118";
+    const VERSION = "12.119";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T01:00:00");
+    const BUILD_DATE = new Date("2026-02-03T02:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.119", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed critical Assignments tab bug: drag-and-drop now works correctly without resetting session view",
+        "Fixed pod ID consistency - pods maintain stable IDs across counselor assignments",
+        "Fixed Add Pod button - now properly displays new empty pods without closing session view",
+        "Enhanced delete pod functionality - can now delete any pod (counselors/campers return to unassigned)",
+        "Improved state management to prevent session view from closing after changes"
+      ]},
       { version: "12.118", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Fixed Assignments tab bug: counselor-only pods now properly save to assignments",
         "Fixed new pod creation - pods with counselors but no campers are now persisted",
@@ -3990,8 +3997,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const key = getSessionKey();
         if (!key) return [];
 
-        // If we have pods stored, use them
-        if (sessionPods[key]) return sessionPods[key];
+        // If we have pods stored in state, use them
+        if (sessionPods[key] && Array.isArray(sessionPods[key]) && sessionPods[key].length > 0) {
+          return sessionPods[key];
+        }
 
         // Otherwise, initialize from existing assignments
         const existingAssignments = assignments[key] || {};
@@ -4003,7 +4012,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
         // If no existing assignments, start with one empty pod
         if (pods.length === 0) {
-          pods.push({ id: 'pod_' + Date.now(), counselorId: null, camperIds: [] });
+          pods.push({ id: 'pod_empty_' + Date.now(), counselorId: null, camperIds: [] });
         }
 
         return pods;
@@ -4014,12 +4023,21 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const key = getSessionKey();
         if (!key) return;
 
-        setSessionPods(prev => ({ ...prev, [key]: newPods }));
+        // Normalize pod IDs: pods with counselors should have ID based on counselorId
+        const normalizedPods = newPods.map(pod => {
+          if (pod.counselorId && !pod.id.startsWith('pod_' + pod.counselorId)) {
+            // Update pod ID to be consistent with counselor ID
+            return { ...pod, id: 'pod_' + pod.counselorId };
+          }
+          return pod;
+        });
+
+        setSessionPods(prev => ({ ...prev, [key]: normalizedPods }));
 
         // Sync to assignments format
         const newAssignments = { ...assignments };
         newAssignments[key] = {};
-        newPods.forEach(pod => {
+        normalizedPods.forEach(pod => {
           // Save any pod that has a counselor assigned (even if no campers yet)
           if (pod.counselorId) {
             newAssignments[key][pod.counselorId] = pod.camperIds || [];
@@ -4031,21 +4049,30 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       // Add new empty pod
       const addPod = () => {
         const pods = getCurrentPods();
-        const newPod = { id: 'pod_' + Date.now(), counselorId: null, camperIds: [] };
+        const newPod = { id: 'pod_empty_' + Date.now(), counselorId: null, camperIds: [] };
         savePods([...pods, newPod]);
         showToast('New pod added');
       };
 
-      // Remove empty pod
+      // Remove pod (counselors and campers are automatically returned to unassigned sections)
       const removePod = (podId) => {
         const pods = getCurrentPods();
         const pod = pods.find(p => p.id === podId);
-        if (pod?.counselorId || pod?.camperIds?.length > 0) {
-          showToast('Cannot remove pod with assigned counselor or campers', 'error');
+
+        // Don't allow removing the last pod
+        if (pods.length === 1) {
+          showToast('Cannot remove the last pod', 'error');
           return;
         }
+
+        // Remove the pod (counselor and campers will automatically appear as unassigned)
         savePods(pods.filter(p => p.id !== podId));
-        showToast('Pod removed');
+
+        if (pod?.counselorId || pod?.camperIds?.length > 0) {
+          showToast('Pod removed - counselor and campers returned to unassigned');
+        } else {
+          showToast('Pod removed');
+        }
       };
 
       // Get approved registrations for the selected date/session
@@ -4534,11 +4561,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       {/* Pod Header with Remove Button */}
                       <div className="bg-gray-50 px-3 py-2 flex items-center justify-between border-b">
                         <span className="font-bold text-sm text-gray-600">Pod {podIndex + 1}</span>
-                        {isEmpty && pods.length > 1 && (
+                        {pods.length > 1 && (
                           <button
                             onClick={() => removePod(pod.id)}
-                            className="text-red-500 hover:text-red-700 text-sm"
-                            title="Remove empty pod"
+                            className="text-red-500 hover:text-red-700 text-sm font-bold"
+                            title={isEmpty ? "Remove empty pod" : "Remove pod (counselor and campers will be returned to unassigned)"}
                           >
                             ✕
                           </button>
