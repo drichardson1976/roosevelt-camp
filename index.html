@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.119";
+    const VERSION = "12.120";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T02:00:00");
+    const BUILD_DATE = new Date("2026-02-03T03:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.120", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added Danger Zone tab to admin dashboard for data management",
+        "Implemented bulk delete functionality for parents, counselors, campers, registrations, and assignments",
+        "Added nuclear option to delete all user data while preserving site content",
+        "Created read-only Supabase table viewer to inspect all database tables",
+        "Counselor onboarding verified to correctly create counselor-only accounts"
+      ]},
       { version: "12.119", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Fixed critical Assignments tab bug: drag-and-drop now works correctly without resetting session view",
         "Fixed pod ID consistency - pods maintain stable IDs across counselor assignments",
@@ -7284,9 +7291,9 @@ As a 1099 contractor, you are responsible for:
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'approval', 'content', 'history'].map(t => (
+                  {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'approval', 'content', 'history', 'dangerzone'].map(t => (
                     <button key={t} onClick={() => setAdminTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t}
+                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                       {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
                       {t === 'sessions' && Object.keys(blockedSessions).length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{Object.values(blockedSessions).reduce((sum, day) => sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0)}</span>}
@@ -7352,6 +7359,10 @@ As a 1099 contractor, you are responsible for:
                       <button onClick={() => setAdminTab('history')} className="flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border-2 border-gray-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📜</span>
                         <span className="font-medium text-gray-700">History</span>
+                      </button>
+                      <button onClick={() => setAdminTab('dangerzone')} className="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 rounded-xl border-2 border-red-300 min-h-[80px] transition-colors">
+                        <span className="text-2xl mb-1">⚠️</span>
+                        <span className="font-medium text-red-700">Danger Zone</span>
                       </button>
                     </div>
                   </div>
@@ -8790,6 +8801,222 @@ As a 1099 contractor, you are responsible for:
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {adminTab === 'dangerzone' && (
+                <div className="space-y-6">
+                  {/* Warning Banner */}
+                  <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">
+                    <div className="flex items-start gap-4">
+                      <span className="text-4xl">⚠️</span>
+                      <div>
+                        <h3 className="font-bold text-xl text-red-700 mb-2">Danger Zone</h3>
+                        <p className="text-red-600 mb-2">
+                          Actions in this section are <strong>destructive and irreversible</strong>. Use extreme caution.
+                        </p>
+                        <p className="text-sm text-red-500">
+                          Deletions will permanently remove data from Supabase and cannot be undone.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Delete Actions */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-gray-800 mb-4">🗑️ Delete Records</h3>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      {/* Delete All Parents */}
+                      <div className="border-2 border-red-200 rounded-lg p-4">
+                        <h4 className="font-bold text-red-700 mb-2">Delete All Parents</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Removes all parent user accounts. Count: <strong>{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</strong>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Are you SURE you want to delete ALL parent accounts? Type DELETE in the prompt to confirm.')) return;
+                            const confirmText = prompt('Type DELETE to confirm:');
+                            if (confirmText !== 'DELETE') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            const newUsers = users.filter(u => u.role !== 'parent' && !u.roles?.includes('parent'));
+                            await saveUsers(newUsers, 'Deleted all parent accounts');
+                            showToast('All parents deleted');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
+                        >
+                          Delete All Parents
+                        </button>
+                      </div>
+
+                      {/* Delete All Counselors */}
+                      <div className="border-2 border-red-200 rounded-lg p-4">
+                        <h4 className="font-bold text-red-700 mb-2">Delete All Counselors</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Removes all counselor profiles and user accounts. Count: <strong>{counselors.length}</strong>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Are you SURE you want to delete ALL counselors? Type DELETE in the prompt to confirm.')) return;
+                            const confirmText = prompt('Type DELETE to confirm:');
+                            if (confirmText !== 'DELETE') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            const counselorEmails = counselors.map(c => c.email);
+                            const newUsers = users.filter(u => !counselorEmails.includes(u.email));
+                            await saveUsers(newUsers, 'Deleted all counselor user accounts');
+                            await saveCounselors([], 'Deleted all counselor profiles');
+                            await saveAvailability({}, 'Cleared all counselor availability');
+                            await saveCounselorSchedule({}, 'Cleared all counselor schedules');
+                            showToast('All counselors deleted');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
+                        >
+                          Delete All Counselors
+                        </button>
+                      </div>
+
+                      {/* Delete All Campers */}
+                      <div className="border-2 border-red-200 rounded-lg p-4">
+                        <h4 className="font-bold text-red-700 mb-2">Delete All Campers</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Removes all camper profiles and parent-child links. Count: <strong>{campers.length}</strong>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Are you SURE you want to delete ALL campers? Type DELETE in the prompt to confirm.')) return;
+                            const confirmText = prompt('Type DELETE to confirm:');
+                            if (confirmText !== 'DELETE') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            await saveCampers([], 'Deleted all campers');
+                            await saveCamperParentLinks([], 'Cleared all camper-parent links');
+                            showToast('All campers deleted');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
+                        >
+                          Delete All Campers
+                        </button>
+                      </div>
+
+                      {/* Delete All Registrations */}
+                      <div className="border-2 border-red-200 rounded-lg p-4">
+                        <h4 className="font-bold text-red-700 mb-2">Delete All Registrations</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Removes all camp registrations. Count: <strong>{registrations.length}</strong>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Are you SURE you want to delete ALL registrations? Type DELETE in the prompt to confirm.')) return;
+                            const confirmText = prompt('Type DELETE to confirm:');
+                            if (confirmText !== 'DELETE') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            await saveRegistrations([], 'Deleted all registrations');
+                            showToast('All registrations deleted');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
+                        >
+                          Delete All Registrations
+                        </button>
+                      </div>
+
+                      {/* Delete All Assignments */}
+                      <div className="border-2 border-red-200 rounded-lg p-4">
+                        <h4 className="font-bold text-red-700 mb-2">Delete All Assignments</h4>
+                        <p className="text-sm text-gray-600 mb-3">
+                          Removes all pod assignments. Sessions with assignments: <strong>{Object.keys(assignments).length}</strong>
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('Are you SURE you want to delete ALL pod assignments? Type DELETE in the prompt to confirm.')) return;
+                            const confirmText = prompt('Type DELETE to confirm:');
+                            if (confirmText !== 'DELETE') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            await saveAssignments({}, 'Deleted all pod assignments');
+                            showToast('All assignments deleted');
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
+                        >
+                          Delete All Assignments
+                        </button>
+                      </div>
+
+                      {/* Delete ALL User Data */}
+                      <div className="border-2 border-red-500 rounded-lg p-4 md:col-span-2 bg-red-50">
+                        <h4 className="font-bold text-red-800 mb-2">💣 Nuclear Option: Delete ALL User Data</h4>
+                        <p className="text-sm text-red-700 mb-3">
+                          Removes ALL parents, counselors, campers, registrations, assignments, and related data. This will completely reset all user data while preserving site content (photos, text, etc.).
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('⚠️ NUCLEAR OPTION: This will delete EVERYTHING - all parents, counselors, campers, registrations, and assignments. Are you ABSOLUTELY SURE?')) return;
+                            const confirmText = prompt('Type DELETE ALL to confirm complete data wipe:');
+                            if (confirmText !== 'DELETE ALL') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            // Delete all user data
+                            await saveUsers(users.filter(u => u.role === 'admin'), 'Nuclear: Deleted all non-admin users');
+                            await saveCounselors([], 'Nuclear: Deleted all counselors');
+                            await saveCampers([], 'Nuclear: Deleted all campers');
+                            await saveRegistrations([], 'Nuclear: Deleted all registrations');
+                            await saveAssignments({}, 'Nuclear: Deleted all assignments');
+                            await saveCamperParentLinks([], 'Nuclear: Cleared all links');
+                            await saveAvailability({}, 'Nuclear: Cleared all availability');
+                            await saveCounselorSchedule({}, 'Nuclear: Cleared all schedules');
+                            showToast('💥 All user data deleted (admins preserved)');
+                          }}
+                          className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 w-full font-bold"
+                        >
+                          💣 DELETE ALL USER DATA
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Supabase Viewer */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-gray-800 mb-4">📊 Supabase Table Viewer (Read-Only)</h3>
+                    <div className="space-y-4">
+                      {(() => {
+                        const tables = [
+                          { name: 'Users', data: users, key: 'email' },
+                          { name: 'Counselors', data: counselors, key: 'id' },
+                          { name: 'Campers', data: campers, key: 'id' },
+                          { name: 'Registrations', data: registrations, key: 'id' },
+                          { name: 'Assignments', data: Object.entries(assignments).map(([k, v]) => ({ session: k, ...v })), key: 'session' },
+                          { name: 'Camper-Parent Links', data: camperParentLinks, key: 'id' },
+                          { name: 'Availability', data: Object.entries(availability).map(([k, v]) => ({ email: k, dates: JSON.stringify(v) })), key: 'email' },
+                          { name: 'Blocked Sessions', data: Object.entries(blockedSessions).map(([k, v]) => ({ date: k, ...v })), key: 'date' }
+                        ];
+
+                        return tables.map(table => (
+                          <details key={table.name} className="border rounded-lg">
+                            <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                              <span>{table.name} ({table.data.length} records)</span>
+                              <span className="text-gray-400">▼</span>
+                            </summary>
+                            <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                              {table.data.length === 0 ? (
+                                <p className="text-gray-500 text-sm">No records</p>
+                              ) : (
+                                <pre className="text-xs bg-white p-4 rounded border overflow-x-auto">
+                                  {JSON.stringify(table.data, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          </details>
+                        ));
+                      })()}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
