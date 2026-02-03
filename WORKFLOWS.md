@@ -542,6 +542,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.114 | 2026-02-02 | Derek Richardson | Added tab navigation to counselor dashboard with Dashboard tab; counselor dashboard now consistent with admin and parent navigation patterns |
 | 12.113 | 2026-02-02 | Derek Richardson | Fixed counselor availability calendar month jumping - stays on current month when toggling sessions; counselor dashboard month selection now persists across updates |
 | 12.112 | 2026-02-02 | Audrey Richardson | Password show/hide toggles on all password fields; counselor availability starts grey (unset) with 3-state cycle (grey→green→red); card-based availability UI matching admin sessions tab; pay updated to $80/session ($26.66/hr); counselor availability data now flows to admin dashboard automatically; fixed afternoon session time display |
 | 12.111 | 2026-02-02 | Audrey Richardson | Policies step now required; auto-select single camper; camper selection warning; reorganized parent tabs (Dashboard, My Campers, Registrations, Messages); Camp Schedule moved into My Campers tab |
