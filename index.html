@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.124";
+    const VERSION = "12.125";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T23:38:00");
+    const BUILD_DATE = new Date("2026-02-02T23:51:56");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -6758,7 +6758,7 @@ As a 1099 contractor, you are responsible for:
 
             // Save availability (keyed by email for isCounselorEligible compatibility)
             const newAvail = { ...availability, [newCounselor.email]: availData };
-            await saveAvailability(newAvail);
+            await saveAvail(newAvail);
 
             // Also save to counselorSchedule so admin dashboard shows availability immediately
             const newSchedule = { ...counselorSchedule };
@@ -8548,7 +8548,7 @@ As a 1099 contractor, you are responsible for:
                                         ? { ...r, status: 'approved', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
                                         : r
                                     );
-                                    await saveAvailabilityChangeRequests(updatedReqs);
+                                    await saveAvailChangeRequests(updatedReqs);
                                     showToast('Availability changes approved!');
                                   }}
                                   className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
@@ -8562,7 +8562,7 @@ As a 1099 contractor, you are responsible for:
                                         ? { ...r, status: 'rejected', reviewedAt: new Date().toISOString(), reviewedBy: user?.name }
                                         : r
                                     );
-                                    await saveAvailabilityChangeRequests(updatedReqs);
+                                    await saveAvailChangeRequests(updatedReqs);
                                     showToast('Availability changes rejected.');
                                   }}
                                   className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
@@ -8874,7 +8874,7 @@ As a 1099 contractor, you are responsible for:
                             const newUsers = users.filter(u => !counselorEmails.includes(u.email));
                             await saveUsers(newUsers, 'Deleted all counselor user accounts');
                             await saveCounselors([], 'Deleted all counselor profiles');
-                            await saveAvailability({}, 'Cleared all counselor availability');
+                            await saveAvail({}, 'Cleared all counselor availability');
                             await saveCounselorSchedule({}, 'Cleared all counselor schedules');
                             showToast('All counselors deleted');
                             setTimeout(() => window.location.reload(), 1000);
@@ -8979,7 +8979,7 @@ As a 1099 contractor, you are responsible for:
                             await saveRegistrations([], 'Nuclear: Deleted all registrations');
                             await saveAssignments({}, 'Nuclear: Deleted all assignments');
                             await saveCamperParentLinks([], 'Nuclear: Cleared all links');
-                            await saveAvailability({}, 'Nuclear: Cleared all availability');
+                            await saveAvail({}, 'Nuclear: Cleared all availability');
                             await saveCounselorSchedule({}, 'Nuclear: Cleared all schedules');
                             showToast('💥 All user data deleted (admins preserved)');
                             setTimeout(() => window.location.reload(), 1000);
@@ -9202,7 +9202,7 @@ As a 1099 contractor, you are responsible for:
                                         // Delete from availability (keyed by email)
                                         const newAvailability = { ...availability };
                                         delete newAvailability[email];
-                                        await saveAvailability(newAvailability, `Deleted availability for ${counselorName}`);
+                                        await saveAvail(newAvailability, `Deleted availability for ${counselorName}`);
 
                                         // Also delete from counselorSchedule (keyed by counselor ID)
                                         const newSchedule = { ...counselorSchedule };

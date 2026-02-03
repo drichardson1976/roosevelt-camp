@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.125 | 2026-02-02 | Derek Richardson | Fixed Danger Zone availability deletion - corrected function name from saveAvailability to saveAvail; now properly saves to 'main' record in Supabase with correct data structure |
 | 12.124 | 2026-02-02 | Derek Richardson | Fixed orphaned counselor availability deletion - now cleans up all orphaned counselorSchedule entries when counselor no longer exists; handles case where counselor was deleted but availability records remain |
 | 12.123 | 2026-02-02 | Derek Richardson | Fixed counselor availability deletion in Danger Zone - now properly deletes from both availability (by email) and counselorSchedule (by ID) tables in Supabase |
 | 12.122 | 2026-02-02 | Derek Richardson | Fixed delete operations in Danger Zone - all deletions now refresh page after 1 second to show updated data; added counselor availability deletion to Danger Zone with individual counselor availability records |
