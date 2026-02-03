@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.123";
+    const VERSION = "12.124";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T05:00:00");
+    const BUILD_DATE = new Date("2026-02-02T23:38:00");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -9205,11 +9205,21 @@ As a 1099 contractor, you are responsible for:
                                         await saveAvailability(newAvailability, `Deleted availability for ${counselorName}`);
 
                                         // Also delete from counselorSchedule (keyed by counselor ID)
+                                        const newSchedule = { ...counselorSchedule };
                                         if (counselor && counselor.id) {
-                                          const newSchedule = { ...counselorSchedule };
+                                          // Counselor exists, delete their schedule by ID
                                           delete newSchedule[counselor.id];
-                                          await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselorName}`);
+                                        } else {
+                                          // Counselor doesn't exist (orphaned record)
+                                          // Clean up any orphaned schedules by removing entries for counselors that no longer exist
+                                          const validCounselorIds = counselors.map(c => c.id);
+                                          Object.keys(newSchedule).forEach(scheduleId => {
+                                            if (!validCounselorIds.includes(scheduleId)) {
+                                              delete newSchedule[scheduleId];
+                                            }
+                                          });
                                         }
+                                        await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselorName}`);
 
                                         showToast('Availability deleted');
                                         setTimeout(() => window.location.reload(), 1000);
