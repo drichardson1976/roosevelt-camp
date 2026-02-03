@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.116 | 2026-02-03 | Derek Richardson | Fixed My Schedule tab error - resolved podAssignments undefined; moved logged-in user name before Logout button; My Schedule now correctly displays assignments |
 | 12.115 | 2026-02-02 | Derek Richardson | Added My Schedule tab to counselor dashboard showing assigned sessions and pod campers (read-only); header shows logged-in user's name for all roles; added role-specific dashboard buttons in header; Login button changes to Logout when logged in |
 | 12.114 | 2026-02-02 | Derek Richardson | Added tab navigation to counselor dashboard with Dashboard tab; counselor dashboard now consistent with admin and parent navigation patterns |
 | 12.113 | 2026-02-02 | Derek Richardson | Fixed counselor availability calendar month jumping - stays on current month when toggling sessions; counselor dashboard month selection now persists across updates |

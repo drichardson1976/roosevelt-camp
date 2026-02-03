@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.115";
+    const VERSION = "12.116";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T23:30:00");
+    const BUILD_DATE = new Date("2026-02-03T00:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.116", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed My Schedule tab - resolved 'podAssignments is not defined' error",
+        "Moved logged-in user's name to appear before Logout button in header",
+        "My Schedule tab now correctly displays counselor assignments and campers"
+      ]},
       { version: "12.115", date: "2026-02-02", author: "Derek Richardson", changes: [
         "Added 'My Schedule' tab to counselor dashboard showing assigned sessions and pod campers (read-only)",
         "Header now shows logged-in user's name for all roles",
@@ -5904,7 +5909,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               ))}
               {user ? (
                 <React.Fragment>
-                  <span className="text-green-300 text-xs sm:text-sm ml-1 sm:ml-2 px-2 py-1">{user.name}</span>
                   {user.role === 'admin' && (
                     <button onClick={() => setPage('admin')} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm sm:text-base min-h-[44px]">
                       Admin Dashboard
@@ -5920,6 +5924,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       Counselor Dashboard
                     </button>
                   )}
+                  <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user.name}</span>
                   <button onClick={() => { setUser(null); setPage('home'); }} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
                 </React.Fragment>
               ) : (
@@ -10227,15 +10232,16 @@ As a 1099 contractor, you are responsible for:
                     }
 
                     // Get all assignments for this counselor
+                    // assignments structure: { "date_session": { counselorId: [childId, ...] } }
                     const myAssignments = {};
-                    Object.entries(podAssignments).forEach(([dateSession, pods]) => {
+                    Object.entries(assignments).forEach(([dateSession, counselorAssignments]) => {
                       const [date, session] = dateSession.split('_');
-                      pods.forEach(pod => {
-                        if (pod.counselorId === myCounselor.id) {
-                          if (!myAssignments[date]) myAssignments[date] = {};
-                          myAssignments[date][session] = pod.camperIds || [];
-                        }
-                      });
+                      const camperIds = counselorAssignments[myCounselor.id] || [];
+
+                      if (camperIds.length > 0) {
+                        if (!myAssignments[date]) myAssignments[date] = {};
+                        myAssignments[date][session] = camperIds;
+                      }
                     });
 
                     const sortedDates = Object.keys(myAssignments).sort();
