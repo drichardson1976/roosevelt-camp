@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.116";
+    const VERSION = "12.117";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T00:00:00");
+    const BUILD_DATE = new Date("2026-02-03T00:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.117", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Updated parent registration UI to match admin Sessions tab pattern",
+        "Replaced collapsible accordion with month selector buttons and responsive grid layout",
+        "Date selection UI now consistent across admin and parent dashboards"
+      ]},
       { version: "12.116", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Fixed My Schedule tab - resolved 'podAssignments is not defined' error",
         "Moved logged-in user's name to appear before Logout button in header",
@@ -9132,8 +9137,13 @@ As a 1099 contractor, you are responsible for:
       // ==================== PARENT ====================
       const Parent = () => {
         const [selectedDates, setSelectedDates] = useState({});
-        const [expandedMonths, setExpandedMonths] = useState({});
-        const [expandedWeeks, setExpandedWeeks] = useState({ 0: true });
+        const [selectedRegistrationMonth, setSelectedRegistrationMonth] = useState(() => {
+          if (CAMP_DATES.length > 0) {
+            const d = new Date(CAMP_DATES[0] + 'T12:00:00');
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          }
+          return null;
+        });
         const [selectedChildren, setSelectedChildren] = useState([]);
         const [showConfirm, setShowConfirm] = useState(null);
         
@@ -9373,91 +9383,99 @@ As a 1099 contractor, you are responsible for:
                   </div>
                   
                   <div className="bg-white rounded-xl shadow p-6">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-lg">Select Dates</h3>
-                      <div className="flex gap-2">
-                        <button onClick={() => setExpandedMonths({ 5: true, 6: true, 7: true })} className="text-sm text-green-600">Expand All</button>
-                        <button onClick={() => { setExpandedMonths({}); setExpandedWeeks({}); }} className="text-sm text-gray-500">Collapse All</button>
-                      </div>
+                    <h3 className="font-bold text-lg mb-4">Step 2: Select Dates & Sessions</h3>
+
+                    {/* Month Selector */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(() => {
+                        const months = [];
+                        CAMP_DATES.forEach(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                          const monthName = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          if (!months.some(m => m.key === monthKey)) {
+                            months.push({ key: monthKey, name: monthName });
+                          }
+                        });
+
+                        return months.map(m => (
+                          <button
+                            key={m.key}
+                            onClick={() => setSelectedRegistrationMonth(m.key)}
+                            className={`px-4 py-2 rounded-lg text-sm ${
+                              selectedRegistrationMonth === m.key
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {m.name}
+                          </button>
+                        ));
+                      })()}
                     </div>
-                    
-                    {Object.entries(getMonthWeeks()).map(([mKey, { name, weeks }]) => (
-                      <div key={mKey} className="mb-4">
-                        <button onClick={() => setExpandedMonths(p => ({ ...p, [mKey]: !p[mKey] }))} className="w-full flex justify-between p-3 bg-green-100 rounded-lg font-bold text-green-800">
-                          <span>{name}</span><span>{expandedMonths[mKey] ? '▼' : '▶'}</span>
-                        </button>
-                        {expandedMonths[mKey] && (
-                          <div className="mt-2 pl-4 space-y-2">{weeks.map(({ idx, start, dates }) => {
-                            const isFullWeek = dates.length === 5 && isWeekFullySelected(dates);
-                            return (
-                            <div key={idx}>
-                              <div className="flex gap-2 items-center">
-                                <button onClick={() => setExpandedWeeks(p => ({ ...p, [idx]: !p[idx] }))} className="flex-1 flex justify-between p-2 bg-gray-100 rounded-lg text-gray-700">
-                                  <span>Week {idx + 1} {isFullWeek && <span className="text-green-600 text-sm ml-2">✓ Full week</span>}</span>
-                                  <span>{expandedWeeks[idx] ? '▼' : '▶'}</span>
-                                </button>
-                                {getAvailableDaysInWeek(dates) > 0 && (
-                                  isFullWeek ? (
-                                    <button onClick={() => clearWeek(dates)} className="px-3 py-2 text-xs bg-red-100 text-red-600 rounded-lg hover:bg-red-200">
-                                      Clear
-                                    </button>
-                                  ) : (
-                                    <button onClick={() => selectFullWeek(dates)} className="px-3 py-2 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                      {getAvailableDaysInWeek(dates) === 5 ? 'Full Week' : `Select ${getAvailableDaysInWeek(dates)} Days`}
-                                    </button>
-                                  )
-                                )}
+
+                    <p className="text-sm text-gray-500 mb-4">
+                      Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
+                    </p>
+
+                    {/* Date Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {(() => {
+                        const getMonthDates = () => {
+                          if (!selectedRegistrationMonth) return [];
+                          const [year, month] = selectedRegistrationMonth.split('-').map(Number);
+                          return CAMP_DATES.filter(date => {
+                            const d = new Date(date + 'T12:00:00');
+                            return d.getFullYear() === year && d.getMonth() === month - 1;
+                          });
+                        };
+
+                        return getMonthDates().map(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const sel = selectedDates[date] || [];
+                          const amBlocked = isSessionBlocked(date, 'morning');
+                          const pmBlocked = isSessionBlocked(date, 'afternoon');
+                          const fullyBlocked = amBlocked && pmBlocked;
+                          const amSelected = sel.includes('morning');
+                          const pmSelected = sel.includes('afternoon');
+                          const bothSelected = amSelected && pmSelected;
+
+                          return (
+                            <div key={date} className={`rounded-lg border-2 overflow-hidden ${
+                              fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                              bothSelected ? 'border-green-300 bg-green-50' :
+                              (amSelected || pmSelected) ? 'border-yellow-300 bg-yellow-50' :
+                              'border-gray-200 bg-white'
+                            }`}>
+                              <div className="p-2 text-center bg-gray-100 font-medium">
+                                <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                               </div>
-                              {expandedWeeks[idx] && (
-                                <div className="grid grid-cols-5 gap-2 mt-2 pl-4">{dates.map(date => {
-                                  const d = new Date(date + 'T12:00:00');
-                                  const sel = selectedDates[date] || [];
-                                  const amBlocked = isSessionBlocked(date, 'morning');
-                                  const pmBlocked = isSessionBlocked(date, 'afternoon');
-                                  const fullyBlocked = amBlocked && pmBlocked;
-                                  const amSelected = sel.includes('morning');
-                                  const pmSelected = sel.includes('afternoon');
-                                  const bothSelected = amSelected && pmSelected;
-                                  return (
-                                    <div key={date} className={`rounded-lg border-2 overflow-hidden ${
-                                      fullyBlocked ? 'border-gray-200 bg-gray-50' :
-                                      bothSelected ? 'border-green-300 bg-green-50' :
-                                      (amSelected || pmSelected) ? 'border-yellow-300 bg-yellow-50' :
-                                      'border-gray-200 bg-white'
-                                    }`}>
-                                      <div className="p-2 text-center bg-gray-100 font-medium">
-                                        <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
-                                        <div className="text-sm">{d.getDate()}</div>
-                                      </div>
-                                      {fullyBlocked ? (
-                                        <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
-                                      ) : (
-                                        <div className="p-2 space-y-1">
-                                          {amBlocked ? (
-                                            <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
-                                          ) : (
-                                            <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
-                                              ☀️ AM {amSelected ? '✓' : ''}
-                                            </button>
-                                          )}
-                                          {pmBlocked ? (
-                                            <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
-                                          ) : (
-                                            <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
-                                              🌙 PM {pmSelected ? '✓' : ''}
-                                            </button>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}</div>
+                              {fullyBlocked ? (
+                                <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
+                              ) : (
+                                <div className="p-2 space-y-1">
+                                  {amBlocked ? (
+                                    <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
+                                  ) : (
+                                    <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                      ☀️ AM {amSelected ? '✓' : ''}
+                                    </button>
+                                  )}
+                                  {pmBlocked ? (
+                                    <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
+                                  ) : (
+                                    <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                      🌙 PM {pmSelected ? '✓' : ''}
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
-                          );})}</div>
-                        )}
-                      </div>
-                    ))}
+                          );
+                        });
+                      })()}
+                    </div>
                   </div>
                   
                   <div className="bg-white rounded-xl shadow p-6">
