@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.114";
+    const VERSION = "12.115";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T23:00:00");
+    const BUILD_DATE = new Date("2026-02-02T23:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.115", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Added 'My Schedule' tab to counselor dashboard showing assigned sessions and pod campers (read-only)",
+        "Header now shows logged-in user's name for all roles",
+        "Added role-specific dashboard buttons in header (Admin/Parent/Counselor Dashboard) for easy navigation from public pages",
+        "Login button changes to Logout when user is logged in"
+      ]},
       { version: "12.114", date: "2026-02-02", author: "Derek Richardson", changes: [
         "Added tab navigation to counselor dashboard with '📊 Dashboard' tab",
         "Counselor dashboard now consistent with admin and parent navigation patterns"
@@ -5898,14 +5904,23 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               ))}
               {user ? (
                 <React.Fragment>
-                  {user.role === 'admin' ? (
-                    <button onClick={() => setPage('admin')} className="text-green-300 text-sm sm:text-base ml-1 sm:ml-2 hover:text-white hover:underline px-3 py-2.5 min-h-[44px]">
-                      Admin
+                  <span className="text-green-300 text-xs sm:text-sm ml-1 sm:ml-2 px-2 py-1">{user.name}</span>
+                  {user.role === 'admin' && (
+                    <button onClick={() => setPage('admin')} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm sm:text-base min-h-[44px]">
+                      Admin Dashboard
                     </button>
-                  ) : (
-                    <span className="text-green-300 text-sm sm:text-base ml-1 sm:ml-2 hidden sm:inline">{user.name}</span>
                   )}
-                  <button onClick={() => { setUser(null); setPage('home'); }} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
+                  {user.role === 'parent' && (
+                    <button onClick={() => setPage('parent')} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm sm:text-base min-h-[44px]">
+                      Parent Dashboard
+                    </button>
+                  )}
+                  {user.role === 'counselor' && (
+                    <button onClick={() => setPage('counselor')} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm sm:text-base min-h-[44px]">
+                      Counselor Dashboard
+                    </button>
+                  )}
+                  <button onClick={() => { setUser(null); setPage('home'); }} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
                 </React.Fragment>
               ) : (
                 <button onClick={() => setPage('login')} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base min-h-[44px] ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
@@ -10078,9 +10093,9 @@ As a 1099 contractor, you are responsible for:
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard'].map(t => (
+                  {['dashboard', 'schedule'].map(t => (
                     <button key={t} onClick={() => setCounselorTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (counselorTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'dashboard' ? '📊 Dashboard' : t}
+                      {t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 My Schedule' : t}
                     </button>
                   ))}
                 </ScrollableTabs>
@@ -10194,6 +10209,109 @@ As a 1099 contractor, you are responsible for:
                   })}
                 </div>
               </div>
+                </div>
+              )}
+
+              {counselorTab === 'schedule' && (
+                <div className="space-y-6">
+                  <div className="bg-blue-100 border-l-4 border-blue-600 p-4 rounded-lg">
+                    <h3 className="font-bold text-blue-800 mb-2">📅 My Assignments</h3>
+                    <p className="text-blue-800 text-sm">View your assigned sessions and pod campers. Only admins can make changes to assignments.</p>
+                  </div>
+
+                  {/* Get counselor ID */}
+                  {(() => {
+                    const myCounselor = counselors.find(c => c.email === user?.email);
+                    if (!myCounselor) {
+                      return <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No counselor profile found.</div>;
+                    }
+
+                    // Get all assignments for this counselor
+                    const myAssignments = {};
+                    Object.entries(podAssignments).forEach(([dateSession, pods]) => {
+                      const [date, session] = dateSession.split('_');
+                      pods.forEach(pod => {
+                        if (pod.counselorId === myCounselor.id) {
+                          if (!myAssignments[date]) myAssignments[date] = {};
+                          myAssignments[date][session] = pod.camperIds || [];
+                        }
+                      });
+                    });
+
+                    const sortedDates = Object.keys(myAssignments).sort();
+
+                    if (sortedDates.length === 0) {
+                      return (
+                        <div className="bg-white rounded-xl shadow p-6 text-center">
+                          <p className="text-gray-500">You haven't been assigned to any sessions yet.</p>
+                          <p className="text-sm text-gray-400 mt-2">Check back later or contact the admin.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {sortedDates.map(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const sessions = myAssignments[date];
+
+                          return (
+                            <div key={date} className="bg-white rounded-xl shadow p-6">
+                              <h3 className="font-bold text-lg text-green-800 mb-4">
+                                {d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                              </h3>
+
+                              <div className="space-y-4">
+                                {sessions.morning && (
+                                  <div className="border-l-4 border-yellow-500 pl-4 bg-yellow-50 p-3 rounded">
+                                    <h4 className="font-bold text-yellow-700 mb-2">☀️ Morning Session (9:00 AM - 12:00 PM)</h4>
+                                    {sessions.morning.length > 0 ? (
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.morning.length} campers):</p>
+                                        {sessions.morning.map(camperId => {
+                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
+                                          return (
+                                            <div key={camperId} className="flex items-center gap-2 text-sm">
+                                              <span className="text-green-600">•</span>
+                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {sessions.afternoon && (
+                                  <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-3 rounded">
+                                    <h4 className="font-bold text-blue-700 mb-2">🌙 Afternoon Session (12:00 PM - 3:00 PM)</h4>
+                                    {sessions.afternoon.length > 0 ? (
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.afternoon.length} campers):</p>
+                                        {sessions.afternoon.map(camperId => {
+                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
+                                          return (
+                                            <div key={camperId} className="flex items-center gap-2 text-sm">
+                                              <span className="text-green-600">•</span>
+                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>

@@ -280,6 +280,11 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 ┌─────────────────────────────────────────────────────────────────┐
 │  COUNSELOR DASHBOARD (after login)                              │
 │                                                                 │
+│  ┌──────────────┬────────────┐                                  │
+│  │ 📊 Dashboard │ 📅 My Schedule │                                │
+│  └──────────────┴────────────┘                                  │
+│                                                                 │
+│  DASHBOARD TAB:                                                 │
 │  ┌──────────────────────────────────────────────┐               │
 │  │  Stats Overview                              │               │
 │  │  ┌──────────┐ ┌──────────┐ ┌──────────┐     │               │
@@ -305,10 +310,22 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  │  🟢 Available    🔴 Unavailable   ⬜ Not Set  │               │
 │  └──────────────────────────────────────────────┘               │
 │                                                                 │
-│  NOTE: Counselors currently do NOT see their pod                │
-│  assignments or which campers they have in their                │
-│  own dashboard. Only parents can see pod info                   │
-│  in their Camp Schedule tab.                                    │
+│  MY SCHEDULE TAB (NEW):                                         │
+│  ┌──────────────────────────────────────────────┐               │
+│  │  Shows assigned sessions and pod campers     │               │
+│  │  Read-only (admin assigns)                   │               │
+│  │                                              │               │
+│  │  Monday, June 22, 2026                       │               │
+│  │  ┌────────────────────────────────────┐      │               │
+│  │  │ ☀️ Morning Session (9:00 AM - 12:00 PM) │      │               │
+│  │  │ Your Pod (5 campers):                │      │               │
+│  │  │ • Sarah Johnson                      │      │               │
+│  │  │ • Emma Williams                      │      │               │
+│  │  │ • Lily Chen                          │      │               │
+│  │  │ • Maya Davis                         │      │               │
+│  │  │ • Zoe Miller                         │      │               │
+│  │  └────────────────────────────────────┘      │               │
+│  └──────────────────────────────────────────────┘               │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -542,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.115 | 2026-02-02 | Derek Richardson | Added My Schedule tab to counselor dashboard showing assigned sessions and pod campers (read-only); header shows logged-in user's name for all roles; added role-specific dashboard buttons in header; Login button changes to Logout when logged in |
 | 12.114 | 2026-02-02 | Derek Richardson | Added tab navigation to counselor dashboard with Dashboard tab; counselor dashboard now consistent with admin and parent navigation patterns |
 | 12.113 | 2026-02-02 | Derek Richardson | Fixed counselor availability calendar month jumping - stays on current month when toggling sessions; counselor dashboard month selection now persists across updates |
 | 12.112 | 2026-02-02 | Audrey Richardson | Password show/hide toggles on all password fields; counselor availability starts grey (unset) with 3-state cycle (grey→green→red); card-based availability UI matching admin sessions tab; pay updated to $80/session ($26.66/hr); counselor availability data now flows to admin dashboard automatically; fixed afternoon session time display |
