@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.117";
+    const VERSION = "12.118";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T00:30:00");
+    const BUILD_DATE = new Date("2026-02-03T01:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.118", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed Assignments tab bug: counselor-only pods now properly save to assignments",
+        "Fixed new pod creation - pods with counselors but no campers are now persisted",
+        "Sessions tab now displays pod assignments with camper counts (e.g., '3/5, 2/5')",
+        "Added warning indicator (⚠️) when registered campers exceed available pod capacity",
+        "Updated Sessions tab legend to explain pod capacity display"
+      ]},
       { version: "12.117", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Updated parent registration UI to match admin Sessions tab pattern",
         "Replaced collapsible accordion with month selector buttons and responsive grid layout",
@@ -3030,6 +3037,18 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         return { assigned };
       };
 
+      // Get pod information for a date/session
+      const getPodStats = (date, session) => {
+        const key = `${date}_${session}`;
+        const sessionAssignments = assignments[key] || {};
+        const pods = Object.entries(sessionAssignments).map(([counselorId, camperIds]) => ({
+          counselorId,
+          camperCount: camperIds.length
+        }));
+        const totalCapacity = pods.length * KIDS_PER_COUNSELOR;
+        return { pods, totalCapacity };
+      };
+
       // Toggle a single session
       const toggleSession = (date, session) => {
         const isBlocked = isSessionBlocked(date, session);
@@ -3175,6 +3194,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 const pmCounselors = getCounselorStats(date, 'afternoon');
                 const amAssigned = getAssignedStats(date, 'morning');
                 const pmAssigned = getAssignedStats(date, 'afternoon');
+                const amPods = getPodStats(date, 'morning');
+                const pmPods = getPodStats(date, 'afternoon');
 
                 return (
                   <div
@@ -3214,14 +3235,23 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          <span title="Counselors available">👤 {amCounselors.available}/{amCounselors.total}</span>
-                          <span className="mx-1">•</span>
-                          <span title="Campers registered">🏕️ {amStats.count}</span>
-                          {amAssigned.assigned > 0 && (
-                            <>
-                              <span className="mx-1">•</span>
-                              <span title="Assigned">📋 {amAssigned.assigned}</span>
-                            </>
+                          <div className="flex items-center gap-1">
+                            <span title="Campers registered">🏕️ {amStats.count}</span>
+                            {amStats.count > amPods.totalCapacity && amPods.totalCapacity > 0 && (
+                              <span className="text-red-600 font-bold" title="Not enough counselors!">⚠️</span>
+                            )}
+                          </div>
+                          {amPods.pods.length > 0 ? (
+                            <div className="mt-1 text-xs">
+                              <span className="text-gray-600">Pods: </span>
+                              {amPods.pods.map((pod, idx) => (
+                                <span key={idx} className="mr-1">
+                                  {pod.camperCount}/{KIDS_PER_COUNSELOR}{idx < amPods.pods.length - 1 ? ',' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-xs text-gray-400">No pods assigned</div>
                           )}
                         </div>
                       </button>
@@ -3240,14 +3270,23 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                           </span>
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          <span title="Counselors available">👤 {pmCounselors.available}/{pmCounselors.total}</span>
-                          <span className="mx-1">•</span>
-                          <span title="Campers registered">🏕️ {pmStats.count}</span>
-                          {pmAssigned.assigned > 0 && (
-                            <>
-                              <span className="mx-1">•</span>
-                              <span title="Assigned">📋 {pmAssigned.assigned}</span>
-                            </>
+                          <div className="flex items-center gap-1">
+                            <span title="Campers registered">🏕️ {pmStats.count}</span>
+                            {pmStats.count > pmPods.totalCapacity && pmPods.totalCapacity > 0 && (
+                              <span className="text-red-600 font-bold" title="Not enough counselors!">⚠️</span>
+                            )}
+                          </div>
+                          {pmPods.pods.length > 0 ? (
+                            <div className="mt-1 text-xs">
+                              <span className="text-gray-600">Pods: </span>
+                              {pmPods.pods.map((pod, idx) => (
+                                <span key={idx} className="mr-1">
+                                  {pod.camperCount}/{KIDS_PER_COUNSELOR}{idx < pmPods.pods.length - 1 ? ',' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-xs text-gray-400">No pods assigned</div>
                           )}
                         </div>
                       </button>
@@ -3276,7 +3315,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               </div>
             </div>
             <div className="mt-3 text-xs text-gray-500">
-              <strong>Stats:</strong> 👤 = Counselors available/total • 🏕️ = Campers registered • 📋 = Assigned to pods
+              <strong>Stats:</strong> 🏕️ = Campers registered • Pods show campers/capacity for each counselor (e.g., "3/5" means 3 campers in a pod of 5) • ⚠️ = Not enough counselors for registered campers
             </div>
           </div>
 
@@ -3981,8 +4020,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const newAssignments = { ...assignments };
         newAssignments[key] = {};
         newPods.forEach(pod => {
-          if (pod.counselorId && pod.camperIds.length > 0) {
-            newAssignments[key][pod.counselorId] = pod.camperIds;
+          // Save any pod that has a counselor assigned (even if no campers yet)
+          if (pod.counselorId) {
+            newAssignments[key][pod.counselorId] = pod.camperIds || [];
           }
         });
         onSaveAssignments(newAssignments, 'Updated pod assignments');
