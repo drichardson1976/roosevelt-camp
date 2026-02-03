@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.112";
+    const VERSION = "12.113";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T21:54:29");
+    const BUILD_DATE = new Date("2026-02-02T22:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.113", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Fixed counselor availability calendar month jumping - stays on current month when toggling sessions",
+        "Counselor dashboard month selection now persists across updates"
+      ]},
       { version: "12.112", date: "2026-02-02", author: "Audrey Richardson", changes: [
         "Added show/hide password toggle on all password fields (login, parent onboarding, counselor onboarding)",
         "Counselor onboarding availability now starts grey (unselected) instead of pre-selected",
@@ -5596,6 +5600,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
+      const [counselorDashMonth, setCounselorDashMonth] = useState(5); // Persist selected month in Counselor Dashboard (5 = June)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
@@ -9972,7 +9977,8 @@ As a 1099 contractor, you are responsible for:
 
       // ==================== COUNSELOR ====================
       const CounselorDash = () => {
-        const [month, setMonth] = useState(5);
+        const month = counselorDashMonth;
+        const setMonth = setCounselorDashMonth;
         const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
         const myAvail = availability[user?.email] || {};
 
