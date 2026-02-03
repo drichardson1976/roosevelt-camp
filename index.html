@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.110";
+    const VERSION = "12.111";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T10:15:00");
+    const BUILD_DATE = new Date("2026-02-02T21:16:00");
 
     const RELEASE_NOTES = [
+      { version: "12.111", date: "2026-02-02", author: "Audrey Richardson", changes: [
+        "Policies step (Step 5) is now required during parent onboarding — cannot be skipped",
+        "Skip button on steps 2-4 now jumps to Policies instead of completing setup",
+        "Auto-select camper if parent has only one child in registration flow",
+        "Added prominent warning when no camper selected but dates are chosen",
+        "Camper selection shows checkmark and count when selected",
+        "Reorganized parent tabs: Dashboard, My Campers, Registrations, Messages",
+        "Camp Schedule now appears within My Campers tab (below camper profiles)",
+        "Renamed Register tab to Registrations"
+      ]},
       { version: "12.110", date: "2026-02-02", author: "Derek Richardson", changes: [
         "Added author tracking to release notes",
         "Release notes now display who made each change"
@@ -998,7 +1008,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             return false;
           }
         }
-        // Steps 2-6 are all skippable - validation is advisory only
+        // Steps 2-4 are skippable, step 5 (Policies) is required
+        if (step === 5) {
+          if (!policiesAccepted.pickup || !policiesAccepted.dropoff) {
+            setError('You must accept both the drop-off and pick-up policies before continuing.');
+            return false;
+          }
+        }
         // Emergency contact phone validation (if adding contacts)
         if (step === 3 && emergencyData.length > 0) {
           const invalidContact = emergencyData.find(c => !isValidPhone(c.phone));
@@ -1559,13 +1575,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     {step === totalSteps ? 'Complete Setup' : 'Continue →'}
                   </button>
                 </div>
-                {/* Skip & Finish option for steps 2-5 */}
-                {step > 1 && step < totalSteps && (
+                {/* Skip to Policies option for steps 2-4 (Policies step 5 is required) */}
+                {step > 1 && step < 5 && (
                   <button
-                    onClick={handleComplete}
+                    onClick={() => setStep(5)}
                     className="w-full py-2 text-gray-500 hover:text-green-700 text-sm border border-gray-200 rounded-lg hover:border-green-300"
                   >
-                    Skip remaining steps & finish setup →
+                    Skip to policies & finish setup →
                   </button>
                 )}
               </div>
@@ -9019,6 +9035,13 @@ As a 1099 contractor, you are responsible for:
         
         const myUser = users.find(u => u.email === user?.email) || user;
         const myChildren = myUser?.children || [];
+
+        // Auto-select if only one camper exists
+        useEffect(() => {
+          if (myChildren.length === 1 && selectedChildren.length === 0) {
+            setSelectedChildren([myChildren[0].id]);
+          }
+        }, [myChildren.length]);
         const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
         const venmoCode = generateVenmoCode(user?.name);
         
@@ -9154,9 +9177,9 @@ As a 1099 contractor, you are responsible for:
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'schedule', 'register', 'campers', 'messages'].map(t => (
+                  {['dashboard', 'campers', 'register', 'messages'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Register' : t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 Camp Schedule' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Registrations' : t === 'dashboard' ? '📊 Dashboard' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -9234,14 +9257,15 @@ As a 1099 contractor, you are responsible for:
 
               {parentTab === 'register' && (
                 <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-2">Select Children to Register</h3>
+                  <div className={'bg-white rounded-xl shadow p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
+                    <h3 className="font-bold text-lg mb-2">Step 1: Select Children to Register</h3>
                     <p className="text-sm text-gray-500 mb-4">Choose which of your children to register for camp sessions. Once registered, they become campers!</p>
                     {myChildren.length === 0 ? <p className="text-gray-500">Add campers in the "My Campers" tab first</p> : (
                       <div className="flex flex-wrap gap-2">{myChildren.map(c => (
-                        <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'px-4 py-2 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50' : 'border-gray-200')}>{c.name}</button>
+                        <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'px-4 py-2 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50 font-bold' : 'border-gray-200')}>{selectedChildren.includes(c.id) ? '✓ ' : ''}{c.name}</button>
                       ))}</div>
                     )}
+                    {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {selectedChildren.length} camper{selectedChildren.length > 1 ? 's' : ''} selected</p>}
                   </div>
                   
                   <div className="bg-white rounded-xl shadow p-6">
@@ -9389,6 +9413,12 @@ As a 1099 contractor, you are responsible for:
                         </div>
                       );
                     })()}
+                    {!selectedChildren.length && Object.values(selectedDates).flat().length > 0 && (
+                      <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
+                        <span className="text-yellow-700 font-bold text-lg">⚠️ Please select a camper above before registering!</span>
+                        <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Children to Register" and click on your child's name.</p>
+                      </div>
+                    )}
                     <button onClick={handleRegister} disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length} className="w-full mt-4 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
                   </div>
                 </div>
@@ -9407,27 +9437,40 @@ As a 1099 contractor, you are responsible for:
               )}
 
               {parentTab === 'campers' && (
-                <div className="bg-white rounded-xl shadow p-6">
-                  <h3 className="font-bold text-lg mb-2">My Campers</h3>
-                  <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Register tab to make them campers!</p>
-                  {myChildren.length > 0 ? (
-                    <ChildrenManager
-                      children={myChildren}
-                      onUpdate={(updatedChild) => {
-                        const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
-                        saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-                        showToast('Child updated!');
-                      }}
-                      onDelete={(childId) => {
-                        const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
-                        saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-                        showToast('Child removed');
-                      }}
-                      onAdd={addChild}
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-2">My Campers</h3>
+                    <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Registrations tab to make them campers!</p>
+                    {myChildren.length > 0 ? (
+                      <ChildrenManager
+                        children={myChildren}
+                        onUpdate={(updatedChild) => {
+                          const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
+                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          showToast('Child updated!');
+                        }}
+                        onDelete={(childId) => {
+                          const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
+                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          showToast('Child removed');
+                        }}
+                        onAdd={addChild}
+                        registrations={myRegs}
+                      />
+                    ) : (
+                      <AddChildForm onAdd={addChild} />
+                    )}
+                  </div>
+                  {myRegs.length > 0 && (
+                    <CamperScheduleTab
+                      myChildren={myChildren}
                       registrations={myRegs}
+                      allRegistrations={registrations}
+                      assignments={assignments}
+                      counselors={counselors}
+                      campers={campers}
+                      users={users}
                     />
-                  ) : (
-                    <AddChildForm onAdd={addChild} />
                   )}
                 </div>
               )}
