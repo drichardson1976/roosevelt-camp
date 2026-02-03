@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.127 | 2026-02-03 | Derek Richardson | Improved Admin Campers tab - removed parent email display; added Emergency Contacts column with clickable link to view full contact details (name, relationship, phone, email, priority); emergency contacts now visible in Edit Camper modal |
 | 12.126 | 2026-02-03 | Derek Richardson | Improved birthdate picker UX - added min/max constraints to start calendar at appropriate year (campers: last 15 years, counselors: 14-25 years ago); makes date selection much faster |
 | 12.125 | 2026-02-02 | Derek Richardson | Fixed Danger Zone availability deletion - corrected function name from saveAvailability to saveAvail; now properly saves to 'main' record in Supabase with correct data structure |
 | 12.124 | 2026-02-02 | Derek Richardson | Fixed orphaned counselor availability deletion - now cleans up all orphaned counselorSchedule entries when counselor no longer exists; handles case where counselor was deleted but availability records remain |
