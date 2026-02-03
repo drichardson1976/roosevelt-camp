@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.128 | 2026-02-03 | Derek Richardson | Added emergency contacts management: Danger Zone can now delete emergency contacts; fixed registration bug where multiple campers/sessions only registered one camper (race condition in saveReg); parents can now edit/delete emergency contacts with validation (requires 3+ contacts, 1+ non-parent) |
 | 12.127 | 2026-02-03 | Derek Richardson | Improved Admin Campers tab - removed parent email display; added Emergency Contacts column with clickable link to view full contact details (name, relationship, phone, email, priority); emergency contacts now visible in Edit Camper modal |
 | 12.126 | 2026-02-03 | Derek Richardson | Improved birthdate picker UX - added min/max constraints to start calendar at appropriate year (campers: last 15 years, counselors: 14-25 years ago); makes date selection much faster |
 | 12.125 | 2026-02-02 | Derek Richardson | Fixed Danger Zone availability deletion - corrected function name from saveAvailability to saveAvail; now properly saves to 'main' record in Supabase with correct data structure |

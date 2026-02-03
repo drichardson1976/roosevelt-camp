@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.127";
+    const VERSION = "12.128";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T19:42:00");
+    const BUILD_DATE = new Date("2026-02-03T20:15:00");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -5906,8 +5906,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       };
 
       const saveReg = async (r, action = null) => {
-        const newRegs = registrations.some(x => x.id === r.id) ? registrations.map(x => x.id === r.id ? r : x) : [...registrations, r];
-        setRegistrations(newRegs);
+        setRegistrations(prevRegs => {
+          const newRegs = prevRegs.some(x => x.id === r.id) ? prevRegs.map(x => x.id === r.id ? r : x) : [...prevRegs, r];
+          return newRegs;
+        });
         await storage.set('camp_registrations', r.id, r);
         if (action) addToHistory('Registration', action);
       };
@@ -6020,9 +6022,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const availableDates = CAMP_DATES.filter(d => !isDateFullyBlocked(d));
 
       // New save functions for onboarding system
-      const saveEmergencyContacts = async (contacts) => {
+      const saveEmergencyContacts = async (contacts, action = null) => {
         setEmergencyContacts(contacts);
         await storage.set('camp_emergency_contacts', 'main', contacts);
+        if (action) addToHistory('Emergency Contacts', action);
       };
 
       const saveOnboardingProgress = async (progress) => {
@@ -9327,6 +9330,45 @@ As a 1099 contractor, you are responsible for:
                           )}
                         </div>
                       </details>
+
+                      {/* Emergency Contacts */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Emergency Contacts ({emergencyContacts.length} contacts)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {emergencyContacts.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No emergency contact records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {emergencyContacts.map(contact => (
+                                <div key={contact.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{contact.name}</div>
+                                    <div className="text-sm text-gray-500">
+                                      {contact.relationship} • {contact.phone}
+                                      {contact.userEmail && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">Parent: {contact.userEmail}</span>}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete emergency contact ${contact.name}?`)) return;
+                                      const newContacts = emergencyContacts.filter(c => c.id !== contact.id);
+                                      await saveEmergencyContacts(newContacts, `Deleted emergency contact ${contact.name}`);
+                                      showToast('Emergency contact deleted');
+                                      setTimeout(() => window.location.reload(), 1000);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </div>
 
@@ -9477,6 +9519,285 @@ As a 1099 contractor, you are responsible for:
               <span className="text-xl">+</span>
               <span>Add Another Child</span>
             </button>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast }) => {
+      const [localContacts, setLocalContacts] = useState([]);
+      const [editingId, setEditingId] = useState(null);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [editForm, setEditForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+      const [hasChanges, setHasChanges] = useState(false);
+
+      // Initialize local contacts from props
+      useEffect(() => {
+        const myContacts = emergencyContacts.filter(c => c.userEmail === parentEmail);
+        setLocalContacts(myContacts);
+      }, [emergencyContacts, parentEmail]);
+
+      // Check if requirements are met
+      const meetsRequirements = () => {
+        const nonParentContacts = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father');
+        return localContacts.length >= 3 && nonParentContacts.length >= 1;
+      };
+
+      const handleEdit = (contact) => {
+        setEditingId(contact.id);
+        setEditForm({
+          name: contact.name,
+          relationship: contact.relationship,
+          phone: contact.phone,
+          email: contact.email || '',
+          priority: contact.priority || 'normal'
+        });
+      };
+
+      const handleSaveEdit = () => {
+        if (!editForm.name || !editForm.relationship || !editForm.phone) {
+          showToast('Please fill in all required fields', 'error');
+          return;
+        }
+        const updatedContacts = localContacts.map(c =>
+          c.id === editingId ? { ...c, ...editForm } : c
+        );
+        setLocalContacts(updatedContacts);
+        setEditingId(null);
+        setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+        setHasChanges(true);
+      };
+
+      const handleDelete = (id) => {
+        if (!confirm('Delete this emergency contact?')) return;
+        setLocalContacts(localContacts.filter(c => c.id !== id));
+        setHasChanges(true);
+      };
+
+      const handleAdd = () => {
+        if (!editForm.name || !editForm.relationship || !editForm.phone) {
+          showToast('Please fill in all required fields', 'error');
+          return;
+        }
+        const newContact = {
+          id: `ec_${Date.now()}`,
+          userEmail: parentEmail,
+          ...editForm
+        };
+        setLocalContacts([...localContacts, newContact]);
+        setShowAddForm(false);
+        setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+        setHasChanges(true);
+      };
+
+      const handleSaveChanges = () => {
+        if (!meetsRequirements()) {
+          showToast('You must have at least 3 emergency contacts, including at least 1 non-parent', 'error');
+          return;
+        }
+        // Merge local contacts with other users' contacts
+        const otherContacts = emergencyContacts.filter(c => c.userEmail !== parentEmail);
+        const allContacts = [...otherContacts, ...localContacts];
+        onSave(allContacts);
+        setHasChanges(false);
+      };
+
+      const handleCancel = () => {
+        const myContacts = emergencyContacts.filter(c => c.userEmail === parentEmail);
+        setLocalContacts(myContacts);
+        setHasChanges(false);
+        setEditingId(null);
+        setShowAddForm(false);
+      };
+
+      const requirementsMet = meetsRequirements();
+      const nonParentCount = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father').length;
+
+      return (
+        <div className="space-y-4">
+          {/* Requirements Status */}
+          <div className={`rounded-lg p-3 border-2 ${requirementsMet ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">{requirementsMet ? '✓' : '⚠️'}</span>
+              <span className="font-medium">{requirementsMet ? 'Requirements Met' : 'Requirements Not Met'}</span>
+            </div>
+            <div className="text-sm text-gray-700">
+              <div>Total contacts: <strong>{localContacts.length}</strong> / 3 minimum {localContacts.length >= 3 ? '✓' : '❌'}</div>
+              <div>Non-parent contacts: <strong>{nonParentCount}</strong> / 1 minimum {nonParentCount >= 1 ? '✓' : '❌'}</div>
+            </div>
+          </div>
+
+          {/* Contact List */}
+          {localContacts.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 3 contacts.</p>
+          ) : (
+            <div className="space-y-2">
+              {localContacts.map(contact => (
+                <div key={contact.id} className="border rounded-lg p-4">
+                  {editingId === contact.id ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        <input
+                          value={editForm.name}
+                          onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                        <input
+                          value={editForm.relationship}
+                          onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          placeholder="e.g., Grandparent, Neighbor, Friend"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                        <input
+                          value={editForm.phone}
+                          onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                          value={editForm.email}
+                          onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+                          }}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{contact.name}</div>
+                        <div className="text-sm text-gray-600">{contact.relationship}</div>
+                        <div className="text-sm text-gray-600">{contact.phone}</div>
+                        {contact.email && <div className="text-sm text-gray-600">{contact.email}</div>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(contact)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(contact.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add New Contact Form */}
+          {showAddForm ? (
+            <div className="border-2 border-green-300 rounded-lg p-4 space-y-3 bg-green-50">
+              <h4 className="font-medium">Add Emergency Contact</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                <input
+                  value={editForm.relationship}
+                  onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="e.g., Grandparent, Neighbor, Friend"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input
+                  value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  value={editForm.email}
+                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdd}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Add Contact
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-3 border-2 border-dashed border-green-300 rounded-lg text-green-600 hover:bg-green-50 hover:border-green-400"
+            >
+              + Add Emergency Contact
+            </button>
+          )}
+
+          {/* Save/Cancel Changes */}
+          {hasChanges && (
+            <div className="flex gap-2 pt-4 border-t">
+              <button
+                onClick={handleSaveChanges}
+                disabled={!requirementsMet}
+                className="flex-1 px-4 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                {requirementsMet ? 'Save Changes' : 'Cannot Save - Requirements Not Met'}
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
           )}
         </div>
       );
@@ -9887,6 +10208,7 @@ As a 1099 contractor, you are responsible for:
           // Calculate proportional discount per session
           const discountRatio = pricing.originalTotal > 0 ? pricing.discount / pricing.originalTotal : 0;
 
+          let regCounter = 0;
           for (const childId of selectedChildren) {
             const child = myChildren.find(c => c.id === childId);
             for (const [date, sessions] of dates) {
@@ -9895,7 +10217,7 @@ As a 1099 contractor, you are responsible for:
               const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
 
               await saveReg({
-                id: `reg_${Date.now()}_${childId}_${date}`,
+                id: `reg_${Date.now()}_${regCounter++}_${childId}_${date}`,
                 orderId, // Group registrations from same order
                 childId, childName: child?.name,
                 parentEmail: user?.email, parentName: user?.name,
@@ -10241,6 +10563,23 @@ As a 1099 contractor, you are responsible for:
                       users={users}
                     />
                   )}
+
+                  {/* Emergency Contacts Management */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
+                    </p>
+                    <ParentEmergencyContactsManager
+                      parentEmail={user?.email}
+                      emergencyContacts={emergencyContacts}
+                      onSave={(contacts) => {
+                        saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
+                        showToast('Emergency contacts updated!');
+                      }}
+                      showToast={showToast}
+                    />
+                  </div>
                 </div>
               )}
 
