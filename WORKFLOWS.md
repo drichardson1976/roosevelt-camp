@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.121 | 2026-02-03 | Derek Richardson | Added individual record deletion to Danger Zone; provided complete Supabase schema SQL for easy setup; individual deletes for specific parents/counselors/campers/registrations/assignments in expandable sections |
 | 12.120 | 2026-02-03 | Derek Richardson | Added Danger Zone tab with bulk delete for parents/counselors/campers/registrations/assignments; nuclear option to wipe all user data; read-only Supabase table viewer; verified counselor onboarding creates counselor-only accounts |
 | 12.119 | 2026-02-03 | Derek Richardson | Fixed critical drag-and-drop bug in Assignments tab; fixed pod ID consistency; Add Pod button now works correctly; enhanced delete pod to work for any pod and return counselors/campers to unassigned; improved state management to keep session view open after changes |
 | 12.118 | 2026-02-03 | Derek Richardson | Fixed Assignments tab: counselor-only pods now save properly; fixed new pod creation persistence; Sessions tab now displays pod assignments with camper counts; added warning indicator when registered campers exceed pod capacity; updated Sessions tab legend |

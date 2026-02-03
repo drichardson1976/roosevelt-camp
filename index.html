@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.120";
+    const VERSION = "12.121";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T03:00:00");
+    const BUILD_DATE = new Date("2026-02-03T04:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added individual record deletion in Danger Zone - delete specific parents, counselors, campers, registrations, or assignments",
+        "Provided complete Supabase schema SQL for easy copy-paste setup",
+        "Individual deletes organized in expandable sections for easy browsing"
+      ]},
       { version: "12.120", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Added Danger Zone tab to admin dashboard for data management",
         "Implemented bulk delete functionality for parents, counselors, campers, registrations, and assignments",
@@ -8978,6 +8983,186 @@ As a 1099 contractor, you are responsible for:
                           💣 DELETE ALL USER DATA
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Individual Record Deletion */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-gray-800 mb-4">🎯 Delete Individual Records</h3>
+                    <div className="space-y-4">
+                      {/* Parents */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Parents ({users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length} records)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No parent records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).map(parent => (
+                                <div key={parent.email} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{parent.name}</div>
+                                    <div className="text-sm text-gray-500">{parent.email}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete parent ${parent.name}? This will also remove their children and registrations.`)) return;
+                                      const newUsers = users.filter(u => u.email !== parent.email);
+                                      await saveUsers(newUsers, `Deleted parent ${parent.name}`);
+                                      showToast(`Deleted ${parent.name}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselors */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Counselors ({counselors.length} records)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {counselors.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No counselor records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {counselors.map(counselor => (
+                                <div key={counselor.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{counselor.name}</div>
+                                    <div className="text-sm text-gray-500">{counselor.email}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete counselor ${counselor.name}?`)) return;
+                                      await deleteCounselor(counselor.id, counselor.name);
+                                      showToast(`Deleted ${counselor.name}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Campers */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Campers ({campers.length} records)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {campers.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No camper records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {campers.map(camper => (
+                                <div key={camper.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{camper.name}</div>
+                                    <div className="text-sm text-gray-500">Age: {camper.age}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete camper ${camper.name}?`)) return;
+                                      await deleteCamper(camper.id, camper.name);
+                                      showToast(`Deleted ${camper.name}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Registrations */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Registrations ({registrations.length} records)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {registrations.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No registration records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {registrations.map(reg => (
+                                <div key={reg.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{reg.camperName || reg.childName}</div>
+                                    <div className="text-sm text-gray-500">{reg.date} - {reg.sessions?.join(', ')}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete registration for ${reg.camperName || reg.childName}?`)) return;
+                                      const newRegs = registrations.filter(r => r.id !== reg.id);
+                                      await saveRegistrations(newRegs, `Deleted registration ${reg.id}`);
+                                      showToast('Registration deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Assignments */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Pod Assignments ({Object.keys(assignments).length} sessions)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(assignments).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No assignment records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(assignments).map(([sessionKey, pods]) => (
+                                <div key={sessionKey} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{sessionKey.replace('_', ' - ')}</div>
+                                    <div className="text-sm text-gray-500">{Object.keys(pods).length} pod(s)</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete all pod assignments for ${sessionKey}?`)) return;
+                                      const newAssignments = { ...assignments };
+                                      delete newAssignments[sessionKey];
+                                      await saveAssignments(newAssignments, `Deleted assignments for ${sessionKey}`);
+                                      showToast('Session assignments deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </div>
 
