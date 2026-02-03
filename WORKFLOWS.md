@@ -194,21 +194,39 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  │                                    ▼                     │   │
 │  │  Step 3: Availability                                    │   │
 │  │  ┌──────────────────────────────────────────┐            │   │
-│  │  │  Select sessions you can work:           │            │   │
-│  │  │       Mon  Tue  Wed  Thu  Fri            │            │   │
-│  │  │  AM:  [✓]  [✓]  [✓]  [✓]  [✓]           │            │   │
-│  │  │  PM:  [✓]  [✓]  [ ]  [✓]  [ ]           │            │   │
+│  │  │  Click sessions to set availability:     │            │   │
+│  │  │  All sessions start GREY (unset).        │            │   │
+│  │  │  Click to cycle:                         │            │   │
+│  │  │    Grey → Green (available)              │            │   │
+│  │  │    Green → Red (unavailable)             │            │   │
+│  │  │    Red → Grey (unset)                    │            │   │
 │  │  │                                          │            │   │
-│  │  │  [Select All]  [Clear All]               │            │   │
-│  │  │  12 sessions selected                    │            │   │
+│  │  │  Card-based layout (matches admin        │            │   │
+│  │  │  sessions tab style):                    │            │   │
+│  │  │                                          │            │   │
+│  │  │  ┌─ Week 1: Jun 22 ─────────────────┐   │            │   │
+│  │  │  │  Mon    Tue    Wed    Thu    Fri   │   │            │   │
+│  │  │  │  🟢AM  🟢AM  ⬜AM  🔴AM  🟢AM   │   │            │   │
+│  │  │  │  🟢PM  ⬜PM  ⬜PM  🔴PM  🟢PM   │   │            │   │
+│  │  │  └──────────────────────────────────┘   │            │   │
+│  │  │                                          │            │   │
+│  │  │  Legend:                                 │            │   │
+│  │  │  🟢 Available  🔴 Unavailable  ⬜ Unset  │            │   │
+│  │  │                                          │            │   │
+│  │  │  [Select All Available] [Clear All]      │            │   │
+│  │  │  Available: 8  Unavailable: 4  Unset: 8  │            │   │
 │  │  └──────────────────────────────────────────┘            │   │
+│  │  NOTE: Data saves to BOTH availability (by email)        │   │
+│  │  and counselorSchedule (by ID) so admin dashboard        │   │
+│  │  reflects it immediately without manual entry.           │   │
 │  │                                    │                     │   │
 │  │                                    ▼                     │   │
 │  │  Step 4: Responsibilities & Pay                          │   │
 │  │  ├─ ☐ Accept counselor responsibilities                  │   │
 │  │  │   (supervise, lead drills, safety, arrive 15 min      │   │
 │  │  │    early, be a role model)                             │   │
-│  │  └─ ☐ Accept pay terms ($25/session, 1099 contractor)    │   │
+│  │  └─ ☐ Accept pay terms ($80/session = $26.66/hr,         │   │
+│  │       1099 contractor)                                   │   │
 │  │                                    │                     │   │
 │  │                                    ▼                     │   │
 │  │  Step 5: Review & Submit                                 │   │
@@ -524,6 +542,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.112 | 2026-02-02 | Audrey Richardson | Password show/hide toggles on all password fields; counselor availability starts grey (unset) with 3-state cycle (grey→green→red); card-based availability UI matching admin sessions tab; pay updated to $80/session ($26.66/hr); counselor availability data now flows to admin dashboard automatically; fixed afternoon session time display |
 | 12.111 | 2026-02-02 | Audrey Richardson | Policies step now required; auto-select single camper; camper selection warning; reorganized parent tabs (Dashboard, My Campers, Registrations, Messages); Camp Schedule moved into My Campers tab |
 
 ---
