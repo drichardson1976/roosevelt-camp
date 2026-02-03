@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.121";
+    const VERSION = "12.122";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T04:00:00");
+    const BUILD_DATE = new Date("2026-02-02T04:00:00");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -8848,6 +8848,7 @@ As a 1099 contractor, you are responsible for:
                             const newUsers = users.filter(u => u.role !== 'parent' && !u.roles?.includes('parent'));
                             await saveUsers(newUsers, 'Deleted all parent accounts');
                             showToast('All parents deleted');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -8876,6 +8877,7 @@ As a 1099 contractor, you are responsible for:
                             await saveAvailability({}, 'Cleared all counselor availability');
                             await saveCounselorSchedule({}, 'Cleared all counselor schedules');
                             showToast('All counselors deleted');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -8900,6 +8902,7 @@ As a 1099 contractor, you are responsible for:
                             await saveCampers([], 'Deleted all campers');
                             await saveCamperParentLinks([], 'Cleared all camper-parent links');
                             showToast('All campers deleted');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -8923,6 +8926,7 @@ As a 1099 contractor, you are responsible for:
                             }
                             await saveRegistrations([], 'Deleted all registrations');
                             showToast('All registrations deleted');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -8946,6 +8950,7 @@ As a 1099 contractor, you are responsible for:
                             }
                             await saveAssignments({}, 'Deleted all pod assignments');
                             showToast('All assignments deleted');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -8977,6 +8982,7 @@ As a 1099 contractor, you are responsible for:
                             await saveAvailability({}, 'Nuclear: Cleared all availability');
                             await saveCounselorSchedule({}, 'Nuclear: Cleared all schedules');
                             showToast('💥 All user data deleted (admins preserved)');
+                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 w-full font-bold"
                         >
@@ -9013,6 +9019,7 @@ As a 1099 contractor, you are responsible for:
                                       const newUsers = users.filter(u => u.email !== parent.email);
                                       await saveUsers(newUsers, `Deleted parent ${parent.name}`);
                                       showToast(`Deleted ${parent.name}`);
+                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9047,6 +9054,7 @@ As a 1099 contractor, you are responsible for:
                                       if (!confirm(`Delete counselor ${counselor.name}?`)) return;
                                       await deleteCounselor(counselor.id, counselor.name);
                                       showToast(`Deleted ${counselor.name}`);
+                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9081,6 +9089,7 @@ As a 1099 contractor, you are responsible for:
                                       if (!confirm(`Delete camper ${camper.name}?`)) return;
                                       await deleteCamper(camper.id, camper.name);
                                       showToast(`Deleted ${camper.name}`);
+                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9116,6 +9125,7 @@ As a 1099 contractor, you are responsible for:
                                       const newRegs = registrations.filter(r => r.id !== reg.id);
                                       await saveRegistrations(newRegs, `Deleted registration ${reg.id}`);
                                       showToast('Registration deleted');
+                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9152,6 +9162,7 @@ As a 1099 contractor, you are responsible for:
                                       delete newAssignments[sessionKey];
                                       await saveAssignments(newAssignments, `Deleted assignments for ${sessionKey}`);
                                       showToast('Session assignments deleted');
+                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9159,6 +9170,48 @@ As a 1099 contractor, you are responsible for:
                                   </button>
                                 </div>
                               ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselor Availability */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>Counselor Availability ({Object.keys(availability).length} counselors)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(availability).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No availability records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(availability).map(([email, dates]) => {
+                                const counselor = counselors.find(c => c.email === email);
+                                const counselorName = counselor ? counselor.name : email;
+                                const dateCount = Object.keys(dates).length;
+                                return (
+                                  <div key={email} className="flex items-center justify-between p-3 bg-white rounded border">
+                                    <div>
+                                      <div className="font-medium">{counselorName}</div>
+                                      <div className="text-sm text-gray-500">{email} - {dateCount} date(s)</div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Delete availability for ${counselorName}?`)) return;
+                                        const newAvailability = { ...availability };
+                                        delete newAvailability[email];
+                                        await saveAvailability(newAvailability, `Deleted availability for ${counselorName}`);
+                                        showToast('Availability deleted');
+                                        setTimeout(() => window.location.reload(), 1000);
+                                      }}
+                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
