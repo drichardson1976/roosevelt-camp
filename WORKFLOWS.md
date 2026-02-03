@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.129 | 2026-02-03 | Derek Richardson | Enhanced parent registration experience: improved confirmation modal with executive summary and next steps; added visual registration calendar in My Campers tab showing June/July/August with color-coded status (approved/pending/rejected); fixed CamperScheduleTab crash by updating assignments lookup to work with object structure |
 | 12.128 | 2026-02-03 | Derek Richardson | Added emergency contacts management: Danger Zone can now delete emergency contacts; fixed registration bug where multiple campers/sessions only registered one camper (race condition in saveReg); parents can now edit/delete emergency contacts with validation (requires 3+ contacts, 1+ non-parent) |
 | 12.127 | 2026-02-03 | Derek Richardson | Improved Admin Campers tab - removed parent email display; added Emergency Contacts column with clickable link to view full contact details (name, relationship, phone, email, priority); emergency contacts now visible in Edit Camper modal |
 | 12.126 | 2026-02-03 | Derek Richardson | Improved birthdate picker UX - added min/max constraints to start calendar at appropriate year (campers: last 15 years, counselors: 14-25 years ago); makes date selection much faster |

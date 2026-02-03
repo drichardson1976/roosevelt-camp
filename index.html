@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.128";
+    const VERSION = "12.129";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T20:15:00");
+    const BUILD_DATE = new Date("2026-02-03T21:05:00");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -9803,6 +9803,205 @@ As a 1099 contractor, you are responsible for:
       );
     };
 
+    // ==================== REGISTRATION CALENDAR VIEW ====================
+    const RegistrationCalendarView = ({ myChildren, registrations }) => {
+      const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || 'all');
+
+      // Get all registration dates for selected child or all children
+      const getRegistrationsForDisplay = () => {
+        if (selectedChild === 'all') {
+          return registrations;
+        }
+        return registrations.filter(r => r.childId === selectedChild);
+      };
+
+      const displayRegs = getRegistrationsForDisplay();
+
+      // Generate calendar for June, July, August 2026
+      const months = [
+        { name: 'June', year: 2026, month: 5 },
+        { name: 'July', year: 2026, month: 6 },
+        { name: 'August', year: 2026, month: 7 }
+      ];
+
+      const getDaysInMonth = (year, month) => {
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+        const days = [];
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startDayOfWeek; i++) {
+          days.push(null);
+        }
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+          days.push(day);
+        }
+        return days;
+      };
+
+      const getRegistrationForDate = (year, month, day) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return displayRegs.filter(r => r.date === dateStr);
+      };
+
+      const getStatusColor = (status) => {
+        if (status === 'approved') return 'bg-green-500';
+        if (status === 'pending') return 'bg-yellow-500';
+        if (status === 'rejected') return 'bg-red-500';
+        return 'bg-gray-300';
+      };
+
+      const getStatusText = (status) => {
+        if (status === 'approved') return 'Approved';
+        if (status === 'pending') return 'Pending';
+        if (status === 'rejected') return 'Rejected';
+        return '';
+      };
+
+      if (myChildren.length === 0) {
+        return (
+          <div className="bg-white rounded-xl shadow p-8 text-center">
+            <div className="text-6xl mb-4">📅</div>
+            <h3 className="font-bold text-lg text-gray-800 mb-2">No Campers Yet</h3>
+            <p className="text-gray-500">Add campers to see their registration calendar</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <div className="mb-6">
+            <h3 className="font-bold text-xl mb-2">📅 Registration Calendar</h3>
+            <p className="text-sm text-gray-500 mb-4">View registration status across June, July, and August</p>
+
+            {/* Child Selector */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              <button
+                onClick={() => setSelectedChild('all')}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  selectedChild === 'all'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Campers
+              </button>
+              {myChildren.map(child => (
+                <button
+                  key={child.id}
+                  onClick={() => setSelectedChild(child.id)}
+                  className={`px-4 py-2 rounded-lg font-medium ${
+                    selectedChild === child.id
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {child.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 text-sm mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span>Approved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <span>Rejected</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                <span>Not Registered</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {months.map(({ name, year, month }) => {
+              const days = getDaysInMonth(year, month);
+              return (
+                <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
+                  <div className="bg-green-700 text-white text-center py-2 font-bold">
+                    {name} {year}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 p-2">
+                    {/* Day headers */}
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
+                        {d}
+                      </div>
+                    ))}
+                    {/* Days */}
+                    {days.map((day, i) => {
+                      if (day === null) {
+                        return <div key={`empty-${i}`} className="aspect-square"></div>;
+                      }
+                      const regs = getRegistrationForDate(year, month, day);
+                      const hasRegistrations = regs.length > 0;
+
+                      return (
+                        <div
+                          key={day}
+                          className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
+                            hasRegistrations
+                              ? regs.some(r => r.status === 'approved')
+                                ? 'bg-green-100 border-2 border-green-500 font-bold'
+                                : regs.some(r => r.status === 'pending')
+                                ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
+                                : 'bg-red-100 border-2 border-red-500 font-bold'
+                              : 'bg-gray-50 border border-gray-200'
+                          }`}
+                        >
+                          <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
+                            {day}
+                          </span>
+                          {hasRegistrations && (
+                            <>
+                              <div className="text-[8px] leading-none mt-1">
+                                {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
+                              </div>
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
+                                <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
+                                  {regs.map((reg, idx) => (
+                                    <div key={idx} className="mb-1 last:mb-0">
+                                      <div className="font-bold">{reg.childName || myChildren.find(c => c.id === reg.childId)?.name}</div>
+                                      <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
+                                      <div className={`text-xs ${
+                                        reg.status === 'approved' ? 'text-green-300' :
+                                        reg.status === 'pending' ? 'text-yellow-300' :
+                                        'text-red-300'
+                                      }`}>
+                                        {getStatusText(reg.status)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
     // ==================== CAMPER SCHEDULE TAB (Visual Schedule for Parents) ====================
     const CamperScheduleTab = ({ myChildren, registrations, allRegistrations, assignments, counselors, campers, users }) => {
       const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || null);
@@ -9822,11 +10021,15 @@ As a 1099 contractor, you are responsible for:
 
       // Get counselor for a specific session
       const getCounselorForSession = (childId, date, session) => {
-        const assignment = assignments.find(a =>
-          a.camperId === childId && a.date === date && a.session === session
-        );
-        if (assignment) {
-          return counselors.find(c => c.id === assignment.counselorId);
+        const sessionKey = `${date}_${session}`;
+        const sessionPods = assignments[sessionKey];
+        if (!sessionPods) return null;
+
+        // Find the pod that contains this child
+        for (const [podId, pod] of Object.entries(sessionPods)) {
+          if (pod.camperIds?.includes(childId)) {
+            return counselors.find(c => c.id === pod.counselorId);
+          }
         }
         return null;
       };
@@ -9834,20 +10037,29 @@ As a 1099 contractor, you are responsible for:
       // Get pod mates (other campers with same counselor for a session)
       const getPodMates = (childId, date, session, counselorId) => {
         if (!counselorId) return [];
-        const podAssignments = assignments.filter(a =>
-          a.counselorId === counselorId && a.date === date && a.session === session && a.camperId !== childId
-        );
-        return podAssignments.map(a => {
-          // Try to find in campers first, then in users' children
-          const camper = campers.find(c => c.id === a.camperId);
-          if (camper) return camper;
+        const sessionKey = `${date}_${session}`;
+        const sessionPods = assignments[sessionKey];
+        if (!sessionPods) return [];
 
-          for (const user of users) {
-            const child = user.children?.find(c => c.id === a.camperId);
-            if (child) return child;
+        // Find the pod with this counselor that contains this child
+        for (const [podId, pod] of Object.entries(sessionPods)) {
+          if (pod.counselorId === counselorId && pod.camperIds?.includes(childId)) {
+            // Get all other campers in this pod
+            const otherCamperIds = pod.camperIds.filter(id => id !== childId);
+            return otherCamperIds.map(camperId => {
+              // Try to find in campers first, then in users' children
+              const camper = campers.find(c => c.id === camperId);
+              if (camper) return camper;
+
+              for (const user of users) {
+                const child = user.children?.find(c => c.id === camperId);
+                if (child) return child;
+              }
+              return null;
+            }).filter(Boolean);
           }
-          return null;
-        }).filter(Boolean);
+        }
+        return [];
       };
 
       // Get all campers at camp for a session (not just pod)
@@ -10234,9 +10446,12 @@ As a 1099 contractor, you are responsible for:
 
           setShowConfirm({
             children: selectedChildren.map(id => myChildren.find(c => c.id === id)?.name),
+            childIds: selectedChildren,
             total: pricing.finalTotal,
             savings: pricing.discount > 0 ? Math.round(pricing.discount) : null,
-            venmoCode
+            venmoCode,
+            dates: dates,
+            sessionCount: dates.reduce((sum, [, sessions]) => sum + (selectedChildren.length * sessions.length), 0)
           });
           setSelectedDates({});
           setSelectedChildren([]);
@@ -10564,6 +10779,14 @@ As a 1099 contractor, you are responsible for:
                     />
                   )}
 
+                  {/* Registration Calendar View */}
+                  {myChildren.length > 0 && (
+                    <RegistrationCalendarView
+                      myChildren={myChildren}
+                      registrations={myRegs}
+                    />
+                  )}
+
                   {/* Emergency Contacts Management */}
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
@@ -10597,24 +10820,121 @@ As a 1099 contractor, you are responsible for:
 
             {showConfirm && (
               <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-xl max-w-md w-full p-6 text-center" onClick={e => e.stopPropagation()}>
-                  <div className="text-6xl mb-4">🎉</div>
-                  <h2 className="font-display text-2xl text-green-800 mb-2">Registration Submitted!</h2>
-                  <p className="text-green-600 font-medium mb-4">Your children are now campers!</p>
-                  <p className="mb-2">Registered: {showConfirm.children?.join(', ')}</p>
-                  <p className="text-2xl font-bold text-green-700 mb-2">Amount Due: ${showConfirm.total}</p>
-                  {showConfirm.savings > 0 && (
-                    <p className="text-green-600 text-sm mb-4">🎉 You saved ${showConfirm.savings} with your bulk discount!</p>
-                  )}
-                  <div className="bg-blue-50 rounded-lg p-4 mb-4">
-                    <p className="font-medium">Venmo: {content.venmoUsername}</p>
-                    <p className="text-sm">Code: <span className="font-mono bg-white px-2 rounded">{showConfirm.venmoCode}</span></p>
+                <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                  <div className="text-center mb-6">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h2 className="font-display text-3xl text-green-800 mb-2">Registration Submitted!</h2>
+                    <p className="text-gray-600">Your registration has been sent to the camp director for review</p>
                   </div>
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-                    <p className="text-sm text-yellow-800"><strong>⚠️ Spot not confirmed until:</strong></p>
-                    <p className="text-sm text-yellow-700">✓ Payment received AND ✓ Admin approves</p>
+
+                  {/* Executive Summary */}
+                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-green-800 mb-3 text-lg">📋 Registration Summary</h3>
+                    <div className="space-y-2 text-left">
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Campers:</span>
+                        <span className="font-medium">{showConfirm.children?.join(', ')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Total Sessions:</span>
+                        <span className="font-medium">{showConfirm.sessionCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Dates:</span>
+                        <span className="font-medium">{showConfirm.dates?.length} day(s)</span>
+                      </div>
+                      {showConfirm.savings > 0 && (
+                        <div className="flex justify-between text-green-700 bg-white rounded px-2 py-1">
+                          <span>🎉 Bulk Discount:</span>
+                          <span className="font-bold">-${showConfirm.savings}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-2 border-t-2 border-green-300 text-lg">
+                        <span className="font-bold text-gray-800">Amount Due:</span>
+                        <span className="font-bold text-green-700">${showConfirm.total}</span>
+                      </div>
+                    </div>
                   </div>
-                  <button onClick={() => { setShowConfirm(null); setParentTab('dashboard'); }} className="w-full bg-green-700 text-white font-bold py-3 rounded-lg">View Payment Info</button>
+
+                  {/* Session Details */}
+                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-gray-800 mb-3">📅 Registered Sessions</h3>
+                    <div className="space-y-2 text-sm">
+                      {showConfirm.dates?.map(([date, sessions]) => {
+                        const d = new Date(date + 'T12:00:00');
+                        const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        return (
+                          <div key={date} className="flex justify-between items-center bg-white rounded px-3 py-2">
+                            <span className="font-medium">{dateStr}</span>
+                            <span className="text-gray-600">
+                              {sessions.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Payment Info */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-blue-800 mb-3 text-lg">💳 Next Step: Payment</h3>
+                    <div className="text-left space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Send payment via Venmo to:</span>
+                        <span className="font-bold text-blue-700">{content.venmoUsername}</span>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border-2 border-blue-300">
+                        <p className="text-sm text-gray-600 mb-1">Include this code in your payment:</p>
+                        <p className="font-mono text-2xl font-bold text-blue-700 text-center">{showConfirm.venmoCode}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* What Happens Next */}
+                  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-yellow-800 mb-3 text-lg">⏱️ What Happens Next?</h3>
+                    <ol className="text-left space-y-3 text-sm">
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">1.</span>
+                        <span><strong>Payment:</strong> Send ${showConfirm.total} via Venmo with code <code className="bg-white px-1 rounded">{showConfirm.venmoCode}</code></span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">2.</span>
+                        <span><strong>Admin Review:</strong> The camp director will review your registration</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">3.</span>
+                        <span><strong>Confirmation:</strong> Once payment is received and registration is approved, your status will change to "Approved"</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">4.</span>
+                        <span><strong>Track Status:</strong> Check your Dashboard or My Campers tab to see registration status</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Warning */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-red-800 text-center">
+                      <strong>⚠️ Important:</strong> Your spot is not confirmed until payment is received AND admin approves your registration
+                    </p>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowConfirm(null); setParentTab('dashboard'); }}
+                      className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700"
+                    >
+                      View Payment Info
+                    </button>
+                    <button
+                      onClick={() => { setShowConfirm(null); setParentTab('campers'); }}
+                      className="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700"
+                    >
+                      View Status
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
