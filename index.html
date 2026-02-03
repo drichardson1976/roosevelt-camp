@@ -45,18 +45,22 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.109";
+    const VERSION = "12.110";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T10:00:00");
+    const BUILD_DATE = new Date("2026-02-02T10:15:00");
 
     const RELEASE_NOTES = [
-      { version: "12.109", date: "2026-02-02", changes: [
+      { version: "12.110", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Added author tracking to release notes",
+        "Release notes now display who made each change"
+      ]},
+      { version: "12.109", date: "2026-02-02", author: "Derek Richardson", changes: [
         "Fixed afternoon session drop-off time (11:45 AM - 12:00 PM)",
         "Added basketball training focus section to schedule with drill descriptions",
         "Removed lunch restaurant options from public page",
         "Removed payment section from pricing page"
       ]},
-      { version: "12.107", date: "2026-02-01", changes: [
+      { version: "12.107", date: "2026-02-01", author: "Derek Richardson", changes: [
         "Registrations tab: Added ability to permanently delete registrations",
         "Delete confirmation modal prevents accidental deletions"
       ]},
@@ -4822,7 +4826,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <div className="flex-1 overflow-y-auto px-6 pb-2">
                   {RELEASE_NOTES.map((r, i) => (
                     <div key={r.version} className={i > 0 ? 'mt-3 pt-3 border-t' : ''}>
-                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}</span></div>
+                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}</span>{r.author && <span className="text-blue-600 text-sm ml-2">by {r.author}</span>}</div>
                       <ul className="text-sm text-gray-600 mt-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
                     </div>
                   ))}
