@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.125";
+    const VERSION = "12.126";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-02T23:51:56");
+    const BUILD_DATE = new Date("2026-02-02T23:56:56");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -1319,6 +1319,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                             value={newCamper.birthdate}
                             onChange={e => setNewCamper({ ...newCamper, birthdate: e.target.value })}
                             className="w-full px-3 py-2 border rounded-lg"
+                            min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
                             max={new Date().toISOString().split('T')[0]}
                           />
                           <select
@@ -2114,6 +2115,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     value={editingChild.child.birthdate || ''}
                     onChange={e => setEditingChild({ ...editingChild, child: { ...editingChild.child, birthdate: e.target.value } })}
                     className="w-full px-3 py-2 border rounded-lg"
+                    min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
+                    max={new Date().toISOString().split('T')[0]}
                     data-1p-ignore="true"
                   />
                 </div>
@@ -3827,6 +3830,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       value={formData.birthdate}
                       onChange={e => setFormData({ ...formData, birthdate: e.target.value })}
                       className="w-full px-3 py-2 border rounded-lg"
+                      min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
+                      max={new Date().toISOString().split('T')[0]}
                     />
                     {formData.birthdate && (
                       <p className="text-sm text-gray-500 mt-1">Age: {getAge(formData.birthdate)} years old</p>
@@ -10272,7 +10277,9 @@ As a 1099 contractor, you are responsible for:
                 <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
                 <input type="date" value={birthdate} onChange={e => setBirthdate(e.target.value)}
                   className="w-full px-3 py-2 border rounded-lg"
-                  max={new Date().toISOString().split('T')[0]} data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                  min={new Date(new Date().getFullYear() - 25, 0, 1).toISOString().split('T')[0]}
+                  max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
+                  data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
@@ -10451,7 +10458,8 @@ As a 1099 contractor, you are responsible for:
                       value={editForm.birthdate || ''}
                       onChange={e => setEditForm({ ...editForm, birthdate: e.target.value })}
                       className="w-full px-3 py-2 border rounded-lg"
-                      max={new Date().toISOString().split('T')[0]}
+                      min={new Date(new Date().getFullYear() - 25, 0, 1).toISOString().split('T')[0]}
+                      max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
                       data-1p-ignore="true"
                     />
                   </div>
