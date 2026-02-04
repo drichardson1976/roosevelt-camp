@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.133";
+    const VERSION = "12.134";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T21:42:58");
+    const BUILD_DATE = new Date("2026-02-03T21:48:35");
 
     const RELEASE_NOTES = [
+      { version: "12.134", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Fixed Parents tab badge count — was showing total users (including counselors), now shows only parent count"
+      ]},
       { version: "12.133", date: "2026-02-03", author: "Audrey Richardson", changes: [
         "Fixed admin Parents tab showing counselors as parents — now filters by role so only actual parents appear",
         "Fixed parent count display to show only parent users, not all users",
@@ -7465,7 +7468,7 @@ As a 1099 contractor, you are responsible for:
                     <button key={t} onClick={() => setAdminTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                       {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
-                      {t === 'parents' && users.length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.length}</span>}
+                      {t === 'parents' && users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</span>}
                       {t === 'sessions' && Object.keys(blockedSessions).length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{Object.values(blockedSessions).reduce((sum, day) => sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0)}</span>}
                       {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
                         <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
