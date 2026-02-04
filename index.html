@@ -45,11 +45,56 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.130";
+    const VERSION = "12.131";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T21:30:00");
+    const BUILD_DATE = new Date("2026-02-03T21:10:44");
 
     const RELEASE_NOTES = [
+      { version: "12.131", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Added missing release notes for versions 12.122 through 12.130 (all by Derek Richardson)",
+        "Verified version numbering and release notes are complete and up to date"
+      ]},
+      { version: "12.130", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Created missing saveRegistrations function for proper Supabase deletion",
+        "Updated Nuclear Option to preserve counselors — only deletes parents, campers, registrations, assignments",
+        "Fixed both bulk and individual registration deletion in Danger Zone"
+      ]},
+      { version: "12.129", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Improved registration confirmation modal with executive summary, payment instructions, and next steps",
+        "Added visual registration calendar in My Campers tab (3-month view, color-coded status, AM/PM indicators)",
+        "Fixed CamperScheduleTab crash — updated getCounselorForSession and getPodMates for object-based assignments"
+      ]},
+      { version: "12.128", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added emergency contacts deletion to Danger Zone",
+        "Fixed critical registration bug: multiple campers/sessions now register correctly (race condition fix)",
+        "Added parent emergency contacts manager in My Campers tab with validation (3+ contacts, 1+ non-parent)"
+      ]},
+      { version: "12.127", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Admin Campers tab: removed parent email, added Emergency Contacts column with clickable count",
+        "Created modal to view emergency contact details (name, relationship, phone, email, priority)",
+        "Added emergency contacts display in Edit Camper modal"
+      ]},
+      { version: "12.126", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added min/max constraints to birthdate inputs for faster date selection",
+        "Camper birthdate picker starts near expected birth year (ages 8-14) instead of current year",
+        "Counselor birthdate picker constrained to appropriate age range (14-25 years old)"
+      ]},
+      { version: "12.125", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed critical bug: Danger Zone was calling non-existent saveAvailability instead of saveAvail",
+        "All availability deletions (bulk, nuclear, individual) now work correctly"
+      ]},
+      { version: "12.124", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed orphaned counselor availability deletion when counselor record already removed",
+        "Cleans up ALL orphaned counselorSchedule entries without matching counselors"
+      ]},
+      { version: "12.123", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed individual counselor availability delete to remove from both availability and counselorSchedule tables",
+        "Now matches bulk delete behavior for complete data removal"
+      ]},
+      { version: "12.122", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added page refresh after all bulk and individual delete operations in Danger Zone",
+        "Added counselor availability deletion section showing counselor name, email, and date count"
+      ]},
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
         "Added individual record deletion in Danger Zone - delete specific parents, counselors, campers, registrations, or assignments",
         "Provided complete Supabase schema SQL for easy copy-paste setup",
