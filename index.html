@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.132";
+    const VERSION = "12.133";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T21:30:09");
+    const BUILD_DATE = new Date("2026-02-03T21:42:58");
 
     const RELEASE_NOTES = [
+      { version: "12.133", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Fixed admin Parents tab showing counselors as parents — now filters by role so only actual parents appear",
+        "Fixed parent count display to show only parent users, not all users",
+        "Fixed Message All Parents to only include parent users, not counselors"
+      ]},
       { version: "12.132", date: "2026-02-03", author: "Audrey Richardson", changes: [
         "Removed emojis from password show/hide toggles — now plain text 'Show'/'Hide'",
         "Counselor onboarding availability now uses month tabs (June/July/Aug) instead of scrolling through all weeks",
@@ -1749,7 +1754,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         }
       };
 
-      const filteredUsers = users.filter(u =>
+      const parentUsers = users.filter(u => u.role === 'parent' || u.roles?.includes('parent'));
+      const filteredUsers = parentUsers.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -1786,7 +1792,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-bold text-xl text-green-800">👨‍👩‍👧 Parents</h3>
-                <p className="text-sm text-gray-500">{users.length} registered parents</p>
+                <p className="text-sm text-gray-500">{parentUsers.length} registered parents</p>
               </div>
               <div className="flex gap-2">
                 {selectedParents.length > 0 && (
@@ -1838,7 +1844,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           {filteredUsers.length === 0 ? (
             <div className="bg-white rounded-xl shadow p-12 text-center text-gray-500">
               <p className="text-4xl mb-4">👨‍👩‍👧</p>
-              <p>{users.length === 0 ? 'No parents have registered yet' : 'No parents match your search'}</p>
+              <p>{parentUsers.length === 0 ? 'No parents have registered yet' : 'No parents match your search'}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -2059,8 +2065,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             <MessageComposer
               mode={composerMode}
               recipient={composerRecipient}
-              selectedParents={composerMode === 'selected' ? users.filter(u => selectedParents.includes(u.email)) : []}
-              allParents={users}
+              selectedParents={composerMode === 'selected' ? parentUsers.filter(u => selectedParents.includes(u.email)) : []}
+              allParents={parentUsers}
               onSend={(msg) => {
                 onSendMessage(msg);
                 const recipientDesc = composerMode === 'all' ? 'all parents' :

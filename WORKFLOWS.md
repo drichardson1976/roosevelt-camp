@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.133 | 2026-02-03 | Audrey Richardson | Fixed admin Parents tab showing counselors — now filters users by parent role only; fixed parent count and messaging to exclude counselors |
 | 12.132 | 2026-02-03 | Audrey Richardson | Removed emojis from password show/hide and availability buttons (color only); counselor onboarding uses month tabs instead of scrolling; counselor dashboard availability now syncs to admin counselorSchedule |
 | 12.131 | 2026-02-03 | Audrey Richardson | Added missing release notes for versions 12.122–12.130 to index.html; verified all version numbers and release notes are complete and accurate |
 | 12.130 | 2026-02-03 | Derek Richardson | Fixed Danger Zone deletion issues: created missing saveRegistrations function to properly delete registrations (both bulk and individual); nuclear option now preserves counselors and only deletes parent/camper data; registrations now delete correctly from Supabase |
