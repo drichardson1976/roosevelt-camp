@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.129";
+    const VERSION = "12.130";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T21:05:00");
+    const BUILD_DATE = new Date("2026-02-03T21:30:00");
 
     const RELEASE_NOTES = [
       { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
@@ -5914,6 +5914,20 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         if (action) addToHistory('Registration', action);
       };
 
+      const saveRegistrations = async (regs, action = null) => {
+        // Delete all existing registrations from Supabase (they're stored as individual records)
+        const currentRegIds = registrations.map(r => r.id);
+        for (const regId of currentRegIds) {
+          await supabase.from('camp_registrations').delete().eq('id', regId);
+        }
+        // Save new registrations (if any)
+        for (const reg of regs) {
+          await storage.set('camp_registrations', reg.id, reg);
+        }
+        setRegistrations(regs);
+        if (action) addToHistory('Registration', action);
+      };
+
       const saveUsers = async (u, action = null) => {
         setUsers(u);
         await storage.set('camp_registered_users', 'main', u);
@@ -9057,31 +9071,29 @@ As a 1099 contractor, you are responsible for:
                       <div className="border-2 border-red-500 rounded-lg p-4 md:col-span-2 bg-red-50">
                         <h4 className="font-bold text-red-800 mb-2">💣 Nuclear Option: Delete ALL User Data</h4>
                         <p className="text-sm text-red-700 mb-3">
-                          Removes ALL parents, counselors, campers, registrations, assignments, and related data. This will completely reset all user data while preserving site content (photos, text, etc.).
+                          Removes ALL parents, campers, registrations, assignments, and related data. <strong>Preserves counselors and admins.</strong> This will completely reset all parent/camper data while keeping your counselor roster intact.
                         </p>
                         <button
                           onClick={async () => {
-                            if (!confirm('⚠️ NUCLEAR OPTION: This will delete EVERYTHING - all parents, counselors, campers, registrations, and assignments. Are you ABSOLUTELY SURE?')) return;
+                            if (!confirm('⚠️ NUCLEAR OPTION: This will delete all parents, campers, registrations, and assignments (but preserve counselors and admins). Are you ABSOLUTELY SURE?')) return;
                             const confirmText = prompt('Type DELETE ALL to confirm complete data wipe:');
                             if (confirmText !== 'DELETE ALL') {
                               showToast('Deletion cancelled', 'error');
                               return;
                             }
-                            // Delete all user data
-                            await saveUsers(users.filter(u => u.role === 'admin'), 'Nuclear: Deleted all non-admin users');
-                            await saveCounselors([], 'Nuclear: Deleted all counselors');
+                            // Delete all user data (but preserve counselors)
+                            await saveUsers(users.filter(u => u.role === 'admin' || u.role === 'counselor'), 'Nuclear: Deleted all parent users');
                             await saveCampers([], 'Nuclear: Deleted all campers');
                             await saveRegistrations([], 'Nuclear: Deleted all registrations');
                             await saveAssignments({}, 'Nuclear: Deleted all assignments');
                             await saveCamperParentLinks([], 'Nuclear: Cleared all links');
-                            await saveAvail({}, 'Nuclear: Cleared all availability');
-                            await saveCounselorSchedule({}, 'Nuclear: Cleared all schedules');
-                            showToast('💥 All user data deleted (admins preserved)');
+                            // Note: We preserve counselor data (counselors, availability, schedules)
+                            showToast('💥 All user data deleted (counselors & admins preserved)');
                             setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 w-full font-bold"
                         >
-                          💣 DELETE ALL USER DATA
+                          💣 DELETE ALL USER DATA (KEEP COUNSELORS)
                         </button>
                       </div>
                     </div>
