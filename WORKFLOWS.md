@@ -79,7 +79,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │           ▼                                                     │
 │  Step 2: Select Dates & Sessions                                │
 │  ┌──────────────────────────────────────────────┐               │
-│  │  June - Week 1                               │               │
+│  │  July - Week 1                               │               │
 │  │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐│              │
 │  │  │ Mon  │ │ Tue  │ │ Wed  │ │ Thu  │ │ Fri  ││              │
 │  │  │      │ │      │ │      │ │      │ │      ││              │
@@ -121,7 +121,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  After admin approves registration and creates pod assignments: │
 │                                                                 │
 │  ┌──────────────────────────────────────────┐                   │
-│  │  Monday, June 22 - Morning Session       │                   │
+│  │  Monday, July 13 - Morning Session       │                   │
 │  │  Status: ✓ Approved                      │                   │
 │  │                                          │                   │
 │  │  YOUR POD                                │                   │
@@ -204,7 +204,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  │  │  Card-based layout (matches admin        │            │   │
 │  │  │  sessions tab style):                    │            │   │
 │  │  │                                          │            │   │
-│  │  │  ┌─ Week 1: Jun 22 ─────────────────┐   │            │   │
+│  │  │  ┌─ Week 1: Jul 13 ─────────────────┐   │            │   │
 │  │  │  │  Mon    Tue    Wed    Thu    Fri   │   │            │   │
 │  │  │  │  🟢AM  🟢AM  ⬜AM  🔴AM  🟢AM   │   │            │   │
 │  │  │  │  🟢PM  ⬜PM  ⬜PM  🔴PM  🟢PM   │   │            │   │
@@ -299,7 +299,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  │  Click to cycle: Available → Unavailable     │               │
 │  │                  → Not Set                   │               │
 │  │                                              │               │
-│  │  [June]  [July]  [August]                    │               │
+│  │  [July]  [August]                            │               │
 │  │  [✓ Mark All Available]  [Clear Month]       │               │
 │  │                                              │               │
 │  │       Mon    Tue    Wed    Thu    Fri         │               │
@@ -315,7 +315,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 │  │  Shows assigned sessions and pod campers     │               │
 │  │  Read-only (admin assigns)                   │               │
 │  │                                              │               │
-│  │  Monday, June 22, 2026                       │               │
+│  │  Monday, July 13, 2026                       │               │
 │  │  ┌────────────────────────────────────┐      │               │
 │  │  │ ☀️ Morning Session (9:00 AM - 12:00 PM) │      │               │
 │  │  │ Your Pod (5 campers):                │      │               │
@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.135 | 2026-02-06 | Audrey Richardson | Updated camp dates to July 13-17 and August 10-28 (4 weeks); removed June from month tabs; updated all date references site-wide |
 | 12.134 | 2026-02-03 | Audrey Richardson | Fixed Parents tab badge count to show only parents, not all users |
 | 12.133 | 2026-02-03 | Audrey Richardson | Fixed admin Parents tab showing counselors — now filters users by parent role only; fixed parent count and messaging to exclude counselors |
 | 12.132 | 2026-02-03 | Audrey Richardson | Removed emojis from password show/hide and availability buttons (color only); counselor onboarding uses month tabs instead of scrolling; counselor dashboard availability now syncs to admin counselorSchedule |

@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.134";
+    const VERSION = "12.135";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-03T21:48:35");
+    const BUILD_DATE = new Date("2026-02-06T09:14:16");
 
     const RELEASE_NOTES = [
+      { version: "12.135", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Updated camp dates: now July 13-17 and August 10-28, 2026 (4 weeks total instead of full summer)",
+        "Removed June from all month selectors (counselor onboarding, counselor dashboard, admin calendars)",
+        "Changed default month views from June to July",
+        "Updated home page camp dates display to reflect new schedule"
+      ]},
       { version: "12.134", date: "2026-02-03", author: "Audrey Richardson", changes: [
         "Fixed Parents tab badge count — was showing total users (including counselors), now shows only parent count"
       ]},
@@ -482,33 +488,23 @@
     // ==================== CONSTANTS ====================
     const KIDS_PER_COUNSELOR = 5;
 
-    // Seattle Public Schools 2025-2026: Last day of school is June 19, 2026 (Friday)
-    // First day of school 2026-2027: September 2, 2026 (Wednesday)
-    // Camp runs: Monday June 22, 2026 through Friday August 28, 2026
-    const SCHOOL_YEAR_END = new Date(2026, 5, 19); // June 19, 2026 (Friday)
-    const SCHOOL_YEAR_START = new Date(2026, 8, 2); // September 2, 2026 (Wednesday)
-
+    // Camp runs specific weeks in July and August 2026:
+    // Week 1: July 13-17, 2026
+    // Week 2: August 10-14, 2026
+    // Week 3: August 17-21, 2026
+    // Week 4: August 24-28, 2026
     const generateCampDates = () => {
-      const dates = [];
-      // Start on Monday after school ends
-      const start = new Date(SCHOOL_YEAR_END);
-      // Find next Monday after school ends
-      while (start.getDay() !== 1) {
-        start.setDate(start.getDate() + 1);
-      }
-      // End on Friday before school starts
-      const end = new Date(SCHOOL_YEAR_START);
-      // Find previous Friday before school starts
-      while (end.getDay() !== 5) {
-        end.setDate(end.getDate() - 1);
-      }
-      // Generate all weekdays (Mon-Fri) between start and end
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() >= 1 && d.getDay() <= 5) {
-          dates.push(new Date(d).toISOString().split('T')[0]);
-        }
-      }
-      return dates;
+      const weeks = [
+        // July Week 1: July 13-17, 2026
+        ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'],
+        // August Week 1: August 10-14, 2026
+        ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14'],
+        // August Week 2: August 17-21, 2026
+        ['2026-08-17', '2026-08-18', '2026-08-19', '2026-08-20', '2026-08-21'],
+        // August Week 3: August 24-28, 2026
+        ['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28']
+      ];
+      return weeks.flat();
     };
     const CAMP_DATES = generateCampDates();
 
@@ -555,7 +551,7 @@
       sessionMorning: "9:00 AM - 12:00 PM",
       sessionAfternoon: "12:00 PM - 3:00 PM",
       sessionCost: "$60",
-      campDates: "June 22 - August 28, 2026",
+      campDates: "July 13-17 & August 10-28, 2026",
       ageRange: "Completed 3rd - 8th Grade",
       // Location details
       locationName: "Roosevelt High School",
@@ -5851,7 +5847,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
-      const [counselorDashMonth, setCounselorDashMonth] = useState(5); // Persist selected month in Counselor Dashboard (5 = June)
+      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
@@ -6774,7 +6770,7 @@ As a 1099 contractor, you are responsible for:
         const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
         const [availData, setAvailData] = useState({});
         const [unavailData, setUnavailData] = useState({});
-        const [selectedMonth, setSelectedMonth] = useState(5); // 5=June, 6=July, 7=August
+        const [selectedMonth, setSelectedMonth] = useState(6); // 6=July, 7=August
         const [responsibilitiesAcked, setResponsibilitiesAcked] = useState(false);
         const [payAcked, setPayAcked] = useState(false);
         const [error, setError] = useState('');
@@ -7101,7 +7097,7 @@ As a 1099 contractor, you are responsible for:
 
                     {/* Month Tabs */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {[{ m: 5, n: 'June' }, { m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                      {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
                         <button key={m} onClick={() => setSelectedMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (selectedMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
                       ))}
                       <div className="flex-1" />
@@ -9889,9 +9885,8 @@ As a 1099 contractor, you are responsible for:
 
       const displayRegs = getRegistrationsForDisplay();
 
-      // Generate calendar for June, July, August 2026
+      // Generate calendar for July, August 2026
       const months = [
-        { name: 'June', year: 2026, month: 5 },
         { name: 'July', year: 2026, month: 6 },
         { name: 'August', year: 2026, month: 7 }
       ];
@@ -9947,7 +9942,7 @@ As a 1099 contractor, you are responsible for:
         <div className="bg-white rounded-xl shadow p-6">
           <div className="mb-6">
             <h3 className="font-bold text-xl mb-2">📅 Registration Calendar</h3>
-            <p className="text-sm text-gray-500 mb-4">View registration status across June, July, and August</p>
+            <p className="text-sm text-gray-500 mb-4">View registration status across July and August</p>
 
             {/* Child Selector */}
             <div className="flex gap-2 flex-wrap mb-4">
@@ -10417,7 +10412,7 @@ As a 1099 contractor, you are responsible for:
           const months = {};
           CAMP_WEEKS.forEach((week, idx) => {
             const m = new Date(week.start + 'T12:00:00').getMonth();
-            if (!months[m]) months[m] = { name: ['June', 'July', 'August'][m - 5], weeks: [] };
+            if (!months[m]) months[m] = { name: ['July', 'August'][m - 6], weeks: [] };
             months[m].weeks.push({ ...week, idx });
           });
           return months;
@@ -11558,7 +11553,7 @@ As a 1099 contractor, you are responsible for:
 
               {/* Month Tabs */}
               <div className="flex flex-wrap gap-2 mb-4">
-                {[{ m: 5, n: 'June' }, { m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
                   <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
                 ))}
                 <div className="flex-1" />
