@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.138";
+    const VERSION = "12.139";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-06T10:15:00");
+    const BUILD_DATE = new Date("2026-02-06T11:45:00");
 
     const RELEASE_NOTES = [
+      { version: "12.139", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed birthdate picker not registering selections — separated year/month/day into independent state fields",
+        "Updated birthdate year dropdown to show 2000-2026 range for proper camper age selection",
+        "Added validation requiring at least one camper before continuing from step 2 in parent registration",
+        "Added parent-level transitioning state to prevent login flash after parent/counselor registration"
+      ]},
       { version: "12.138", date: "2026-02-06", author: "Audrey Richardson", changes: [
         "Fixed login glitch — added loading screen during registration submission to prevent flash back to login page",
         "Fixed counselor dashboard not showing unavailable (red) sessions from onboarding — now saves both available AND unavailable to availability table",
@@ -1012,7 +1018,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
       // State for adding campers/contacts (moved to parent level to avoid re-renders)
       const [showAddCamper, setShowAddCamper] = useState(false);
-      const [newCamper, setNewCamper] = useState({ name: '', birthdate: '', grade: '', phone: '' });
+      const [newCamper, setNewCamper] = useState({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' });
       const [showAddContact, setShowAddContact] = useState(false);
       const [newContact, setNewContact] = useState({ name: '', phone: '', relationship: '', photo: null });
       // Photo cropping state
@@ -1084,7 +1090,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const addCamper = () => {
         if (!newCamper.name || !newCamper.birthdate || !newCamper.grade) return;
         setCampersData([...campersData, { ...newCamper, id: 'camper_' + Date.now() }]);
-        setNewCamper({ name: '', birthdate: '', grade: '', phone: '' });
+        setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' });
         setShowAddCamper(false);
       };
 
@@ -1140,7 +1146,14 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             return false;
           }
         }
-        // Steps 2-4 are skippable, step 5 (Policies) is required
+        // Step 2: Require at least one camper
+        if (step === 2) {
+          if (campersData.length === 0) {
+            setError('Please add at least one camper before continuing');
+            return false;
+          }
+        }
+        // Steps 3-4 are skippable, step 5 (Policies) is required
         if (step === 5) {
           if (!policiesAccepted.pickup || !policiesAccepted.dropoff) {
             setError('You must accept both the drop-off and pick-up policies before continuing.');
@@ -1410,24 +1423,18 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                             <label className="absolute -top-2 left-2 bg-green-50 px-1 text-xs text-gray-500">Birthdate</label>
                             <div className="grid grid-cols-3 gap-2">
                               <select
-                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[0] : ''}
-                                onChange={e => {
-                                  const [, m, d] = (newCamper.birthdate || '--').split('-');
-                                  setNewCamper({ ...newCamper, birthdate: e.target.value && m && d ? `${e.target.value}-${m}-${d}` : '' });
-                                }}
+                                value={newCamper.birthYear || ''}
+                                onChange={e => setNewCamper({ ...newCamper, birthYear: e.target.value, birthdate: e.target.value && newCamper.birthMonth && newCamper.birthDay ? `${e.target.value}-${newCamper.birthMonth}-${newCamper.birthDay}` : '' })}
                                 className="w-full px-2 py-1.5 border rounded text-sm"
                               >
                                 <option value="">Year</option>
-                                {Array.from({ length: 15 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                {Array.from({ length: 27 }, (_, i) => 2026 - i).map(y => (
                                   <option key={y} value={y}>{y}</option>
                                 ))}
                               </select>
                               <select
-                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[1] : ''}
-                                onChange={e => {
-                                  const [y, , d] = (newCamper.birthdate || '--').split('-');
-                                  setNewCamper({ ...newCamper, birthdate: y && e.target.value && d ? `${y}-${e.target.value}-${d}` : '' });
-                                }}
+                                value={newCamper.birthMonth || ''}
+                                onChange={e => setNewCamper({ ...newCamper, birthMonth: e.target.value, birthdate: newCamper.birthYear && e.target.value && newCamper.birthDay ? `${newCamper.birthYear}-${e.target.value}-${newCamper.birthDay}` : '' })}
                                 className="w-full px-2 py-1.5 border rounded text-sm"
                               >
                                 <option value="">Month</option>
@@ -1436,11 +1443,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                 ))}
                               </select>
                               <select
-                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[2] : ''}
-                                onChange={e => {
-                                  const [y, m] = (newCamper.birthdate || '--').split('-');
-                                  setNewCamper({ ...newCamper, birthdate: y && m && e.target.value ? `${y}-${m}-${e.target.value}` : '' });
-                                }}
+                                value={newCamper.birthDay || ''}
+                                onChange={e => setNewCamper({ ...newCamper, birthDay: e.target.value, birthdate: newCamper.birthYear && newCamper.birthMonth && e.target.value ? `${newCamper.birthYear}-${newCamper.birthMonth}-${e.target.value}` : '' })}
                                 className="w-full px-2 py-1.5 border rounded text-sm"
                               >
                                 <option value="">Day</option>
@@ -5889,6 +5893,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [toast, setToast] = useState(null);
       const [loading, setLoading] = useState(true);
       const [showBanner, setShowBanner] = useState(false);
+      const [transitioning, setTransitioning] = useState(false); // Global transition state for login/registration
       
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
@@ -7365,8 +7370,10 @@ As a 1099 contractor, you are responsible for:
           return (
             <ParentOnboarding
               onComplete={(newUser) => {
+                setTransitioning(true);
                 setUser(newUser);
                 setPage('parent');
+                setTimeout(() => setTransitioning(false), 100);
                 showToast('Welcome to Roosevelt Camp!');
               }}
               onBack={() => setMode('selectRole')}
@@ -7388,8 +7395,10 @@ As a 1099 contractor, you are responsible for:
           return (
             <CounselorOnboarding
               onComplete={(newUser) => {
+                setTransitioning(true);
                 setUser(newUser);
                 setPage('counselor');
+                setTimeout(() => setTransitioning(false), 100);
                 showToast('Application submitted! Awaiting admin approval.');
               }}
               onBack={() => setMode('selectRole')}
@@ -11869,6 +11878,22 @@ As a 1099 contractor, you are responsible for:
 
       // ==================== ROUTER ====================
       if (loading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
+
+      // Global transitioning screen - prevents flash during login/registration
+      if (transitioning) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
+              <div className="text-6xl mb-4">🏀</div>
+              <h2 className="font-display text-2xl text-green-800 mb-2">Welcome!</h2>
+              <p className="text-gray-600">Loading your dashboard...</p>
+              <div className="mt-4 flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="min-h-screen bg-gray-50">
