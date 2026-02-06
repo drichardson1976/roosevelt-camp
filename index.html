@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.139";
+    const VERSION = "12.140";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-06T11:45:00");
 
     const RELEASE_NOTES = [
+      { version: "12.140", date: "2026-02-06", time: "3:40 PM ET", author: "Derek Richardson", changes: [
+        "Danger Zone: Deletions no longer log out or reload page — stays in Danger Zone for continued operations",
+        "Fixed DELETE ALL USER DATA to also delete emergency contacts and onboarding progress",
+        "Fixed DELETE ALL USER DATA to only preserve counselor accounts (not stale admin entries in users table)",
+        "Added new DELETE ALL DATA button — total system wipe that removes everything except the admin account",
+        "Release notes now include timestamps"
+      ]},
       { version: "12.139", date: "2026-02-06", author: "Audrey Richardson", changes: [
         "Fixed birthdate picker not registering selections — separated year/month/day into independent state fields",
         "Updated birthdate year dropdown to show 2000-2026 range for proper camper age selection",
@@ -5182,7 +5189,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <div className="flex-1 overflow-y-auto px-6 pb-2">
                   {RELEASE_NOTES.map((r, i) => (
                     <div key={r.version} className={i > 0 ? 'mt-3 pt-3 border-t' : ''}>
-                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}</span>{r.author && <span className="text-blue-600 text-sm ml-2">by {r.author}</span>}</div>
+                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}{r.time && ` at ${r.time}`}</span>{r.author && <span className="text-blue-600 text-sm ml-2">by {r.author}</span>}</div>
                       <ul className="text-sm text-gray-600 mt-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
                     </div>
                   ))}
@@ -9143,7 +9150,6 @@ As a 1099 contractor, you are responsible for:
                             const newUsers = users.filter(u => u.role !== 'parent' && !u.roles?.includes('parent'));
                             await saveUsers(newUsers, 'Deleted all parent accounts');
                             showToast('All parents deleted');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -9172,7 +9178,6 @@ As a 1099 contractor, you are responsible for:
                             await saveAvail({}, 'Cleared all counselor availability');
                             await saveCounselorSchedule({}, 'Cleared all counselor schedules');
                             showToast('All counselors deleted');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -9197,7 +9202,6 @@ As a 1099 contractor, you are responsible for:
                             await saveCampers([], 'Deleted all campers');
                             await saveCamperParentLinks([], 'Cleared all camper-parent links');
                             showToast('All campers deleted');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -9221,7 +9225,6 @@ As a 1099 contractor, you are responsible for:
                             }
                             await saveRegistrations([], 'Deleted all registrations');
                             showToast('All registrations deleted');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -9245,7 +9248,6 @@ As a 1099 contractor, you are responsible for:
                             }
                             await saveAssignments({}, 'Deleted all pod assignments');
                             showToast('All assignments deleted');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
                         >
@@ -9268,18 +9270,54 @@ As a 1099 contractor, you are responsible for:
                               return;
                             }
                             // Delete all user data (but preserve counselors)
-                            await saveUsers(users.filter(u => u.role === 'admin' || u.role === 'counselor'), 'Nuclear: Deleted all parent users');
+                            await saveUsers(users.filter(u => u.role === 'counselor' || u.roles?.includes('counselor')), 'Nuclear: Deleted all parent users');
                             await saveCampers([], 'Nuclear: Deleted all campers');
                             await saveRegistrations([], 'Nuclear: Deleted all registrations');
                             await saveAssignments({}, 'Nuclear: Deleted all assignments');
                             await saveCamperParentLinks([], 'Nuclear: Cleared all links');
+                            await saveEmergencyContacts([], 'Nuclear: Deleted all emergency contacts');
+                            await saveOnboardingProgress({});
                             // Note: We preserve counselor data (counselors, availability, schedules)
                             showToast('💥 All user data deleted (counselors & admins preserved)');
-                            setTimeout(() => window.location.reload(), 1000);
                           }}
                           className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 w-full font-bold"
                         >
                           💣 DELETE ALL USER DATA (KEEP COUNSELORS)
+                        </button>
+                      </div>
+
+                      {/* Delete ALL Data (Total Wipe) */}
+                      <div className="border-2 border-red-700 rounded-lg p-4 md:col-span-2 bg-red-100">
+                        <h4 className="font-bold text-red-900 mb-2">☢️ Total Wipe: Delete ALL Data</h4>
+                        <p className="text-sm text-red-800 mb-3">
+                          Removes <strong>EVERYTHING</strong>: all parents, counselors, campers, registrations, assignments, availability, emergency contacts, schedules, and all user accounts. <strong>Only the admin account is preserved.</strong> This is a complete system reset.
+                        </p>
+                        <button
+                          onClick={async () => {
+                            if (!confirm('☢️ TOTAL WIPE: This will delete ALL data — parents, counselors, campers, registrations, assignments, availability, emergency contacts, and ALL user accounts. Only the admin will remain. Are you ABSOLUTELY SURE?')) return;
+                            const confirmText = prompt('Type DESTROY EVERYTHING to confirm total data wipe:');
+                            if (confirmText !== 'DESTROY EVERYTHING') {
+                              showToast('Deletion cancelled', 'error');
+                              return;
+                            }
+                            // Total wipe - delete everything except admin
+                            await saveUsers([], 'Total Wipe: Deleted all users');
+                            await saveCounselors([], 'Total Wipe: Deleted all counselors');
+                            await saveCampers([], 'Total Wipe: Deleted all campers');
+                            await saveRegistrations([], 'Total Wipe: Deleted all registrations');
+                            await saveAssignments({}, 'Total Wipe: Deleted all assignments');
+                            await saveCamperParentLinks([], 'Total Wipe: Cleared all links');
+                            await saveAvail({}, 'Total Wipe: Cleared all availability');
+                            await saveCounselorSchedule({}, 'Total Wipe: Cleared all schedules');
+                            await saveEmergencyContacts([], 'Total Wipe: Deleted all emergency contacts');
+                            await saveOnboardingProgress({});
+                            await saveAvailabilityChangeRequests([], 'Total Wipe: Cleared change requests');
+                            await saveProfileChangeRequests([], 'Total Wipe: Cleared profile requests');
+                            showToast('☢️ Total wipe complete — only admin preserved');
+                          }}
+                          className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-black w-full font-bold"
+                        >
+                          ☢️ DELETE ALL DATA (KEEP ADMIN ONLY)
                         </button>
                       </div>
                     </div>
@@ -9312,7 +9350,6 @@ As a 1099 contractor, you are responsible for:
                                       const newUsers = users.filter(u => u.email !== parent.email);
                                       await saveUsers(newUsers, `Deleted parent ${parent.name}`);
                                       showToast(`Deleted ${parent.name}`);
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9347,7 +9384,6 @@ As a 1099 contractor, you are responsible for:
                                       if (!confirm(`Delete counselor ${counselor.name}?`)) return;
                                       await deleteCounselor(counselor.id, counselor.name);
                                       showToast(`Deleted ${counselor.name}`);
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9382,7 +9418,6 @@ As a 1099 contractor, you are responsible for:
                                       if (!confirm(`Delete camper ${camper.name}?`)) return;
                                       await deleteCamper(camper.id, camper.name);
                                       showToast(`Deleted ${camper.name}`);
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9418,7 +9453,6 @@ As a 1099 contractor, you are responsible for:
                                       const newRegs = registrations.filter(r => r.id !== reg.id);
                                       await saveRegistrations(newRegs, `Deleted registration ${reg.id}`);
                                       showToast('Registration deleted');
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9455,7 +9489,6 @@ As a 1099 contractor, you are responsible for:
                                       delete newAssignments[sessionKey];
                                       await saveAssignments(newAssignments, `Deleted assignments for ${sessionKey}`);
                                       showToast('Session assignments deleted');
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9515,7 +9548,6 @@ As a 1099 contractor, you are responsible for:
                                         await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselorName}`);
 
                                         showToast('Availability deleted');
-                                        setTimeout(() => window.location.reload(), 1000);
                                       }}
                                       className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                     >
@@ -9555,7 +9587,6 @@ As a 1099 contractor, you are responsible for:
                                       const newContacts = emergencyContacts.filter(c => c.id !== contact.id);
                                       await saveEmergencyContacts(newContacts, `Deleted emergency contact ${contact.name}`);
                                       showToast('Emergency contact deleted');
-                                      setTimeout(() => window.location.reload(), 1000);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
