@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.140 | 2026-02-06 | Derek Richardson | Danger Zone deletions no longer log out or reload page; DELETE ALL USER DATA now also removes emergency contacts and onboarding progress; added DELETE ALL DATA button for total system wipe; release notes now include timestamps |
 | 12.139 | 2026-02-06 | Audrey Richardson | Fixed birthdate picker not registering selections (separated year/month/day state); year dropdown now 2000-2026; requires at least one camper before continuing; improved login transition state |
 | 12.138 | 2026-02-06 | Audrey Richardson | Added loading screens during registration submission (prevents login flash); fixed counselor dashboard showing red availability from onboarding; replaced birthdate picker with year/month/day dropdowns |
 | 12.137 | 2026-02-06 | Audrey Richardson | Fixed login glitch after registration; fixed counselor availability sync (both green AND red now transfer to admin); admin schedule shows ✓/✗/○ states; added Birthdate label to camper form; added weekdays clarity to multiple pages |
