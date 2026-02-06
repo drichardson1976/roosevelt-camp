@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.136 | 2026-02-06 | Audrey Richardson | Updated home page camp dates to clarify weekdays only: "Weekdays from July 13-17 & August 10-28, 2026" |
 | 12.135 | 2026-02-06 | Audrey Richardson | Updated camp dates to July 13-17 and August 10-28 (4 weeks); removed June from month tabs; updated all date references site-wide |
 | 12.134 | 2026-02-03 | Audrey Richardson | Fixed Parents tab badge count to show only parents, not all users |
 | 12.133 | 2026-02-03 | Audrey Richardson | Fixed admin Parents tab showing counselors — now filters users by parent role only; fixed parent count and messaging to exclude counselors |

@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.135";
+    const VERSION = "12.136";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-06T09:14:16");
+    const BUILD_DATE = new Date("2026-02-06T09:22:00");
 
     const RELEASE_NOTES = [
+      { version: "12.136", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Updated home page camp dates to clarify weekdays only: 'Weekdays from July 13-17 & August 10-28, 2026'"
+      ]},
       { version: "12.135", date: "2026-02-06", author: "Audrey Richardson", changes: [
         "Updated camp dates: now July 13-17 and August 10-28, 2026 (4 weeks total instead of full summer)",
         "Removed June from all month selectors (counselor onboarding, counselor dashboard, admin calendars)",
@@ -551,7 +554,7 @@
       sessionMorning: "9:00 AM - 12:00 PM",
       sessionAfternoon: "12:00 PM - 3:00 PM",
       sessionCost: "$60",
-      campDates: "July 13-17 & August 10-28, 2026",
+      campDates: "Weekdays from July 13-17 & August 10-28, 2026",
       ageRange: "Completed 3rd - 8th Grade",
       // Location details
       locationName: "Roosevelt High School",
