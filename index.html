@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.136";
+    const VERSION = "12.137";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-06T09:22:00");
+    const BUILD_DATE = new Date("2026-02-06T09:45:00");
 
     const RELEASE_NOTES = [
+      { version: "12.137", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed login glitch after counselor/parent registration — removed redundant role checks that caused brief flash to login",
+        "Fixed counselor availability sync — both available (green) AND unavailable (red) sessions now transfer to admin dashboard",
+        "Admin schedule view now shows three states: ✓ Available (green), ✗ Unavailable (red), ○ Not set (gray)",
+        "Added 'Birthdate' label to camper registration date field for clarity",
+        "Added weekdays clarity to counselor onboarding, counselor dashboard, and parent registration pages"
+      ]},
       { version: "12.136", date: "2026-02-06", author: "Audrey Richardson", changes: [
         "Updated home page camp dates to clarify weekdays only: 'Weekdays from July 13-17 & August 10-28, 2026'"
       ]},
@@ -1372,14 +1379,17 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                           autoComplete="off" data-1p-ignore="true"
                         />
                         <div className="grid grid-cols-2 gap-3">
-                          <input
-                            type="date"
-                            value={newCamper.birthdate}
-                            onChange={e => setNewCamper({ ...newCamper, birthdate: e.target.value })}
-                            className="w-full px-3 py-2 border rounded-lg"
-                            min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
-                            max={new Date().toISOString().split('T')[0]}
-                          />
+                          <div className="relative">
+                            <label className="absolute -top-2 left-2 bg-green-50 px-1 text-xs text-gray-500">Birthdate</label>
+                            <input
+                              type="date"
+                              value={newCamper.birthdate}
+                              onChange={e => setNewCamper({ ...newCamper, birthdate: e.target.value })}
+                              className="w-full px-3 py-2 border rounded-lg"
+                              min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
+                              max={new Date().toISOString().split('T')[0]}
+                            />
+                          </div>
                           <select
                             value={newCamper.grade}
                             onChange={e => setNewCamper({ ...newCamper, grade: e.target.value })}
@@ -6929,13 +6939,23 @@ As a 1099 contractor, you are responsible for:
             await saveAvail(newAvail);
 
             // Also save to counselorSchedule so admin dashboard shows availability immediately
+            // Save both available (true) and unavailable (false) sessions
             const newSchedule = { ...counselorSchedule };
             newSchedule[newCounselor.id] = {};
-            Object.entries(availData).forEach(([date, sessions]) => {
-              newSchedule[newCounselor.id][date] = {
-                morning: sessions.includes('morning'),
-                afternoon: sessions.includes('afternoon')
-              };
+            // Get all dates that have any availability data
+            const allDates = new Set([...Object.keys(availData), ...Object.keys(unavailData)]);
+            allDates.forEach(date => {
+              const avail = availData[date] || [];
+              const unavail = unavailData[date] || [];
+              // Only add date entry if there's any data for it
+              if (avail.length > 0 || unavail.length > 0) {
+                newSchedule[newCounselor.id][date] = {};
+                // Set true for available, false for unavailable
+                if (avail.includes('morning')) newSchedule[newCounselor.id][date].morning = true;
+                else if (unavail.includes('morning')) newSchedule[newCounselor.id][date].morning = false;
+                if (avail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = true;
+                else if (unavail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = false;
+              }
             });
             await saveCounselorSchedule(newSchedule, `${newCounselor.name} registered with availability`);
 
@@ -7096,7 +7116,7 @@ As a 1099 contractor, you are responsible for:
                 {/* Step 3: Availability */}
                 {step === 3 && (
                   <div className="space-y-4">
-                    <p className="text-gray-600 mb-2">Click each session to set your availability. Click cycles through: <span className="text-gray-400 font-medium">Not Set</span> → <span className="text-green-600 font-medium">Available</span> → <span className="text-red-600 font-medium">Unavailable</span></p>
+                    <p className="text-gray-600 mb-2">Camp runs weekdays only (Mon-Fri). Click each session to set your availability. Click cycles through: <span className="text-gray-400 font-medium">Not Set</span> → <span className="text-green-600 font-medium">Available</span> → <span className="text-red-600 font-medium">Unavailable</span></p>
 
                     {/* Month Tabs */}
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -8386,8 +8406,13 @@ As a 1099 contractor, you are responsible for:
                                   const fullyBlocked = morningBlocked && afternoonBlocked;
                                   const morningEligible = counselorSchedule[managingSchedule.id]?.[d]?.morning === true;
                                   const afternoonEligible = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === true;
+                                  // Check for explicitly unavailable (false) vs not set (undefined)
+                                  const morningUnavailable = counselorSchedule[managingSchedule.id]?.[d]?.morning === false;
+                                  const afternoonUnavailable = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === false;
                                   const bothEligible = morningEligible && afternoonEligible;
+                                  const bothUnavailable = morningUnavailable && afternoonUnavailable;
                                   const partialEligible = (morningEligible || afternoonEligible) && !bothEligible;
+                                  const hasUnavailable = (morningUnavailable || afternoonUnavailable) && !bothUnavailable;
 
                                   // Check if counselor has campers assigned
                                   const morningAssigned = (assignments[`${d}_morning`]?.[managingSchedule.id]?.length || 0) > 0;
@@ -8399,7 +8424,9 @@ As a 1099 contractor, you are responsible for:
                                       className={`rounded-lg border-2 overflow-hidden ${
                                         fullyBlocked ? 'border-gray-300 bg-gray-50' :
                                         bothEligible ? 'border-green-300 bg-green-50' :
+                                        bothUnavailable ? 'border-red-300 bg-red-50' :
                                         partialEligible ? 'border-yellow-300 bg-yellow-50' :
+                                        hasUnavailable ? 'border-orange-300 bg-orange-50' :
                                         'border-gray-200 bg-white'
                                       }`}
                                     >
@@ -8410,7 +8437,9 @@ As a 1099 contractor, you are responsible for:
                                         className={`w-full p-2 text-center font-bold transition-colors ${
                                           fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
                                           bothEligible ? 'bg-green-200 hover:bg-green-300' :
+                                          bothUnavailable ? 'bg-red-200 hover:bg-red-300' :
                                           partialEligible ? 'bg-yellow-200 hover:bg-yellow-300' :
+                                          hasUnavailable ? 'bg-orange-200 hover:bg-orange-300' :
                                           'bg-gray-100 hover:bg-gray-200'
                                         }`}
                                       >
@@ -8426,13 +8455,14 @@ As a 1099 contractor, you are responsible for:
                                           disabled={morningBlocked}
                                           className={`w-full p-2 rounded text-left text-sm transition-colors ${
                                             morningBlocked ? 'bg-gray-100 cursor-not-allowed' :
-                                            morningEligible ? 'bg-green-100 hover:bg-green-200' : 'bg-white hover:bg-gray-50'
+                                            morningEligible ? 'bg-green-100 hover:bg-green-200' :
+                                            morningUnavailable ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
                                           }`}
                                         >
                                           <div className="flex justify-between items-center">
                                             <span className="font-medium">☀️ AM</span>
-                                            <span className={morningBlocked ? 'text-gray-400' : morningEligible ? 'text-green-600' : 'text-gray-400'}>
-                                              {morningBlocked ? '🚫' : morningEligible ? '✓' : '○'}
+                                            <span className={morningBlocked ? 'text-gray-400' : morningEligible ? 'text-green-600' : morningUnavailable ? 'text-red-600' : 'text-gray-400'}>
+                                              {morningBlocked ? '🚫' : morningEligible ? '✓' : morningUnavailable ? '✗' : '○'}
                                             </span>
                                           </div>
                                           {morningAssigned && (
@@ -8446,13 +8476,14 @@ As a 1099 contractor, you are responsible for:
                                           disabled={afternoonBlocked}
                                           className={`w-full p-2 rounded text-left text-sm transition-colors ${
                                             afternoonBlocked ? 'bg-gray-100 cursor-not-allowed' :
-                                            afternoonEligible ? 'bg-green-100 hover:bg-green-200' : 'bg-white hover:bg-gray-50'
+                                            afternoonEligible ? 'bg-green-100 hover:bg-green-200' :
+                                            afternoonUnavailable ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
                                           }`}
                                         >
                                           <div className="flex justify-between items-center">
                                             <span className="font-medium">🌙 PM</span>
-                                            <span className={afternoonBlocked ? 'text-gray-400' : afternoonEligible ? 'text-green-600' : 'text-gray-400'}>
-                                              {afternoonBlocked ? '🚫' : afternoonEligible ? '✓' : '○'}
+                                            <span className={afternoonBlocked ? 'text-gray-400' : afternoonEligible ? 'text-green-600' : afternoonUnavailable ? 'text-red-600' : 'text-gray-400'}>
+                                              {afternoonBlocked ? '🚫' : afternoonEligible ? '✓' : afternoonUnavailable ? '✗' : '○'}
                                             </span>
                                           </div>
                                           {afternoonAssigned && (
@@ -8468,7 +8499,7 @@ As a 1099 contractor, you are responsible for:
                           })()}
 
                           <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                            <strong>Legend:</strong> ✓ = Eligible to work • 🚫 = Session blocked • 🏕️ = Has campers assigned
+                            <strong>Legend:</strong> ✓ = Available • ✗ = Unavailable • ○ = Not set • 🚫 = Session blocked • 🏕️ = Has campers
                           </div>
                         </div>
                         <div className="p-4 border-t">
@@ -10669,7 +10700,7 @@ As a 1099 contractor, you are responsible for:
                     </div>
 
                     <p className="text-sm text-gray-500 mb-4">
-                      Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
+                      Camp runs weekdays only (Mon-Fri). Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
                     </p>
 
                     {/* Date Grid */}
@@ -11416,6 +11447,7 @@ As a 1099 contractor, you are responsible for:
         };
 
         // Sync availability data to counselorSchedule so admin dashboard sees it
+        // Saves both available (true) and unavailable (false) sessions
         const syncSchedule = async (newAvail) => {
           const myCounselor = counselors.find(c => c.email === user?.email);
           if (!myCounselor) return;
@@ -11423,10 +11455,16 @@ As a 1099 contractor, you are responsible for:
           newSchedule[myCounselor.id] = {};
           Object.entries(newAvail).forEach(([date, data]) => {
             const avail = Array.isArray(data) ? data : (data.available || []);
-            newSchedule[myCounselor.id][date] = {
-              morning: avail.includes('morning'),
-              afternoon: avail.includes('afternoon')
-            };
+            const unavail = Array.isArray(data) ? [] : (data.unavailable || []);
+            // Only add date entry if there's any data
+            if (avail.length > 0 || unavail.length > 0) {
+              newSchedule[myCounselor.id][date] = {};
+              // Set true for available, false for unavailable
+              if (avail.includes('morning')) newSchedule[myCounselor.id][date].morning = true;
+              else if (unavail.includes('morning')) newSchedule[myCounselor.id][date].morning = false;
+              if (avail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = true;
+              else if (unavail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = false;
+            }
           });
           await saveCounselorSchedule(newSchedule, `${myCounselor.name} updated availability`);
         };
@@ -11551,7 +11589,7 @@ As a 1099 contractor, you are responsible for:
               <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
                 <h3 className="font-bold text-green-800 mb-2">📅 Sign Up for Sessions</h3>
                 <p className="text-green-800 text-sm mb-2">Click on AM or PM to cycle through: <span className="font-medium">Available</span> → <span className="font-medium">Unavailable</span> → <span className="font-medium">Not Set</span></p>
-                <p className="text-green-700 text-sm">Camp runs {CAMP_DATE_RANGE} (Monday after school ends through Friday before school starts)</p>
+                <p className="text-green-700 text-sm">Camp runs weekdays only: July 13-17 & August 10-28, 2026</p>
               </div>
 
               {/* Month Tabs */}
@@ -11756,9 +11794,9 @@ As a 1099 contractor, you are responsible for:
           {page === 'location' && <Location />}
           {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
-          {page === 'admin' && user?.role === 'admin' && <Admin />}
-          {page === 'parent' && user?.role === 'parent' && <Parent />}
-          {page === 'counselor' && user?.role === 'counselor' && <CounselorDash />}
+          {page === 'admin' && user && <Admin />}
+          {page === 'parent' && user && <Parent />}
+          {page === 'counselor' && user && <CounselorDash />}
           <footer className="bg-gray-800 text-white py-6 text-center">© 2026 Roosevelt High School Girls Basketball</footer>
         </div>
       );
