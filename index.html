@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.137";
+    const VERSION = "12.138";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-06T09:45:00");
+    const BUILD_DATE = new Date("2026-02-06T10:15:00");
 
     const RELEASE_NOTES = [
+      { version: "12.138", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed login glitch — added loading screen during registration submission to prevent flash back to login page",
+        "Fixed counselor dashboard not showing unavailable (red) sessions from onboarding — now saves both available AND unavailable to availability table",
+        "Replaced camper birthdate picker with year/month/day dropdowns for easier year selection",
+        "Parent registration also now shows loading screen during submission"
+      ]},
       { version: "12.137", date: "2026-02-06", author: "Audrey Richardson", changes: [
         "Fixed login glitch after counselor/parent registration — removed redundant role checks that caused brief flash to login",
         "Fixed counselor availability sync — both available (green) AND unavailable (red) sessions now transfer to admin dashboard",
@@ -1003,6 +1009,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [policiesAccepted, setPoliciesAccepted] = useState({ pickup: false, dropoff: false });
       const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '', name: '' });
       const [error, setError] = useState('');
+      const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
       // State for adding campers/contacts (moved to parent level to avoid re-renders)
       const [showAddCamper, setShowAddCamper] = useState(false);
       const [newCamper, setNewCamper] = useState({ name: '', birthdate: '', grade: '', phone: '' });
@@ -1153,6 +1160,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       // Allow completing registration early (skip remaining steps)
       const handleComplete = async () => {
+        // Show submitting screen to prevent flash
+        setSubmitting(true);
+
         // Create user account with whatever data we have
         const newUser = {
           email: userData.email,
@@ -1218,6 +1228,22 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           setStep(step - 1);
         }
       };
+
+      // Submitting screen - prevents flash during async operations
+      if (submitting) {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
+            <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
+              <div className="text-6xl mb-4">🏀</div>
+              <h2 className="font-display text-2xl text-green-800 mb-2">Creating Your Account...</h2>
+              <p className="text-gray-600">Please wait while we save your information.</p>
+              <div className="mt-4 flex justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       return (
         <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8">
@@ -1378,17 +1404,51 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                           className="w-full px-3 py-2 border rounded-lg"
                           autoComplete="off" data-1p-ignore="true"
                         />
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="relative">
+                        <div className="space-y-3">
+                          {/* Birthdate with year/month/day dropdowns */}
+                          <div className="relative border rounded-lg p-3 bg-white">
                             <label className="absolute -top-2 left-2 bg-green-50 px-1 text-xs text-gray-500">Birthdate</label>
-                            <input
-                              type="date"
-                              value={newCamper.birthdate}
-                              onChange={e => setNewCamper({ ...newCamper, birthdate: e.target.value })}
-                              className="w-full px-3 py-2 border rounded-lg"
-                              min={new Date(new Date().getFullYear() - 15, 0, 1).toISOString().split('T')[0]}
-                              max={new Date().toISOString().split('T')[0]}
-                            />
+                            <div className="grid grid-cols-3 gap-2">
+                              <select
+                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[0] : ''}
+                                onChange={e => {
+                                  const [, m, d] = (newCamper.birthdate || '--').split('-');
+                                  setNewCamper({ ...newCamper, birthdate: e.target.value && m && d ? `${e.target.value}-${m}-${d}` : '' });
+                                }}
+                                className="w-full px-2 py-1.5 border rounded text-sm"
+                              >
+                                <option value="">Year</option>
+                                {Array.from({ length: 15 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                  <option key={y} value={y}>{y}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[1] : ''}
+                                onChange={e => {
+                                  const [y, , d] = (newCamper.birthdate || '--').split('-');
+                                  setNewCamper({ ...newCamper, birthdate: y && e.target.value && d ? `${y}-${e.target.value}-${d}` : '' });
+                                }}
+                                className="w-full px-2 py-1.5 border rounded text-sm"
+                              >
+                                <option value="">Month</option>
+                                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                                  <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                                ))}
+                              </select>
+                              <select
+                                value={newCamper.birthdate ? newCamper.birthdate.split('-')[2] : ''}
+                                onChange={e => {
+                                  const [y, m] = (newCamper.birthdate || '--').split('-');
+                                  setNewCamper({ ...newCamper, birthdate: y && m && e.target.value ? `${y}-${m}-${e.target.value}` : '' });
+                                }}
+                                className="w-full px-2 py-1.5 border rounded text-sm"
+                              >
+                                <option value="">Day</option>
+                                {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                                  <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                                ))}
+                              </select>
+                            </div>
                           </div>
                           <select
                             value={newCamper.grade}
@@ -6789,6 +6849,7 @@ As a 1099 contractor, you are responsible for:
         const [error, setError] = useState('');
         const [showCropper, setShowCropper] = useState(false);
         const [tempImage, setTempImage] = useState(null);
+        const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
         const photoInputRef = useRef(null);
 
         const totalSteps = 5;
@@ -6902,6 +6963,9 @@ As a 1099 contractor, you are responsible for:
           if (!validateStep()) return;
 
           if (step === totalSteps) {
+            // Show submitting screen to prevent flash
+            setSubmitting(true);
+
             // Create user account
             const newUser = {
               email: userData.email,
@@ -6934,16 +6998,23 @@ As a 1099 contractor, you are responsible for:
             };
             await saveCounselors([...counselors, newCounselor]);
 
-            // Save availability (keyed by email for isCounselorEligible compatibility)
-            const newAvail = { ...availability, [newCounselor.email]: availData };
+            // Save availability in object format with both available and unavailable arrays
+            // This format is required for counselor dashboard to show both green and red sessions
+            const allDates = new Set([...Object.keys(availData), ...Object.keys(unavailData)]);
+            const combinedAvail = {};
+            allDates.forEach(date => {
+              combinedAvail[date] = {
+                available: availData[date] || [],
+                unavailable: unavailData[date] || []
+              };
+            });
+            const newAvail = { ...availability, [newCounselor.email]: combinedAvail };
             await saveAvail(newAvail);
 
             // Also save to counselorSchedule so admin dashboard shows availability immediately
             // Save both available (true) and unavailable (false) sessions
             const newSchedule = { ...counselorSchedule };
             newSchedule[newCounselor.id] = {};
-            // Get all dates that have any availability data
-            const allDates = new Set([...Object.keys(availData), ...Object.keys(unavailData)]);
             allDates.forEach(date => {
               const avail = availData[date] || [];
               const unavail = unavailData[date] || [];
@@ -6973,6 +7044,22 @@ As a 1099 contractor, you are responsible for:
             setStep(step - 1);
           }
         };
+
+        // Submitting screen - prevents flash during async operations
+        if (submitting) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
+                <div className="text-6xl mb-4">🏀</div>
+                <h2 className="font-display text-2xl text-blue-800 mb-2">Submitting Application...</h2>
+                <p className="text-gray-600">Please wait while we save your information.</p>
+                <div className="mt-4 flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              </div>
+            </div>
+          );
+        }
 
         // Image cropper modal
         if (showCropper && tempImage) {
