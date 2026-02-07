@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Roosevelt Girls Basketball Day Camp 2026</title>
+  <title>Parent Dashboard - Roosevelt Day Camp</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -1812,6 +1812,159 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       );
     };
 
+    // ==================== PARENT MESSAGES TAB ====================
+    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast }) => {
+      const [replyText, setReplyText] = useState('');
+      const [selectedMsg, setSelectedMsg] = useState(null);
+      const messagesEndRef = useRef(null);
+
+      // Get messages for this parent (sent to them or to all, or from them)
+      const myMessages = messages
+        .filter(m => m.to === 'all' || m.to?.includes(userEmail) || m.from === userEmail)
+        .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+
+      const unreadMessages = myMessages.filter(m => m.from !== userEmail && !m.readBy?.includes(userEmail));
+
+      useEffect(() => {
+        // Mark messages as read when viewing
+        if (selectedMsg && !selectedMsg.readBy?.includes(userEmail)) {
+          markAsRead(selectedMsg.id, userEmail);
+        }
+      }, [selectedMsg]);
+
+      const handleSendReply = () => {
+        if (!replyText.trim() || !selectedMsg) return;
+        const msg = {
+          id: 'msg_' + Date.now(),
+          threadId: selectedMsg.threadId || selectedMsg.from === 'admin' ? userEmail : selectedMsg.threadId,
+          from: userEmail,
+          to: ['admin'],
+          subject: selectedMsg.subject ? `Re: ${selectedMsg.subject}` : '',
+          body: replyText.trim(),
+          sentAt: new Date().toISOString(),
+          readBy: [userEmail]
+        };
+        onSendReply(msg);
+        setReplyText('');
+        showToast('Reply sent!');
+      };
+
+      return (
+        <div className="space-y-6">
+          {/* Unread Alert */}
+          {unreadMessages.length > 0 && (
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-4">
+              <div className="text-3xl">📬</div>
+              <div>
+                <div className="font-bold text-blue-800">You have {unreadMessages.length} unread message{unreadMessages.length > 1 ? 's' : ''}</div>
+                <div className="text-sm text-blue-600">Click on a message to read and reply</div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Message List */}
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-bold text-lg text-green-800 mb-4">💬 Messages from Camp</h3>
+              {myMessages.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-4xl mb-2">📭</p>
+                  <p>No messages yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {myMessages.map(msg => {
+                    const isUnread = msg.from !== userEmail && !msg.readBy?.includes(userEmail);
+                    const isSelected = selectedMsg?.id === msg.id;
+                    const isFromMe = msg.from === userEmail;
+
+                    return (
+                      <div
+                        key={msg.id}
+                        onClick={() => setSelectedMsg(msg)}
+                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                          isSelected ? 'bg-green-100 border-2 border-green-500' :
+                          isUnread ? 'bg-blue-50 border-2 border-blue-300' :
+                          'bg-gray-50 hover:bg-gray-100'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <span className={`text-sm ${isUnread ? 'font-bold text-blue-800' : 'text-gray-600'}`}>
+                            {isFromMe ? '📤 You' : '📥 Camp Admin'}
+                            {msg.to === 'all' && !isFromMe && <span className="ml-1 text-xs text-purple-600">(Broadcast)</span>}
+                          </span>
+                          <span className="text-xs text-gray-400">{formatTimestamp(msg.sentAt)}</span>
+                        </div>
+                        {msg.subject && <div className={`text-sm ${isUnread ? 'font-bold' : 'font-medium'}`}>{msg.subject}</div>}
+                        <div className="text-sm text-gray-600 truncate">{msg.body}</div>
+                        {isUnread && <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded">New</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Message Detail / Reply */}
+            <div className="bg-white rounded-xl shadow p-6">
+              {!selectedMsg ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-4xl mb-2">👈</p>
+                  <p>Select a message to read</p>
+                </div>
+              ) : (
+                <div className="flex flex-col h-full">
+                  <div className="mb-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-bold text-lg">
+                        {selectedMsg.from === userEmail ? '📤 You sent' : '📥 From Camp Admin'}
+                      </span>
+                      <span className="text-sm text-gray-500">{formatTimestamp(selectedMsg.sentAt)}</span>
+                    </div>
+                    {selectedMsg.subject && (
+                      <div className="font-medium text-gray-800 mb-2">{selectedMsg.subject}</div>
+                    )}
+                    {selectedMsg.to === 'all' && selectedMsg.from !== userEmail && (
+                      <span className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded mb-2">
+                        📢 Sent to all parents
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 bg-gray-50 rounded-lg p-4 mb-4 whitespace-pre-wrap overflow-y-auto max-h-48">
+                    {selectedMsg.body}
+                  </div>
+
+                  {/* Reply section - only show for messages from admin */}
+                  {selectedMsg.from !== userEmail && (
+                    <div className="border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Reply:</label>
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg resize-none"
+                        rows={3}
+                        placeholder="Type your reply..."
+                        autoComplete="off"
+                        data-1p-ignore="true"
+                      />
+                      <button
+                        onClick={handleSendReply}
+                        disabled={!replyText.trim()}
+                        className="mt-2 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
+                      >
+                        Send Reply
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     // ==================== VERSION BANNER ====================
     const VersionBanner = ({ isVisible, isDev }) => {
       const [elapsed, setElapsed] = useState('0s');
@@ -2571,6 +2724,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       );
     };
 
+    // ==================== MAIN APP ====================
     function RooseveltCamp() {
       const [page, setPage] = useState('home');
       const [user, setUser] = useState(null);
@@ -2909,1246 +3063,1596 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const getUnpaid = () => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length;
 
       // ==================== NAV ====================
-      const Nav = () => (
-        <nav className="bg-green-900 text-white shadow-lg">
-          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => setPage('home')} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
-            <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
-              {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
-                <button key={p} onClick={() => setPage(p)} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base capitalize min-h-[44px] ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
-              ))}
-              <button onClick={() => setPage('login')} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base min-h-[44px] ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
-            </div>
-          </div>
-        </nav>
-      );
-
-      // ==================== HOME ====================
-      // Helper to get cropped image (handles both old string format and new object format)
-      const getSitePhoto = (key) => {
-        const data = sitePhotos?.[key];
-        if (!data) return null;
-        return typeof data === 'string' ? data : data.cropped;
-      };
-
-      const Home = () => (
-        <div className="w-full">
-          {/* Hero Section with Large Background Image - Edge to Edge */}
-          <div className="relative w-full min-h-[400px] sm:min-h-[500px] md:min-h-[600px] flex items-center justify-center overflow-hidden">
-            {/* Background Image or Gradient Fallback */}
-            {getSitePhoto('hero') ? (
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${getSitePhoto('hero')})` }}
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-green-800 to-green-900" />
-            )}
-            {/* Dark Overlay for Text Readability */}
-            <div className="absolute inset-0 bg-black/40" />
-            {/* Hero Content */}
-            <div className="relative z-10 max-w-4xl mx-auto px-4 text-center text-white">
-              <h1 className="font-display text-3xl sm:text-5xl md:text-7xl mb-3 sm:mb-4 drop-shadow-lg">{content.heroTitle}</h1>
-              <h2 className="font-display text-xl sm:text-3xl md:text-5xl text-green-200 mb-3 sm:mb-4 drop-shadow-md">{content.heroSubtitle}</h2>
-              <p className="text-base sm:text-xl md:text-2xl text-green-100 mb-6 sm:mb-8 drop-shadow">{content.heroTagline}</p>
-              <button onClick={() => setPage('login')} className="bg-yellow-500 hover:bg-yellow-400 text-green-900 font-bold text-base sm:text-xl px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-lg transform hover:scale-105 transition-transform">Register Now →</button>
-            </div>
-          </div>
-
-          {/* Info Cards */}
-          <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-green-600">
-              <div className="text-3xl sm:text-4xl mb-2">📅</div>
-              <h3 className="font-bold text-lg sm:text-xl text-green-800">Camp Dates</h3>
-              <p className="text-sm sm:text-base text-gray-700">{content.campDates}</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-yellow-500">
-              <div className="text-3xl sm:text-4xl mb-2">⏰</div>
-              <h3 className="font-bold text-lg sm:text-xl text-green-800">Sessions</h3>
-              <p className="text-sm sm:text-base text-gray-700">AM: {content.sessionMorning}</p>
-              <p className="text-sm sm:text-base text-gray-700">PM: {content.sessionAfternoon}</p>
-              <p className="text-green-600 font-bold mt-2 text-sm sm:text-base">{content.sessionCost}/session</p>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-orange-500">
-              <div className="text-3xl sm:text-4xl mb-2">👧</div>
-              <h3 className="font-bold text-lg sm:text-xl text-green-800">Ages</h3>
-              <p className="text-sm sm:text-base text-gray-700">{content.ageRange}</p>
-            </div>
-          </div>
-
-          {/* Counselors Section - Large circular headshots */}
-          <div className="bg-green-50 py-8 sm:py-12">
-            <div className="max-w-6xl mx-auto px-4">
-              <h2 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h2>
-              <div className="flex flex-wrap justify-center gap-6 sm:gap-8 md:gap-10">
-                {counselors.filter(c => c.visible).map(c => (
-                  <div key={c.id} className="text-center">
-                    {c.photo ? (
-                      <img src={c.photo} className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full object-cover shadow-lg border-4 border-white mx-auto" alt={c.name} />
-                    ) : (
-                      <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 rounded-full bg-green-200 flex items-center justify-center text-3xl sm:text-4xl md:text-5xl shadow-lg border-4 border-white mx-auto">{c.name[0]}</div>
-                    )}
-                    <h3 className="font-bold text-sm sm:text-base md:text-lg text-green-800 mt-3">{c.name}</h3>
-                    <p className="text-green-600 text-xs sm:text-sm">{c.position}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Drop-off Photo Section */}
-          {getSitePhoto('dropoff') && (
-            <div className="bg-green-50 py-12">
-              <div className="max-w-6xl mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div>
-                    <img
-                      src={getSitePhoto('dropoff')}
-                      alt="Camp drop-off"
-                      className="w-full object-cover rounded-2xl shadow-xl"
-                      style={{ aspectRatio: '4/3' }}
-                    />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-3xl text-green-800 mb-4">Easy Pick-up & Drop-off</h2>
-                    <p className="text-gray-700 text-lg mb-4">Our convenient location at Roosevelt High School makes drop-off and pick-up a breeze. Counselors greet every camper at the gym entrance.</p>
-                    <ul className="space-y-2 text-gray-600">
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Morning drop-off: 8:45 - 9:00 AM</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Afternoon drop-off: 11:45 AM - 12:00 PM</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Safe, supervised transitions</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* About Section */}
-          <div className="bg-gray-50 py-12">
-            <div className="max-w-4xl mx-auto px-4 text-center">
-              <h2 className="font-display text-4xl text-green-800 mb-6">About Our Camp</h2>
-              <p className="text-gray-700 text-lg">{content.aboutText}</p>
-            </div>
-          </div>
-
-          {/* Skills Training Photo Section */}
-          {getSitePhoto('layups') && (
-            <div className="py-12">
-              <div className="max-w-6xl mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div className="order-2 md:order-1">
-                    <h2 className="font-display text-3xl text-green-800 mb-4">Skills Training with Expert Coaches</h2>
-                    <p className="text-gray-700 text-lg mb-4">Our counselors work one-on-one and in small groups to develop fundamental basketball skills. Every camper gets personalized attention.</p>
-                    <ul className="space-y-2 text-gray-600">
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Layups, shooting, and ball handling</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Age-appropriate drills</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> 5:1 camper-to-counselor ratio</li>
-                    </ul>
-                  </div>
-                  <div className="order-1 md:order-2">
-                    <img
-                      src={getSitePhoto('layups')}
-                      alt="Layups practice"
-                      className="w-full object-cover rounded-2xl shadow-xl"
-                      style={{ aspectRatio: '4/3' }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Lunch Photo Section */}
-          {getSitePhoto('lunch') && (
-            <div className="bg-amber-50 py-12">
-              <div className="max-w-6xl mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
-                  <div>
-                    <img
-                      src={getSitePhoto('lunch')}
-                      alt="Campers eating lunch"
-                      className="w-full object-cover rounded-2xl shadow-xl"
-                      style={{ aspectRatio: '4/3' }}
-                    />
-                  </div>
-                  <div>
-                    <h2 className="font-display text-3xl text-green-800 mb-4">Lunch & Snack Time</h2>
-                    <p className="text-gray-700 text-lg mb-4">Campers enjoy healthy snacks and lunch breaks together, building friendships on and off the court.</p>
-                    <ul className="space-y-2 text-gray-600">
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Healthy snacks provided</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Water and sports drinks available</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Contact Footer */}
-          <div className="bg-green-900 text-white py-8 sm:py-12 text-center px-4">
-            <h2 className="font-display text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-6">Contact Us</h2>
-            <p className="text-base sm:text-lg md:text-xl break-words">{content.contactEmail}</p>
-            <p className="text-base sm:text-lg md:text-xl">{content.contactPhone}</p>
-            <p className="mt-3 sm:mt-4 text-green-200 whitespace-pre-line text-sm sm:text-base">{content.locationAddress}</p>
-          </div>
-        </div>
-      );
-
-      // ==================== SCHEDULE ====================
-      const DEFAULT_FOOD_PHOTOS = {
-        snack_fruit: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=150&h=150&fit=crop',
-        snack_granola: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=150&h=150&fit=crop',
-        snack_cheese: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=150&h=150&fit=crop',
-        snack_veggie: 'https://images.unsplash.com/photo-1640719028782-8230f1bdc5d1?w=150&h=150&fit=crop',
-        drink_water: 'https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=150&h=150&fit=crop',
-        drink_gatorade: 'https://images.unsplash.com/photo-1622543925917-763c34d1a86e?w=150&h=150&fit=crop',
-        drink_orange: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=150&h=150&fit=crop',
-        drink_apple: 'https://images.unsplash.com/photo-1576673442511-7e39b6545c87?w=150&h=150&fit=crop'
-      };
-      const getFoodPhoto = (key) => foodPhotos[key] || DEFAULT_FOOD_PHOTOS[key] || '';
-      const Schedule = () => (
-        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
-          <div className="max-w-4xl mx-auto px-4">
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Camp Schedule</h1>
-
-            {/* Sessions */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">Daily Sessions</h2>
-              <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                  <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
-                  <p className="text-base sm:text-lg">{content.sessionMorning}</p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <h3 className="font-bold text-blue-700">☀️ Afternoon Session</h3>
-                  <p className="text-base sm:text-lg">{content.sessionAfternoon}</p>
-                </div>
-              </div>
-              <p className="text-gray-700 font-medium">{content.campDates}</p>
-              <p className="text-sm text-gray-500 mt-2">Camp runs Monday through Friday.</p>
-              <button onClick={() => setPage('pricing')} className="mt-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">View Pricing →</button>
-            </div>
-
-            {/* Basketball Training Focus */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🏀 Basketball Training Focus</h2>
-              <p className="text-gray-700 mb-4">Each session includes a variety of basketball drills and activities designed to build fundamental skills and game experience:</p>
-              <div className="grid sm:grid-cols-2 gap-3">
-                <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-                  <h3 className="font-bold text-orange-800 text-sm mb-1">🎯 Shooting Form</h3>
-                  <p className="text-gray-600 text-sm">Proper technique, follow-through, and free throws</p>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                  <h3 className="font-bold text-blue-800 text-sm mb-1">🏃 Layups</h3>
-                  <p className="text-gray-600 text-sm">Footwork, finishing with both hands, and coordination</p>
-                </div>
-                <div className="p-3 bg-purple-50 rounded-lg border-l-4 border-purple-400">
-                  <h3 className="font-bold text-purple-800 text-sm mb-1">⚡ Dribbling</h3>
-                  <p className="text-gray-600 text-sm">Ball control, speed dribbles, and ball handling drills</p>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                  <h3 className="font-bold text-green-800 text-sm mb-1">🤝 Passing</h3>
-                  <p className="text-gray-600 text-sm">Chest passes, bounce passes, and court awareness</p>
-                </div>
-                <div className="p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                  <h3 className="font-bold text-red-800 text-sm mb-1">🛡️ Defense</h3>
-                  <p className="text-gray-600 text-sm">Stance, positioning, and defensive fundamentals</p>
-                </div>
-                <div className="p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                  <h3 className="font-bold text-yellow-800 text-sm mb-1">🏆 Scrimmages</h3>
-                  <p className="text-gray-600 text-sm">Apply skills in game situations and team play</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Lunch & Snacks */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🍎 Lunch & Snacks</h2>
-
-              {/* Lunch Info */}
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200 mb-6">
-                <h3 className="font-bold text-orange-800 mb-2">🍽️ Bring Your Own Lunch</h3>
-                <p className="text-gray-700">
-                  Campers attending both morning and afternoon sessions should bring their own lunch. We have a supervised lunch break between sessions where kids can eat together.
-                </p>
-              </div>
-
-              {/* Snacks Provided */}
-              <div className="mb-6">
-                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Snacks Provided</h3>
-                <p className="text-gray-700 mb-4">
-                  We provide healthy snacks to keep campers energized! If your child needs extra snacks, we're happy to help.
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=🍎'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Fresh Fruit</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f59e0b/white?text=🥜'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Granola Bars</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/fbbf24/white?text=🧀'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Cheese & Crackers</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/84cc16/white?text=🥕'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Veggie Sticks</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drinks */}
-              <div>
-                <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/3b82f6/white?text=💧'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Water</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-green-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=⚡'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Gatorade</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f97316/white?text=🍊'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Orange Juice</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-red-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/ef4444/white?text=🍎'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Apple Juice</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      );
-
-      // ==================== PRICING PAGE ====================
-      const Pricing = () => (
-        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
-          <div className="max-w-4xl mx-auto px-4">
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">💰 Pricing & Registration</h1>
-
-            {/* Session Pricing */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">Session Pricing</h2>
-              <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
-                  <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
-                  <p className="text-base sm:text-lg">{content.sessionMorning}</p>
-                  <p className="text-green-600 font-bold text-lg">${content.singleSessionCost || 60}/session</p>
-                </div>
-                <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                  <h3 className="font-bold text-blue-700">☀️ Afternoon Session</h3>
-                  <p className="text-base sm:text-lg">{content.sessionAfternoon}</p>
-                  <p className="text-green-600 font-bold text-lg">${content.singleSessionCost || 60}/session</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Discounts */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🎉 Discounts</h2>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span>Single Session</span>
-                  <span className="font-bold">${content.singleSessionCost || 60}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div>
-                    <span className="font-medium">Full Week (10 sessions)</span>
-                    <span className="ml-2 text-green-600 text-sm">Save {content.weekDiscount || 10}%!</span>
-                  </div>
-                  <span className="font-bold text-green-700">${Math.round((content.singleSessionCost || 60) * 10 * (1 - (content.weekDiscount || 10) / 100))}</span>
-                </div>
-                <div className="flex justify-between items-center p-3 bg-green-100 rounded-lg border border-green-300">
-                  <div>
-                    <span className="font-medium">2+ Weeks</span>
-                    <span className="ml-2 text-green-700 text-sm">Save {content.multiWeekDiscount || 15}%!</span>
-                  </div>
-                  <span className="font-bold text-green-800">{content.multiWeekDiscount || 15}% off total</span>
-                </div>
-              </div>
-              <p className="text-sm text-gray-500 mt-4">Discounts applied automatically at checkout.</p>
-            </div>
-
-            {/* Scholarship */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
-              <h2 className="font-bold text-lg sm:text-xl text-purple-800 mb-4">💜 Scholarship Assistance</h2>
-              <p className="text-gray-700">{content.scholarshipInfo}</p>
-              <button onClick={() => setPage('login')} className="mt-4 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Apply for Scholarship</button>
-            </div>
-
-            {/* Policies */}
-            <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-              <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">📋 Policies</h2>
-              <div className="space-y-3">
-                <div className="p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                  <h3 className="font-bold text-red-800 text-sm">🚫 Cancellations</h3>
-                  <p className="text-gray-700 text-sm">Cancel 14+ days ahead for full refund. Later cancellations may receive credit for future sessions.</p>
-                </div>
-                <div className="p-3 bg-orange-50 rounded-lg border-l-4 border-orange-400">
-                  <h3 className="font-bold text-orange-800 text-sm">⏰ Late Pickup</h3>
-                  <p className="text-gray-700 text-sm">Please pick up on time - our volunteer counselors have commitments after camp. Call if you'll be late.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-
-      // ==================== LOCATION PAGE ====================
-      const Location = () => {
-        const fullAddress = `${content.locationAddress}, ${content.locationCity}, ${content.locationState} ${content.locationZip}`;
-        const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(content.locationName + ' ' + fullAddress)}`;
-        const mapsEmbedUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(content.locationName + ' ' + fullAddress)}`;
+      // ==================== NAV (PARENT) ====================
+      const Nav = () => {
+        const handleLogout = () => {
+          sessionStorage.removeItem('user');
+          window.location.href = '/index.html';
+        };
 
         return (
-          <div className="min-h-screen bg-amber-50 py-12">
-            <div className="max-w-4xl mx-auto px-4">
-              <h1 className="font-display text-4xl text-green-800 text-center mb-8">📍 Camp Location</h1>
+          <nav className="bg-green-900 text-white shadow-lg">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => window.location.href = '/index.html'}>🏀 ROOSEVELT CAMP</div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
+                <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user?.name || 'Parent'}</span>
+                <button onClick={handleLogout} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
+              </div>
+            </div>
+          </nav>
+        );
+      };
 
-              {/* Location Card */}
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6">
-                {/* Map */}
-                <div className="h-64 bg-gray-200 relative">
-                  <iframe
-                    width="100%"
-                    height="100%"
-                    frameBorder="0"
-                    style={{ border: 0 }}
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(content.locationName + ' ' + fullAddress)}&output=embed`}
-                    allowFullScreen
-                  />
-                </div>
+      const Parent = () => {
+        const [selectedDates, setSelectedDates] = useState({});
+        const [selectedRegistrationMonth, setSelectedRegistrationMonth] = useState(() => {
+          if (CAMP_DATES.length > 0) {
+            const d = new Date(CAMP_DATES[0] + 'T12:00:00');
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          }
+          return null;
+        });
+        const [selectedChildren, setSelectedChildren] = useState([]);
+        const [showConfirm, setShowConfirm] = useState(null);
+        
+        const myUser = users.find(u => u.email === user?.email) || user;
+        // Get children via camper-parent links
+        const myChildrenIds = (camperParentLinks || [])
+          .filter(link => link.parentEmail === user?.email)
+          .map(link => link.camperId);
+        const myChildren = (campers || []).filter(c => myChildrenIds.includes(c.id));
 
-                {/* Details */}
-                <div className="p-6">
-                  <h2 className="font-display text-3xl text-green-800 mb-2">{content.locationName || 'Roosevelt High School'}</h2>
+        // Auto-select if only one camper exists
+        useEffect(() => {
+          if (myChildren.length === 1 && selectedChildren.length === 0) {
+            setSelectedChildren([myChildren[0].id]);
+          }
+        }, [myChildren.length]);
+        const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
+        const venmoCode = generateVenmoCode(user?.name);
+        
+        const getAmountDue = () => myRegs.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').reduce((s, r) => s + (r.totalAmount || sessionCost), 0);
+        
+        const getMonthWeeks = () => {
+          const months = {};
+          CAMP_WEEKS.forEach((week, idx) => {
+            const m = new Date(week.start + 'T12:00:00').getMonth();
+            if (!months[m]) months[m] = { name: ['July', 'August'][m - 6], weeks: [] };
+            months[m].weeks.push({ ...week, idx });
+          });
+          return months;
+        };
 
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl">🏫</span>
-                      <div>
-                        <p className="font-medium">{content.locationAddress || '1410 NE 66th St'}</p>
-                        <p className="text-gray-600">{content.locationCity || 'Seattle'}, {content.locationState || 'WA'} {content.locationZip || '98115'}</p>
-                      </div>
+        const toggleDate = (date, session) => {
+          setSelectedDates(p => {
+            const cur = p[date] || [];
+            return { ...p, [date]: cur.includes(session) ? cur.filter(s => s !== session) : [...cur, session] };
+          });
+        };
+
+        // Use discount calculation
+        const getPricingBreakdown = () => calculateDiscountedTotal(selectedDates, selectedChildren.length, content);
+        const calcTotal = () => getPricingBreakdown().finalTotal;
+
+        // Quick action to select entire week (both AM and PM for all available days)
+        const selectFullWeek = (weekDates) => {
+          setSelectedDates(p => {
+            const newDates = { ...p };
+            weekDates.forEach(date => {
+              const sessions = [];
+              if (!isSessionBlocked(date, 'morning')) sessions.push('morning');
+              if (!isSessionBlocked(date, 'afternoon')) sessions.push('afternoon');
+              if (sessions.length > 0) newDates[date] = sessions;
+            });
+            return newDates;
+          });
+        };
+
+        // Check if a week is fully selected (only counting available sessions)
+        const isWeekFullySelected = (weekDates) => {
+          const hasAvailable = weekDates.some(date =>
+            !isSessionBlocked(date, 'morning') || !isSessionBlocked(date, 'afternoon')
+          );
+          if (!hasAvailable) return false;
+          return weekDates.every(date => {
+            const sel = selectedDates[date] || [];
+            const amBlocked = isSessionBlocked(date, 'morning');
+            const pmBlocked = isSessionBlocked(date, 'afternoon');
+            const amOk = amBlocked || sel.includes('morning');
+            const pmOk = pmBlocked || sel.includes('afternoon');
+            return amOk && pmOk;
+          });
+        };
+
+        // Get count of available days in a week (days with at least one available session)
+        const getAvailableDaysInWeek = (weekDates) => weekDates.filter(date =>
+          !isSessionBlocked(date, 'morning') || !isSessionBlocked(date, 'afternoon')
+        ).length;
+
+        // Clear a week's selection
+        const clearWeek = (weekDates) => {
+          setSelectedDates(p => {
+            const newDates = { ...p };
+            weekDates.forEach(date => {
+              delete newDates[date];
+            });
+            return newDates;
+          });
+        };
+
+        const handleRegister = async () => {
+          if (!selectedChildren.length) { showToast('Select children', 'error'); return; }
+          const dates = Object.entries(selectedDates).filter(([, s]) => s.length);
+          if (!dates.length) { showToast('Select sessions', 'error'); return; }
+
+          // Calculate discount info for the entire order
+          const pricing = getPricingBreakdown();
+          const orderId = `order_${Date.now()}`;
+
+          // Calculate proportional discount per session
+          const discountRatio = pricing.originalTotal > 0 ? pricing.discount / pricing.originalTotal : 0;
+
+          let regCounter = 0;
+          for (const childId of selectedChildren) {
+            const child = myChildren.find(c => c.id === childId);
+            for (const [date, sessions] of dates) {
+              const baseAmount = sessions.length * sessionCost;
+              const discountAmount = Math.round(baseAmount * discountRatio * 100) / 100;
+              const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
+
+              await saveReg({
+                id: `reg_${Date.now()}_${regCounter++}_${childId}_${date}`,
+                orderId, // Group registrations from same order
+                childId, childName: child?.name,
+                parentEmail: user?.email, parentName: user?.name,
+                date, sessions,
+                status: 'pending', paymentStatus: 'unpaid',
+                baseAmount, // Original price before discount
+                discountAmount, // How much was discounted
+                discountPercent: pricing.discountPercent,
+                totalAmount: finalAmount, // Final price to pay
+                registeredAt: new Date().toISOString()
+              });
+            }
+          }
+
+          setShowConfirm({
+            children: selectedChildren.map(id => myChildren.find(c => c.id === id)?.name),
+            childIds: selectedChildren,
+            total: pricing.finalTotal,
+            savings: pricing.discount > 0 ? Math.round(pricing.discount) : null,
+            venmoCode,
+            dates: dates,
+            sessionCount: dates.reduce((sum, [, sessions]) => sum + (selectedChildren.length * sessions.length), 0)
+          });
+          setSelectedDates({});
+          setSelectedChildren([]);
+        };
+
+        const addChild = async (child) => {
+          const updated = { ...myUser, children: [...(myUser.children || []), { ...child, id: 'child_' + Date.now() }] };
+          await saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+          showToast('Child profile added! Go to Register tab to sign them up for camp.');
+        };
+
+        return (
+          <div className="min-h-screen bg-amber-50">
+            <div className="bg-green-800 text-white py-3 sm:py-4">
+              <div className="max-w-6xl mx-auto px-4">
+                <h1 className="font-display text-2xl sm:text-3xl">Parent Dashboard</h1>
+                <p className="text-green-200 text-sm sm:text-base">Welcome, {user?.name}</p>
+              </div>
+            </div>
+
+            <div className="bg-white shadow">
+              <div className="max-w-6xl mx-auto px-2 sm:px-4">
+                <ScrollableTabs>
+                  {['dashboard', 'campers', 'register', 'messages'].map(t => (
+                    <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Registrations' : t === 'dashboard' ? '📊 Dashboard' : t}
+                      {t === 'messages' && getUnreadCount(user?.email) > 0 && (
+                        <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
+                      )}
+                    </button>
+                  ))}
+                </ScrollableTabs>
+              </div>
+            </div>
+
+            <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
+              {parentTab === 'dashboard' && (
+                <div className="space-y-6">
+                  <div className={'rounded-xl shadow p-6 ' + (getAmountDue() > 0 ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50')}>
+                    <h3 className="font-bold text-lg mb-4">Payment</h3>
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div className="text-center"><p className="text-sm text-gray-600">Due</p><p className="text-2xl font-bold text-red-600">${getAmountDue()}</p></div>
+                      <div className="text-center"><p className="text-sm text-gray-600">Your Code</p><p className="text-2xl font-bold text-blue-600">{venmoCode}</p></div>
                     </div>
-
-                    {content.locationDetails && (
-                      <div className="flex items-start gap-3">
-                        <span className="text-2xl">ℹ️</span>
-                        <p className="text-gray-700">{content.locationDetails}</p>
-                      </div>
+                    <div className="bg-white rounded-lg p-4">
+                      <p><strong>Venmo:</strong> {content.venmoUsername}</p>
+                      <p className="text-sm text-gray-600">Include code: <span className="font-mono bg-gray-100 px-2 rounded">{venmoCode}</span></p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-4">My Registrations</h3>
+                    {myRegs.length === 0 ? <p className="text-gray-500">None yet</p> : (
+                      <div className="space-y-2">{myRegs.map(r => (
+                        <div key={r.id} className="flex justify-between p-3 border rounded-lg">
+                          <div>
+                            <span className="font-medium">{r.childName}</span>
+                            <span className="text-gray-500 ml-2">{r.date} • {r.sessions?.join(', ')}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <span className={'px-2 py-0.5 rounded text-xs ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>{r.status}</span>
+                            <span className={'px-2 py-0.5 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{r.paymentStatus || 'unpaid'}</span>
+                          </div>
+                        </div>
+                      ))}</div>
                     )}
                   </div>
 
-                  {/* Copy-friendly address box */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <p className="text-sm text-gray-500 mb-2">📋 Copy this address for GPS/Maps:</p>
-                    <p className="font-mono text-gray-800 select-all">{fullAddress}</p>
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex flex-wrap gap-3">
-                    <a
-                      href={mapsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 min-w-[200px] py-3 bg-blue-600 text-white rounded-lg text-center font-medium hover:bg-blue-700"
-                    >
-                      🗺️ Open in Google Maps
-                    </a>
-                    <a
-                      href={`https://maps.apple.com/?q=${encodeURIComponent(fullAddress)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 min-w-[200px] py-3 bg-gray-800 text-white rounded-lg text-center font-medium hover:bg-gray-900"
-                    >
-                      🍎 Open in Apple Maps
-                    </a>
+                  {/* Share with Friends */}
+                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl shadow p-6 border border-purple-200">
+                    <div className="flex items-center gap-4">
+                      <div className="text-4xl">📢</div>
+                      <div className="flex-1">
+                        <h3 className="font-bold text-lg text-purple-800">Invite Friends to Camp!</h3>
+                        <p className="text-sm text-purple-600">Know other families who might be interested? Share Roosevelt Camp with them!</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const shareText = `Join us at Roosevelt Girls Basketball Day Camp this summer! Great coaching, fun activities, and skill development for grades 3-8. ${window.location.origin}`;
+                          if (navigator.share) {
+                            navigator.share({
+                              title: 'Roosevelt Girls Basketball Day Camp',
+                              text: shareText,
+                              url: window.location.origin
+                            }).catch(() => {});
+                          } else {
+                            navigator.clipboard.writeText(shareText).then(() => {
+                              showToast('Link copied to clipboard!');
+                            });
+                          }
+                        }}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 flex items-center gap-2"
+                      >
+                        <span>Share</span>
+                        <span>📤</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Parking & Directions */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="font-bold text-xl text-green-800 mb-4">🚗 Parking & Drop-off</h2>
-                <div className="space-y-3 text-gray-700">
-                  <p>• <strong>Parking:</strong> Free parking is available in the school parking lot off NE 66th St.</p>
-                  <p>• <strong>Drop-off:</strong> Please drop off campers at the main gymnasium entrance on the east side of the building.</p>
-                  <p>• <strong>Pick-up:</strong> Campers should be picked up at the same location promptly at the end of their session.</p>
+              {parentTab === 'register' && (
+                <div className="space-y-6">
+                  <div className={'bg-white rounded-xl shadow p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
+                    <h3 className="font-bold text-lg mb-2">Step 1: Select Children to Register</h3>
+                    <p className="text-sm text-gray-500 mb-4">Choose which of your children to register for camp sessions. Once registered, they become campers!</p>
+                    {myChildren.length === 0 ? <p className="text-gray-500">Add campers in the "My Campers" tab first</p> : (
+                      <div className="flex flex-wrap gap-2">{myChildren.map(c => (
+                        <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'px-4 py-2 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50 font-bold' : 'border-gray-200')}>{selectedChildren.includes(c.id) ? '✓ ' : ''}{c.name}</button>
+                      ))}</div>
+                    )}
+                    {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {selectedChildren.length} camper{selectedChildren.length > 1 ? 's' : ''} selected</p>}
+                  </div>
+                  
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-4">Step 2: Select Dates & Sessions</h3>
+
+                    {/* Month Selector */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {(() => {
+                        const months = [];
+                        CAMP_DATES.forEach(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                          const monthName = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                          if (!months.some(m => m.key === monthKey)) {
+                            months.push({ key: monthKey, name: monthName });
+                          }
+                        });
+
+                        return months.map(m => (
+                          <button
+                            key={m.key}
+                            onClick={() => setSelectedRegistrationMonth(m.key)}
+                            className={`px-4 py-2 rounded-lg text-sm ${
+                              selectedRegistrationMonth === m.key
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {m.name}
+                          </button>
+                        ));
+                      })()}
+                    </div>
+
+                    <p className="text-sm text-gray-500 mb-4">
+                      Camp runs weekdays only (Mon-Fri). Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
+                    </p>
+
+                    {/* Date Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                      {(() => {
+                        const getMonthDates = () => {
+                          if (!selectedRegistrationMonth) return [];
+                          const [year, month] = selectedRegistrationMonth.split('-').map(Number);
+                          return CAMP_DATES.filter(date => {
+                            const d = new Date(date + 'T12:00:00');
+                            return d.getFullYear() === year && d.getMonth() === month - 1;
+                          });
+                        };
+
+                        return getMonthDates().map(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const sel = selectedDates[date] || [];
+                          const amBlocked = isSessionBlocked(date, 'morning');
+                          const pmBlocked = isSessionBlocked(date, 'afternoon');
+                          const fullyBlocked = amBlocked && pmBlocked;
+                          const amSelected = sel.includes('morning');
+                          const pmSelected = sel.includes('afternoon');
+                          const bothSelected = amSelected && pmSelected;
+
+                          return (
+                            <div key={date} className={`rounded-lg border-2 overflow-hidden ${
+                              fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                              bothSelected ? 'border-green-300 bg-green-50' :
+                              (amSelected || pmSelected) ? 'border-yellow-300 bg-yellow-50' :
+                              'border-gray-200 bg-white'
+                            }`}>
+                              <div className="p-2 text-center bg-gray-100 font-medium">
+                                <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                              </div>
+                              {fullyBlocked ? (
+                                <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
+                              ) : (
+                                <div className="p-2 space-y-1">
+                                  {amBlocked ? (
+                                    <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
+                                  ) : (
+                                    <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                      ☀️ AM {amSelected ? '✓' : ''}
+                                    </button>
+                                  )}
+                                  {pmBlocked ? (
+                                    <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
+                                  ) : (
+                                    <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
+                                      🌙 PM {pmSelected ? '✓' : ''}
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-4">Order Summary</h3>
+                    {(() => {
+                      const pricing = getPricingBreakdown();
+                      const hasSelections = pricing.totalSessions > 0;
+                      return hasSelections ? (
+                        <div className="space-y-3">
+                          <div className="flex justify-between text-gray-600">
+                            <span>{pricing.totalSessions} session{pricing.totalSessions !== 1 ? 's' : ''} × ${content.singleSessionCost || 60}</span>
+                            <span>${pricing.originalTotal}</span>
+                          </div>
+                          {selectedChildren.length > 1 && (
+                            <div className="text-sm text-gray-500">
+                              ({selectedChildren.length} children)
+                            </div>
+                          )}
+                          {pricing.fullWeeks > 0 && (
+                            <div className="flex justify-between text-green-600">
+                              <span>
+                                {pricing.fullWeeks >= 2
+                                  ? `🎉 Multi-week discount (${pricing.discountPercent}% off ${pricing.fullWeeks} full weeks)`
+                                  : `✓ Full week discount (${pricing.discountPercent}% off)`}
+                              </span>
+                              <span>-${Math.round(pricing.discount)}</span>
+                            </div>
+                          )}
+                          {pricing.partialSessions > 0 && pricing.fullWeeks > 0 && (
+                            <div className="text-sm text-gray-500">
+                              + {pricing.partialSessions} additional session{pricing.partialSessions !== 1 ? 's' : ''} at full price
+                            </div>
+                          )}
+                          <div className="border-t pt-3 flex justify-between items-center">
+                            <span className="font-bold text-lg">Total</span>
+                            <div className="text-right">
+                              {pricing.discount > 0 && (
+                                <span className="text-gray-400 line-through text-sm mr-2">${pricing.originalTotal}</span>
+                              )}
+                              <span className="text-2xl font-bold text-green-700">${pricing.finalTotal}</span>
+                            </div>
+                          </div>
+                          {pricing.discount > 0 && (
+                            <div className="bg-green-50 text-green-700 text-sm p-2 rounded-lg text-center">
+                              You save ${Math.round(pricing.discount)}!
+                            </div>
+                          )}
+                          {pricing.fullWeeks === 0 && pricing.totalSessions >= 5 && (
+                            <div className="bg-yellow-50 text-yellow-700 text-sm p-2 rounded-lg">
+                              💡 Tip: Book both AM & PM for all 5 days of a week to get {content.weekDiscount || 10}% off!
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-gray-400 text-center py-4">
+                          Select sessions above to see pricing
+                        </div>
+                      );
+                    })()}
+                    {!selectedChildren.length && Object.values(selectedDates).flat().length > 0 && (
+                      <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
+                        <span className="text-yellow-700 font-bold text-lg">⚠️ Please select a camper above before registering!</span>
+                        <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Children to Register" and click on your child's name.</p>
+                      </div>
+                    )}
+                    <button onClick={handleRegister} disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length} className="w-full mt-4 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {parentTab === 'schedule' && (
+                <CamperScheduleTab
+                  myChildren={myChildren}
+                  registrations={myRegs}
+                  allRegistrations={registrations}
+                  assignments={assignments}
+                  counselors={counselors}
+                  campers={campers}
+                  users={users}
+                />
+              )}
+
+              {parentTab === 'campers' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-2">My Campers</h3>
+                    <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Registrations tab to make them campers!</p>
+                    {myChildren.length > 0 ? (
+                      <ChildrenManager
+                        children={myChildren}
+                        onUpdate={(updatedChild) => {
+                          const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
+                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          showToast('Child updated!');
+                        }}
+                        onDelete={(childId) => {
+                          const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
+                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          showToast('Child removed');
+                        }}
+                        onAdd={addChild}
+                        registrations={myRegs}
+                      />
+                    ) : (
+                      <AddChildForm onAdd={addChild} />
+                    )}
+                  </div>
+                  {myRegs.length > 0 && (
+                    <CamperScheduleTab
+                      myChildren={myChildren}
+                      registrations={myRegs}
+                      allRegistrations={registrations}
+                      assignments={assignments}
+                      counselors={counselors}
+                      campers={campers}
+                      users={users}
+                    />
+                  )}
+
+                  {/* Registration Calendar View */}
+                  {myChildren.length > 0 && (
+                    <RegistrationCalendarView
+                      myChildren={myChildren}
+                      registrations={myRegs}
+                    />
+                  )}
+
+                  {/* Emergency Contacts Management */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
+                    </p>
+                    <ParentEmergencyContactsManager
+                      parentEmail={user?.email}
+                      emergencyContacts={emergencyContacts}
+                      onSave={(contacts) => {
+                        saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
+                        showToast('Emergency contacts updated!');
+                      }}
+                      showToast={showToast}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {parentTab === 'messages' && (
+                <ParentMessagesTab
+                  userEmail={user?.email}
+                  userName={user?.name}
+                  messages={messages}
+                  onSendReply={saveMessage}
+                  markAsRead={markMessageRead}
+                  showToast={showToast}
+                />
+              )}
             </div>
+
+            {showConfirm && (
+              <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                  <div className="text-center mb-6">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h2 className="font-display text-3xl text-green-800 mb-2">Registration Submitted!</h2>
+                    <p className="text-gray-600">Your registration has been sent to the camp director for review</p>
+                  </div>
+
+                  {/* Executive Summary */}
+                  <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-green-800 mb-3 text-lg">📋 Registration Summary</h3>
+                    <div className="space-y-2 text-left">
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Campers:</span>
+                        <span className="font-medium">{showConfirm.children?.join(', ')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Total Sessions:</span>
+                        <span className="font-medium">{showConfirm.sessionCount}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-700">Dates:</span>
+                        <span className="font-medium">{showConfirm.dates?.length} day(s)</span>
+                      </div>
+                      {showConfirm.savings > 0 && (
+                        <div className="flex justify-between text-green-700 bg-white rounded px-2 py-1">
+                          <span>🎉 Bulk Discount:</span>
+                          <span className="font-bold">-${showConfirm.savings}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between pt-2 border-t-2 border-green-300 text-lg">
+                        <span className="font-bold text-gray-800">Amount Due:</span>
+                        <span className="font-bold text-green-700">${showConfirm.total}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Session Details */}
+                  <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-gray-800 mb-3">📅 Registered Sessions</h3>
+                    <div className="space-y-2 text-sm">
+                      {showConfirm.dates?.map(([date, sessions]) => {
+                        const d = new Date(date + 'T12:00:00');
+                        const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                        return (
+                          <div key={date} className="flex justify-between items-center bg-white rounded px-3 py-2">
+                            <span className="font-medium">{dateStr}</span>
+                            <span className="text-gray-600">
+                              {sessions.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Payment Info */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-blue-800 mb-3 text-lg">💳 Next Step: Payment</h3>
+                    <div className="text-left space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700">Send payment via Venmo to:</span>
+                        <span className="font-bold text-blue-700">{content.venmoUsername}</span>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border-2 border-blue-300">
+                        <p className="text-sm text-gray-600 mb-1">Include this code in your payment:</p>
+                        <p className="font-mono text-2xl font-bold text-blue-700 text-center">{showConfirm.venmoCode}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* What Happens Next */}
+                  <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4 mb-6">
+                    <h3 className="font-bold text-yellow-800 mb-3 text-lg">⏱️ What Happens Next?</h3>
+                    <ol className="text-left space-y-3 text-sm">
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">1.</span>
+                        <span><strong>Payment:</strong> Send ${showConfirm.total} via Venmo with code <code className="bg-white px-1 rounded">{showConfirm.venmoCode}</code></span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">2.</span>
+                        <span><strong>Admin Review:</strong> The camp director will review your registration</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">3.</span>
+                        <span><strong>Confirmation:</strong> Once payment is received and registration is approved, your status will change to "Approved"</span>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="font-bold text-yellow-700 flex-shrink-0">4.</span>
+                        <span><strong>Track Status:</strong> Check your Dashboard or My Campers tab to see registration status</span>
+                      </li>
+                    </ol>
+                  </div>
+
+                  {/* Warning */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-red-800 text-center">
+                      <strong>⚠️ Important:</strong> Your spot is not confirmed until payment is received AND admin approves your registration
+                    </p>
+                  </div>
+
+                  {/* Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => { setShowConfirm(null); setParentTab('dashboard'); }}
+                      className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700"
+                    >
+                      View Payment Info
+                    </button>
+                    <button
+                      onClick={() => { setShowConfirm(null); setParentTab('campers'); }}
+                      className="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700"
+                    >
+                      View Status
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       };
 
-      // ==================== COUNSELORS PAGE ====================
-      const Counselors = () => (
-        <div className="min-h-screen bg-amber-50 py-8 sm:py-12">
-          <div className="max-w-6xl mx-auto px-4">
-            <h1 className="font-display text-2xl sm:text-3xl md:text-4xl text-green-800 text-center mb-6 sm:mb-8">Our Counselors</h1>
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-              {counselors.filter(c => c.visible).map(c => (
-                <div key={c.id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="pt-4 sm:pt-6 flex items-center justify-center">
-                    {c.photo ? <img src={c.photo} className="w-28 h-28 sm:w-48 sm:h-48 rounded-full object-cover border-4 border-green-600 shadow-lg" /> : <div className="w-28 h-28 sm:w-48 sm:h-48 rounded-full bg-green-200 flex items-center justify-center text-4xl sm:text-6xl border-4 border-green-600 shadow-lg">{c.name[0]}</div>}
-                  </div>
-                  <div className="p-3 sm:p-4 text-center">
-                    <h3 className="font-bold text-base sm:text-xl text-green-800">{c.name}</h3>
-                    <p className="text-green-600 text-xs sm:text-base">{c.position} • {c.year}</p>
-                    <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">{c.bio}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      );
+      const AddChildForm = ({ onAdd, onCancel }) => {
+        const [name, setName] = useState('');
+        const [birthdate, setBirthdate] = useState('');
+        const [grade, setGrade] = useState('');
+        const [phone, setPhone] = useState('');
+        const [photo, setPhoto] = useState(null);
+        const [showCrop, setShowCrop] = useState(false);
+        const [tempImg, setTempImg] = useState(null);
+        const inputRef = useRef(null);
 
-      // ==================== ROLE SELECTOR ====================
-      const RoleSelector = ({ onSelect, onBack }) => (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-8 sm:py-12">
-          <div className="max-w-lg mx-auto px-4">
-            <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
-              <h2 className="font-display text-2xl sm:text-3xl text-green-800 text-center mb-2">Join Roosevelt Camp</h2>
-              <p className="text-gray-600 text-center mb-6 sm:mb-8 text-sm sm:text-base">How would you like to participate?</p>
+        const age = calculateAge(birthdate);
 
-              <div className="space-y-3 sm:space-y-4">
-                <button
-                  onClick={() => onSelect('parent')}
-                  className="w-full p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="text-3xl sm:text-4xl">👨‍👩‍👧</div>
-                    <div>
-                      <h3 className="font-bold text-lg sm:text-xl text-green-800 group-hover:text-green-600">I'm a Parent</h3>
-                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Register your children for basketball camp sessions</p>
-                      <ul className="text-xs sm:text-sm text-gray-500 mt-2 space-y-1">
-                        <li>• Add your children's profiles</li>
-                        <li>• Set up emergency contacts</li>
-                        <li>• Register for camp sessions</li>
-                      </ul>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => onSelect('counselor')}
-                  className="w-full p-4 sm:p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
-                >
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="text-3xl sm:text-4xl">🏀</div>
-                    <div>
-                      <h3 className="font-bold text-lg sm:text-xl text-blue-800 group-hover:text-blue-600">I'm a Counselor</h3>
-                      <p className="text-gray-600 mt-1 text-sm sm:text-base">Apply to be a camp counselor and work with campers</p>
-                      <ul className="text-xs sm:text-sm text-gray-500 mt-2 space-y-1">
-                        <li>• Create your counselor profile</li>
-                        <li>• Set your availability</li>
-                        <li>• Pending admin approval</li>
-                      </ul>
-                    </div>
-                  </div>
-                </button>
-              </div>
-
-              <button
-                onClick={onBack}
-                className="w-full mt-6 text-gray-500 hover:text-gray-700 text-sm"
-              >
-                ← Back to login
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-      const CounselorOnboarding = ({ onComplete, onBack, users, saveUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule }) => {
-        const [step, setStep] = useState(1);
-        const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
-        const [showPassword, setShowPassword] = useState(false);
-        const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
-        const [availData, setAvailData] = useState({});
-        const [unavailData, setUnavailData] = useState({});
-        const [selectedMonth, setSelectedMonth] = useState(6); // 6=July, 7=August
-        const [responsibilitiesAcked, setResponsibilitiesAcked] = useState(false);
-        const [payAcked, setPayAcked] = useState(false);
-        const [error, setError] = useState('');
-        const [showCropper, setShowCropper] = useState(false);
-        const [tempImage, setTempImage] = useState(null);
-        const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
-        const photoInputRef = useRef(null);
-
-        const totalSteps = 5;
-
-        const steps = [
-          { num: 1, title: 'Account', icon: '👤' },
-          { num: 2, title: 'Profile', icon: '🏀' },
-          { num: 3, title: 'Availability', icon: '📅' },
-          { num: 4, title: 'Responsibilities', icon: '📋' },
-          { num: 5, title: 'Submit', icon: '✅' }
-        ];
-
-        const handlePhotoUpload = (e) => {
+        const handleFile = (e) => {
           const file = e.target.files?.[0];
           if (file) {
             const reader = new FileReader();
             reader.onloadend = () => {
-              setTempImage(reader.result);
-              setShowCropper(true);
+              setTempImg(reader.result);
+              setShowCrop(true);
             };
             reader.readAsDataURL(file);
           }
           if (e.target) e.target.value = '';
         };
 
-        // Availability helpers - cycle: grey (unset) → green (available) → red (unavailable) → grey
-        const getSessionState = (date, session) => {
-          const avail = availData[date] || [];
-          const unavail = unavailData[date] || [];
-          if (avail.includes(session)) return 'available';
-          if (unavail.includes(session)) return 'unavailable';
-          return 'unset';
+        const handleSubmit = () => {
+          if (!name || !birthdate || !grade) return;
+          onAdd({ name, birthdate, grade, phone, photo });
+          setName(''); setBirthdate(''); setGrade(''); setPhone(''); setPhoto(null);
         };
 
-        const toggleSession = (date, session) => {
-          const state = getSessionState(date, session);
-          if (state === 'unset') {
-            // grey → green (available)
-            setAvailData({ ...availData, [date]: [...(availData[date] || []), session] });
-            setUnavailData({ ...unavailData, [date]: (unavailData[date] || []).filter(s => s !== session) });
-          } else if (state === 'available') {
-            // green → red (unavailable)
-            setAvailData({ ...availData, [date]: (availData[date] || []).filter(s => s !== session) });
-            setUnavailData({ ...unavailData, [date]: [...(unavailData[date] || []), session] });
-          } else {
-            // red → grey (unset)
-            setUnavailData({ ...unavailData, [date]: (unavailData[date] || []).filter(s => s !== session) });
-          }
-        };
-
-        const selectAllSessions = () => {
-          const newAvail = {};
-          CAMP_DATES.forEach(date => {
-            newAvail[date] = ['morning', 'afternoon'];
-          });
-          setAvailData(newAvail);
-          setUnavailData({});
-        };
-
-        const clearAllSessions = () => {
-          setAvailData({});
-          setUnavailData({});
-        };
-
-        const getTotalSessions = () => {
-          return Object.values(availData).flat().length;
-        };
-
-        const getUnavailableSessions = () => {
-          return Object.values(unavailData).flat().length;
-        };
-
-        const validateStep = () => {
-          setError('');
-          if (step === 1) {
-            if (!userData.name || !userData.email || !userData.phone || !userData.password) {
-              setError('Please fill in all required fields');
-              return false;
-            }
-            if (!isValidPhone(userData.phone)) {
-              setError('Please enter a valid phone number');
-              return false;
-            }
-            if (users.some(u => u.email === userData.email) || counselors.some(c => c.email === userData.email)) {
-              setError('An account with this email already exists');
-              return false;
-            }
-          }
-          if (step === 2) {
-            if (!profileData.bio || profileData.bio.length < 20) {
-              setError('Please write a bio (at least 20 characters)');
-              return false;
-            }
-          }
-          if (step === 3) {
-            if (Object.values(availData).flat().length === 0) {
-              setError('Please select at least one available session');
-              return false;
-            }
-          }
-          if (step === 4) {
-            if (!responsibilitiesAcked || !payAcked) {
-              setError('Please acknowledge both the responsibilities and pay terms');
-              return false;
-            }
-          }
-          return true;
-        };
-
-        const handleNext = async () => {
-          if (!validateStep()) return;
-
-          if (step === totalSteps) {
-            // Show submitting screen to prevent flash
-            setSubmitting(true);
-
-            // Create user account
-            const newUser = {
-              email: userData.email,
-              name: userData.name,
-              password: userData.password,
-              phone: userData.phone,
-              role: 'counselor',
-              roles: ['counselor'],
-              onboardingComplete: true,
-              onboardingCompletedAt: new Date().toISOString()
-            };
-            await saveUsers([...users, newUser]);
-
-            // Create counselor profile (pending approval)
-            const newCounselor = {
-              id: 'counselor_' + Date.now(),
-              name: userData.name,
-              email: userData.email,
-              phone: userData.phone,
-              position: profileData.position,
-              year: profileData.year,
-              bio: profileData.bio,
-              photo: profileData.photo,
-              visible: false, // Hidden until approved
-              approvedByAdmin: false,
-              responsibilitiesAcknowledged: true,
-              payDisclosureAcknowledged: true,
-              createdAt: new Date().toISOString(),
-              order: counselors.length
-            };
-            await saveCounselors([...counselors, newCounselor]);
-
-            // Save availability in object format with both available and unavailable arrays
-            // This format is required for counselor dashboard to show both green and red sessions
-            const allDates = new Set([...Object.keys(availData), ...Object.keys(unavailData)]);
-            const combinedAvail = {};
-            allDates.forEach(date => {
-              combinedAvail[date] = {
-                available: availData[date] || [],
-                unavailable: unavailData[date] || []
-              };
-            });
-            const newAvail = { ...availability, [newCounselor.email]: combinedAvail };
-            await saveAvail(newAvail);
-
-            // Also save to counselorSchedule so admin dashboard shows availability immediately
-            // Save both available (true) and unavailable (false) sessions
-            const newSchedule = { ...counselorSchedule };
-            newSchedule[newCounselor.id] = {};
-            allDates.forEach(date => {
-              const avail = availData[date] || [];
-              const unavail = unavailData[date] || [];
-              // Only add date entry if there's any data for it
-              if (avail.length > 0 || unavail.length > 0) {
-                newSchedule[newCounselor.id][date] = {};
-                // Set true for available, false for unavailable
-                if (avail.includes('morning')) newSchedule[newCounselor.id][date].morning = true;
-                else if (unavail.includes('morning')) newSchedule[newCounselor.id][date].morning = false;
-                if (avail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = true;
-                else if (unavail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = false;
-              }
-            });
-            await saveCounselorSchedule(newSchedule, `${newCounselor.name} registered with availability`);
-
-            onComplete(newUser);
-            return;
-          }
-
-          setStep(step + 1);
-        };
-
-        const handleBack = () => {
-          if (step === 1) {
-            onBack();
-          } else {
-            setStep(step - 1);
-          }
-        };
-
-        // Submitting screen - prevents flash during async operations
-        if (submitting) {
+        if (showCrop && tempImg) {
           return (
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
-              <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
-                <div className="text-6xl mb-4">🏀</div>
-                <h2 className="font-display text-2xl text-blue-800 mb-2">Submitting Application...</h2>
-                <p className="text-gray-600">Please wait while we save your information.</p>
-                <div className="mt-4 flex justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        // Image cropper modal
-        if (showCropper && tempImage) {
-          return (
-            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-lg w-full p-6">
-                <h3 className="font-bold text-lg mb-4">Crop Your Photo</h3>
-                <ImageCropper
-                  image={tempImage}
-                  shape="circle"
-                  onSave={(img) => {
-                    setProfileData({ ...profileData, photo: img });
-                    setShowCropper(false);
-                    setTempImage(null);
-                  }}
-                  onCancel={() => {
-                    setShowCropper(false);
-                    setTempImage(null);
-                  }}
-                />
-              </div>
-            </div>
+            <ImageCropper
+              image={tempImg}
+              onSave={(img) => { setPhoto(img); setShowCrop(false); }}
+              onCancel={() => { setShowCrop(false); setTempImg(null); }}
+            />
           );
         }
 
         return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8">
-            <div className="max-w-lg mx-auto px-4">
-              {/* Progress Bar */}
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  {steps.map((s) => (
-                    <div
-                      key={s.num}
-                      className={`flex flex-col items-center ${s.num <= step ? 'text-blue-600' : 'text-gray-400'}`}
-                    >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
-                        s.num < step ? 'bg-blue-600 text-white' :
-                        s.num === step ? 'bg-blue-100 border-2 border-blue-600' : 'bg-gray-200'
-                      }`}>
-                        {s.num < step ? '✓' : s.icon}
-                      </div>
-                      <span className="text-xs mt-1 hidden sm:block">{s.title}</span>
-                    </div>
-                  ))}
+          <div className="border-t pt-4 space-y-4">
+            <h4 className="font-medium text-lg">Add Child Profile</h4>
+            <p className="text-sm text-gray-500 -mt-2">Create a profile for your child. You'll register them for camp sessions separately.</p>
+
+            {/* Photo Upload with Face Silhouette Placeholder */}
+            <div className="flex justify-center">
+              {photo ? (
+                <div className="relative">
+                  <img src={photo} className="w-24 h-24 rounded-full object-cover border-2 border-green-600" />
+                  <button onClick={() => inputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm">✎</button>
+                  <button onClick={() => setPhoto(null)}
+                    className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">×</button>
                 </div>
-                <div className="h-2 bg-gray-200 rounded-full">
-                  <div
-                    className="h-2 bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
-                  />
+              ) : (
+                <div
+                  onClick={() => inputRef.current?.click()}
+                  className="w-24 h-24 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300"
+                >
+                  <svg className="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                  <span className="text-xs text-gray-500 mt-1">Add Photo</span>
+                </div>
+              )}
+              <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </div>
+            <p className="text-xs text-gray-500 text-center">Photo helps us recognize your child at camp</p>
+
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Child's Name *</label>
+              <input value={name} onChange={e => setName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg" placeholder="Full name"
+                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+            </div>
+
+            {/* Birthdate & Calculated Age */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
+                <input type="date" value={birthdate} onChange={e => setBirthdate(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  min={new Date(new Date().getFullYear() - 25, 0, 1).toISOString().split('T')[0]}
+                  max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
+                  data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700">
+                  {age !== null ? `${age} years old` : 'Select birthdate'}
                 </div>
               </div>
+            </div>
 
-              {/* Content Card */}
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="font-display text-2xl text-blue-800 mb-6">
-                  {steps[step - 1].title}
-                </h2>
+            {/* Grade */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Grade (Fall 2026) *</label>
+              <select value={grade} onChange={e => setGrade(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Select grade</option>
+                <option value="3rd">3rd Grade</option>
+                <option value="4th">4th Grade</option>
+                <option value="5th">5th Grade</option>
+                <option value="6th">6th Grade</option>
+                <option value="7th">7th Grade</option>
+                <option value="8th">8th Grade</option>
+              </select>
+            </div>
 
-                {error && (
-                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
-                    {error}
-                  </div>
-                )}
+            {/* Phone (optional) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Child's Phone <span className="text-gray-400">(optional)</span>
+              </label>
+              <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234"
+                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+              <p className="text-xs text-gray-500 mt-1">If your child has a phone for emergencies</p>
+            </div>
 
-                {/* Step 1: Account */}
-                {step === 1 && (
-                  <div className="space-y-4">
-                    <p className="text-gray-600 mb-4">Create your counselor account to get started.</p>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                      <input value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Your full name" autoComplete="off" data-1p-ignore="true" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <input type="email" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="your@email.com" autoComplete="off" data-1p-ignore="true" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                      <input value={userData.phone} onChange={e => setUserData({ ...userData, phone: formatPhone(e.target.value) })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="(555) 555-1234" autoComplete="off" data-1p-ignore="true" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                      <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} value={userData.password} onChange={e => setUserData({ ...userData, password: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none pr-16" placeholder="Create a password" autoComplete="off" data-1p-ignore="true" />
-                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 2: Profile */}
-                {step === 2 && (
-                  <div className="space-y-4">
-                    <p className="text-gray-600 mb-4">Tell us about your basketball background. This will appear on the camp website once approved.</p>
-                    <div className="flex justify-center mb-4">
-                      {profileData.photo ? (
-                        <div className="relative">
-                          <img src={profileData.photo} className="w-32 h-32 rounded-full object-cover border-4 border-blue-600" />
-                          <button onClick={() => photoInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full text-white flex items-center justify-center hover:bg-blue-700">✎</button>
-                        </div>
-                      ) : (
-                        <div onClick={() => photoInputRef.current?.click()} className="w-32 h-32 rounded-full bg-gray-200 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                          <span className="text-4xl mb-1">📷</span>
-                          <span className="text-xs text-gray-500">Add Photo</span>
-                        </div>
-                      )}
-                      <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
-                        <select value={profileData.position} onChange={e => setProfileData({ ...profileData, position: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
-                          <option value="Point Guard">Point Guard</option>
-                          <option value="Shooting Guard">Shooting Guard</option>
-                          <option value="Small Forward">Small Forward</option>
-                          <option value="Power Forward">Power Forward</option>
-                          <option value="Center">Center</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
-                        <select value={profileData.year} onChange={e => setProfileData({ ...profileData, year: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
-                          <option value="Freshman">Freshman</option>
-                          <option value="Sophomore">Sophomore</option>
-                          <option value="Junior">Junior</option>
-                          <option value="Senior">Senior</option>
-                          <option value="Alumni">Alumni</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bio *</label>
-                      <textarea value={profileData.bio} onChange={e => setProfileData({ ...profileData, bio: e.target.value })} className="w-full px-3 py-2 border rounded-lg h-24" placeholder="Tell us about your basketball experience and why you want to be a counselor..." />
-                      <p className="text-xs text-gray-500 mt-1">{profileData.bio.length}/200 characters</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 3: Availability */}
-                {step === 3 && (
-                  <div className="space-y-4">
-                    <p className="text-gray-600 mb-2">Camp runs weekdays only (Mon-Fri). Click each session to set your availability. Click cycles through: <span className="text-gray-400 font-medium">Not Set</span> → <span className="text-green-600 font-medium">Available</span> → <span className="text-red-600 font-medium">Unavailable</span></p>
-
-                    {/* Month Tabs */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
-                        <button key={m} onClick={() => setSelectedMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (selectedMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
-                      ))}
-                      <div className="flex-1" />
-                      <button onClick={selectAllSessions} className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">Mark All Available</button>
-                      <button onClick={clearAllSessions} className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">Clear All</button>
-                    </div>
-                    <div className="text-sm text-gray-500 text-right mb-2">{getTotalSessions()} available · {getUnavailableSessions()} unavailable</div>
-
-                    {/* Weeks for selected month */}
-                    {CAMP_WEEKS.filter(w => new Date(w.start + 'T12:00:00').getMonth() === selectedMonth).map((week, weekIdx) => (
-                      <div key={weekIdx} className="border rounded-lg overflow-hidden">
-                        <div className="bg-gray-100 px-3 py-2 text-sm font-medium">Week {weekIdx + 1}: {new Date(week.start + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                        <div className="grid grid-cols-5 gap-2 p-3">
-                          {week.dates.map(date => {
-                            const d = new Date(date + 'T12:00:00');
-                            const amState = getSessionState(date, 'morning');
-                            const pmState = getSessionState(date, 'afternoon');
-                            const bothAvail = amState === 'available' && pmState === 'available';
-                            const bothUnavail = amState === 'unavailable' && pmState === 'unavailable';
-                            const cardBorder = bothAvail ? 'border-green-300 bg-green-50' : bothUnavail ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white';
-                            const getButtonStyle = (state) => state === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : state === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
-                            return (
-                              <div key={date} className={`rounded-lg border-2 overflow-hidden ${cardBorder}`}>
-                                <div className={`text-center p-1 font-bold text-xs ${bothAvail ? 'bg-green-200' : bothUnavail ? 'bg-red-200' : 'bg-gray-100'}`}>
-                                  <div className="text-gray-600">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
-                                  <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                                </div>
-                                <div className="p-1 space-y-1">
-                                  <button onClick={() => toggleSession(date, 'morning')} className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${getButtonStyle(amState)}`}>
-                                    AM
-                                  </button>
-                                  <button onClick={() => toggleSession(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${getButtonStyle(pmState)}`}>
-                                    PM
-                                  </button>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    {/* Legend */}
-                    <div className="flex gap-4 text-xs text-gray-600 justify-center">
-                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-green-500 rounded"></div><span>Available</span></div>
-                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-red-500 rounded"></div><span>Unavailable</span></div>
-                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-gray-200 rounded"></div><span>Not Set</span></div>
-                    </div>
-                    <p className="text-xs text-gray-500 text-center">You can update your availability later from your dashboard.</p>
-                  </div>
-                )}
-
-                {/* Step 4: Responsibilities */}
-                {step === 4 && (
-                  <div className="space-y-6">
-                    <div className="bg-white border rounded-lg overflow-hidden">
-                      <div className="bg-blue-100 px-4 py-2 font-medium text-blue-800">📋 Counselor Responsibilities</div>
-                      <div className="p-4">
-                        <ul className="space-y-2">
-                          {COUNSELOR_RESPONSIBILITIES.map((resp, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-600"><span className="text-blue-500">•</span>{resp}</li>
-                          ))}
-                        </ul>
-                        <label className="flex items-center gap-3 mt-4 cursor-pointer">
-                          <input type="checkbox" checked={responsibilitiesAcked} onChange={e => setResponsibilitiesAcked(e.target.checked)} className="w-5 h-5 text-blue-600" />
-                          <span className="text-sm">I understand and accept these responsibilities</span>
-                        </label>
-                      </div>
-                    </div>
-                    <div className="bg-white border rounded-lg overflow-hidden">
-                      <div className="bg-green-100 px-4 py-2 font-medium text-green-800">💵 Pay Information</div>
-                      <div className="p-4">
-                        <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">{PAY_DISCLOSURE}</pre>
-                        <label className="flex items-center gap-3 mt-4 cursor-pointer">
-                          <input type="checkbox" checked={payAcked} onChange={e => setPayAcked(e.target.checked)} className="w-5 h-5 text-green-600" />
-                          <span className="text-sm">I understand and accept the pay terms and 1099 status</span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 5: Submit */}
-                {step === 5 && (
-                  <div className="text-center space-y-6">
-                    <div className="text-6xl">📨</div>
-                    <h3 className="font-display text-2xl text-blue-800">Ready to Submit!</h3>
-                    <p className="text-gray-600">Your application will be reviewed by a camp administrator. You'll be notified once approved.</p>
-                    <div className="bg-gray-50 rounded-lg p-4 text-left">
-                      <h4 className="font-medium mb-2">Application Summary:</h4>
-                      <p className="text-sm text-gray-600">• {userData.name}</p>
-                      <p className="text-sm text-gray-600">• {profileData.position} • {profileData.year}</p>
-                      <p className="text-sm text-gray-600">• {getTotalSessions()} sessions available</p>
-                    </div>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                      <p className="text-yellow-800 font-medium">⏳ Pending Admin Approval</p>
-                      <p className="text-sm text-yellow-700 mt-1">Your profile won't appear on the website until approved by an administrator.</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Navigation */}
-                <div className="flex gap-4 mt-8">
-                  <button
-                    onClick={handleBack}
-                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    {step === 1 ? '← Back' : '← Previous'}
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="flex-1 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg"
-                  >
-                    {step === totalSteps ? 'Submit Application' : 'Continue →'}
-                  </button>
-                </div>
-              </div>
+            {/* Buttons */}
+            <div className="flex gap-4 pt-4">
+              {onCancel && <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>}
+              <button onClick={handleSubmit} disabled={!name || !birthdate || !grade}
+                className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-green-700 disabled:hover:bg-gray-300">
+                Add Child
+              </button>
             </div>
           </div>
         );
       };
 
-      // ==================== LOGIN ====================
-      const Login = () => {
-        const [email, setEmail] = useState('');
-        const [password, setPassword] = useState('');
-        const [showPassword, setShowPassword] = useState(false);
-        const [error, setError] = useState('');
-        const [mode, setMode] = useState('login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor'
-        const [name, setName] = useState('');
-        const [phone, setPhone] = useState('');
+      // ==================== CHILD CARD ====================
+      const ChildCard = ({ child, onUpdate, onDelete }) => {
+        const inputRef = useRef(null);
+        const [tempImg, setTempImg] = useState(null);
+        const [showCrop, setShowCrop] = useState(false);
+        const [isEditing, setIsEditing] = useState(false);
+        const [editForm, setEditForm] = useState({ ...child });
+        const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+        const age = calculateAge(child.birthdate);
 
-        const handleLogin = () => {
-          // Check if logging in as admin
-          const admin = admins.find(a => a.username === email && a.password === password);
-          if (admin) {
-            const user = { name: admin.name, role: 'admin', adminId: admin.id };
-            sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/admin.html';
-            return;
+        const handleFile = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); };
+            reader.readAsDataURL(file);
           }
-          const u = users.find(x => x.email === email && x.password === password);
-          if (u) {
-            sessionStorage.setItem('user', JSON.stringify(u));
-            window.location.href = u.role === 'counselor' ? '/counselor.html' : '/parent.html';
-            return;
-          }
-          const c = counselors.find(x => x.email === email);
-          if (c) {
-            const user = { ...c, role: 'counselor' };
-            sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/counselor.html';
-            return;
-          }
-          setError('Invalid credentials');
+          if (e.target) e.target.value = '';
         };
 
-        // Show role selector
-        if (mode === 'selectRole') {
+        const handleSaveEdit = () => {
+          if (!editForm.name || !editForm.birthdate || !editForm.grade) return;
+          onUpdate({ ...child, ...editForm });
+          setIsEditing(false);
+        };
+
+        const handleCancelEdit = () => {
+          setEditForm({ ...child });
+          setIsEditing(false);
+        };
+
+        if (showCrop && tempImg) {
           return (
-            <RoleSelector
-              onSelect={(role) => setMode(role === 'parent' ? 'onboardParent' : 'onboardCounselor')}
-              onBack={() => setMode('login')}
-            />
+            <div className="border rounded-lg p-4">
+              <ImageCropper
+                image={tempImg}
+                onSave={(img) => {
+                  if (isEditing) {
+                    setEditForm({ ...editForm, photo: img });
+                  } else {
+                    onUpdate({ ...child, photo: img });
+                  }
+                  setShowCrop(false);
+                }}
+                onCancel={() => { setShowCrop(false); setTempImg(null); }}
+              />
+            </div>
           );
         }
 
-        // Show parent onboarding wizard
-        if (mode === 'onboardParent') {
+        // Delete confirmation dialog
+        if (showDeleteConfirm) {
           return (
-            <ParentOnboarding
-              onComplete={(newUser) => {
-                sessionStorage.setItem('user', JSON.stringify(newUser));
-                window.location.href = '/parent.html';
-              }}
-              onBack={() => setMode('selectRole')}
-              users={users}
-              saveUsers={saveUsers}
-              saveEmergencyContacts={saveEmergencyContacts}
-              emergencyContacts={emergencyContacts}
-              saveOnboardingProgress={saveOnboardingProgress}
-              campers={campers}
-              saveCampers={saveCampers}
-              saveCamperParentLinks={saveCamperParentLinks}
-              camperParentLinks={camperParentLinks}
-            />
+            <div className="border-2 border-red-300 bg-red-50 rounded-lg p-4">
+              <div className="text-center">
+                <div className="text-4xl mb-2">⚠️</div>
+                <h4 className="font-bold text-red-800 mb-2">Delete {child.name}?</h4>
+                <p className="text-sm text-red-600 mb-4">
+                  This will permanently remove this child from your account.
+                  Any existing registrations will remain in the system.
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => { onDelete(child.id); setShowDeleteConfirm(false); }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </div>
           );
         }
 
-        // Show counselor onboarding wizard
-        if (mode === 'onboardCounselor') {
+        // Edit mode
+        if (isEditing) {
           return (
-            <CounselorOnboarding
-              onComplete={(newUser) => {
-                sessionStorage.setItem('user', JSON.stringify(newUser));
-                window.location.href = '/counselor.html';
-              }}
-              onBack={() => setMode('selectRole')}
-              users={users}
-              saveUsers={saveUsers}
-              counselors={counselors}
-              saveCounselors={saveCounselors}
-              availability={availability}
-              saveAvailability={saveAvail}
-              counselorSchedule={counselorSchedule}
-              saveCounselorSchedule={saveCounselorSchedule}
-            />
-          );
-        }
+            <div className="border-2 border-blue-300 bg-blue-50 rounded-lg p-4">
+              <h4 className="font-bold text-blue-800 mb-4">✏️ Edit Child Details</h4>
 
-        return (
-          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
-            <div className="max-w-md mx-auto px-4">
-              <div className="bg-white rounded-2xl shadow-xl p-8">
-                <h2 className="font-display text-3xl text-green-800 text-center mb-6">Welcome Back</h2>
-                {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-center">{error}</div>}
-
-                <form autoComplete="off" data-1p-ignore="true" onSubmit={e => e.preventDefault()} className="space-y-4">
-                  <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" autoFocus />
+              {/* Photo */}
+              <div className="flex justify-center mb-4">
+                {editForm.photo ? (
                   <div className="relative">
-                    <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg pr-16" placeholder="Password" onKeyDown={e => e.key === 'Enter' && handleLogin()} autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
+                    <img src={editForm.photo} className="w-20 h-20 rounded-full object-cover border-2 border-blue-400" />
+                    <button onClick={() => inputRef.current?.click()}
+                      className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                    <button onClick={() => setEditForm({ ...editForm, photo: null })}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">×</button>
                   </div>
-                  <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
-                </form>
+                ) : (
+                  <div onClick={() => inputRef.current?.click()}
+                    className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                    <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    <span className="text-xs text-gray-500">Add</span>
+                  </div>
+                )}
+                <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+              </div>
 
-                <div className="relative my-6">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-200"></div>
+              <div className="space-y-3">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <input
+                    value={editForm.name || ''}
+                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="Child's name"
+                    autoComplete="off"
+                    data-1p-ignore="true"
+                  />
+                </div>
+
+                {/* Birthdate & Age */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
+                    <input
+                      type="date"
+                      value={editForm.birthdate || ''}
+                      onChange={e => setEditForm({ ...editForm, birthdate: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      min={new Date(new Date().getFullYear() - 25, 0, 1).toISOString().split('T')[0]}
+                      max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
+                      data-1p-ignore="true"
+                    />
                   </div>
-                  <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-4 text-gray-500">or continue with</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                    <div className="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-700">
+                      {calculateAge(editForm.birthdate) !== null ? `${calculateAge(editForm.birthdate)} years old` : 'Select birthdate'}
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <button
-                    onClick={() => showToast('Google login coming soon!')}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                {/* Grade */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade (Fall 2026) *</label>
+                  <select
+                    value={editForm.grade || ''}
+                    onChange={e => setEditForm({ ...editForm, grade: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg"
                   >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    <span className="font-medium text-gray-700">Continue with Google</span>
-                  </button>
-
-                  <button
-                    onClick={() => showToast('Apple login coming soon!')}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                    </svg>
-                    <span className="font-medium text-gray-700">Continue with Apple</span>
-                  </button>
+                    <option value="">Select grade</option>
+                    <option value="3rd">3rd Grade</option>
+                    <option value="4th">4th Grade</option>
+                    <option value="5th">5th Grade</option>
+                    <option value="6th">6th Grade</option>
+                    <option value="7th">7th Grade</option>
+                    <option value="8th">8th Grade</option>
+                  </select>
                 </div>
 
-                <button onClick={() => { setMode('selectRole'); setError(''); }} className="w-full mt-6 text-green-600 hover:underline font-medium">
-                  New? Create account with email →
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Child's Phone (optional)</label>
+                  <input
+                    value={editForm.phone || ''}
+                    onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                    className="w-full px-3 py-2 border rounded-lg"
+                    placeholder="(555) 555-1234"
+                    autoComplete="off"
+                    data-1p-ignore="true"
+                  />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button onClick={handleCancelEdit} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={!editForm.name || !editForm.birthdate || !editForm.grade}
+                    className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Normal display mode
+        return (
+          <div className="border rounded-lg p-4 flex items-start gap-4">
+            {/* Photo with edit button or face placeholder */}
+            <div className="flex-shrink-0">
+              {child.photo ? (
+                <div className="relative">
+                  <img src={child.photo} className="w-20 h-20 rounded-full object-cover border-2 border-green-600" />
+                  <button onClick={() => inputRef.current?.click()}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                </div>
+              ) : (
+                <div onClick={() => inputRef.current?.click()}
+                  className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                  <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                  </svg>
+                  <span className="text-xs text-gray-500">Add</span>
+                </div>
+              )}
+              <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1">
+              <div className="font-bold text-lg">{child.name}</div>
+              <div className="text-sm text-gray-600 space-y-1">
+                {child.grade && <div>Grade: {child.grade}</div>}
+                {child.birthdate && (
+                  <div>
+                    Birthday: {new Date(child.birthdate + 'T12:00:00').toLocaleDateString()}
+                    {age !== null && <span className="text-green-600 font-medium"> ({age} years old)</span>}
+                  </div>
+                )}
+                {child.phone && <div>Phone: {child.phone}</div>}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { setEditForm({ ...child }); setIsEditing(true); }}
+                className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
+              >
+                ✏️ Edit
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm"
+              >
+                🗑️ Delete
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== COUNSELOR ====================
+    // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
+    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations }) => {
+      const [showAddForm, setShowAddForm] = useState(false);
+
+      // Check if child has any registrations (is a camper)
+      const isCamper = (childId) => registrations?.some(r => r.childId === childId);
+
+      return (
+        <div className="space-y-4">
+          {children.map(child => (
+            <div key={child.id} className="relative">
+              <ChildCard
+                child={child}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+              />
+              {isCamper(child.id) && (
+                <div className="absolute top-2 right-2">
+                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                    🏕️ Registered Camper
+                  </span>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {showAddForm ? (
+            <div className="border-t pt-4 mt-4">
+              <AddChildForm
+                onAdd={(child) => {
+                  onAdd(child);
+                  setShowAddForm(false);
+                }}
+                onCancel={() => setShowAddForm(false)}
+              />
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 hover:bg-green-50 hover:border-green-400 transition-colors flex items-center justify-center gap-2 font-medium"
+            >
+              <span className="text-xl">+</span>
+              <span>Add Another Child</span>
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast }) => {
+      const [localContacts, setLocalContacts] = useState([]);
+      const [editingId, setEditingId] = useState(null);
+      const [showAddForm, setShowAddForm] = useState(false);
+      const [editForm, setEditForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+      const [hasChanges, setHasChanges] = useState(false);
+
+      // Initialize local contacts from props
+      useEffect(() => {
+        const myContacts = emergencyContacts.filter(c => c.userEmail === parentEmail);
+        setLocalContacts(myContacts);
+      }, [emergencyContacts, parentEmail]);
+
+      // Check if requirements are met
+      const meetsRequirements = () => {
+        const nonParentContacts = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father');
+        return localContacts.length >= 3 && nonParentContacts.length >= 1;
+      };
+
+      const handleEdit = (contact) => {
+        setEditingId(contact.id);
+        setEditForm({
+          name: contact.name,
+          relationship: contact.relationship,
+          phone: contact.phone,
+          email: contact.email || '',
+          priority: contact.priority || 'normal'
+        });
+      };
+
+      const handleSaveEdit = () => {
+        if (!editForm.name || !editForm.relationship || !editForm.phone) {
+          showToast('Please fill in all required fields', 'error');
+          return;
+        }
+        const updatedContacts = localContacts.map(c =>
+          c.id === editingId ? { ...c, ...editForm } : c
+        );
+        setLocalContacts(updatedContacts);
+        setEditingId(null);
+        setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+        setHasChanges(true);
+      };
+
+      const handleDelete = (id) => {
+        if (!confirm('Delete this emergency contact?')) return;
+        setLocalContacts(localContacts.filter(c => c.id !== id));
+        setHasChanges(true);
+      };
+
+      const handleAdd = () => {
+        if (!editForm.name || !editForm.relationship || !editForm.phone) {
+          showToast('Please fill in all required fields', 'error');
+          return;
+        }
+        const newContact = {
+          id: `ec_${Date.now()}`,
+          userEmail: parentEmail,
+          ...editForm
+        };
+        setLocalContacts([...localContacts, newContact]);
+        setShowAddForm(false);
+        setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+        setHasChanges(true);
+      };
+
+      const handleSaveChanges = () => {
+        if (!meetsRequirements()) {
+          showToast('You must have at least 3 emergency contacts, including at least 1 non-parent', 'error');
+          return;
+        }
+        // Merge local contacts with other users' contacts
+        const otherContacts = emergencyContacts.filter(c => c.userEmail !== parentEmail);
+        const allContacts = [...otherContacts, ...localContacts];
+        onSave(allContacts);
+        setHasChanges(false);
+      };
+
+      const handleCancel = () => {
+        const myContacts = emergencyContacts.filter(c => c.userEmail === parentEmail);
+        setLocalContacts(myContacts);
+        setHasChanges(false);
+        setEditingId(null);
+        setShowAddForm(false);
+      };
+
+      const requirementsMet = meetsRequirements();
+      const nonParentCount = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father').length;
+
+      return (
+        <div className="space-y-4">
+          {/* Requirements Status */}
+          <div className={`rounded-lg p-3 border-2 ${requirementsMet ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xl">{requirementsMet ? '✓' : '⚠️'}</span>
+              <span className="font-medium">{requirementsMet ? 'Requirements Met' : 'Requirements Not Met'}</span>
+            </div>
+            <div className="text-sm text-gray-700">
+              <div>Total contacts: <strong>{localContacts.length}</strong> / 3 minimum {localContacts.length >= 3 ? '✓' : '❌'}</div>
+              <div>Non-parent contacts: <strong>{nonParentCount}</strong> / 1 minimum {nonParentCount >= 1 ? '✓' : '❌'}</div>
+            </div>
+          </div>
+
+          {/* Contact List */}
+          {localContacts.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 3 contacts.</p>
+          ) : (
+            <div className="space-y-2">
+              {localContacts.map(contact => (
+                <div key={contact.id} className="border rounded-lg p-4">
+                  {editingId === contact.id ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                        <input
+                          value={editForm.name}
+                          onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                        <input
+                          value={editForm.relationship}
+                          onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                          placeholder="e.g., Grandparent, Neighbor, Friend"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                        <input
+                          value={editForm.phone}
+                          onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                          value={editForm.email}
+                          onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                          className="w-full px-3 py-2 border rounded-lg"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+                          }}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-medium">{contact.name}</div>
+                        <div className="text-sm text-gray-600">{contact.relationship}</div>
+                        <div className="text-sm text-gray-600">{contact.phone}</div>
+                        {contact.email && <div className="text-sm text-gray-600">{contact.email}</div>}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEdit(contact)}
+                          className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(contact.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add New Contact Form */}
+          {showAddForm ? (
+            <div className="border-2 border-green-300 rounded-lg p-4 space-y-3 bg-green-50">
+              <h4 className="font-medium">Add Emergency Contact</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                <input
+                  value={editForm.relationship}
+                  onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="e.g., Grandparent, Neighbor, Friend"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input
+                  value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  value={editForm.email}
+                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdd}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Add Contact
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
-          </div>
-        );
+          ) : (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="w-full py-3 border-2 border-dashed border-green-300 rounded-lg text-green-600 hover:bg-green-50 hover:border-green-400"
+            >
+              + Add Emergency Contact
+            </button>
+          )}
+
+          {/* Save/Cancel Changes */}
+          {hasChanges && (
+            <div className="flex gap-2 pt-4 border-t">
+              <button
+                onClick={handleSaveChanges}
+                disabled={!requirementsMet}
+                className="flex-1 px-4 py-3 bg-green-700 text-white rounded-lg hover:bg-green-800 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+              >
+                {requirementsMet ? 'Save Changes' : 'Cannot Save - Requirements Not Met'}
+              </button>
+              <button
+                onClick={handleCancel}
+                className="px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== REGISTRATION CALENDAR VIEW ====================
+    const RegistrationCalendarView = ({ myChildren, registrations }) => {
+      const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || 'all');
+
+      // Get all registration dates for selected child or all children
+      const getRegistrationsForDisplay = () => {
+        if (selectedChild === 'all') {
+          return registrations;
+        }
+        return registrations.filter(r => r.childId === selectedChild);
       };
 
-      // ==================== ADMIN ====================
+      const displayRegs = getRegistrationsForDisplay();
 
-      // ==================== ROUTER (INDEX.HTML) ====================
-      if (loading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
+      // Generate calendar for July, August 2026
+      const months = [
+        { name: 'July', year: 2026, month: 6 },
+        { name: 'August', year: 2026, month: 7 }
+      ];
 
-      // Global transitioning screen
-      if (transitioning) {
+      const getDaysInMonth = (year, month) => {
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+        const days = [];
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startDayOfWeek; i++) {
+          days.push(null);
+        }
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+          days.push(day);
+        }
+        return days;
+      };
+
+      const getRegistrationForDate = (year, month, day) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return displayRegs.filter(r => r.date === dateStr);
+      };
+
+      const getStatusColor = (status) => {
+        if (status === 'approved') return 'bg-green-500';
+        if (status === 'pending') return 'bg-yellow-500';
+        if (status === 'rejected') return 'bg-red-500';
+        return 'bg-gray-300';
+      };
+
+      const getStatusText = (status) => {
+        if (status === 'approved') return 'Approved';
+        if (status === 'pending') return 'Pending';
+        if (status === 'rejected') return 'Rejected';
+        return '';
+      };
+
+      if (myChildren.length === 0) {
         return (
-          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
-              <div className="text-6xl mb-4">🏀</div>
-              <h2 className="font-display text-2xl text-green-800 mb-2">Welcome!</h2>
-              <p className="text-gray-600">Loading your dashboard...</p>
-              <div className="mt-4 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-              </div>
-            </div>
+          <div className="bg-white rounded-xl shadow p-8 text-center">
+            <div className="text-6xl mb-4">📅</div>
+            <h3 className="font-bold text-lg text-gray-800 mb-2">No Campers Yet</h3>
+            <p className="text-gray-500">Add campers to see their registration calendar</p>
           </div>
         );
       }
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <div className="mb-6">
+            <h3 className="font-bold text-xl mb-2">📅 Registration Calendar</h3>
+            <p className="text-sm text-gray-500 mb-4">View registration status across July and August</p>
+
+            {/* Child Selector */}
+            <div className="flex gap-2 flex-wrap mb-4">
+              <button
+                onClick={() => setSelectedChild('all')}
+                className={`px-4 py-2 rounded-lg font-medium ${
+                  selectedChild === 'all'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Campers
+              </button>
+              {myChildren.map(child => (
+                <button
+                  key={child.id}
+                  onClick={() => setSelectedChild(child.id)}
+                  className={`px-4 py-2 rounded-lg font-medium ${
+                    selectedChild === child.id
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {child.name}
+                </button>
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-4 text-sm mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-green-500 rounded"></div>
+                <span>Approved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-red-500 rounded"></div>
+                <span>Rejected</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                <span>Not Registered</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="grid md:grid-cols-3 gap-6">
+            {months.map(({ name, year, month }) => {
+              const days = getDaysInMonth(year, month);
+              return (
+                <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
+                  <div className="bg-green-700 text-white text-center py-2 font-bold">
+                    {name} {year}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 p-2">
+                    {/* Day headers */}
+                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                      <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
+                        {d}
+                      </div>
+                    ))}
+                    {/* Days */}
+                    {days.map((day, i) => {
+                      if (day === null) {
+                        return <div key={`empty-${i}`} className="aspect-square"></div>;
+                      }
+                      const regs = getRegistrationForDate(year, month, day);
+                      const hasRegistrations = regs.length > 0;
+
+                      return (
+                        <div
+                          key={day}
+                          className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
+                            hasRegistrations
+                              ? regs.some(r => r.status === 'approved')
+                                ? 'bg-green-100 border-2 border-green-500 font-bold'
+                                : regs.some(r => r.status === 'pending')
+                                ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
+                                : 'bg-red-100 border-2 border-red-500 font-bold'
+                              : 'bg-gray-50 border border-gray-200'
+                          }`}
+                        >
+                          <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
+                            {day}
+                          </span>
+                          {hasRegistrations && (
+                            <>
+                              <div className="text-[8px] leading-none mt-1">
+                                {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
+                              </div>
+                              {/* Tooltip on hover */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
+                                <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
+                                  {regs.map((reg, idx) => (
+                                    <div key={idx} className="mb-1 last:mb-0">
+                                      <div className="font-bold">{reg.childName || myChildren.find(c => c.id === reg.childId)?.name}</div>
+                                      <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
+                                      <div className={`text-xs ${
+                                        reg.status === 'approved' ? 'text-green-300' :
+                                        reg.status === 'pending' ? 'text-yellow-300' :
+                                        'text-red-300'
+                                      }`}>
+                                        {getStatusText(reg.status)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== CAMPER SCHEDULE TAB (Visual Schedule for Parents) ====================
+
+      // ==================== AUTH CHECK & ROUTER (PARENT) ====================
+      useEffect(() => {
+        const userJson = sessionStorage.getItem('user');
+        if (!userJson) {
+          window.location.href = '/index.html';
+          return;
+        }
+        const sessionUser = JSON.parse(userJson);
+        if (sessionUser.role !== 'parent') {
+          window.location.href = '/index.html';
+          return;
+        }
+        if (!user) setUser(sessionUser);
+      }, []);
+
+      if (loading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
+
+      if (!user) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
 
       return (
         <div className="min-h-screen bg-gray-50">
           <VersionBanner isVisible={isDevEnv || showBanner} isDev={isDevEnv} />
           <Nav />
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
-          {page === 'home' && <Home />}
-          {page === 'schedule' && <Schedule />}
-          {page === 'pricing' && <Pricing />}
-          {page === 'location' && <Location />}
-          {page === 'counselors' && <Counselors />}
-          {page === 'login' && <Login />}
-          <footer className="bg-gray-800 text-white py-6 text-center">© 2026 Roosevelt High School Girls Basketball</footer>
+          <Parent />
         </div>
       );
     }

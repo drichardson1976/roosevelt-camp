@@ -1,0 +1,3028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Counselor Dashboard - Roosevelt Day Camp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-display { font-family: 'Bebas Neue', sans-serif; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ==================== CONFIGURATION ====================
+    const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
+
+    const getEnvironment = () => {
+      const hostname = window.location.hostname;
+      // GitHub Pages and localhost = development (uses dev schema)
+      // Netlify production = production (uses public schema)
+      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev') || hostname.includes('github.io')) ? 'development' : 'production';
+    };
+    
+    const ENV = getEnvironment();
+    const SCHEMA = ENV === 'development' ? 'dev' : 'public';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: SCHEMA },
+      global: { headers: { 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA } }
+    });
+    
+    console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
+
+    // ==================== VERSION INFO ====================
+    const VERSION = "12.143";
+    // BUILD_DATE - update this timestamp when committing changes
+    const BUILD_DATE = new Date("2026-02-07T13:29:00");
+
+    const RELEASE_NOTES = [
+      { version: "12.143", date: "2026-02-07", time: "1:29 PM PT", author: "Derek Richardson", changes: [
+        "Split monolithic index.html into 4 separate files for parallel development",
+        "Created index.html (public pages + login), admin.html, parent.html, counselor.html",
+        "Implemented sessionStorage authentication for cross-page navigation",
+        "Each dashboard file now self-contained and can be edited independently",
+        "Enabled multiple Claude Code instances to work on different roles simultaneously"
+      ]},
+      { version: "12.142", date: "2026-02-07", time: "1:08 PM PT", author: "Derek Richardson", changes: [
+        "Fixed timestamp inconsistency — BUILD_DATE and release notes now use same Pacific Time source",
+        "Converted all release note timestamps from Eastern Time to Pacific Time (Seattle timezone)",
+        "BUILD_DATE now properly updates with each release"
+      ]},
+      { version: "12.141", date: "2026-02-07", time: "1:06 PM PT", author: "Derek Richardson", changes: [
+        "Fixed admin tab bar scroll position — now retains scroll position when clicking into tabs (especially Danger Zone)",
+        "Removed individual bulk delete buttons from Danger Zone (Delete All Parents, Campers, Counselors, Registrations, Assignments, Nuclear Option)",
+        "Simplified Danger Zone to single 'DELETE ALL DATA (EXCEPT COUNSELORS)' button that preserves counselors and admin",
+        "Updated DELETE ALL DATA to preserve counselor roster, availability, and schedules while wiping parent/camper data"
+      ]},
+      { version: "12.140", date: "2026-02-06", time: "12:40 PM PT", author: "Derek Richardson", changes: [
+        "Danger Zone: Deletions no longer log out or reload page — stays in Danger Zone for continued operations",
+        "Fixed DELETE ALL USER DATA to also delete emergency contacts and onboarding progress",
+        "Fixed DELETE ALL USER DATA to only preserve counselor accounts (not stale admin entries in users table)",
+        "Added new DELETE ALL DATA button — total system wipe that removes everything except the admin account",
+        "Release notes now include timestamps"
+      ]},
+      { version: "12.139", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed birthdate picker not registering selections — separated year/month/day into independent state fields",
+        "Updated birthdate year dropdown to show 2000-2026 range for proper camper age selection",
+        "Added validation requiring at least one camper before continuing from step 2 in parent registration",
+        "Added parent-level transitioning state to prevent login flash after parent/counselor registration"
+      ]},
+      { version: "12.138", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed login glitch — added loading screen during registration submission to prevent flash back to login page",
+        "Fixed counselor dashboard not showing unavailable (red) sessions from onboarding — now saves both available AND unavailable to availability table",
+        "Replaced camper birthdate picker with year/month/day dropdowns for easier year selection",
+        "Parent registration also now shows loading screen during submission"
+      ]},
+      { version: "12.137", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Fixed login glitch after counselor/parent registration — removed redundant role checks that caused brief flash to login",
+        "Fixed counselor availability sync — both available (green) AND unavailable (red) sessions now transfer to admin dashboard",
+        "Admin schedule view now shows three states: ✓ Available (green), ✗ Unavailable (red), ○ Not set (gray)",
+        "Added 'Birthdate' label to camper registration date field for clarity",
+        "Added weekdays clarity to counselor onboarding, counselor dashboard, and parent registration pages"
+      ]},
+      { version: "12.136", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Updated home page camp dates to clarify weekdays only: 'Weekdays from July 13-17 & August 10-28, 2026'"
+      ]},
+      { version: "12.135", date: "2026-02-06", author: "Audrey Richardson", changes: [
+        "Updated camp dates: now July 13-17 and August 10-28, 2026 (4 weeks total instead of full summer)",
+        "Removed June from all month selectors (counselor onboarding, counselor dashboard, admin calendars)",
+        "Changed default month views from June to July",
+        "Updated home page camp dates display to reflect new schedule"
+      ]},
+      { version: "12.134", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Fixed Parents tab badge count — was showing total users (including counselors), now shows only parent count"
+      ]},
+      { version: "12.133", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Fixed admin Parents tab showing counselors as parents — now filters by role so only actual parents appear",
+        "Fixed parent count display to show only parent users, not all users",
+        "Fixed Message All Parents to only include parent users, not counselors"
+      ]},
+      { version: "12.132", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Removed emojis from password show/hide toggles — now plain text 'Show'/'Hide'",
+        "Counselor onboarding availability now uses month tabs (June/July/Aug) instead of scrolling through all weeks",
+        "Removed checkmark and prohibited emojis from availability session buttons — color only (green/red/grey)",
+        "Fixed counselor dashboard availability sync: changes now save to both availability and counselorSchedule so admin dashboard reflects updates immediately"
+      ]},
+      { version: "12.131", date: "2026-02-03", author: "Audrey Richardson", changes: [
+        "Added missing release notes for versions 12.122 through 12.130 (all by Derek Richardson)",
+        "Verified version numbering and release notes are complete and up to date"
+      ]},
+      { version: "12.130", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Created missing saveRegistrations function for proper Supabase deletion",
+        "Updated Nuclear Option to preserve counselors — only deletes parents, campers, registrations, assignments",
+        "Fixed both bulk and individual registration deletion in Danger Zone"
+      ]},
+      { version: "12.129", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Improved registration confirmation modal with executive summary, payment instructions, and next steps",
+        "Added visual registration calendar in My Campers tab (3-month view, color-coded status, AM/PM indicators)",
+        "Fixed CamperScheduleTab crash — updated getCounselorForSession and getPodMates for object-based assignments"
+      ]},
+      { version: "12.128", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added emergency contacts deletion to Danger Zone",
+        "Fixed critical registration bug: multiple campers/sessions now register correctly (race condition fix)",
+        "Added parent emergency contacts manager in My Campers tab with validation (3+ contacts, 1+ non-parent)"
+      ]},
+      { version: "12.127", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Admin Campers tab: removed parent email, added Emergency Contacts column with clickable count",
+        "Created modal to view emergency contact details (name, relationship, phone, email, priority)",
+        "Added emergency contacts display in Edit Camper modal"
+      ]},
+      { version: "12.126", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added min/max constraints to birthdate inputs for faster date selection",
+        "Camper birthdate picker starts near expected birth year (ages 8-14) instead of current year",
+        "Counselor birthdate picker constrained to appropriate age range (14-25 years old)"
+      ]},
+      { version: "12.125", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed critical bug: Danger Zone was calling non-existent saveAvailability instead of saveAvail",
+        "All availability deletions (bulk, nuclear, individual) now work correctly"
+      ]},
+      { version: "12.124", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed orphaned counselor availability deletion when counselor record already removed",
+        "Cleans up ALL orphaned counselorSchedule entries without matching counselors"
+      ]},
+      { version: "12.123", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed individual counselor availability delete to remove from both availability and counselorSchedule tables",
+        "Now matches bulk delete behavior for complete data removal"
+      ]},
+      { version: "12.122", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added page refresh after all bulk and individual delete operations in Danger Zone",
+        "Added counselor availability deletion section showing counselor name, email, and date count"
+      ]},
+      { version: "12.121", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added individual record deletion in Danger Zone - delete specific parents, counselors, campers, registrations, or assignments",
+        "Provided complete Supabase schema SQL for easy copy-paste setup",
+        "Individual deletes organized in expandable sections for easy browsing"
+      ]},
+      { version: "12.120", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Added Danger Zone tab to admin dashboard for data management",
+        "Implemented bulk delete functionality for parents, counselors, campers, registrations, and assignments",
+        "Added nuclear option to delete all user data while preserving site content",
+        "Created read-only Supabase table viewer to inspect all database tables",
+        "Counselor onboarding verified to correctly create counselor-only accounts"
+      ]},
+      { version: "12.119", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed critical Assignments tab bug: drag-and-drop now works correctly without resetting session view",
+        "Fixed pod ID consistency - pods maintain stable IDs across counselor assignments",
+        "Fixed Add Pod button - now properly displays new empty pods without closing session view",
+        "Enhanced delete pod functionality - can now delete any pod (counselors/campers return to unassigned)",
+        "Improved state management to prevent session view from closing after changes"
+      ]},
+      { version: "12.118", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed Assignments tab bug: counselor-only pods now properly save to assignments",
+        "Fixed new pod creation - pods with counselors but no campers are now persisted",
+        "Sessions tab now displays pod assignments with camper counts (e.g., '3/5, 2/5')",
+        "Added warning indicator (⚠️) when registered campers exceed available pod capacity",
+        "Updated Sessions tab legend to explain pod capacity display"
+      ]},
+      { version: "12.117", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Updated parent registration UI to match admin Sessions tab pattern",
+        "Replaced collapsible accordion with month selector buttons and responsive grid layout",
+        "Date selection UI now consistent across admin and parent dashboards"
+      ]},
+      { version: "12.116", date: "2026-02-03", author: "Derek Richardson", changes: [
+        "Fixed My Schedule tab - resolved 'podAssignments is not defined' error",
+        "Moved logged-in user's name to appear before Logout button in header",
+        "My Schedule tab now correctly displays counselor assignments and campers"
+      ]},
+      { version: "12.115", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Added 'My Schedule' tab to counselor dashboard showing assigned sessions and pod campers (read-only)",
+        "Header now shows logged-in user's name for all roles",
+        "Added role-specific dashboard buttons in header (Admin/Parent/Counselor Dashboard) for easy navigation from public pages",
+        "Login button changes to Logout when user is logged in"
+      ]},
+      { version: "12.114", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Added tab navigation to counselor dashboard with '📊 Dashboard' tab",
+        "Counselor dashboard now consistent with admin and parent navigation patterns"
+      ]},
+      { version: "12.113", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Fixed counselor availability calendar month jumping - stays on current month when toggling sessions",
+        "Counselor dashboard month selection now persists across updates"
+      ]},
+      { version: "12.112", date: "2026-02-02", author: "Audrey Richardson", changes: [
+        "Added show/hide password toggle on all password fields (login, parent onboarding, counselor onboarding)",
+        "Counselor onboarding availability now starts grey (unselected) instead of pre-selected",
+        "Availability cycles: grey (unset) → green (available) → red (unavailable) → grey",
+        "Counselor availability UI updated to card-based layout matching admin sessions tab style with color-coded legend",
+        "Updated counselor pay to $80/session ($26.66/hr for 3-hour sessions)",
+        "Fixed counselor availability data flow: now saves to both availability and counselorSchedule so admin dashboard reflects it immediately",
+        "Fixed afternoon session display from 1:00 PM - 4:00 PM to 12:00 PM - 3:00 PM in admin view"
+      ]},
+      { version: "12.111", date: "2026-02-02", author: "Audrey Richardson", changes: [
+        "Policies step (Step 5) is now required during parent onboarding — cannot be skipped",
+        "Skip button on steps 2-4 now jumps to Policies instead of completing setup",
+        "Auto-select camper if parent has only one child in registration flow",
+        "Added prominent warning when no camper selected but dates are chosen",
+        "Camper selection shows checkmark and count when selected",
+        "Reorganized parent tabs: Dashboard, My Campers, Registrations, Messages",
+        "Camp Schedule now appears within My Campers tab (below camper profiles)",
+        "Renamed Register tab to Registrations"
+      ]},
+      { version: "12.110", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Added author tracking to release notes",
+        "Release notes now display who made each change"
+      ]},
+      { version: "12.109", date: "2026-02-02", author: "Derek Richardson", changes: [
+        "Fixed afternoon session drop-off time (11:45 AM - 12:00 PM)",
+        "Added basketball training focus section to schedule with drill descriptions",
+        "Removed lunch restaurant options from public page",
+        "Removed payment section from pricing page"
+      ]},
+      { version: "12.107", date: "2026-02-01", author: "Derek Richardson", changes: [
+        "Registrations tab: Added ability to permanently delete registrations",
+        "Delete confirmation modal prevents accidental deletions"
+      ]},
+      { version: "12.106", date: "2026-02-01", changes: [
+        "Assignments tab: Counselors split into Eligible and Not Eligible groups",
+        "Assignments tab: Registered campers shown as draggable list for pod assignment"
+      ]},
+      { version: "12.105", date: "2026-02-01", changes: [
+        "Removed Children tab from admin dashboard",
+        "Simplified Parents tab header to just 'Parents'",
+        "Reordered admin tabs: Campers now follows Parents",
+        "Redesigned Assignments tab with pod-based layout",
+        "Pods can be added/removed, with counselor slot at top and 5 camper slots below",
+        "Drag and drop support for both counselors and campers in pods"
+      ]},
+      { version: "12.104", date: "2026-02-01", changes: [
+        "Simplified data model - removed children/campers distinction",
+        "Parents now register campers directly during onboarding",
+        "Updated parent onboarding to 'Add Campers' step",
+        "Campers tab now shows all campers (not just those with approved registrations)",
+        "All terminology updated from 'children' to 'campers' throughout",
+        "Registrations now use camperId/camperName (backward compatible with childId/childName)"
+      ]},
+      { version: "12.103", date: "2026-02-01", changes: [
+        "Updated counselor photos on public site - removed green background, 50% larger",
+        "Made registration detail fields read-only (camper name, parent info, session date)",
+        "Added rejected/cancelled registrations section to admin dashboard",
+        "Updated campers tab to show approved and pending registration counts",
+        "Removed manage parents option from camper summary"
+      ]},
+      { version: "12.102", date: "2026-02-01", changes: [
+        "Fixed bulk registration creating only one registration",
+        "Added registration details view with edit capability",
+        "Added payment status visibility and mark-as-paid in pending registrations",
+        "Made registration rows clickable to view/edit details"
+      ]},
+      { version: "12.101", date: "2026-01-31", changes: [
+        "Moved policy info from Schedule to Pricing page",
+        "Added bulk registration creation in Registrations tab",
+        "Admin can create registrations for multiple children across multiple days/sessions/weeks",
+        "Unified session selection UI with week headers and ☀️ AM / 🌙 PM buttons",
+      ]},
+      { version: "12.100", date: "2026-01-31", changes: [
+        "Phone validation now requires exactly 10 digits",
+        "Parent onboarding steps 2-6 are now skippable (only account info required)",
+        "Parent tab summary shows: Children, Campers, Approved/Pending Registrations, Unread Messages",
+        "Admin can create registrations for parent's children",
+        "Registration approval with payment verification in Approvals tab",
+        "Renamed profile changes section to 'Counselor Profile Change Requests'",
+        "Campers tab only shows children with approved registrations",
+      ]},
+      { version: "12.099", date: "2026-01-31", changes: [
+        "Fixed Add Parent button showing blank screen (moved ParentOnboarding to correct scope)",
+      ]},
+      { version: "12.098", date: "2026-01-31", changes: [
+        "Fixed counselor schedule modal staying open when toggling sessions",
+        "Unified day/session UI: ☀️ AM and 🌙 PM icons across all screens",
+        "Counselor schedule modal now matches Sessions tab layout",
+        "Parent registration date selector uses consistent styling",
+        "Counselor availability calendar uses same icons"
+      ]},
+      { version: "12.097", date: "2026-01-31", changes: [
+        "Counselors: renamed to Edit Profile/Edit Schedule, Delete moved inside profile",
+        "Admin Add Parent now uses full parent onboarding wizard"
+      ]},
+      { version: "12.096", date: "2026-01-31", changes: [
+        "Login page auto-focuses email input for faster typing",
+        "Schedule eligibility modal now requires Done button to close",
+        "All schedule changes logged to history"
+      ]},
+      { version: "12.095", date: "2026-01-31", changes: [
+        "Dashboard stats now labeled as 'Registration Requests'",
+        "Counselors tab: Schedule button to set work eligibility by week/day/session",
+        "Counselors show eligible sessions count and scheduled (working) status",
+        "Sessions marked with camper icon when counselor has assignments"
+      ]},
+      { version: "12.094", date: "2026-01-31", changes: [
+        "Fixed popup/modal windows closing unexpectedly when clicking",
+        "Added large navigation buttons to admin dashboard for quick access"
+      ]},
+      { version: "12.092", date: "2026-01-31", changes: [
+        "Build timestamp now uses actual current time",
+        "Sessions tab: toggle individual AM/PM sessions or whole day",
+        "Sessions tab: stays in current month after changes",
+        "Sessions tab: shows counselor availability and camper counts per session",
+        "Parent registration: shows blocked AM/PM sessions individually"
+      ]},
+      { version: "12.091", date: "2026-01-31", changes: [
+        "Larger navigation buttons for easier mobile use",
+        "Registration deletion now cascades to remove camper from assignments",
+        "New Sessions admin tab to block/unblock camp dates",
+        "Blocked dates shown as unavailable in parent registration",
+        "Reordered admin tabs: Counselors, Parents, Children, Registrations, Campers, Assignments, Sessions, Approval, Content, History"
+      ]},
+      { version: "12.090", date: "2026-01-31", changes: [
+        "Moved counselors section up on homepage with larger circular headshots",
+        "Removed green rectangle frames from counselor photos",
+        "Changed to 'Easy Pick-up & Drop-off' text"
+      ]},
+      { version: "12.089", date: "2026-01-31", changes: [
+        "Hero image now edge-to-edge",
+        "New Pricing tab with pricing, discounts, and scholarship info",
+        "Removed pre-order lunch options - campers bring their own lunch",
+        "Updated snacks section with clearer messaging",
+        "Simplified cancellation and late pickup policies"
+      ]},
+      { version: "12.088", date: "2026-01-31", changes: [
+        "Mobile responsive improvements across entire site",
+        "Navigation wraps and scales properly on small screens",
+        "Hero section text sizes adjust for mobile devices",
+        "Info cards and counselor grids use responsive breakpoints",
+        "Admin/Parent dashboard tabs and headers scale for mobile",
+        "Tables have horizontal scroll on small screens",
+        "Footer contact info breaks properly on mobile",
+        "Role selector and forms use appropriate mobile sizing"
+      ]},
+      { version: "12.087", date: "2026-01-31", changes: [
+        "Version banner time now uses 12-hour format with AM/PM",
+        "Photo re-editing preserves previous zoom, position, and rotation settings",
+        "Original images stored for lossless re-editing",
+        "Public site photos now use consistent 4:3 aspect ratios matching cropper"
+      ]},
+      { version: "12.086", date: "2026-01-31", changes: [
+        "Version banner now shows build time in MM-DD-YYYY HH:MM format",
+        "Version banner shows both build time and time since upload",
+        "Release notes modal is now scrollable for long release histories"
+      ]},
+      { version: "12.085", date: "2026-01-31", changes: [
+        "Scrollable tabs with drag-to-scroll in Admin and Parent dashboards",
+        "Visual indicators (fade + arrows) when more tabs are available to scroll",
+        "Admin content photos now display at correct aspect ratios matching website",
+        "Increased image export resolution from 300px to 1200px for sharper photos",
+        "Improved JPEG quality from 90% to 95% for uploaded images"
+      ]},
+      { version: "12.084", date: "2026-01-30", changes: ["Version bump for dev build"] },
+      { version: "12.081", date: "2026-01-30", changes: [
+        "Fixed input focus issue in onboarding flows - text fields now maintain focus",
+        "Refactored ParentOnboarding to use inline JSX instead of inner components",
+        "Refactored CounselorOnboarding to use inline JSX instead of inner components",
+        "All form inputs throughout the site now work correctly without losing focus"
+      ]},
+      { version: "12.080", date: "2026-01-30", changes: [
+        "Parent dashboard: 'Add Another Child' button replaces always-visible form",
+        "New 'Camp Schedule' tab shows visual schedule with counselor & pod info",
+        "Schedule tab displays pod mates and other campers at each session",
+        "Counselor headshots shown in pod assignments",
+        "Children remain as children even when registered as campers",
+        "Admin Children tab now shows ALL children from both data sources",
+        "Clear distinction: children are profiles, campers are registered children"
+      ]},
+      { version: "12.079", date: "2026-01-30", changes: [
+        "Added Children tab in admin dashboard to view all child profiles",
+        "Children tab separates registered (campers) from unregistered children",
+        "Hidden 'Coming Soon' badges on Google/Apple login buttons",
+        "Content tab has text editing and photo management (scroll down)",
+        "Site Photos section in Content tab for hero image and activity photos"
+      ]},
+      { version: "12.078", date: "2026-01-30", changes: [
+        "Removed admin credentials display from login page",
+        "Added Google and Apple login buttons (Coming Soon)",
+        "Login page visually shows social login options will be available",
+        "Updated 'Create account' button text for clarity"
+      ]},
+      { version: "12.077", date: "2026-01-30", changes: [
+        "Hero image: Admin can upload a large background photo for the hero section",
+        "Activity photos: Drop-off, layups practice, and lunch photos throughout site",
+        "Photo editor with zoom/crop shows exact preview of final result",
+        "All site photos manageable from Admin Content tab",
+        "Photos stored in database and persist across builds"
+      ]},
+      { version: "12.076", date: "2026-01-30", changes: [
+        "Terminology update: Parents have 'children', registered children become 'campers'",
+        "Parent dashboard: 'My Children' tab with clear profile management",
+        "Registration confirmation now says 'Your children are now campers!'",
+        "Clear messaging throughout: profiles vs registrations",
+        "Admin tabs updated with clearer camper/children terminology"
+      ]},
+      { version: "12.075", date: "2026-01-29", changes: [
+        "Food/snack/drink images are now perfectly square (aspect-square)",
+        "Image cropper preview exactly matches how photos appear on website",
+        "Square photos have rounded corners (rounded-xl) in both editor and site",
+        "Admin thumbnails now square to match public display",
+        "Edit modal preview labeled 'Preview (exactly as shown on website)'"
+      ]},
+      { version: "12.074", date: "2026-01-29", changes: [
+        "Image cropper now supports shapes: circle (counselors), square (food photos)",
+        "Added rotation slider and 90° rotate button to image editor",
+        "Click any food photo to see 'Edit' overlay - opens edit modal",
+        "Edit modal has: Upload New Photo, Adjust Position/Zoom/Rotate, Reset to Default",
+        "Food/snack photos on Schedule page are now 2x larger",
+        "Green dot indicator shows which photos have custom uploads"
+      ]},
+      { version: "12.073", date: "2026-01-29", changes: [
+        "Food photo uploads now include zoom, crop, and pan controls",
+        "Hover over any food photo to see upload and adjust buttons",
+        "Adjust button opens the image cropper for existing photos",
+        "Same image editor used for counselor photos"
+      ]},
+      { version: "12.072", date: "2026-01-29", changes: [
+        "Fixed parent editing bug - changes now save properly",
+        "Fixed child editing bug - changes now save properly",
+        "Fixed registration editing bug - changes now save properly",
+        "Admin can upload custom photos for snacks and drinks (Content tab)",
+        "Food photos persist to database",
+        "Reset button to restore default photos"
+      ]},
+      { version: "12.071", date: "2026-01-29", changes: [
+        "All changes persist to database immediately",
+        "Proper delete functions remove records from database",
+        "Delete counselor: Removes from DB, cleans up assignments and availability",
+        "Delete camper: Removes from DB, cleans up parent links and assignments",
+        "Delete parent: Removes from DB, cleans up camper links",
+        "DELETE confirmation modal for counselors (replaces browser confirm)",
+        "UI updates instantly on all add/edit/delete operations",
+        "All dynamic data stored in Supabase for persistence across builds"
+      ]},
+      { version: "12.070", date: "2026-01-29", changes: [
+        "Standalone campers: Campers are now separate entities from parents",
+        "Many-to-many relationships: A camper can have multiple parents, and a parent can have multiple campers",
+        "Admin can add/edit/delete campers from Campers tab",
+        "Admin can add/edit/delete parents from Parents tab",
+        "Manage camper-parent associations from either tab",
+        "Backward compatible with legacy children data",
+        "Counselors tab has full CRUD (add/edit/delete/reorder)",
+        "Camper can only be assigned to ONE counselor per session (enforced)"
+      ]},
+      { version: "12.069", date: "2026-01-29", changes: [
+        "Admin management: Create, edit, delete admin accounts",
+        "At least one admin always required",
+        "Campers tab: View all registered campers with details",
+        "Camper search, sort by name/age/grade/registrations",
+        "Assignments tab: Drag-and-drop camper-counselor assignments",
+        "View assignments by date and session (AM/PM)",
+        "Capacity tracking: 5 campers max per counselor",
+        "Auto-assign feature distributes campers evenly",
+        "Empty spots summary to see available capacity"
+      ]},
+      { version: "12.068", date: "2026-01-29", changes: [
+        "Enhanced counselor availability signup with bulk actions",
+        "Camp dates auto-generated: Monday after school ends → Friday before school starts",
+        "Flexible registration with bulk discounts:",
+        "  - 10% off for booking full week (all 5 days, AM & PM)",
+        "  - 15% off for booking 2+ full weeks",
+        "Quick 'Full Week' selection buttons for easy booking",
+        "Order summary shows discount breakdown and savings",
+        "Registrations store discount info for accounting"
+      ]},
+      { version: "12.067", date: "2026-01-29", changes: [
+        "Admin can edit/delete parents, children, and registrations",
+        "Type 'DELETE' confirmation for all deletions",
+        "Location page with Roosevelt HS map, address, GPS links",
+        "Schedule page shows pricing tiers and bulk discounts",
+        "Cancellation policy (2 weeks advance notice)",
+        "Late pickup policy (Starbucks gift card suggestion)",
+        "Added Apple Maps and Google Maps direct links"
+      ]},
+      { version: "12.066", date: "2026-01-29", changes: [
+        "Parents can now edit child details (name, birthdate, grade, phone, photo)",
+        "Parents can delete children from their account (e.g., duplicates)",
+        "Edit mode with inline form for child details",
+        "Delete confirmation dialog to prevent accidents"
+      ]},
+      { version: "12.065", date: "2026-01-29", changes: [
+        "Added Parents tab in admin to view all registered parents and campers",
+        "Two-way in-app messaging system between admin and parents",
+        "Message individual, multiple, or all parents",
+        "Parents see messages in dashboard with unread indicators",
+        "Conversation threads with reply functionality"
+      ]},
+      { version: "12.064", date: "2026-01-29", changes: [
+        "Fixed modal closing when selecting text in edit forms",
+        "Enhanced photo editing: adjust zoom/position, delete, or upload new",
+        "Added counselor reordering with up/down arrows",
+        "Counselor order persists and displays on public website"
+      ]},
+      { version: "12.063", date: "2026-01-29", changes: [
+        "Fixed 1Password popup with data-1p-ignore attributes",
+        "Admin shows as 'Admin' - click to go to admin portal",
+        "Fixed input fields losing focus when typing",
+        "Enhanced child form: photo upload, birthdate, calculated age, optional phone",
+        "Auto-save for all content changes",
+        "Added change history with timestamps"
+      ]},
+      { version: "12.061", date: "2026-01-29", changes: ["Fresh rebuild with all features", "Merged v12.042 features with Supabase schema separation", "Payment tracking, cancellation/refund system", "Collapsible calendar, scholarship requests"] },
+      { version: "12.056", date: "2026-01-29", changes: ["Fixed counselor editing, photo cropper, phone formatting"] },
+      { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] }
+    ];
+
+    const isDev = () => ENV === 'development';
+
+    // ==================== CONSTANTS ====================
+    const KIDS_PER_COUNSELOR = 5;
+
+    // Camp runs specific weeks in July and August 2026:
+    // Week 1: July 13-17, 2026
+    // Week 2: August 10-14, 2026
+    // Week 3: August 17-21, 2026
+    // Week 4: August 24-28, 2026
+    const generateCampDates = () => {
+      const weeks = [
+        // July Week 1: July 13-17, 2026
+        ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'],
+        // August Week 1: August 10-14, 2026
+        ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14'],
+        // August Week 2: August 17-21, 2026
+        ['2026-08-17', '2026-08-18', '2026-08-19', '2026-08-20', '2026-08-21'],
+        // August Week 3: August 24-28, 2026
+        ['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28']
+      ];
+      return weeks.flat();
+    };
+    const CAMP_DATES = generateCampDates();
+
+    // Format camp date range for display
+    const getCampDateRange = () => {
+      if (CAMP_DATES.length === 0) return '';
+      const start = new Date(CAMP_DATES[0] + 'T12:00:00');
+      const end = new Date(CAMP_DATES[CAMP_DATES.length - 1] + 'T12:00:00');
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      return `${months[start.getMonth()]} ${start.getDate()} - ${months[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    };
+    const CAMP_DATE_RANGE = getCampDateRange();
+    
+    const getWeeks = () => {
+      const weeks = [];
+      let currentWeek = [];
+      let weekStart = null;
+      CAMP_DATES.forEach((date, idx) => {
+        const d = new Date(date + 'T12:00:00');
+        if (d.getDay() === 1 || idx === 0) {
+          if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+          currentWeek = [date];
+          weekStart = date;
+        } else {
+          currentWeek.push(date);
+        }
+      });
+      if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+      return weeks;
+    };
+    const CAMP_WEEKS = getWeeks();
+
+    // ==================== DEFAULT DATA ====================
+    const DEFAULT_CONTENT = {
+      heroTitle: "Roosevelt Girls Basketball",
+      heroSubtitle: "Summer Daycamp 2026",
+      heroTagline: "Build Skills. Build Friendships. Build Your Future.",
+      heroImage: null,
+      venmoImage: null,
+      venmoUsername: "@RHSDayCamp",
+      aboutText: "Join us for an incredible summer of basketball at Roosevelt High School! Our camp is designed for young athletes who want to develop their basketball skills while having fun and making lasting friendships.",
+      contactEmail: "rhsdaycamp@gmail.com",
+      contactPhone: "(206) 384-1872",
+      sessionMorning: "9:00 AM - 12:00 PM",
+      sessionAfternoon: "12:00 PM - 3:00 PM",
+      sessionCost: "$60",
+      campDates: "Weekdays from July 13-17 & August 10-28, 2026",
+      ageRange: "Completed 3rd - 8th Grade",
+      // Location details
+      locationName: "Roosevelt High School",
+      locationAddress: "1410 NE 66th St",
+      locationCity: "Seattle",
+      locationState: "WA",
+      locationZip: "98115",
+      locationDetails: "Roosevelt High School Gymnasium - Enter through the main gym entrance on the east side of the building.",
+      // Pricing tiers
+      singleSessionCost: 60,
+      weekDiscount: 10, // percent off for booking full week (10 sessions)
+      multiWeekDiscount: 15, // percent off for 2+ weeks
+      // Policies
+      cancellationPolicy: "All cancellation requests must be submitted at least 14 days (2 weeks) before the scheduled session to receive a full refund. Cancellations made less than 14 days in advance are non-refundable but may be credited toward a future session at the camp director's discretion. No-shows are non-refundable.",
+      latePickupPolicy: "Camp sessions end promptly at the scheduled time. Our counselors volunteer their time and have other commitments after camp. If you anticipate being late, please call us immediately. As a gesture of appreciation for counselors who stay late due to delayed pickups, we kindly suggest purchasing a small Starbucks gift card ($5-10) for the counselor who waited with your child. Repeated late pickups may result in dismissal from the camp.",
+      scholarshipInfo: "We believe every child deserves the chance to experience our camp. Apply for scholarship assistance through your Parent Dashboard."
+    };
+
+    const DEFAULT_COUNSELORS = [
+      { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', phone: '(206) 555-0101', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience.', photo: null, visible: true, order: 0 },
+      { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', phone: '(206) 555-0102', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
+      { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', phone: '(206) 555-0103', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
+      { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', phone: '(206) 555-0104', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
+    ];
+
+    const DEFAULT_ADMINS = [
+      { id: 'admin_1', username: 'admin', password: 'admin', name: 'Camp Director', email: 'director@rooseveltcamp.com', createdAt: new Date().toISOString() }
+    ];
+
+    // ==================== STORAGE ====================
+    const storage = {
+      async get(table) {
+        if (!supabase) return null;
+        try {
+          const { data, error } = await supabase.from(table).select('*');
+          if (error) throw error;
+          return data;
+        } catch (e) {
+          console.error('Error fetching ' + table + ':', e);
+          return null;
+        }
+      },
+      async set(table, id, data) {
+        if (!supabase) return false;
+        try {
+          const { error } = await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() });
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.error('Error saving to ' + table + ':', e);
+          return false;
+        }
+      }
+    };
+
+    // ==================== UTILITIES ====================
+    const formatPhone = (value) => {
+      const digits = value.replace(/\D/g, '').slice(0, 10);
+      if (digits.length === 0) return '';
+      if (digits.length <= 3) return '(' + digits;
+      if (digits.length <= 6) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+      return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+    };
+
+    const isValidPhone = (phone) => (phone || '').replace(/\D/g, '').length === 10;
+
+    const generateVenmoCode = (name) => {
+      if (!name) return 'CAMP000';
+      const parts = name.trim().split(' ');
+      const first = (parts[0] || 'XXX').substring(0, 3).toUpperCase();
+      const last = (parts[parts.length - 1] || 'XXX').substring(0, 3).toUpperCase();
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = ((hash << 5) - hash) + name.charCodeAt(i);
+        hash = hash & hash;
+      }
+      return first + last + Math.abs(hash % 1000).toString().padStart(3, '0');
+    };
+
+    const getSessionCost = (content) => parseInt((content.sessionCost || '$60').replace(/[^0-9]/g, '')) || 60;
+
+    // Calculate discounted total based on sessions selected
+    // - 10% discount for booking a full week (both AM and PM for all 5 days = 10 sessions)
+    // - 15% discount for booking 2+ full weeks
+    const calculateDiscountedTotal = (selectedDates, numChildren, content) => {
+      const basePrice = content.singleSessionCost || 60;
+      const weekDiscount = (content.weekDiscount || 10) / 100;
+      const multiWeekDiscount = (content.multiWeekDiscount || 15) / 100;
+
+      // Group sessions by week
+      const sessionsByWeek = {};
+      Object.entries(selectedDates).forEach(([date, sessions]) => {
+        if (!sessions?.length) return;
+        // Find which week this date belongs to
+        const weekIdx = CAMP_WEEKS.findIndex(w => w.dates.includes(date));
+        if (weekIdx >= 0) {
+          if (!sessionsByWeek[weekIdx]) sessionsByWeek[weekIdx] = { dates: {}, totalSessions: 0 };
+          sessionsByWeek[weekIdx].dates[date] = sessions;
+          sessionsByWeek[weekIdx].totalSessions += sessions.length;
+        }
+      });
+
+      // Count full weeks (5 days with both AM and PM = 10 sessions)
+      let fullWeeks = 0;
+      let fullWeekSessions = 0;
+      let partialSessions = 0;
+
+      Object.values(sessionsByWeek).forEach(week => {
+        const daysCount = Object.keys(week.dates).length;
+        const hasBothSessions = Object.values(week.dates).every(s => s.includes('morning') && s.includes('afternoon'));
+
+        if (daysCount === 5 && hasBothSessions && week.totalSessions === 10) {
+          fullWeeks++;
+          fullWeekSessions += 10;
+        } else {
+          partialSessions += week.totalSessions;
+        }
+      });
+
+      // Calculate pricing
+      const children = Math.max(1, numChildren);
+      let subtotal = 0;
+      let discount = 0;
+
+      if (fullWeeks >= 2) {
+        // Multi-week discount applies to all full weeks
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * multiWeekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else if (fullWeeks === 1) {
+        // Single week discount
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * weekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else {
+        // No discount - partial weeks only
+        subtotal = (fullWeekSessions + partialSessions) * basePrice * children;
+      }
+
+      const totalSessions = fullWeekSessions + partialSessions;
+      const originalTotal = totalSessions * basePrice * children;
+
+      return {
+        totalSessions,
+        fullWeeks,
+        partialSessions,
+        originalTotal,
+        discount,
+        discountPercent: fullWeeks >= 2 ? multiWeekDiscount * 100 : fullWeeks === 1 ? weekDiscount * 100 : 0,
+        finalTotal: Math.round(subtotal)
+      };
+    };
+
+    const calculateAge = (birthdate) => {
+      if (!birthdate) return null;
+      const today = new Date();
+      const birth = new Date(birthdate);
+      let age = today.getFullYear() - birth.getFullYear();
+      if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
+      return age;
+    };
+
+    const formatTimestamp = (date) => {
+      const d = new Date(date);
+      return d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    };
+
+    // ==================== STABLE INPUT COMPONENTS ====================
+    const StableInput = React.memo(({ value, onSave, type = 'text', className = '', placeholder = '' }) => {
+      const [local, setLocal] = useState(value || '');
+      const inputRef = useRef(null);
+      const initialValue = useRef(value);
+
+      useEffect(() => {
+        if (value !== initialValue.current && document.activeElement !== inputRef.current) {
+          setLocal(value || '');
+          initialValue.current = value;
+        }
+      }, [value]);
+
+      const handleBlur = () => {
+        if (local !== value) {
+          onSave(local);
+          initialValue.current = local;
+        }
+      };
+
+      return (
+        <input
+          ref={inputRef}
+          type={type}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={handleBlur}
+          className={className}
+          placeholder={placeholder}
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+        />
+      );
+    });
+
+    const StableTextarea = React.memo(({ value, onSave, className = '', placeholder = '', rows = 3 }) => {
+      const [local, setLocal] = useState(value || '');
+      const ref = useRef(null);
+      const initialValue = useRef(value);
+
+      useEffect(() => {
+        if (value !== initialValue.current && document.activeElement !== ref.current) {
+          setLocal(value || '');
+          initialValue.current = value;
+        }
+      }, [value]);
+
+      const handleBlur = () => {
+        if (local !== value) {
+          onSave(local);
+          initialValue.current = local;
+        }
+      };
+
+      return (
+        <textarea
+          ref={ref}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          onBlur={handleBlur}
+          className={className}
+          placeholder={placeholder}
+          rows={rows}
+          autoComplete="off"
+          data-1p-ignore="true"
+          data-lpignore="true"
+          data-form-type="other"
+        />
+      );
+    });
+
+    // ==================== COUNSELOR EDIT FORM ====================
+    const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
+      const [form, setForm] = useState({ ...counselor });
+      const inputRef = useRef(null);
+      const [tempImg, setTempImg] = useState(null);
+      const [showCrop, setShowCrop] = useState(false);
+      const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+
+      const update = (field, value) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+      };
+
+      const handleFile = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => { setTempImg(reader.result); setShowCrop(true); setShowPhotoOptions(false); };
+          reader.readAsDataURL(file);
+        }
+        if (e.target) e.target.value = '';
+      };
+
+      const handleAdjustPhoto = () => {
+        setTempImg(form.photo);
+        setShowCrop(true);
+        setShowPhotoOptions(false);
+      };
+
+      if (showCrop && tempImg) {
+        return <ImageCropper image={tempImg} onSave={(img) => { update('photo', img); setShowCrop(false); setTempImg(null); }} onCancel={() => { setShowCrop(false); setTempImg(null); }} />;
+      }
+
+      return (
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            {form.photo ? (
+              <div className="relative">
+                <img
+                  src={form.photo}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-green-600 cursor-pointer hover:opacity-80"
+                  onClick={() => setShowPhotoOptions(true)}
+                />
+                {showPhotoOptions && (
+                  <div className="absolute top-0 left-24 bg-white rounded-lg shadow-lg border p-2 z-10 min-w-[140px]">
+                    <button onClick={handleAdjustPhoto} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm flex items-center gap-2">
+                      <span>🔍</span> Adjust Photo
+                    </button>
+                    <button onClick={() => { inputRef.current?.click(); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm flex items-center gap-2">
+                      <span>📷</span> Upload New
+                    </button>
+                    <button onClick={() => { update('photo', null); setShowPhotoOptions(false); }} className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 rounded text-sm flex items-center gap-2">
+                      <span>🗑️</span> Delete Photo
+                    </button>
+                    <hr className="my-1" />
+                    <button onClick={() => setShowPhotoOptions(false)} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded text-sm text-gray-500">
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div onClick={() => inputRef.current?.click()} className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span className="text-xs text-gray-500">Add</span>
+              </div>
+            )}
+            <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            <div className="flex-1 text-sm text-gray-500">{form.photo ? 'Click photo for options' : 'Click to add photo'}</div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                value={form.name || ''}
+                onChange={e => update('name', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="Full name"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input
+                value={form.email || ''}
+                onChange={e => update('email', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="email@example.com"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <input
+                value={form.phone || ''}
+                onChange={e => update('phone', formatPhone(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="(555) 555-1234"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+              <input
+                value={form.position || ''}
+                onChange={e => update('position', e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="Point Guard"
+                autoComplete="off"
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-form-type="other"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+              <select value={form.year || ''} onChange={e => update('year', e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                <option value="">Select year</option>
+                <option value="Freshman">Freshman</option>
+                <option value="Sophomore">Sophomore</option>
+                <option value="Junior">Junior</option>
+                <option value="Senior">Senior</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" checked={form.visible !== false} onChange={e => update('visible', e.target.checked)} className="w-5 h-5" />
+              <label className="text-sm font-medium text-gray-700">Visible on website</label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea
+              value={form.bio || ''}
+              onChange={e => update('bio', e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg"
+              rows={3}
+              placeholder="Short bio..."
+              autoComplete="off"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-form-type="other"
+            />
+          </div>
+
+          <div className="flex gap-4 pt-4">
+            <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+            <button onClick={() => onSave(form)} className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Save</button>
+          </div>
+
+          {onDelete && counselor?.id && (
+            <div className="pt-4 mt-4 border-t">
+              <button onClick={() => onDelete(counselor)} className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 border border-red-200">
+                Delete Counselor
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== POLICY CONSTANTS ====================
+    const PICKUP_POLICY = `
+Only authorized emergency contacts may pick up your child.
+Photo ID is required for all pickups.
+If someone not on the authorized list needs to pick up,
+parents must notify camp staff in advance by phone or email.
+    `.trim();
+
+    const DROPOFF_POLICY = `
+Morning sessions: Drop-off is between 8:45 AM - 9:00 AM
+Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
+Please sign in your child with the counselor on duty at the main gym entrance.
+    `.trim();
+
+      const CounselorOnboarding = ({ onComplete, onBack, users, saveUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule }) => {
+        const [step, setStep] = useState(1);
+        const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
+        const [showPassword, setShowPassword] = useState(false);
+        const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
+        const [availData, setAvailData] = useState({});
+        const [unavailData, setUnavailData] = useState({});
+        const [selectedMonth, setSelectedMonth] = useState(6); // 6=July, 7=August
+        const [responsibilitiesAcked, setResponsibilitiesAcked] = useState(false);
+        const [payAcked, setPayAcked] = useState(false);
+        const [error, setError] = useState('');
+        const [showCropper, setShowCropper] = useState(false);
+        const [tempImage, setTempImage] = useState(null);
+        const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
+        const photoInputRef = useRef(null);
+
+        const totalSteps = 5;
+
+        const steps = [
+          { num: 1, title: 'Account', icon: '👤' },
+          { num: 2, title: 'Profile', icon: '🏀' },
+          { num: 3, title: 'Availability', icon: '📅' },
+          { num: 4, title: 'Responsibilities', icon: '📋' },
+          { num: 5, title: 'Submit', icon: '✅' }
+        ];
+
+        const handlePhotoUpload = (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setTempImage(reader.result);
+              setShowCropper(true);
+            };
+            reader.readAsDataURL(file);
+          }
+          if (e.target) e.target.value = '';
+        };
+
+        // Availability helpers - cycle: grey (unset) → green (available) → red (unavailable) → grey
+        const getSessionState = (date, session) => {
+          const avail = availData[date] || [];
+          const unavail = unavailData[date] || [];
+          if (avail.includes(session)) return 'available';
+          if (unavail.includes(session)) return 'unavailable';
+          return 'unset';
+        };
+
+        const toggleSession = (date, session) => {
+          const state = getSessionState(date, session);
+          if (state === 'unset') {
+            // grey → green (available)
+            setAvailData({ ...availData, [date]: [...(availData[date] || []), session] });
+            setUnavailData({ ...unavailData, [date]: (unavailData[date] || []).filter(s => s !== session) });
+          } else if (state === 'available') {
+            // green → red (unavailable)
+            setAvailData({ ...availData, [date]: (availData[date] || []).filter(s => s !== session) });
+            setUnavailData({ ...unavailData, [date]: [...(unavailData[date] || []), session] });
+          } else {
+            // red → grey (unset)
+            setUnavailData({ ...unavailData, [date]: (unavailData[date] || []).filter(s => s !== session) });
+          }
+        };
+
+        const selectAllSessions = () => {
+          const newAvail = {};
+          CAMP_DATES.forEach(date => {
+            newAvail[date] = ['morning', 'afternoon'];
+          });
+          setAvailData(newAvail);
+          setUnavailData({});
+        };
+
+        const clearAllSessions = () => {
+          setAvailData({});
+          setUnavailData({});
+        };
+
+        const getTotalSessions = () => {
+          return Object.values(availData).flat().length;
+        };
+
+        const getUnavailableSessions = () => {
+          return Object.values(unavailData).flat().length;
+        };
+
+        const validateStep = () => {
+          setError('');
+          if (step === 1) {
+            if (!userData.name || !userData.email || !userData.phone || !userData.password) {
+              setError('Please fill in all required fields');
+              return false;
+            }
+            if (!isValidPhone(userData.phone)) {
+              setError('Please enter a valid phone number');
+              return false;
+            }
+            if (users.some(u => u.email === userData.email) || counselors.some(c => c.email === userData.email)) {
+              setError('An account with this email already exists');
+              return false;
+            }
+          }
+          if (step === 2) {
+            if (!profileData.bio || profileData.bio.length < 20) {
+              setError('Please write a bio (at least 20 characters)');
+              return false;
+            }
+          }
+          if (step === 3) {
+            if (Object.values(availData).flat().length === 0) {
+              setError('Please select at least one available session');
+              return false;
+            }
+          }
+          if (step === 4) {
+            if (!responsibilitiesAcked || !payAcked) {
+              setError('Please acknowledge both the responsibilities and pay terms');
+              return false;
+            }
+          }
+          return true;
+        };
+
+        const handleNext = async () => {
+          if (!validateStep()) return;
+
+          if (step === totalSteps) {
+            // Show submitting screen to prevent flash
+            setSubmitting(true);
+
+            // Create user account
+            const newUser = {
+              email: userData.email,
+              name: userData.name,
+              password: userData.password,
+              phone: userData.phone,
+              role: 'counselor',
+              roles: ['counselor'],
+              onboardingComplete: true,
+              onboardingCompletedAt: new Date().toISOString()
+            };
+            await saveUsers([...users, newUser]);
+
+            // Create counselor profile (pending approval)
+            const newCounselor = {
+              id: 'counselor_' + Date.now(),
+              name: userData.name,
+              email: userData.email,
+              phone: userData.phone,
+              position: profileData.position,
+              year: profileData.year,
+              bio: profileData.bio,
+              photo: profileData.photo,
+              visible: false, // Hidden until approved
+              approvedByAdmin: false,
+              responsibilitiesAcknowledged: true,
+              payDisclosureAcknowledged: true,
+              createdAt: new Date().toISOString(),
+              order: counselors.length
+            };
+            await saveCounselors([...counselors, newCounselor]);
+
+            // Save availability in object format with both available and unavailable arrays
+            // This format is required for counselor dashboard to show both green and red sessions
+            const allDates = new Set([...Object.keys(availData), ...Object.keys(unavailData)]);
+            const combinedAvail = {};
+            allDates.forEach(date => {
+              combinedAvail[date] = {
+                available: availData[date] || [],
+                unavailable: unavailData[date] || []
+              };
+            });
+            const newAvail = { ...availability, [newCounselor.email]: combinedAvail };
+            await saveAvail(newAvail);
+
+            // Also save to counselorSchedule so admin dashboard shows availability immediately
+            // Save both available (true) and unavailable (false) sessions
+            const newSchedule = { ...counselorSchedule };
+            newSchedule[newCounselor.id] = {};
+            allDates.forEach(date => {
+              const avail = availData[date] || [];
+              const unavail = unavailData[date] || [];
+              // Only add date entry if there's any data for it
+              if (avail.length > 0 || unavail.length > 0) {
+                newSchedule[newCounselor.id][date] = {};
+                // Set true for available, false for unavailable
+                if (avail.includes('morning')) newSchedule[newCounselor.id][date].morning = true;
+                else if (unavail.includes('morning')) newSchedule[newCounselor.id][date].morning = false;
+                if (avail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = true;
+                else if (unavail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = false;
+              }
+            });
+            await saveCounselorSchedule(newSchedule, `${newCounselor.name} registered with availability`);
+
+            onComplete(newUser);
+            return;
+          }
+
+          setStep(step + 1);
+        };
+
+        const handleBack = () => {
+          if (step === 1) {
+            onBack();
+          } else {
+            setStep(step - 1);
+          }
+        };
+
+        // Submitting screen - prevents flash during async operations
+        if (submitting) {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+              <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
+                <div className="text-6xl mb-4">🏀</div>
+                <h2 className="font-display text-2xl text-blue-800 mb-2">Submitting Application...</h2>
+                <p className="text-gray-600">Please wait while we save your information.</p>
+                <div className="mt-4 flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Image cropper modal
+        if (showCropper && tempImage) {
+          return (
+            <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full p-6">
+                <h3 className="font-bold text-lg mb-4">Crop Your Photo</h3>
+                <ImageCropper
+                  image={tempImage}
+                  shape="circle"
+                  onSave={(img) => {
+                    setProfileData({ ...profileData, photo: img });
+                    setShowCropper(false);
+                    setTempImage(null);
+                  }}
+                  onCancel={() => {
+                    setShowCropper(false);
+                    setTempImage(null);
+                  }}
+                />
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8">
+            <div className="max-w-lg mx-auto px-4">
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  {steps.map((s) => (
+                    <div
+                      key={s.num}
+                      className={`flex flex-col items-center ${s.num <= step ? 'text-blue-600' : 'text-gray-400'}`}
+                    >
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${
+                        s.num < step ? 'bg-blue-600 text-white' :
+                        s.num === step ? 'bg-blue-100 border-2 border-blue-600' : 'bg-gray-200'
+                      }`}>
+                        {s.num < step ? '✓' : s.icon}
+                      </div>
+                      <span className="text-xs mt-1 hidden sm:block">{s.title}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-2 bg-gray-200 rounded-full">
+                  <div
+                    className="h-2 bg-blue-600 rounded-full transition-all"
+                    style={{ width: `${((step - 1) / (totalSteps - 1)) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Content Card */}
+              <div className="bg-white rounded-2xl shadow-xl p-8">
+                <h2 className="font-display text-2xl text-blue-800 mb-6">
+                  {steps[step - 1].title}
+                </h2>
+
+                {error && (
+                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4 text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Step 1: Account */}
+                {step === 1 && (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-4">Create your counselor account to get started.</p>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                      <input value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Your full name" autoComplete="off" data-1p-ignore="true" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                      <input type="email" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="your@email.com" autoComplete="off" data-1p-ignore="true" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                      <input value={userData.phone} onChange={e => setUserData({ ...userData, phone: formatPhone(e.target.value) })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="(555) 555-1234" autoComplete="off" data-1p-ignore="true" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={userData.password} onChange={e => setUserData({ ...userData, password: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none pr-16" placeholder="Create a password" autoComplete="off" data-1p-ignore="true" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Profile */}
+                {step === 2 && (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-4">Tell us about your basketball background. This will appear on the camp website once approved.</p>
+                    <div className="flex justify-center mb-4">
+                      {profileData.photo ? (
+                        <div className="relative">
+                          <img src={profileData.photo} className="w-32 h-32 rounded-full object-cover border-4 border-blue-600" />
+                          <button onClick={() => photoInputRef.current?.click()} className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full text-white flex items-center justify-center hover:bg-blue-700">✎</button>
+                        </div>
+                      ) : (
+                        <div onClick={() => photoInputRef.current?.click()} className="w-32 h-32 rounded-full bg-gray-200 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                          <span className="text-4xl mb-1">📷</span>
+                          <span className="text-xs text-gray-500">Add Photo</span>
+                        </div>
+                      )}
+                      <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Position *</label>
+                        <select value={profileData.position} onChange={e => setProfileData({ ...profileData, position: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                          <option value="Point Guard">Point Guard</option>
+                          <option value="Shooting Guard">Shooting Guard</option>
+                          <option value="Small Forward">Small Forward</option>
+                          <option value="Power Forward">Power Forward</option>
+                          <option value="Center">Center</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Year *</label>
+                        <select value={profileData.year} onChange={e => setProfileData({ ...profileData, year: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                          <option value="Freshman">Freshman</option>
+                          <option value="Sophomore">Sophomore</option>
+                          <option value="Junior">Junior</option>
+                          <option value="Senior">Senior</option>
+                          <option value="Alumni">Alumni</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bio *</label>
+                      <textarea value={profileData.bio} onChange={e => setProfileData({ ...profileData, bio: e.target.value })} className="w-full px-3 py-2 border rounded-lg h-24" placeholder="Tell us about your basketball experience and why you want to be a counselor..." />
+                      <p className="text-xs text-gray-500 mt-1">{profileData.bio.length}/200 characters</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Availability */}
+                {step === 3 && (
+                  <div className="space-y-4">
+                    <p className="text-gray-600 mb-2">Camp runs weekdays only (Mon-Fri). Click each session to set your availability. Click cycles through: <span className="text-gray-400 font-medium">Not Set</span> → <span className="text-green-600 font-medium">Available</span> → <span className="text-red-600 font-medium">Unavailable</span></p>
+
+                    {/* Month Tabs */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                        <button key={m} onClick={() => setSelectedMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (selectedMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
+                      ))}
+                      <div className="flex-1" />
+                      <button onClick={selectAllSessions} className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">Mark All Available</button>
+                      <button onClick={clearAllSessions} className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">Clear All</button>
+                    </div>
+                    <div className="text-sm text-gray-500 text-right mb-2">{getTotalSessions()} available · {getUnavailableSessions()} unavailable</div>
+
+                    {/* Weeks for selected month */}
+                    {CAMP_WEEKS.filter(w => new Date(w.start + 'T12:00:00').getMonth() === selectedMonth).map((week, weekIdx) => (
+                      <div key={weekIdx} className="border rounded-lg overflow-hidden">
+                        <div className="bg-gray-100 px-3 py-2 text-sm font-medium">Week {weekIdx + 1}: {new Date(week.start + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                        <div className="grid grid-cols-5 gap-2 p-3">
+                          {week.dates.map(date => {
+                            const d = new Date(date + 'T12:00:00');
+                            const amState = getSessionState(date, 'morning');
+                            const pmState = getSessionState(date, 'afternoon');
+                            const bothAvail = amState === 'available' && pmState === 'available';
+                            const bothUnavail = amState === 'unavailable' && pmState === 'unavailable';
+                            const cardBorder = bothAvail ? 'border-green-300 bg-green-50' : bothUnavail ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white';
+                            const getButtonStyle = (state) => state === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : state === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
+                            return (
+                              <div key={date} className={`rounded-lg border-2 overflow-hidden ${cardBorder}`}>
+                                <div className={`text-center p-1 font-bold text-xs ${bothAvail ? 'bg-green-200' : bothUnavail ? 'bg-red-200' : 'bg-gray-100'}`}>
+                                  <div className="text-gray-600">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                  <div>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                </div>
+                                <div className="p-1 space-y-1">
+                                  <button onClick={() => toggleSession(date, 'morning')} className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${getButtonStyle(amState)}`}>
+                                    AM
+                                  </button>
+                                  <button onClick={() => toggleSession(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${getButtonStyle(pmState)}`}>
+                                    PM
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Legend */}
+                    <div className="flex gap-4 text-xs text-gray-600 justify-center">
+                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-green-500 rounded"></div><span>Available</span></div>
+                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-red-500 rounded"></div><span>Unavailable</span></div>
+                      <div className="flex items-center gap-1"><div className="w-4 h-4 bg-gray-200 rounded"></div><span>Not Set</span></div>
+                    </div>
+                    <p className="text-xs text-gray-500 text-center">You can update your availability later from your dashboard.</p>
+                  </div>
+                )}
+
+                {/* Step 4: Responsibilities */}
+                {step === 4 && (
+                  <div className="space-y-6">
+                    <div className="bg-white border rounded-lg overflow-hidden">
+                      <div className="bg-blue-100 px-4 py-2 font-medium text-blue-800">📋 Counselor Responsibilities</div>
+                      <div className="p-4">
+                        <ul className="space-y-2">
+                          {COUNSELOR_RESPONSIBILITIES.map((resp, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm text-gray-600"><span className="text-blue-500">•</span>{resp}</li>
+                          ))}
+                        </ul>
+                        <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                          <input type="checkbox" checked={responsibilitiesAcked} onChange={e => setResponsibilitiesAcked(e.target.checked)} className="w-5 h-5 text-blue-600" />
+                          <span className="text-sm">I understand and accept these responsibilities</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="bg-white border rounded-lg overflow-hidden">
+                      <div className="bg-green-100 px-4 py-2 font-medium text-green-800">💵 Pay Information</div>
+                      <div className="p-4">
+                        <pre className="whitespace-pre-wrap text-sm text-gray-600 font-sans">{PAY_DISCLOSURE}</pre>
+                        <label className="flex items-center gap-3 mt-4 cursor-pointer">
+                          <input type="checkbox" checked={payAcked} onChange={e => setPayAcked(e.target.checked)} className="w-5 h-5 text-green-600" />
+                          <span className="text-sm">I understand and accept the pay terms and 1099 status</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Submit */}
+                {step === 5 && (
+                  <div className="text-center space-y-6">
+                    <div className="text-6xl">📨</div>
+                    <h3 className="font-display text-2xl text-blue-800">Ready to Submit!</h3>
+                    <p className="text-gray-600">Your application will be reviewed by a camp administrator. You'll be notified once approved.</p>
+                    <div className="bg-gray-50 rounded-lg p-4 text-left">
+                      <h4 className="font-medium mb-2">Application Summary:</h4>
+                      <p className="text-sm text-gray-600">• {userData.name}</p>
+                      <p className="text-sm text-gray-600">• {profileData.position} • {profileData.year}</p>
+                      <p className="text-sm text-gray-600">• {getTotalSessions()} sessions available</p>
+                    </div>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <p className="text-yellow-800 font-medium">⏳ Pending Admin Approval</p>
+                      <p className="text-sm text-yellow-700 mt-1">Your profile won't appear on the website until approved by an administrator.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Navigation */}
+                <div className="flex gap-4 mt-8">
+                  <button
+                    onClick={handleBack}
+                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    {step === 1 ? '← Back' : '← Previous'}
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="flex-1 py-3 bg-blue-700 hover:bg-blue-800 text-white font-bold rounded-lg"
+                  >
+                    {step === totalSteps ? 'Submit Application' : 'Continue →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== LOGIN ====================
+    // ==================== VERSION BANNER ====================
+    const VersionBanner = ({ isVisible, isDev }) => {
+      const [elapsed, setElapsed] = useState('0s');
+      const [dbStatus, setDbStatus] = useState('checking');
+      const [showNotes, setShowNotes] = useState(false);
+
+      // Format BUILD_DATE as MM-DD-YYYY HH:MM AM/PM
+      const formatBuildDate = () => {
+        const d = BUILD_DATE;
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${mm}-${dd}-${yyyy} ${hours}:${min} ${ampm}`;
+      };
+
+      useEffect(() => {
+        const update = () => {
+          const diff = Math.floor((new Date() - BUILD_DATE) / 1000);
+          const h = Math.floor(diff / 3600), m = Math.floor((diff % 3600) / 60), s = diff % 60;
+          setElapsed((h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm ' : '') + s + 's');
+        };
+        update();
+        const i = setInterval(update, 1000);
+        supabase.from('camp_content').select('id').limit(1).then(({ error }) => setDbStatus(error ? 'error' : 'connected')).catch(() => setDbStatus('error'));
+        return () => clearInterval(i);
+      }, []);
+
+      if (!isVisible) return null;
+
+      return (
+        <React.Fragment>
+          <div className={(isDev ? 'bg-red-600' : 'bg-green-600') + ' text-white text-center py-2 text-sm font-mono'}>
+            <span className="font-bold">{isDev ? 'DEVELOPMENT' : 'PRODUCTION'}</span>
+            <span className="mx-2">•</span>
+            <span>v{VERSION}</span>
+            <span className="mx-2">•</span>
+            <span>{dbStatus === 'connected' ? '✓ DB (' + SCHEMA + ')' : dbStatus === 'checking' ? '⏳...' : '✗ DB Error'}</span>
+            <span className="mx-2">•</span>
+            <span>Built: {formatBuildDate()} ({elapsed} ago)</span>
+            <span className="mx-2">•</span>
+            <button onClick={() => setShowNotes(true)} className="underline">Notes</button>
+          </div>
+          {showNotes && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowNotes(false)}>
+              <div className="bg-white rounded-xl max-w-lg w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                <div className="p-6 pb-2">
+                  <h2 className="font-bold text-xl">Release Notes</h2>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 pb-2">
+                  {RELEASE_NOTES.map((r, i) => (
+                    <div key={r.version} className={i > 0 ? 'mt-3 pt-3 border-t' : ''}>
+                      <div className="font-mono text-green-700">v{r.version} <span className="text-gray-400 text-sm">{r.date}{r.time && ` at ${r.time}`}</span>{r.author && <span className="text-blue-600 text-sm ml-2">by {r.author}</span>}</div>
+                      <ul className="text-sm text-gray-600 mt-1">{r.changes.map((c, j) => <li key={j}>• {c}</li>)}</ul>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-6 pt-2">
+                  <button onClick={() => setShowNotes(false)} className="w-full py-2 bg-green-600 text-white rounded-lg">Close</button>
+                </div>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      );
+    };
+
+    // ==================== UI COMPONENTS ====================
+    const Toast = ({ message, type, onDone }) => {
+      useEffect(() => {
+        const t = setTimeout(onDone, 3000);
+        return () => clearTimeout(t);
+      }, []);
+      return <div className={'fixed top-16 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg text-white ' + (type === 'error' ? 'bg-red-500' : 'bg-green-600')}>{message}</div>;
+    };
+
+    const Modal = ({ isOpen, onClose, title, children }) => {
+      const mouseDownTarget = useRef(null);
+
+      if (!isOpen) return null;
+
+      const handleMouseDown = (e) => {
+        mouseDownTarget.current = e.target;
+      };
+
+      const handleClick = (e) => {
+        // Only close if both mousedown and click happened on the backdrop itself
+        if (e.target === e.currentTarget && mouseDownTarget.current === e.currentTarget) {
+          onClose();
+        }
+        mouseDownTarget.current = null;
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onMouseDown={handleMouseDown} onClick={handleClick}>
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <div className="bg-green-800 text-white px-6 py-4 flex justify-between items-center">
+              <h2 className="font-display text-2xl">{title}</h2>
+              <button onClick={onClose} className="text-2xl hover:bg-green-700 rounded px-2">×</button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">{children}</div>
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== SCROLLABLE TABS ====================
+    const ScrollableTabs = ({ children, className = '' }) => {
+      const containerRef = useRef(null);
+      const [canScrollLeft, setCanScrollLeft] = useState(false);
+      const [canScrollRight, setCanScrollRight] = useState(false);
+      const [isDragging, setIsDragging] = useState(false);
+      const [startX, setStartX] = useState(0);
+      const [scrollLeft, setScrollLeft] = useState(0);
+
+      const checkScroll = () => {
+        const el = containerRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 0);
+        setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+      };
+
+      useEffect(() => {
+        checkScroll();
+        window.addEventListener('resize', checkScroll);
+        return () => window.removeEventListener('resize', checkScroll);
+      }, [children]);
+
+      const onMouseDown = (e) => {
+        setIsDragging(true);
+        setStartX(e.pageX - containerRef.current.offsetLeft);
+        setScrollLeft(containerRef.current.scrollLeft);
+      };
+
+      const onMouseMove = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - containerRef.current.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        containerRef.current.scrollLeft = scrollLeft - walk;
+      };
+
+      const onMouseUp = () => setIsDragging(false);
+      const onMouseLeave = () => setIsDragging(false);
+
+      // Touch support
+      const onTouchStart = (e) => {
+        setIsDragging(true);
+        setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
+        setScrollLeft(containerRef.current.scrollLeft);
+      };
+
+      const onTouchMove = (e) => {
+        if (!isDragging) return;
+        const x = e.touches[0].pageX - containerRef.current.offsetLeft;
+        const walk = (x - startX) * 1.5;
+        containerRef.current.scrollLeft = scrollLeft - walk;
+      };
+
+      const onTouchEnd = () => setIsDragging(false);
+
+      return (
+        <div className="relative">
+          {/* Left fade indicator */}
+          {canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-white to-transparent z-10 pointer-events-none flex items-center">
+              <span className="text-gray-400 text-lg ml-1">‹</span>
+            </div>
+          )}
+
+          {/* Scrollable container */}
+          <div
+            ref={containerRef}
+            className={`flex gap-1 overflow-x-auto scrollbar-hide ${isDragging ? 'cursor-grabbing' : 'cursor-grab'} ${className}`}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            onScroll={checkScroll}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseLeave}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
+            {children}
+          </div>
+
+          {/* Right fade indicator */}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent z-10 pointer-events-none flex items-center justify-end">
+              <span className="text-gray-400 text-lg mr-1">›</span>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // shape: 'circle' | 'square' | 'rectangle'
+    // aspectRatio: only used for rectangle (width/height ratio, e.g. 16/9)
+    // initialTransform: optional { zoom, posX, posY, rotation } to restore previous editing state
+    const ImageCropper = ({ image, onSave, onCancel, shape = 'circle', aspectRatio = 1, initialTransform = null }) => {
+      const canvasRef = useRef(null);
+      const [zoom, setZoom] = useState(initialTransform?.zoom ?? 1);
+      const [pos, setPos] = useState({ x: initialTransform?.posX ?? 0, y: initialTransform?.posY ?? 0 });
+      const [rotation, setRotation] = useState(initialTransform?.rotation ?? 0);
+      const [dragging, setDragging] = useState(false);
+      const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+      const [img, setImg] = useState(null);
+
+      // Canvas dimensions - high resolution for export, displayed smaller via CSS
+      const exportW = shape === 'rectangle' ? 1200 : 400;
+      const exportH = shape === 'rectangle' ? Math.round(1200 / aspectRatio) : 400;
+      const displayW = shape === 'rectangle' ? 300 : 250;
+      const displayH = shape === 'rectangle' ? Math.round(300 / aspectRatio) : 250;
+      const canvasW = exportW;
+      const canvasH = exportH;
+
+      useEffect(() => {
+        const i = new Image();
+        i.onload = () => setImg(i);
+        i.src = image;
+      }, [image]);
+
+      useEffect(() => {
+        if (!img || !canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = canvasW;
+        canvas.height = canvasH;
+        ctx.clearRect(0, 0, canvasW, canvasH);
+        ctx.save();
+
+        // Clip based on shape (with rounded corners for square to match website)
+        ctx.beginPath();
+        if (shape === 'circle') {
+          ctx.arc(canvasW / 2, canvasH / 2, Math.min(canvasW, canvasH) / 2, 0, Math.PI * 2);
+        } else {
+          // Rounded rectangle (12px radius to match rounded-xl)
+          const radius = 12;
+          ctx.moveTo(radius, 0);
+          ctx.lineTo(canvasW - radius, 0);
+          ctx.quadraticCurveTo(canvasW, 0, canvasW, radius);
+          ctx.lineTo(canvasW, canvasH - radius);
+          ctx.quadraticCurveTo(canvasW, canvasH, canvasW - radius, canvasH);
+          ctx.lineTo(radius, canvasH);
+          ctx.quadraticCurveTo(0, canvasH, 0, canvasH - radius);
+          ctx.lineTo(0, radius);
+          ctx.quadraticCurveTo(0, 0, radius, 0);
+        }
+        ctx.clip();
+
+        // Draw image with rotation
+        ctx.translate(canvasW / 2, canvasH / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+        const scale = zoom * Math.min(canvasW, canvasH) / Math.max(img.width, img.height);
+        const w = img.width * scale, h = img.height * scale;
+        ctx.drawImage(img, -w / 2 + pos.x, -h / 2 + pos.y, w, h);
+        ctx.restore();
+
+        // Draw border
+        ctx.beginPath();
+        if (shape === 'circle') {
+          ctx.arc(canvasW / 2, canvasH / 2, Math.min(canvasW, canvasH) / 2 - 2, 0, Math.PI * 2);
+        } else {
+          // Rounded rectangle border (matching the clip)
+          const radius = 10;
+          const offset = 2;
+          ctx.moveTo(radius + offset, offset);
+          ctx.lineTo(canvasW - radius - offset, offset);
+          ctx.quadraticCurveTo(canvasW - offset, offset, canvasW - offset, radius + offset);
+          ctx.lineTo(canvasW - offset, canvasH - radius - offset);
+          ctx.quadraticCurveTo(canvasW - offset, canvasH - offset, canvasW - radius - offset, canvasH - offset);
+          ctx.lineTo(radius + offset, canvasH - offset);
+          ctx.quadraticCurveTo(offset, canvasH - offset, offset, canvasH - radius - offset);
+          ctx.lineTo(offset, radius + offset);
+          ctx.quadraticCurveTo(offset, offset, radius + offset, offset);
+        }
+        ctx.strokeStyle = '#16a34a';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }, [img, zoom, pos, rotation, shape, canvasW, canvasH]);
+
+      // Scale factor for mouse movements (display is smaller than export)
+      const scaleFactor = exportW / displayW;
+      const onMouseDown = (e) => { setDragging(true); setDragStart({ x: e.clientX - pos.x / scaleFactor, y: e.clientY - pos.y / scaleFactor }); };
+      const onMouseMove = (e) => { if (dragging) setPos({ x: (e.clientX - dragStart.x) * scaleFactor, y: (e.clientY - dragStart.y) * scaleFactor }); };
+      const onMouseUp = () => setDragging(false);
+      const rotate90 = () => setRotation((r) => (r + 90) % 360);
+
+      const containerClass = shape === 'circle' ? 'rounded-full' : 'rounded-xl';
+
+      return (
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-xs text-gray-500 text-center">Preview exactly as it will appear on the website.<br/>Drag to position, use sliders to zoom & rotate.</p>
+          <div
+            className={`overflow-hidden cursor-move bg-gray-100 shadow-md ${containerClass}`}
+            style={{ width: displayW, height: displayH }}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
+            <canvas ref={canvasRef} style={{ width: displayW, height: displayH }} />
+          </div>
+          <div className="flex flex-col gap-2 w-64">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">Zoom</span>
+              <input type="range" min="0.5" max="3" step="0.1" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="flex-1" />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500 w-12">Rotate</span>
+              <input type="range" min="0" max="360" step="1" value={rotation} onChange={e => setRotation(parseInt(e.target.value))} className="flex-1" />
+              <button onClick={rotate90} className="px-2 py-1 bg-gray-200 rounded text-xs" title="Rotate 90°">↻</button>
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded-lg">Cancel</button>
+            <button onClick={() => onSave(canvasRef.current.toDataURL('image/jpeg', 0.95), { zoom, posX: pos.x, posY: pos.y, rotation })} className="px-4 py-2 bg-green-600 text-white rounded-lg">Save</button>
+          </div>
+        </div>
+      );
+    };
+
+    const ImageUpload = ({ currentImage, onImageChange, label, circular = false }) => {
+      const inputRef = useRef(null);
+      const [temp, setTemp] = useState(null);
+      const [showCrop, setShowCrop] = useState(false);
+
+      const onFile = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => { setTemp(reader.result); setShowCrop(true); };
+          reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+      };
+
+      if (showCrop && temp) {
+        return <ImageCropper image={temp} onSave={(img) => { onImageChange(img); setShowCrop(false); }} onCancel={() => setShowCrop(false)} />;
+      }
+
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+          <div className="flex items-center gap-4">
+            {currentImage ? <img src={currentImage} className={'w-20 h-20 object-cover border ' + (circular ? 'rounded-full' : 'rounded-lg')} /> : <div className={'w-20 h-20 bg-gray-100 border-2 border-dashed flex items-center justify-center text-gray-400 text-xs ' + (circular ? 'rounded-full' : 'rounded-lg')}>No image</div>}
+            <div className="flex flex-col gap-2">
+              <button onClick={() => inputRef.current?.click()} className="px-3 py-1 bg-green-600 text-white rounded text-sm">{currentImage ? 'Change' : 'Upload'}</button>
+              {currentImage && <button onClick={() => onImageChange(null)} className="px-3 py-1 bg-red-100 text-red-600 rounded text-sm">Remove</button>}
+            </div>
+          </div>
+          <input ref={inputRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
+        </div>
+      );
+    };
+
+    // ==================== FOOD PHOTOS MANAGER ====================
+    const FoodPhotosManager = ({ foodPhotos, getFoodPhoto, onSave }) => {
+      const [editingPhoto, setEditingPhoto] = useState(null); // { key, label }
+      const [showCropper, setShowCropper] = useState(false);
+      const [cropImage, setCropImage] = useState(null);
+      const inputRef = useRef(null);
+
+      const FOOD_ITEMS = {
+        snacks: [
+          { key: 'snack_fruit', label: 'Fresh Fruit' },
+          { key: 'snack_granola', label: 'Granola Bars' },
+          { key: 'snack_cheese', label: 'Cheese & Crackers' },
+          { key: 'snack_veggie', label: 'Veggie Sticks' }
+        ],
+        drinks: [
+          { key: 'drink_water', label: 'Water' },
+          { key: 'drink_gatorade', label: 'Gatorade' },
+          { key: 'drink_orange', label: 'Orange Juice' },
+          { key: 'drink_apple', label: 'Apple Juice' }
+        ]
+      };
+
+      const handleUploadClick = () => {
+        inputRef.current?.click();
+      };
+
+      const handleFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setCropImage(reader.result);
+            setShowCropper(true);
+          };
+          reader.readAsDataURL(file);
+        }
+        e.target.value = '';
+      };
+
+      const handleEditClick = () => {
+        setCropImage(getFoodPhoto(editingPhoto.key));
+        setShowCropper(true);
+      };
+
+      const handleCropSave = (croppedImage) => {
+        onSave({ ...foodPhotos, [editingPhoto.key]: croppedImage });
+        setShowCropper(false);
+        setCropImage(null);
+        setEditingPhoto(null);
+      };
+
+      const handleDelete = () => {
+        const updated = { ...foodPhotos };
+        delete updated[editingPhoto.key];
+        onSave(updated);
+        setEditingPhoto(null);
+      };
+
+      const renderPhotoGrid = (items, title, colorClass) => (
+        <div className={title === 'Snacks' ? 'mb-6' : ''}>
+          <h4 className={`font-medium ${colorClass} mb-3`}>{title}</h4>
+          <div className="grid grid-cols-4 gap-4">
+            {items.map(item => (
+              <div key={item.key} className="text-center">
+                <div
+                  className="relative group cursor-pointer"
+                  onClick={() => setEditingPhoto(item)}
+                >
+                  <img
+                    src={getFoodPhoto(item.key)}
+                    alt={item.label}
+                    className="w-full aspect-square object-cover rounded-xl mb-1 shadow-sm"
+                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
+                  />
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
+                    <span className="text-white font-medium text-sm">Edit</span>
+                  </div>
+                  {foodPhotos[item.key] && (
+                    <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full" title="Custom photo" />
+                  )}
+                </div>
+                <span className="text-xs text-gray-600 block">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Click any photo to edit. Green dot indicates a custom uploaded photo.
+          </p>
+          {renderPhotoGrid(FOOD_ITEMS.snacks, 'Snacks', 'text-green-700')}
+          {renderPhotoGrid(FOOD_ITEMS.drinks, 'Beverages', 'text-blue-700')}
+
+          {/* Photo Edit Modal */}
+          {editingPhoto && !showCropper && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">Edit: {editingPhoto.label}</h2>
+                  <button onClick={() => setEditingPhoto(null)} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-500 mb-2 text-center">Preview (exactly as shown on website)</p>
+                    <img
+                      src={getFoodPhoto(editingPhoto.key)}
+                      alt={editingPhoto.label}
+                      className="w-full aspect-square object-cover rounded-xl shadow-md"
+                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/gray/white?text=No+Image'; }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <button
+                      onClick={handleUploadClick}
+                      className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      📷 Upload New Photo
+                    </button>
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
+                    >
+                      ✂️ Adjust Position, Zoom & Rotate
+                    </button>
+                    {foodPhotos[editingPhoto.key] && (
+                      <button
+                        onClick={handleDelete}
+                        className="w-full py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center justify-center gap-2"
+                      >
+                        🗑️ Reset to Default
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setEditingPhoto(null)}
+                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {/* Image Cropper Modal */}
+          {showCropper && cropImage && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">Adjust: {editingPhoto.label}</h2>
+                  <button onClick={() => { setShowCropper(false); setCropImage(null); }} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  <ImageCropper
+                    image={cropImage}
+                    shape="square"
+                    onSave={handleCropSave}
+                    onCancel={() => { setShowCropper(false); setCropImage(null); }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== SITE PHOTOS MANAGER ====================
+    const SitePhotosManager = ({ sitePhotos, onSave }) => {
+      const [editingPhoto, setEditingPhoto] = useState(null);
+      const [showCropper, setShowCropper] = useState(false);
+      const [cropImage, setCropImage] = useState(null);
+      const [cropTransform, setCropTransform] = useState(null);
+      const [isNewUpload, setIsNewUpload] = useState(false);
+      const inputRef = useRef(null);
+
+      const SITE_PHOTO_CONFIG = [
+        { key: 'hero', label: 'Hero Background', description: 'Large banner image behind the camp title', aspectRatio: 16/9 },
+        { key: 'dropoff', label: 'Drop-off Photo', description: 'Camper being dropped off at gym entrance', aspectRatio: 4/3 },
+        { key: 'layups', label: 'Skills Training Photo', description: 'Counselor working with kids on layups/drills', aspectRatio: 4/3 },
+        { key: 'lunch', label: 'Lunch Photo', description: 'Kids sitting together eating lunch', aspectRatio: 4/3 }
+      ];
+
+      // Helper to get cropped image (handles both old string format and new object format)
+      const getCroppedImage = (key) => {
+        const data = sitePhotos?.[key];
+        if (!data) return null;
+        return typeof data === 'string' ? data : data.cropped;
+      };
+
+      // Helper to get photo data for re-editing
+      const getPhotoData = (key) => {
+        const data = sitePhotos?.[key];
+        if (!data) return null;
+        if (typeof data === 'string') return { cropped: data, original: null, transform: null };
+        return data;
+      };
+
+      const handleFileSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setCropImage(reader.result);
+            setCropTransform(null);
+            setIsNewUpload(true);
+            setShowCropper(true);
+          };
+          reader.readAsDataURL(file);
+        }
+        if (e.target) e.target.value = '';
+      };
+
+      const handleReEdit = () => {
+        const photoData = getPhotoData(editingPhoto.key);
+        if (photoData?.original) {
+          setCropImage(photoData.original);
+          setCropTransform(photoData.transform);
+        } else {
+          setCropImage(photoData?.cropped || getCroppedImage(editingPhoto.key));
+          setCropTransform(null);
+        }
+        setIsNewUpload(false);
+        setShowCropper(true);
+      };
+
+      const handleCropSave = (croppedImage, transform) => {
+        const photoData = {
+          cropped: croppedImage,
+          original: isNewUpload ? cropImage : (getPhotoData(editingPhoto.key)?.original || cropImage),
+          transform: transform
+        };
+        onSave({ ...sitePhotos, [editingPhoto.key]: photoData }, editingPhoto.label);
+        setShowCropper(false);
+        setCropImage(null);
+        setCropTransform(null);
+        setIsNewUpload(false);
+        setEditingPhoto(null);
+      };
+
+      const handleDelete = () => {
+        const updated = { ...sitePhotos };
+        delete updated[editingPhoto.key];
+        onSave(updated, editingPhoto.label);
+        setEditingPhoto(null);
+      };
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <h3 className="font-bold text-lg text-green-800 mb-2">📸 Site Photos</h3>
+          <p className="text-sm text-gray-500 mb-4">Upload photos that appear throughout the website. Photos will be displayed exactly as cropped.</p>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {SITE_PHOTO_CONFIG.map(photo => (
+              <div key={photo.key} className="border rounded-xl p-4 hover:border-green-400 transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h4 className="font-medium text-gray-800">{photo.label}</h4>
+                    <p className="text-xs text-gray-500">{photo.description}</p>
+                  </div>
+                  {getCroppedImage(photo.key) && (
+                    <span className="w-3 h-3 bg-green-500 rounded-full" title="Custom photo uploaded" />
+                  )}
+                </div>
+
+                {getCroppedImage(photo.key) ? (
+                  <div
+                    className="relative group cursor-pointer rounded-xl overflow-hidden"
+                    style={{ aspectRatio: photo.aspectRatio }}
+                    onClick={() => setEditingPhoto(photo)}
+                  >
+                    <img
+                      src={getCroppedImage(photo.key)}
+                      alt={photo.label}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">Edit</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
+                    style={{ aspectRatio: photo.aspectRatio }}
+                    onClick={() => {
+                      setEditingPhoto(photo);
+                      setTimeout(() => inputRef.current?.click(), 100);
+                    }}
+                  >
+                    <span className="text-4xl mb-2">📷</span>
+                    <span className="text-sm text-gray-500">Click to upload</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Edit Modal */}
+          {editingPhoto && !showCropper && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">{editingPhoto.label}</h2>
+                  <button onClick={() => setEditingPhoto(null)} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  {getCroppedImage(editingPhoto.key) && (
+                    <div className="mb-4">
+                      <p className="text-sm text-gray-500 mb-2 font-medium">Preview (exactly as shown on website)</p>
+                      <img
+                        src={getCroppedImage(editingPhoto.key)}
+                        alt={editingPhoto.label}
+                        className="w-full object-cover rounded-xl shadow"
+                        style={{ aspectRatio: editingPhoto.aspectRatio }}
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <button
+                      onClick={() => inputRef.current?.click()}
+                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-2"
+                    >
+                      <span>📤</span> {getCroppedImage(editingPhoto.key) ? 'Upload New Photo' : 'Upload Photo'}
+                    </button>
+
+                    {getCroppedImage(editingPhoto.key) && (
+                      <>
+                        <button
+                          onClick={handleReEdit}
+                          className="w-full py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium flex items-center justify-center gap-2"
+                        >
+                          <span>✂️</span> Adjust Position / Zoom
+                        </button>
+                        <button
+                          onClick={handleDelete}
+                          className="w-full py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium flex items-center justify-center gap-2"
+                        >
+                          <span>🗑️</span> Remove Photo
+                        </button>
+                      </>
+                    )}
+
+                    <button
+                      onClick={() => setEditingPhoto(null)}
+                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <input
+                ref={inputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </div>
+          )}
+
+          {/* Image Cropper Modal */}
+          {showCropper && cropImage && editingPhoto && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
+                  <h2 className="font-display text-lg">Adjust: {editingPhoto.label}</h2>
+                  <button onClick={() => { setShowCropper(false); setCropImage(null); setCropTransform(null); }} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-gray-500 mb-4 text-center">The preview below shows exactly how the photo will appear on the website.</p>
+                  <ImageCropper
+                    image={cropImage}
+                    shape="rectangle"
+                    aspectRatio={editingPhoto.aspectRatio}
+                    initialTransform={cropTransform}
+                    onSave={handleCropSave}
+                    onCancel={() => { setShowCropper(false); setCropImage(null); setCropTransform(null); }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== MAIN APP ====================
+    function RooseveltCamp() {
+      const [page, setPage] = useState('home');
+      const [user, setUser] = useState(null);
+      const [toast, setToast] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [showBanner, setShowBanner] = useState(false);
+      const [transitioning, setTransitioning] = useState(false); // Global transition state for login/registration
+      
+      const [content, setContent] = useState(DEFAULT_CONTENT);
+      const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
+      const [registrations, setRegistrations] = useState([]);
+      const [users, setUsers] = useState([]);
+      const [availability, setAvailability] = useState({});
+      const [changeHistory, setChangeHistory] = useState([]);
+      const [messages, setMessages] = useState([]);
+      const [admins, setAdmins] = useState(DEFAULT_ADMINS);
+      const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
+      const [campers, setCampers] = useState([]); // Standalone campers collection
+      const [camperParentLinks, setCamperParentLinks] = useState([]); // { camperId, parentEmail } associations
+      const [foodPhotos, setFoodPhotos] = useState({}); // Admin-uploadable food photos { snack_fruit: base64, ... }
+      const [sitePhotos, setSitePhotos] = useState({}); // Site-wide photos { hero, dropoff, layups, lunch }
+
+      // New state for onboarding system
+      const [emergencyContacts, setEmergencyContacts] = useState([]); // Emergency contact records
+      const [onboardingProgress, setOnboardingProgress] = useState({}); // { email: { step, complete, ... } }
+      const [pendingCounselors, setPendingCounselors] = useState([]); // Counselors awaiting admin approval
+      const [availabilityChangeRequests, setAvailabilityChangeRequests] = useState([]); // Counselor availability change requests
+      const [profileChangeRequests, setProfileChangeRequests] = useState([]); // Counselor profile change requests
+      const [blockedSessions, setBlockedSessions] = useState({}); // { date: { morning: bool, afternoon: bool } }
+      const [counselorSchedule, setCounselorSchedule] = useState({}); // { counselorId: { date: { morning: bool, afternoon: bool } } }
+
+      const [adminTab, setAdminTab] = useState('dashboard');
+      const [parentTab, setParentTab] = useState('dashboard');
+      const [counselorTab, setCounselorTab] = useState('dashboard');
+      const [sessionsTabMonth, setSessionsTabMonth] = useState(null); // Persist selected month in Sessions tab
+      const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
+      const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
+      const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
+      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
+      const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
+      const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
+      const [deleteRegConfirm, setDeleteRegConfirm] = useState(null); // Registration to delete confirmation
+
+      const isDevEnv = isDev();
+      const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
+      const sessionCost = getSessionCost(content);
+
+      useEffect(() => {
+        const load = async () => {
+          setLoading(true);
+          try {
+            const cd = await storage.get('camp_content');
+            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
+            const cs = await storage.get('camp_counselors');
+            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
+            const rg = await storage.get('camp_registrations');
+            if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
+            const us = await storage.get('camp_registered_users');
+            if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
+            const av = await storage.get('camp_counselor_availability');
+            if (av?.[0]?.data) setAvailability(av[0].data);
+            const ch = await storage.get('camp_change_history');
+            if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
+            const ms = await storage.get('camp_messages');
+            if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
+            const ad = await storage.get('camp_admins');
+            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
+            const as = await storage.get('camp_assignments');
+            if (as?.[0]?.data) setAssignments(as[0].data);
+            const cp = await storage.get('camp_campers');
+            if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
+            const cpl = await storage.get('camp_camper_parent_links');
+            if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
+            const fp = await storage.get('camp_food_photos');
+            if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
+            const sp = await storage.get('camp_site_photos');
+            if (sp?.[0]?.data) setSitePhotos(sp[0].data);
+
+            // Load new onboarding system data
+            const ec = await storage.get('camp_emergency_contacts');
+            if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
+            const op = await storage.get('camp_onboarding_progress');
+            if (op?.[0]?.data) setOnboardingProgress(op[0].data || {});
+            const acr = await storage.get('camp_availability_change_requests');
+            if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
+            const pcr = await storage.get('camp_profile_change_requests');
+            if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
+            const bs = await storage.get('camp_blocked_sessions');
+            if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
+            const csch = await storage.get('camp_counselor_schedule');
+            if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
+          } catch (e) { console.error('Load error:', e); }
+          setLoading(false);
+        };
+        load();
+      }, []);
+
+      const addToHistory = useCallback(async (action, details) => {
+        const entry = {
+          id: Date.now(),
+          timestamp: new Date().toISOString(),
+          action,
+          details
+        };
+        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        setChangeHistory(newHistory);
+        await storage.set('camp_change_history', 'main', newHistory);
+      }, [changeHistory]);
+
+      const saveContent = async (c, field = null) => {
+        setContent(c);
+        await storage.set('camp_content', 'main', c);
+        if (field) {
+          addToHistory('Content Updated', `Changed "${field}"`);
+        }
+        showToast('Saved!');
+      };
+
+      const saveCounselors = async (cs, action = null) => {
+        setCounselors(cs);
+        for (const c of cs) await storage.set('camp_counselors', c.id, c);
+        if (action) addToHistory('Counselor', action);
+        showToast('Saved!');
+      };
+
+      const deleteCounselor = async (counselorId, counselorName) => {
+        // Remove from state
+        const updated = counselors.filter(c => c.id !== counselorId).map((c, i) => ({ ...c, order: i }));
+        setCounselors(updated);
+        // Remove from database
+        try {
+          await supabase.from('camp_counselors').delete().eq('id', counselorId);
+        } catch (e) { console.error('Error deleting counselor:', e); }
+        // Clean up assignments that reference this counselor
+        const cleanedAssignments = { ...assignments };
+        Object.keys(cleanedAssignments).forEach(key => {
+          if (cleanedAssignments[key][counselorId]) {
+            delete cleanedAssignments[key][counselorId];
+          }
+        });
+        await saveAssignments(cleanedAssignments);
+        // Clean up availability
+        const cleanedAvail = { ...availability };
+        if (cleanedAvail[counselorId]) {
+          delete cleanedAvail[counselorId];
+          await saveAvail(cleanedAvail);
+        }
+        addToHistory('Counselor', `Deleted counselor ${counselorName}`);
+        showToast('Counselor deleted');
+      };
+
+      const saveReg = async (r, action = null) => {
+        setRegistrations(prevRegs => {
+          const newRegs = prevRegs.some(x => x.id === r.id) ? prevRegs.map(x => x.id === r.id ? r : x) : [...prevRegs, r];
+          return newRegs;
+        });
+        await storage.set('camp_registrations', r.id, r);
+        if (action) addToHistory('Registration', action);
+      };
+
+      const saveRegistrations = async (regs, action = null) => {
+        // Delete all existing registrations from Supabase (they're stored as individual records)
+        const currentRegIds = registrations.map(r => r.id);
+        for (const regId of currentRegIds) {
+          await supabase.from('camp_registrations').delete().eq('id', regId);
+        }
+        // Save new registrations (if any)
+        for (const reg of regs) {
+          await storage.set('camp_registrations', reg.id, reg);
+        }
+        setRegistrations(regs);
+        if (action) addToHistory('Registration', action);
+      };
+
+      const saveUsers = async (u, action = null) => {
+        setUsers(u);
+        await storage.set('camp_registered_users', 'main', u);
+        if (action) addToHistory('Parent', action);
+      };
+
+      const deleteParent = async (parentEmail, parentName) => {
+        // Remove from users state
+        const updatedUsers = users.filter(u => u.email !== parentEmail);
+        setUsers(updatedUsers);
+        await storage.set('camp_registered_users', 'main', updatedUsers);
+        // Remove camper-parent links for this parent
+        const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
+        setCamperParentLinks(updatedLinks);
+        await storage.set('camp_camper_parent_links', 'main', updatedLinks);
+        // Note: We don't delete registrations - they're historical records
+        addToHistory('Parent', `Deleted parent ${parentName}`);
+        showToast('Parent deleted');
+      };
+      const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
+      const saveAdmins = async (a, action = null) => {
+        setAdmins(a);
+        await storage.set('camp_admins', 'main', a);
+        if (action) addToHistory('Admin', action);
+      };
+      const saveAssignments = async (a, action = null) => {
+        setAssignments(a);
+        await storage.set('camp_assignments', 'main', a);
+        if (action) addToHistory('Assignment', action);
+      };
+      const saveCampers = async (c, action = null) => {
+        setCampers(c);
+        await storage.set('camp_campers', 'main', c);
+        if (action) addToHistory('Camper', action);
+      };
+      const saveFoodPhotos = async (photos) => {
+        setFoodPhotos(photos);
+        await storage.set('camp_food_photos', 'main', photos);
+        addToHistory('Content', 'Updated food photos');
+        showToast('Photo updated!');
+      };
+
+      const saveSitePhotos = async (photos, photoName = null) => {
+        setSitePhotos(photos);
+        await storage.set('camp_site_photos', 'main', photos);
+        if (photoName) addToHistory('Content', `Updated ${photoName} photo`);
+        showToast('Photo updated!');
+      };
+
+      const deleteCamper = async (camperId, camperName) => {
+        // Remove from campers state
+        const updatedCampers = campers.filter(c => c.id !== camperId);
+        setCampers(updatedCampers);
+        await storage.set('camp_campers', 'main', updatedCampers);
+        // Remove camper-parent links
+        const updatedLinks = camperParentLinks.filter(l => l.camperId !== camperId);
+        setCamperParentLinks(updatedLinks);
+        await storage.set('camp_camper_parent_links', 'main', updatedLinks);
+        // Clean up assignments that reference this camper
+        const cleanedAssignments = { ...assignments };
+        Object.keys(cleanedAssignments).forEach(key => {
+          Object.keys(cleanedAssignments[key]).forEach(counselorId => {
+            cleanedAssignments[key][counselorId] = cleanedAssignments[key][counselorId].filter(id => id !== camperId);
+          });
+        });
+        setAssignments(cleanedAssignments);
+        await storage.set('camp_assignments', 'main', cleanedAssignments);
+        // Note: We don't delete registrations - they're historical records
+        addToHistory('Camper', `Deleted camper ${camperName}`);
+        showToast('Camper deleted');
+      };
+
+      const saveCamperParentLinks = async (links) => {
+        setCamperParentLinks(links);
+        await storage.set('camp_camper_parent_links', 'main', links);
+      };
+
+      const saveBlockedSessions = async (sessions, action = null) => {
+        setBlockedSessions(sessions);
+        await storage.set('camp_blocked_sessions', 'main', sessions);
+        if (action) addToHistory('Sessions', action);
+      };
+
+      const saveCounselorSchedule = async (schedule, action = null) => {
+        setCounselorSchedule(schedule);
+        await storage.set('camp_counselor_schedule', 'main', schedule);
+        if (action) addToHistory('Counselor Schedule', action);
+      };
+
+      // Helper to check if a counselor is scheduled to work a session
+      const isCounselorScheduled = (counselorId, date, session) => {
+        return counselorSchedule[counselorId]?.[date]?.[session] === true;
+      };
+
+      // Helper to check if a session is blocked
+      const isSessionBlocked = (date, session) => {
+        return blockedSessions[date]?.[session] === true;
+      };
+
+      // Helper to check if a date is fully blocked (both sessions)
+      const isDateFullyBlocked = (date) => {
+        return isSessionBlocked(date, 'morning') && isSessionBlocked(date, 'afternoon');
+      };
+
+      // Compute available dates (dates where at least one session is available)
+      const availableDates = CAMP_DATES.filter(d => !isDateFullyBlocked(d));
+
+      // New save functions for onboarding system
+      const saveEmergencyContacts = async (contacts, action = null) => {
+        setEmergencyContacts(contacts);
+        await storage.set('camp_emergency_contacts', 'main', contacts);
+        if (action) addToHistory('Emergency Contacts', action);
+      };
+
+      const saveOnboardingProgress = async (progress) => {
+        setOnboardingProgress(progress);
+        await storage.set('camp_onboarding_progress', 'main', progress);
+      };
+
+      const saveAvailabilityChangeRequests = async (requests, action = null) => {
+        setAvailabilityChangeRequests(requests);
+        await storage.set('camp_availability_change_requests', 'main', requests);
+        if (action) addToHistory('Availability', action);
+      };
+
+      const saveProfileChangeRequests = async (requests, action = null) => {
+        setProfileChangeRequests(requests);
+        await storage.set('camp_profile_change_requests', 'main', requests);
+        if (action) addToHistory('Profile', action);
+      };
+
+      const saveMessage = async (msg) => {
+        const newMsgs = [...messages, msg];
+        setMessages(newMsgs);
+        await storage.set('camp_messages', msg.id, msg);
+      };
+
+      const markMessageRead = async (msgId, readerEmail) => {
+        const updated = messages.map(m => {
+          if (m.id === msgId && !m.readBy?.includes(readerEmail)) {
+            return { ...m, readBy: [...(m.readBy || []), readerEmail] };
+          }
+          return m;
+        });
+        setMessages(updated);
+        const msg = updated.find(m => m.id === msgId);
+        if (msg) await storage.set('camp_messages', msg.id, msg);
+      };
+
+      const getUnreadCount = (email) => {
+        return messages.filter(m =>
+          (m.to === 'all' || m.to?.includes(email)) &&
+          m.from !== email &&
+          !m.readBy?.includes(email)
+        ).length;
+      };
+
+      const getPending = () => registrations.filter(r => r.status === 'pending').length;
+      const getApproved = () => registrations.filter(r => r.status === 'approved').length;
+      const getCancelled = () => registrations.filter(r => r.status === 'cancelled' || r.status === 'rejected').length;
+      const getUnpaid = () => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length;
+
+      // ==================== NAV ====================
+      // ==================== NAV (COUNSELOR) ====================
+      const Nav = () => {
+        const handleLogout = () => {
+          sessionStorage.removeItem('user');
+          window.location.href = '/index.html';
+        };
+
+        return (
+          <nav className="bg-green-900 text-white shadow-lg">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => window.location.href = '/index.html'}>🏀 ROOSEVELT CAMP</div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
+                <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user?.name || 'Counselor'}</span>
+                <button onClick={handleLogout} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
+              </div>
+            </div>
+          </nav>
+        );
+      };
+
+      const CounselorDash = () => {
+        const month = counselorDashMonth;
+        const setMonth = setCounselorDashMonth;
+        const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
+        const myAvail = availability[user?.email] || {};
+
+        const getMonthDates = (m) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === m);
+
+        const getState = (date, session) => {
+          const data = myAvail[date];
+          if (!data) return null;
+          if (data.available?.includes(session)) return 'available';
+          if (data.unavailable?.includes(session)) return 'unavailable';
+          if (Array.isArray(data) && data.includes(session)) return 'available';
+          return null;
+        };
+
+        // Sync availability data to counselorSchedule so admin dashboard sees it
+        // Saves both available (true) and unavailable (false) sessions
+        const syncSchedule = async (newAvail) => {
+          const myCounselor = counselors.find(c => c.email === user?.email);
+          if (!myCounselor) return;
+          const newSchedule = { ...counselorSchedule };
+          newSchedule[myCounselor.id] = {};
+          Object.entries(newAvail).forEach(([date, data]) => {
+            const avail = Array.isArray(data) ? data : (data.available || []);
+            const unavail = Array.isArray(data) ? [] : (data.unavailable || []);
+            // Only add date entry if there's any data
+            if (avail.length > 0 || unavail.length > 0) {
+              newSchedule[myCounselor.id][date] = {};
+              // Set true for available, false for unavailable
+              if (avail.includes('morning')) newSchedule[myCounselor.id][date].morning = true;
+              else if (unavail.includes('morning')) newSchedule[myCounselor.id][date].morning = false;
+              if (avail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = true;
+              else if (unavail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = false;
+            }
+          });
+          await saveCounselorSchedule(newSchedule, `${myCounselor.name} updated availability`);
+        };
+
+        const cycle = async (date, session) => {
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          const state = getState(date, session);
+
+          if (!newAvail[date] || Array.isArray(newAvail[date])) {
+            newAvail[date] = { available: Array.isArray(newAvail[date]) ? [...newAvail[date]] : [], unavailable: [] };
+          }
+
+          if (state === null) {
+            newAvail[date].available.push(session);
+          } else if (state === 'available') {
+            newAvail[date].available = newAvail[date].available.filter(s => s !== session);
+            newAvail[date].unavailable.push(session);
+          } else {
+            newAvail[date].unavailable = newAvail[date].unavailable.filter(s => s !== session);
+          }
+
+          if (!newAvail[date].available?.length && !newAvail[date].unavailable?.length) delete newAvail[date];
+
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          await syncSchedule(newAvail);
+          showToast('Availability updated!');
+        };
+
+        // Bulk actions
+        const markWeekAvailable = async (weekDates) => {
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          weekDates.forEach(date => {
+            newAvail[date] = { available: ['morning', 'afternoon'], unavailable: [] };
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          await syncSchedule(newAvail);
+          showToast('Week marked as available!');
+        };
+
+        const markMonthAvailable = async (monthNum) => {
+          const monthDates = getMonthDates(monthNum);
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          monthDates.forEach(date => {
+            newAvail[date] = { available: ['morning', 'afternoon'], unavailable: [] };
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          await syncSchedule(newAvail);
+          showToast('Month marked as available!');
+        };
+
+        const clearMonth = async (monthNum) => {
+          const monthDates = getMonthDates(monthNum);
+          const newAvail = JSON.parse(JSON.stringify(myAvail));
+          monthDates.forEach(date => {
+            delete newAvail[date];
+          });
+          await saveAvail({ ...availability, [user?.email]: newAvail });
+          await syncSchedule(newAvail);
+          showToast('Month cleared!');
+        };
+
+        // Calculate stats
+        const getStats = () => {
+          let available = 0, unavailable = 0, notSet = 0;
+          CAMP_DATES.forEach(date => {
+            ['morning', 'afternoon'].forEach(session => {
+              const state = getState(date, session);
+              if (state === 'available') available++;
+              else if (state === 'unavailable') unavailable++;
+              else notSet++;
+            });
+          });
+          return { available, unavailable, notSet, total: CAMP_DATES.length * 2 };
+        };
+        const stats = getStats();
+
+        return (
+          <div className="min-h-screen bg-amber-50">
+            <div className="bg-green-800 text-white py-4">
+              <div className="max-w-6xl mx-auto px-4">
+                <h1 className="font-display text-3xl">Counselor Dashboard</h1>
+                <p className="text-green-200">Welcome, {user?.name}</p>
+              </div>
+            </div>
+
+            <div className="bg-white shadow">
+              <div className="max-w-6xl mx-auto px-2 sm:px-4">
+                <ScrollableTabs>
+                  {['dashboard', 'schedule'].map(t => (
+                    <button key={t} onClick={() => setCounselorTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (counselorTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                      {t === 'dashboard' ? '📊 Dashboard' : t === 'schedule' ? '📅 My Schedule' : t}
+                    </button>
+                  ))}
+                </ScrollableTabs>
+              </div>
+            </div>
+
+            <div className="max-w-6xl mx-auto px-4 py-6">
+              {counselorTab === 'dashboard' && (
+                <div className="space-y-6">
+              {/* Stats Overview */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{stats.available}</div>
+                  <div className="text-sm text-gray-600">Sessions Available</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-red-600">{stats.unavailable}</div>
+                  <div className="text-sm text-gray-600">Unavailable</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-600">{stats.notSet}</div>
+                  <div className="text-sm text-gray-600">Not Set</div>
+                </div>
+                <div className="bg-white rounded-xl shadow p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                  <div className="text-sm text-gray-600">Total Sessions</div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
+                <h3 className="font-bold text-green-800 mb-2">📅 Sign Up for Sessions</h3>
+                <p className="text-green-800 text-sm mb-2">Click on AM or PM to cycle through: <span className="font-medium">Available</span> → <span className="font-medium">Unavailable</span> → <span className="font-medium">Not Set</span></p>
+                <p className="text-green-700 text-sm">Camp runs weekdays only: July 13-17 & August 10-28, 2026</p>
+              </div>
+
+              {/* Month Tabs */}
+              <div className="flex flex-wrap gap-2 mb-4">
+                {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                  <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
+                ))}
+                <div className="flex-1" />
+                {/* Bulk Actions */}
+                <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
+                  Mark All Available
+                </button>
+                <button onClick={() => clearMonth(month)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
+                  Clear Month
+                </button>
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="bg-white rounded-xl shadow p-6">
+                <div className="grid grid-cols-5 gap-3">
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <div key={d} className="text-center font-bold text-green-800">{d}</div>)}
+                  {getMonthDates(month).map(date => {
+                    const d = new Date(date + 'T12:00:00');
+                    const mState = getState(date, 'morning');
+                    const aState = getState(date, 'afternoon');
+                    const style = (s) => s === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : s === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
+                    return (
+                      <div key={date} className="border rounded-lg p-2 hover:shadow-md transition-shadow">
+                        <div className="text-center font-bold text-green-800 mb-2">{d.getDate()}</div>
+                        <button onClick={() => cycle(date, 'morning')} className={'w-full py-1.5 rounded text-xs mb-1 font-medium transition-colors ' + style(mState)}>
+                          AM
+                        </button>
+                        <button onClick={() => cycle(date, 'afternoon')} className={'w-full py-1.5 rounded text-xs font-medium transition-colors ' + style(aState)}>
+                          PM
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div className="mt-6 pt-4 border-t flex flex-wrap gap-4 justify-center text-sm">
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available - I can work</span></div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" /><span>Unavailable - Can't work</span></div>
+                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" /><span>Not Set - Haven't decided</span></div>
+                </div>
+              </div>
+
+              {/* Quick Actions by Week */}
+              <div className="bg-white rounded-xl shadow p-6 mt-6">
+                <h3 className="font-bold text-green-800 mb-4">⚡ Quick Actions by Week</h3>
+                <div className="space-y-2">
+                  {CAMP_WEEKS.filter(w => new Date(w.start + 'T12:00:00').getMonth() === month).map((week, idx) => {
+                    const weekStart = new Date(week.start + 'T12:00:00');
+                    const weekEnd = new Date(week.dates[week.dates.length - 1] + 'T12:00:00');
+                    const availableCount = week.dates.reduce((sum, date) => {
+                      return sum + (getState(date, 'morning') === 'available' ? 1 : 0) + (getState(date, 'afternoon') === 'available' ? 1 : 0);
+                    }, 0);
+
+                    return (
+                      <div key={week.start} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="flex-1">
+                          <span className="font-medium">Week {idx + 1}: </span>
+                          <span className="text-gray-600">
+                            {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                          <span className="ml-2 text-sm text-green-600">({availableCount}/{week.dates.length * 2} sessions)</span>
+                        </div>
+                        <button
+                          onClick={() => markWeekAvailable(week.dates)}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
+                        >
+                          Mark Week Available
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+                </div>
+              )}
+
+              {counselorTab === 'schedule' && (
+                <div className="space-y-6">
+                  <div className="bg-blue-100 border-l-4 border-blue-600 p-4 rounded-lg">
+                    <h3 className="font-bold text-blue-800 mb-2">📅 My Assignments</h3>
+                    <p className="text-blue-800 text-sm">View your assigned sessions and pod campers. Only admins can make changes to assignments.</p>
+                  </div>
+
+                  {/* Get counselor ID */}
+                  {(() => {
+                    const myCounselor = counselors.find(c => c.email === user?.email);
+                    if (!myCounselor) {
+                      return <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No counselor profile found.</div>;
+                    }
+
+                    // Get all assignments for this counselor
+                    // assignments structure: { "date_session": { counselorId: [childId, ...] } }
+                    const myAssignments = {};
+                    Object.entries(assignments).forEach(([dateSession, counselorAssignments]) => {
+                      const [date, session] = dateSession.split('_');
+                      const camperIds = counselorAssignments[myCounselor.id] || [];
+
+                      if (camperIds.length > 0) {
+                        if (!myAssignments[date]) myAssignments[date] = {};
+                        myAssignments[date][session] = camperIds;
+                      }
+                    });
+
+                    const sortedDates = Object.keys(myAssignments).sort();
+
+                    if (sortedDates.length === 0) {
+                      return (
+                        <div className="bg-white rounded-xl shadow p-6 text-center">
+                          <p className="text-gray-500">You haven't been assigned to any sessions yet.</p>
+                          <p className="text-sm text-gray-400 mt-2">Check back later or contact the admin.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-4">
+                        {sortedDates.map(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          const sessions = myAssignments[date];
+
+                          return (
+                            <div key={date} className="bg-white rounded-xl shadow p-6">
+                              <h3 className="font-bold text-lg text-green-800 mb-4">
+                                {d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                              </h3>
+
+                              <div className="space-y-4">
+                                {sessions.morning && (
+                                  <div className="border-l-4 border-yellow-500 pl-4 bg-yellow-50 p-3 rounded">
+                                    <h4 className="font-bold text-yellow-700 mb-2">☀️ Morning Session (9:00 AM - 12:00 PM)</h4>
+                                    {sessions.morning.length > 0 ? (
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.morning.length} campers):</p>
+                                        {sessions.morning.map(camperId => {
+                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
+                                          return (
+                                            <div key={camperId} className="flex items-center gap-2 text-sm">
+                                              <span className="text-green-600">•</span>
+                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
+                                    )}
+                                  </div>
+                                )}
+
+                                {sessions.afternoon && (
+                                  <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-3 rounded">
+                                    <h4 className="font-bold text-blue-700 mb-2">🌙 Afternoon Session (12:00 PM - 3:00 PM)</h4>
+                                    {sessions.afternoon.length > 0 ? (
+                                      <div className="space-y-1">
+                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.afternoon.length} campers):</p>
+                                        {sessions.afternoon.map(camperId => {
+                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
+                                          return (
+                                            <div key={camperId} className="flex items-center gap-2 text-sm">
+                                              <span className="text-green-600">•</span>
+                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      };
+
+      // ==================== AUTH CHECK & ROUTER (COUNSELOR) ====================
+      useEffect(() => {
+        const userJson = sessionStorage.getItem('user');
+        if (!userJson) {
+          window.location.href = '/index.html';
+          return;
+        }
+        const sessionUser = JSON.parse(userJson);
+        if (sessionUser.role !== 'counselor') {
+          window.location.href = '/index.html';
+          return;
+        }
+        if (!user) setUser(sessionUser);
+      }, []);
+
+      if (loading) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
+
+      if (!user) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-6xl">🏀</div></div>;
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <VersionBanner isVisible={isDevEnv || showBanner} isDev={isDevEnv} />
+          <Nav />
+          {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
+          <CounselorDash />
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<RooseveltCamp />);
+  </script>
+</body>
+</html>
