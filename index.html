@@ -45,18 +45,23 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.141";
+    const VERSION = "12.142";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-06T11:45:00");
+    const BUILD_DATE = new Date("2026-02-07T13:08:00");
 
     const RELEASE_NOTES = [
-      { version: "12.141", date: "2026-02-07", time: "4:03 PM ET", author: "Derek Richardson", changes: [
+      { version: "12.142", date: "2026-02-07", time: "1:08 PM PT", author: "Derek Richardson", changes: [
+        "Fixed timestamp inconsistency — BUILD_DATE and release notes now use same Pacific Time source",
+        "Converted all release note timestamps from Eastern Time to Pacific Time (Seattle timezone)",
+        "BUILD_DATE now properly updates with each release"
+      ]},
+      { version: "12.141", date: "2026-02-07", time: "1:06 PM PT", author: "Derek Richardson", changes: [
         "Fixed admin tab bar scroll position — now retains scroll position when clicking into tabs (especially Danger Zone)",
         "Removed individual bulk delete buttons from Danger Zone (Delete All Parents, Campers, Counselors, Registrations, Assignments, Nuclear Option)",
         "Simplified Danger Zone to single 'DELETE ALL DATA (EXCEPT COUNSELORS)' button that preserves counselors and admin",
         "Updated DELETE ALL DATA to preserve counselor roster, availability, and schedules while wiping parent/camper data"
       ]},
-      { version: "12.140", date: "2026-02-06", time: "3:40 PM ET", author: "Derek Richardson", changes: [
+      { version: "12.140", date: "2026-02-06", time: "12:40 PM PT", author: "Derek Richardson", changes: [
         "Danger Zone: Deletions no longer log out or reload page — stays in Danger Zone for continued operations",
         "Fixed DELETE ALL USER DATA to also delete emergency contacts and onboarding progress",
         "Fixed DELETE ALL USER DATA to only preserve counselor accounts (not stale admin entries in users table)",
