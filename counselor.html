@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.149";
+    const VERSION = "12.150";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T15:12:00");
+    const BUILD_DATE = new Date("2026-02-07T15:18:00");
 
     const RELEASE_NOTES = [
+      { version: "12.150", date: "2026-02-07", time: "3:18 PM PT", author: "Derek Richardson", changes: [
+        "Removed camp schedule by day section from parent dashboard Campers tab",
+        "Moved 'Registered Camper' tag to inline position beside camper name",
+        "Simplified Campers tab layout for cleaner user experience"
+      ]},
       { version: "12.149", date: "2026-02-07", time: "3:12 PM PT", author: "Derek Richardson", changes: [
         "Added contextual hints/advice system to parent dashboard with smart next-step recommendations",
         "Added current registrations list on registration tab showing all registrations grouped by camper",
