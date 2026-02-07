@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.146";
+    const VERSION = "12.147";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:33:00");
+    const BUILD_DATE = new Date("2026-02-07T14:38:00");
 
     const RELEASE_NOTES = [
+      { version: "12.147", date: "2026-02-07", time: "2:38 PM PT", author: "Derek Richardson", changes: [
+        "Removed credit card payment step from parent onboarding process",
+        "Simplified registration flow from 6 steps to 5 steps",
+        "Parent onboarding now: Account Setup → Add Campers → Emergency Contacts → Policies → Complete",
+        "Removed all credit card input fields and formatting functions"
+      ]},
       { version: "12.146", date: "2026-02-07", time: "2:33 PM PT", author: "Derek Richardson", changes: [
         "Reduced emergency contact requirement from 3 to 2 contacts",
         "Removed requirement for non-parent contact (any relationship now accepted)",
@@ -1052,7 +1058,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [campersData, setCampersData] = useState([]);
       const [emergencyData, setEmergencyData] = useState([]);
       const [policiesAccepted, setPoliciesAccepted] = useState({ pickup: false, dropoff: false });
-      const [cardData, setCardData] = useState({ number: '', expiry: '', cvc: '', name: '' });
       const [error, setError] = useState('');
       const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
       // State for adding campers/contacts (moved to parent level to avoid re-renders)
@@ -1067,15 +1072,14 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const parentPhotoRef = useRef(null);
       const contactPhotoRef = useRef(null);
 
-      const totalSteps = 6;
+      const totalSteps = 5;
 
       const steps = [
         { num: 1, title: 'Your Account', icon: '👤' },
         { num: 2, title: 'Add Campers', icon: '🏀' },
         { num: 3, title: 'Emergency Contacts', icon: '📞' },
-        { num: 4, title: 'Payment', icon: '💳' },
-        { num: 5, title: 'Policies', icon: '📋' },
-        { num: 6, title: 'Complete', icon: '✅' }
+        { num: 4, title: 'Policies', icon: '📋' },
+        { num: 5, title: 'Complete', icon: '✅' }
       ];
 
       // Photo upload handler
@@ -1102,27 +1106,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         setShowCropper(false);
         setTempImage(null);
         setCropTarget(null);
-      };
-
-      // Credit card number formatting
-      const formatCardNumber = (value) => {
-        const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        const matches = v.match(/\d{4,16}/g);
-        const match = matches && matches[0] || '';
-        const parts = [];
-        for (let i = 0, len = match.length; i < len; i += 4) {
-          parts.push(match.substring(i, i + 4));
-        }
-        return parts.length ? parts.join(' ') : value;
-      };
-
-      // Expiry formatting
-      const formatExpiry = (value) => {
-        const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-        if (v.length >= 2) {
-          return v.substring(0, 2) + '/' + v.substring(2, 4);
-        }
-        return v;
       };
 
       // Helper functions for campers
@@ -1192,8 +1175,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             return false;
           }
         }
-        // Steps 3-4 are skippable, step 5 (Policies) is required
-        if (step === 5) {
+        // Step 3 is skippable, step 4 (Policies) is required
+        if (step === 4) {
           if (!policiesAccepted.pickup || !policiesAccepted.dropoff) {
             setError('You must accept both the drop-off and pick-up policies before continuing.');
             return false;
@@ -1637,100 +1620,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {/* Step 4: Payment (Optional) */}
+              {/* Step 4: Policies */}
               {step === 4 && (
-                <div className="space-y-6">
-                  <p className="text-gray-600">Add a payment method for faster checkout. You can skip this for now.</p>
-
-                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-xl p-6 text-white">
-                    <div className="flex justify-between items-start mb-8">
-                      <div className="text-xs uppercase tracking-wider opacity-60">Credit Card</div>
-                      <div className="flex gap-2">
-                        <div className="w-10 h-6 bg-gradient-to-r from-blue-500 to-blue-700 rounded flex items-center justify-center text-xs font-bold">VISA</div>
-                        <div className="w-10 h-6 bg-gradient-to-r from-red-500 to-yellow-500 rounded flex items-center justify-center text-xs font-bold">MC</div>
-                      </div>
-                    </div>
-                    <div className="font-mono text-xl tracking-wider mb-6">
-                      {cardData.number || '•••• •••• •••• ••••'}
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <div>
-                        <div className="text-xs opacity-60 uppercase">Card Holder</div>
-                        <div>{cardData.name || 'YOUR NAME'}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs opacity-60 uppercase">Expires</div>
-                        <div>{cardData.expiry || 'MM/YY'}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Card Number</label>
-                      <input
-                        value={cardData.number}
-                        onChange={e => setCardData({ ...cardData, number: formatCardNumber(e.target.value) })}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none font-mono"
-                        placeholder="1234 5678 9012 3456"
-                        maxLength={19}
-                        autoComplete="off" data-1p-ignore="true"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Cardholder Name</label>
-                      <input
-                        value={cardData.name}
-                        onChange={e => setCardData({ ...cardData, name: e.target.value.toUpperCase() })}
-                        className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
-                        placeholder="JOHN DOE"
-                        autoComplete="off" data-1p-ignore="true"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
-                        <input
-                          value={cardData.expiry}
-                          onChange={e => setCardData({ ...cardData, expiry: formatExpiry(e.target.value) })}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
-                          placeholder="MM/YY"
-                          maxLength={5}
-                          autoComplete="off" data-1p-ignore="true"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">CVC</label>
-                        <input
-                          value={cardData.cvc}
-                          onChange={e => setCardData({ ...cardData, cvc: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                          className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
-                          placeholder="123"
-                          maxLength={4}
-                          type="password"
-                          autoComplete="off" data-1p-ignore="true"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <p className="text-yellow-800 text-sm">
-                      <strong>🔐 Secure Payment:</strong> Card payments will be processed through Stripe (coming soon). For now, you can skip this step and pay via Venmo.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => setStep(5)}
-                    className="w-full py-3 text-gray-500 hover:text-gray-700 text-sm"
-                  >
-                    Skip for now →
-                  </button>
-                </div>
-              )}
-
-              {/* Step 5: Policies */}
-              {step === 5 && (
                 <div className="space-y-6">
                   <p className="text-gray-600">Please review and acknowledge our camp policies.</p>
 
@@ -1768,8 +1659,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {/* Step 6: Complete */}
-              {step === 6 && (
+              {/* Step 5: Complete */}
+              {step === 5 && (
                 <div className="text-center space-y-6">
                   <div className="text-6xl">🎉</div>
                   <h3 className="font-display text-2xl text-green-800">You're All Set!</h3>
@@ -1780,7 +1671,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     <p className="text-sm text-gray-600">• {userData.name} ({userData.email})</p>
                     <p className="text-sm text-gray-600">• {campersData.length} camper{campersData.length !== 1 ? 's' : ''} added</p>
                     <p className="text-sm text-gray-600">• {emergencyData.length + 1} emergency contact{emergencyData.length !== 0 ? 's' : ''}</p>
-                    {cardData.number && <p className="text-sm text-gray-600">• Payment method saved</p>}
                   </div>
 
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1806,10 +1696,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     {step === totalSteps ? 'Complete Setup' : 'Continue →'}
                   </button>
                 </div>
-                {/* Skip to Policies option for steps 2-4 (Policies step 5 is required) */}
-                {step > 1 && step < 5 && (
+                {/* Skip to Policies option for steps 2-3 (Policies step 4 is required) */}
+                {step > 1 && step < 4 && (
                   <button
-                    onClick={() => setStep(5)}
+                    onClick={() => setStep(4)}
                     className="w-full py-2 text-gray-500 hover:text-green-700 text-sm border border-gray-200 rounded-lg hover:border-green-300"
                   >
                     Skip to policies & finish setup →

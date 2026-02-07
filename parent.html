@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.146";
+    const VERSION = "12.147";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:33:00");
+    const BUILD_DATE = new Date("2026-02-07T14:38:00");
 
     const RELEASE_NOTES = [
+      { version: "12.147", date: "2026-02-07", time: "2:38 PM PT", author: "Derek Richardson", changes: [
+        "Removed credit card payment step from parent onboarding process",
+        "Simplified registration flow from 6 steps to 5 steps",
+        "Parent onboarding now: Account Setup → Add Campers → Emergency Contacts → Policies → Complete",
+        "Removed all credit card input fields and formatting functions"
+      ]},
       { version: "12.146", date: "2026-02-07", time: "2:33 PM PT", author: "Derek Richardson", changes: [
         "Reduced emergency contact requirement from 3 to 2 contacts",
         "Removed requirement for non-parent contact (any relationship now accepted)",
