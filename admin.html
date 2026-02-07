@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.145";
+    const VERSION = "12.146";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:24:00");
+    const BUILD_DATE = new Date("2026-02-07T14:33:00");
 
     const RELEASE_NOTES = [
+      { version: "12.146", date: "2026-02-07", time: "2:33 PM PT", author: "Derek Richardson", changes: [
+        "Reduced emergency contact requirement from 3 to 2 contacts",
+        "Removed requirement for non-parent contact (any relationship now accepted)",
+        "Removed requirements status box from emergency contacts form",
+        "Removed explanatory and warning text from emergency contacts section"
+      ]},
       { version: "12.145", date: "2026-02-07", time: "2:24 PM PT", author: "Derek Richardson", changes: [
         "Fixed remaining duplicate components in admin.html (ParentEmergencyContactsManager, RegistrationCalendarView)",
         "Admin dashboard now fully functional with all components properly declared once"
@@ -1531,7 +1537,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               {/* Step 3: Emergency Contacts */}
               {step === 3 && (
                 <div className="space-y-4">
-                  <p className="text-gray-600 mb-2">Emergency contacts are people we can call if we can't reach you.</p>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
                     <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent (grandparent, neighbor, etc.)
                   </div>
@@ -1629,9 +1634,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     <button onClick={() => { setShowAddContact(true); setContactError(''); }} className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-600">+ Add Emergency Contact</button>
                   )}
 
-                  {!hasNonParentContact && (
-                    <p className="text-sm text-orange-600 text-center">Please add at least one non-parent contact (grandparent, neighbor, etc.)</p>
-                  )}
                 </div>
               )}
 
@@ -8983,8 +8985,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       // Check if requirements are met
       const meetsRequirements = () => {
-        const nonParentContacts = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father');
-        return localContacts.length >= 3 && nonParentContacts.length >= 1;
+        return localContacts.length >= 2;
       };
 
       const handleEdit = (contact) => {
@@ -9036,7 +9037,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       const handleSaveChanges = () => {
         if (!meetsRequirements()) {
-          showToast('You must have at least 3 emergency contacts, including at least 1 non-parent', 'error');
+          showToast('You must have at least 2 emergency contacts', 'error');
           return;
         }
         // Merge local contacts with other users' contacts
@@ -9055,25 +9056,12 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       };
 
       const requirementsMet = meetsRequirements();
-      const nonParentCount = localContacts.filter(c => c.relationship.toLowerCase() !== 'parent' && c.relationship.toLowerCase() !== 'mother' && c.relationship.toLowerCase() !== 'father').length;
 
       return (
         <div className="space-y-4">
-          {/* Requirements Status */}
-          <div className={`rounded-lg p-3 border-2 ${requirementsMet ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-xl">{requirementsMet ? '✓' : '⚠️'}</span>
-              <span className="font-medium">{requirementsMet ? 'Requirements Met' : 'Requirements Not Met'}</span>
-            </div>
-            <div className="text-sm text-gray-700">
-              <div>Total contacts: <strong>{localContacts.length}</strong> / 3 minimum {localContacts.length >= 3 ? '✓' : '❌'}</div>
-              <div>Non-parent contacts: <strong>{nonParentCount}</strong> / 1 minimum {nonParentCount >= 1 ? '✓' : '❌'}</div>
-            </div>
-          </div>
-
           {/* Contact List */}
           {localContacts.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 3 contacts.</p>
+            <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 2 contacts.</p>
           ) : (
             <div className="space-y-2">
               {localContacts.map(contact => (

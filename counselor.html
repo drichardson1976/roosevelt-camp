@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.145";
+    const VERSION = "12.146";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:24:00");
+    const BUILD_DATE = new Date("2026-02-07T14:33:00");
 
     const RELEASE_NOTES = [
+      { version: "12.146", date: "2026-02-07", time: "2:33 PM PT", author: "Derek Richardson", changes: [
+        "Reduced emergency contact requirement from 3 to 2 contacts",
+        "Removed requirement for non-parent contact (any relationship now accepted)",
+        "Removed requirements status box from emergency contacts form",
+        "Removed explanatory and warning text from emergency contacts section"
+      ]},
       { version: "12.145", date: "2026-02-07", time: "2:24 PM PT", author: "Derek Richardson", changes: [
         "Fixed remaining duplicate components in admin.html (ParentEmergencyContactsManager, RegistrationCalendarView)",
         "Admin dashboard now fully functional with all components properly declared once"
