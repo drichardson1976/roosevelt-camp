@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.140";
+    const VERSION = "12.141";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-06T11:45:00");
 
     const RELEASE_NOTES = [
+      { version: "12.141", date: "2026-02-07", time: "4:03 PM ET", author: "Derek Richardson", changes: [
+        "Fixed admin tab bar scroll position — now retains scroll position when clicking into tabs (especially Danger Zone)",
+        "Removed individual bulk delete buttons from Danger Zone (Delete All Parents, Campers, Counselors, Registrations, Assignments, Nuclear Option)",
+        "Simplified Danger Zone to single 'DELETE ALL DATA (EXCEPT COUNSELORS)' button that preserves counselors and admin",
+        "Updated DELETE ALL DATA to preserve counselor roster, availability, and schedules while wiping parent/camper data"
+      ]},
       { version: "12.140", date: "2026-02-06", time: "3:40 PM ET", author: "Derek Richardson", changes: [
         "Danger Zone: Deletions no longer log out or reload page — stays in Danger Zone for continued operations",
         "Fixed DELETE ALL USER DATA to also delete emergency contacts and onboarding progress",
@@ -7587,7 +7593,7 @@ As a 1099 contractor, you are responsible for:
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
                   {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'approval', 'content', 'history', 'dangerzone'].map(t => (
-                    <button key={t} onClick={() => setAdminTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
+                    <button key={t} onClick={(e) => { setAdminTab(t); setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 50); }} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                       {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                       {t === 'parents' && users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</span>}
@@ -9132,192 +9138,37 @@ As a 1099 contractor, you are responsible for:
                   {/* Delete Actions */}
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg text-gray-800 mb-4">🗑️ Delete Records</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      {/* Delete All Parents */}
-                      <div className="border-2 border-red-200 rounded-lg p-4">
-                        <h4 className="font-bold text-red-700 mb-2">Delete All Parents</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Removes all parent user accounts. Count: <strong>{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</strong>
+                    <div className="grid md:grid-cols-1 gap-4">
+                      {/* Delete ALL Data (except Counselors) */}
+                      <div className="border-2 border-red-700 rounded-lg p-4 bg-red-100">
+                        <h4 className="font-bold text-red-900 mb-2">☢️ Delete All Data (except Counselors)</h4>
+                        <p className="text-sm text-red-800 mb-3">
+                          Removes all parents, campers, registrations, assignments, emergency contacts, and all parent data. <strong>Preserves counselors, counselor availability, and admin.</strong> This resets all parent/camper data while keeping your counselor roster intact.
                         </p>
                         <button
                           onClick={async () => {
-                            if (!confirm('Are you SURE you want to delete ALL parent accounts? Type DELETE in the prompt to confirm.')) return;
-                            const confirmText = prompt('Type DELETE to confirm:');
-                            if (confirmText !== 'DELETE') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            const newUsers = users.filter(u => u.role !== 'parent' && !u.roles?.includes('parent'));
-                            await saveUsers(newUsers, 'Deleted all parent accounts');
-                            showToast('All parents deleted');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
-                        >
-                          Delete All Parents
-                        </button>
-                      </div>
-
-                      {/* Delete All Counselors */}
-                      <div className="border-2 border-red-200 rounded-lg p-4">
-                        <h4 className="font-bold text-red-700 mb-2">Delete All Counselors</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Removes all counselor profiles and user accounts. Count: <strong>{counselors.length}</strong>
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('Are you SURE you want to delete ALL counselors? Type DELETE in the prompt to confirm.')) return;
-                            const confirmText = prompt('Type DELETE to confirm:');
-                            if (confirmText !== 'DELETE') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            const counselorEmails = counselors.map(c => c.email);
-                            const newUsers = users.filter(u => !counselorEmails.includes(u.email));
-                            await saveUsers(newUsers, 'Deleted all counselor user accounts');
-                            await saveCounselors([], 'Deleted all counselor profiles');
-                            await saveAvail({}, 'Cleared all counselor availability');
-                            await saveCounselorSchedule({}, 'Cleared all counselor schedules');
-                            showToast('All counselors deleted');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
-                        >
-                          Delete All Counselors
-                        </button>
-                      </div>
-
-                      {/* Delete All Campers */}
-                      <div className="border-2 border-red-200 rounded-lg p-4">
-                        <h4 className="font-bold text-red-700 mb-2">Delete All Campers</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Removes all camper profiles and parent-child links. Count: <strong>{campers.length}</strong>
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('Are you SURE you want to delete ALL campers? Type DELETE in the prompt to confirm.')) return;
-                            const confirmText = prompt('Type DELETE to confirm:');
-                            if (confirmText !== 'DELETE') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            await saveCampers([], 'Deleted all campers');
-                            await saveCamperParentLinks([], 'Cleared all camper-parent links');
-                            showToast('All campers deleted');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
-                        >
-                          Delete All Campers
-                        </button>
-                      </div>
-
-                      {/* Delete All Registrations */}
-                      <div className="border-2 border-red-200 rounded-lg p-4">
-                        <h4 className="font-bold text-red-700 mb-2">Delete All Registrations</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Removes all camp registrations. Count: <strong>{registrations.length}</strong>
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('Are you SURE you want to delete ALL registrations? Type DELETE in the prompt to confirm.')) return;
-                            const confirmText = prompt('Type DELETE to confirm:');
-                            if (confirmText !== 'DELETE') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            await saveRegistrations([], 'Deleted all registrations');
-                            showToast('All registrations deleted');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
-                        >
-                          Delete All Registrations
-                        </button>
-                      </div>
-
-                      {/* Delete All Assignments */}
-                      <div className="border-2 border-red-200 rounded-lg p-4">
-                        <h4 className="font-bold text-red-700 mb-2">Delete All Assignments</h4>
-                        <p className="text-sm text-gray-600 mb-3">
-                          Removes all pod assignments. Sessions with assignments: <strong>{Object.keys(assignments).length}</strong>
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('Are you SURE you want to delete ALL pod assignments? Type DELETE in the prompt to confirm.')) return;
-                            const confirmText = prompt('Type DELETE to confirm:');
-                            if (confirmText !== 'DELETE') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            await saveAssignments({}, 'Deleted all pod assignments');
-                            showToast('All assignments deleted');
-                          }}
-                          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 w-full"
-                        >
-                          Delete All Assignments
-                        </button>
-                      </div>
-
-                      {/* Delete ALL User Data */}
-                      <div className="border-2 border-red-500 rounded-lg p-4 md:col-span-2 bg-red-50">
-                        <h4 className="font-bold text-red-800 mb-2">💣 Nuclear Option: Delete ALL User Data</h4>
-                        <p className="text-sm text-red-700 mb-3">
-                          Removes ALL parents, campers, registrations, assignments, and related data. <strong>Preserves counselors and admins.</strong> This will completely reset all parent/camper data while keeping your counselor roster intact.
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('⚠️ NUCLEAR OPTION: This will delete all parents, campers, registrations, and assignments (but preserve counselors and admins). Are you ABSOLUTELY SURE?')) return;
-                            const confirmText = prompt('Type DELETE ALL to confirm complete data wipe:');
+                            if (!confirm('☢️ DELETE ALL DATA: This will delete all parents, campers, registrations, assignments, and emergency contacts (but preserve counselors and admin). Are you ABSOLUTELY SURE?')) return;
+                            const confirmText = prompt('Type DELETE ALL to confirm data wipe:');
                             if (confirmText !== 'DELETE ALL') {
                               showToast('Deletion cancelled', 'error');
                               return;
                             }
-                            // Delete all user data (but preserve counselors)
-                            await saveUsers(users.filter(u => u.role === 'counselor' || u.roles?.includes('counselor')), 'Nuclear: Deleted all parent users');
-                            await saveCampers([], 'Nuclear: Deleted all campers');
-                            await saveRegistrations([], 'Nuclear: Deleted all registrations');
-                            await saveAssignments({}, 'Nuclear: Deleted all assignments');
-                            await saveCamperParentLinks([], 'Nuclear: Cleared all links');
-                            await saveEmergencyContacts([], 'Nuclear: Deleted all emergency contacts');
-                            await saveOnboardingProgress({});
-                            // Note: We preserve counselor data (counselors, availability, schedules)
-                            showToast('💥 All user data deleted (counselors & admins preserved)');
-                          }}
-                          className="px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 w-full font-bold"
-                        >
-                          💣 DELETE ALL USER DATA (KEEP COUNSELORS)
-                        </button>
-                      </div>
-
-                      {/* Delete ALL Data (Total Wipe) */}
-                      <div className="border-2 border-red-700 rounded-lg p-4 md:col-span-2 bg-red-100">
-                        <h4 className="font-bold text-red-900 mb-2">☢️ Total Wipe: Delete ALL Data</h4>
-                        <p className="text-sm text-red-800 mb-3">
-                          Removes <strong>EVERYTHING</strong>: all parents, counselors, campers, registrations, assignments, availability, emergency contacts, schedules, and all user accounts. <strong>Only the admin account is preserved.</strong> This is a complete system reset.
-                        </p>
-                        <button
-                          onClick={async () => {
-                            if (!confirm('☢️ TOTAL WIPE: This will delete ALL data — parents, counselors, campers, registrations, assignments, availability, emergency contacts, and ALL user accounts. Only the admin will remain. Are you ABSOLUTELY SURE?')) return;
-                            const confirmText = prompt('Type DESTROY EVERYTHING to confirm total data wipe:');
-                            if (confirmText !== 'DESTROY EVERYTHING') {
-                              showToast('Deletion cancelled', 'error');
-                              return;
-                            }
-                            // Total wipe - delete everything except admin
-                            await saveUsers([], 'Total Wipe: Deleted all users');
-                            await saveCounselors([], 'Total Wipe: Deleted all counselors');
+                            // Delete all parent/camper data (but preserve counselors and admin)
+                            await saveUsers(users.filter(u => u.role === 'counselor' || u.roles?.includes('counselor')), 'Total Wipe: Deleted all parent users');
                             await saveCampers([], 'Total Wipe: Deleted all campers');
                             await saveRegistrations([], 'Total Wipe: Deleted all registrations');
                             await saveAssignments({}, 'Total Wipe: Deleted all assignments');
                             await saveCamperParentLinks([], 'Total Wipe: Cleared all links');
-                            await saveAvail({}, 'Total Wipe: Cleared all availability');
-                            await saveCounselorSchedule({}, 'Total Wipe: Cleared all schedules');
                             await saveEmergencyContacts([], 'Total Wipe: Deleted all emergency contacts');
                             await saveOnboardingProgress({});
                             await saveAvailabilityChangeRequests([], 'Total Wipe: Cleared change requests');
                             await saveProfileChangeRequests([], 'Total Wipe: Cleared profile requests');
-                            showToast('☢️ Total wipe complete — only admin preserved');
+                            // Note: We preserve counselor data (counselors, availability, schedules)
+                            showToast('☢️ All parent/camper data deleted (counselors & admin preserved)');
                           }}
                           className="px-4 py-2 bg-red-900 text-white rounded-lg hover:bg-black w-full font-bold"
                         >
-                          ☢️ DELETE ALL DATA (KEEP ADMIN ONLY)
+                          ☢️ DELETE ALL DATA (EXCEPT COUNSELORS)
                         </button>
                       </div>
                     </div>
