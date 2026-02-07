@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.148";
+    const VERSION = "12.149";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:53:00");
+    const BUILD_DATE = new Date("2026-02-07T15:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.149", date: "2026-02-07", time: "3:12 PM PT", author: "Derek Richardson", changes: [
+        "Added contextual hints/advice system to parent dashboard with smart next-step recommendations",
+        "Added current registrations list on registration tab showing all registrations grouped by camper",
+        "Registration submissions now stay on page and update list in real-time without reload",
+        "Added 'Select Both Sessions' button for each date on registration calendar",
+        "Added 'Add Whole Week' buttons for quick bulk registration of entire weeks",
+        "Fixed share button functionality with Web Share API and clipboard fallback"
+      ]},
       { version: "12.148", date: "2026-02-07", time: "2:53 PM PT", author: "Derek Richardson", changes: [
         "Fixed critical bug: Added missing CamperScheduleTab component to parent.html",
         "Fixed missing AddChildForm and ChildCard components in admin.html",
@@ -3423,7 +3431,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           return null;
         });
         const [selectedChildren, setSelectedChildren] = useState([]);
-        const [showConfirm, setShowConfirm] = useState(null);
+        const [showConfirm, setShowConfirm] = useState(null); // Not used but kept for backward compatibility
+        const [justRegistered, setJustRegistered] = useState(false);
         
         const myUser = users.find(u => u.email === user?.email) || user;
         // Get children via camper-parent links
@@ -3458,6 +3467,143 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             const cur = p[date] || [];
             return { ...p, [date]: cur.includes(session) ? cur.filter(s => s !== session) : [...cur, session] };
           });
+        };
+
+        // Toggle both sessions for a single date
+        const toggleBothSessions = (date) => {
+          setSelectedDates(p => {
+            const cur = p[date] || [];
+            const amBlocked = isSessionBlocked(date, 'morning');
+            const pmBlocked = isSessionBlocked(date, 'afternoon');
+            const amSelected = cur.includes('morning');
+            const pmSelected = cur.includes('afternoon');
+
+            // If both available sessions are selected, deselect all
+            const bothSelected = (!amBlocked && amSelected) && (!pmBlocked && pmSelected);
+            if (bothSelected) {
+              return { ...p, [date]: [] };
+            }
+
+            // Otherwise select both available sessions
+            const sessions = [];
+            if (!amBlocked) sessions.push('morning');
+            if (!pmBlocked) sessions.push('afternoon');
+            return { ...p, [date]: sessions };
+          });
+        };
+
+        // Get contextual hints for dashboard
+        const getContextualHints = () => {
+          const hints = [];
+          const myContacts = emergencyContacts.filter(c => c.userEmail === user?.email);
+          const pendingRegs = myRegs.filter(r => r.status === 'pending');
+          const upcomingSessions = myRegs.filter(r => {
+            const regDate = new Date(r.date + 'T12:00:00');
+            const now = new Date();
+            const daysUntil = Math.ceil((regDate - now) / (1000 * 60 * 60 * 24));
+            return daysUntil >= 0 && daysUntil <= 7;
+          });
+          const childrenWithoutPhotos = myChildren.filter(c => !c.photo);
+          const unreadCount = getUnreadCount(user?.email);
+
+          // Priority 1: No campers added
+          if (myChildren.length === 0) {
+            hints.push({
+              icon: '👶',
+              text: 'Add campers with photos (we need photos of all campers, parents, and emergency contacts)',
+              action: () => setParentTab('campers'),
+              actionText: 'Add Campers',
+              priority: 1
+            });
+          }
+
+          // Priority 2: Campers missing photos
+          if (childrenWithoutPhotos.length > 0) {
+            hints.push({
+              icon: '📸',
+              text: `Add photos to ${childrenWithoutPhotos.length} camper profile${childrenWithoutPhotos.length > 1 ? 's' : ''}`,
+              action: () => setParentTab('campers'),
+              actionText: 'Add Photos',
+              priority: 2
+            });
+          }
+
+          // Priority 3: Insufficient emergency contacts
+          if (myContacts.length < 2) {
+            hints.push({
+              icon: '🚨',
+              text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
+              action: () => setParentTab('campers'),
+              actionText: 'Add Contacts',
+              priority: 3
+            });
+          }
+
+          // Priority 4: No registrations
+          if (myRegs.length === 0 && myChildren.length > 0) {
+            hints.push({
+              icon: '📝',
+              text: 'Register your campers for camp sessions',
+              action: () => setParentTab('register'),
+              actionText: 'Register Now',
+              priority: 4
+            });
+          }
+
+          // Priority 5: Pending registrations (need payment)
+          if (pendingRegs.length > 0) {
+            hints.push({
+              icon: '💳',
+              text: `Pay for ${pendingRegs.length} pending session${pendingRegs.length > 1 ? 's' : ''}`,
+              action: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
+              actionText: 'View Payment Info',
+              priority: 5
+            });
+          }
+
+          // Priority 6: Upcoming sessions
+          if (upcomingSessions.length > 0) {
+            hints.push({
+              icon: '🎒',
+              text: 'Get ready for camp: ensure your camper has snacks, water bottle, basketball, appropriate clothes (shorts, socks, basketball shoes, t-shirt)',
+              priority: 6
+            });
+          }
+
+          // Priority 7: Unread messages
+          if (unreadCount > 0) {
+            hints.push({
+              icon: '💬',
+              text: `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''} from camp`,
+              action: () => setParentTab('messages'),
+              actionText: 'Read Messages',
+              priority: 7
+            });
+          }
+
+          // Always show: Share camp
+          hints.push({
+            icon: '📢',
+            text: 'Tell other parents about the camp',
+            action: () => {
+              const shareText = `Join us at Roosevelt Girls Basketball Day Camp this summer! Great coaching, fun activities, and skill development for grades 3-8. ${window.location.origin}`;
+              if (navigator.share) {
+                navigator.share({
+                  title: 'Roosevelt Girls Basketball Day Camp',
+                  text: shareText,
+                  url: window.location.origin
+                }).catch(() => {});
+              } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                  showToast('Link copied to clipboard!');
+                });
+              }
+            },
+            actionText: 'Share',
+            priority: 8
+          });
+
+          return hints.sort((a, b) => a.priority - b.priority);
         };
 
         // Use discount calculation
@@ -3546,17 +3692,14 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             }
           }
 
-          setShowConfirm({
-            children: selectedChildren.map(id => myChildren.find(c => c.id === id)?.name),
-            childIds: selectedChildren,
-            total: pricing.finalTotal,
-            savings: pricing.discount > 0 ? Math.round(pricing.discount) : null,
-            venmoCode,
-            dates: dates,
-            sessionCount: dates.reduce((sum, [, sessions]) => sum + (selectedChildren.length * sessions.length), 0)
-          });
+          // Show success toast and stay on registrations tab
+          showToast(`Registration submitted for ${selectedChildren.length} camper${selectedChildren.length > 1 ? 's' : ''}!`, 'success');
           setSelectedDates({});
           setSelectedChildren([]);
+          setJustRegistered(true);
+
+          // Scroll to top to show the updated registrations list
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         };
 
         const addChild = async (child) => {
@@ -3592,6 +3735,32 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             <div className="max-w-6xl mx-auto px-4 py-4 sm:py-6">
               {parentTab === 'dashboard' && (
                 <div className="space-y-6">
+                  {/* Contextual Hints Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-6 border-2 border-blue-200">
+                    <h3 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2">
+                      <span>💡</span>
+                      <span>Next Steps</span>
+                    </h3>
+                    <div className="space-y-3">
+                      {getContextualHints().map((hint, idx) => (
+                        <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                          <div className="text-2xl">{hint.icon}</div>
+                          <div className="flex-1">
+                            <p className="text-gray-800">{hint.text}</p>
+                          </div>
+                          {hint.action && hint.actionText && (
+                            <button
+                              onClick={hint.action}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 whitespace-nowrap text-sm"
+                            >
+                              {hint.actionText}
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className={'rounded-xl shadow p-6 ' + (getAmountDue() > 0 ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50')}>
                     <h3 className="font-bold text-lg mb-4">Payment</h3>
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -3621,42 +3790,92 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       ))}</div>
                     )}
                   </div>
-
-                  {/* Share with Friends */}
-                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 rounded-xl shadow p-6 border border-purple-200">
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl">📢</div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg text-purple-800">Invite Friends to Camp!</h3>
-                        <p className="text-sm text-purple-600">Know other families who might be interested? Share Roosevelt Camp with them!</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const shareText = `Join us at Roosevelt Girls Basketball Day Camp this summer! Great coaching, fun activities, and skill development for grades 3-8. ${window.location.origin}`;
-                          if (navigator.share) {
-                            navigator.share({
-                              title: 'Roosevelt Girls Basketball Day Camp',
-                              text: shareText,
-                              url: window.location.origin
-                            }).catch(() => {});
-                          } else {
-                            navigator.clipboard.writeText(shareText).then(() => {
-                              showToast('Link copied to clipboard!');
-                            });
-                          }
-                        }}
-                        className="px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 flex items-center gap-2"
-                      >
-                        <span>Share</span>
-                        <span>📤</span>
-                      </button>
-                    </div>
-                  </div>
                 </div>
               )}
 
               {parentTab === 'register' && (
                 <div className="space-y-6">
+                  {/* Existing Registrations Section */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
+                      <span>📋</span>
+                      <span>Current Registrations</span>
+                    </h3>
+                    {myRegs.length === 0 ? (
+                      <p className="text-gray-500 text-center py-4">No current registrations</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {(() => {
+                          // Group registrations by camper
+                          const regsByCamper = {};
+                          myRegs.forEach(reg => {
+                            if (!regsByCamper[reg.childId]) {
+                              regsByCamper[reg.childId] = {
+                                childName: reg.childName,
+                                registrations: []
+                              };
+                            }
+                            regsByCamper[reg.childId].registrations.push(reg);
+                          });
+
+                          return Object.entries(regsByCamper).map(([childId, data]) => (
+                            <div key={childId} className="border-2 border-gray-200 rounded-lg p-4">
+                              <h4 className="font-bold text-lg mb-3 text-green-800">{data.childName}</h4>
+                              <div className="space-y-2">
+                                {data.registrations.map(reg => (
+                                  <div key={reg.id} className="flex flex-wrap items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex-1 min-w-[200px]">
+                                      <div className="font-medium">{reg.date}</div>
+                                      <div className="text-sm text-gray-600">
+                                        {reg.sessions?.map(s => s === 'morning' ? 'Morning' : 'Afternoon').join(' + ')}
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-2 flex-wrap">
+                                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                        reg.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                        reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                        'bg-gray-100 text-gray-700'
+                                      }`}>
+                                        {reg.status}
+                                      </span>
+                                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                        reg.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                                        'bg-red-100 text-red-700'
+                                      }`}>
+                                        {reg.paymentStatus || 'unpaid'}
+                                      </span>
+                                      {reg.totalAmount && (
+                                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                          ${reg.totalAmount}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    )}
+                  </div>
+
+                  {justRegistered && (
+                    <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 flex items-center gap-3">
+                      <span className="text-3xl">✅</span>
+                      <div className="flex-1">
+                        <p className="font-bold text-green-800">Registration submitted successfully!</p>
+                        <p className="text-sm text-green-700">Your registration has been sent to the camp director for review.</p>
+                      </div>
+                      <button
+                        onClick={() => setJustRegistered(false)}
+                        className="text-green-600 hover:text-green-800 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+
                   <div className={'bg-white rounded-xl shadow p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
                     <h3 className="font-bold text-lg mb-2">Step 1: Select Children to Register</h3>
                     <p className="text-sm text-gray-500 mb-4">Choose which of your children to register for camp sessions. Once registered, they become campers!</p>
@@ -3701,8 +3920,55 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     </div>
 
                     <p className="text-sm text-gray-500 mb-4">
-                      Camp runs weekdays only (Mon-Fri). Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
+                      Camp runs weekdays only (Mon-Fri). Click AM or PM to select individual sessions, or use "Both" to select the full day. Selected sessions will be highlighted in green.
                     </p>
+
+                    {/* Quick Actions */}
+                    {(() => {
+                      const getMonthDates = () => {
+                        if (!selectedRegistrationMonth) return [];
+                        const [year, month] = selectedRegistrationMonth.split('-').map(Number);
+                        return CAMP_DATES.filter(date => {
+                          const d = new Date(date + 'T12:00:00');
+                          return d.getFullYear() === year && d.getMonth() === month - 1;
+                        });
+                      };
+
+                      const monthDates = getMonthDates();
+                      if (monthDates.length === 0) return null;
+
+                      // Get weeks in this month (groups of 5 consecutive weekdays)
+                      const weeks = [];
+                      let currentWeek = [];
+                      monthDates.forEach((date, idx) => {
+                        currentWeek.push(date);
+                        if (currentWeek.length === 5 || idx === monthDates.length - 1) {
+                          if (currentWeek.length > 0) weeks.push([...currentWeek]);
+                          currentWeek = [];
+                        }
+                      });
+
+                      return (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {weeks.map((weekDates, idx) => {
+                            const weekStartDate = new Date(weekDates[0] + 'T12:00:00');
+                            const weekEndDate = new Date(weekDates[weekDates.length - 1] + 'T12:00:00');
+                            const weekLabel = `Week ${idx + 1} (${weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`;
+
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => selectFullWeek(weekDates)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+                              >
+                                <span>📅</span>
+                                <span>Add {weekLabel}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
 
                     {/* Date Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -3741,6 +4007,20 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                 <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
                               ) : (
                                 <div className="p-2 space-y-1">
+                                  {/* Both Sessions Button (only show if both are available) */}
+                                  {!amBlocked && !pmBlocked && (
+                                    <button
+                                      onClick={() => toggleBothSessions(date)}
+                                      className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${
+                                        bothSelected
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-300'
+                                      }`}
+                                    >
+                                      {bothSelected ? '✓ Both' : 'Both'}
+                                    </button>
+                                  )}
+
                                   {amBlocked ? (
                                     <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
                                   ) : (

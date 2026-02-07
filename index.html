@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.148";
+    const VERSION = "12.149";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T14:53:00");
+    const BUILD_DATE = new Date("2026-02-07T15:12:00");
 
     const RELEASE_NOTES = [
+      { version: "12.149", date: "2026-02-07", time: "3:12 PM PT", author: "Derek Richardson", changes: [
+        "Added contextual hints/advice system to parent dashboard with smart next-step recommendations",
+        "Added current registrations list on registration tab showing all registrations grouped by camper",
+        "Registration submissions now stay on page and update list in real-time without reload",
+        "Added 'Select Both Sessions' button for each date on registration calendar",
+        "Added 'Add Whole Week' buttons for quick bulk registration of entire weeks",
+        "Fixed share button functionality with Web Share API and clipboard fallback"
+      ]},
       { version: "12.148", date: "2026-02-07", time: "2:53 PM PT", author: "Derek Richardson", changes: [
         "Fixed critical bug: Added missing CamperScheduleTab component to parent.html",
         "Fixed missing AddChildForm and ChildCard components in admin.html",
