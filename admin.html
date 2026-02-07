@@ -9744,56 +9744,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       );
     };
 
-      // ==================== PARENT ====================
-    // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
-    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations }) => {
-      const [showAddForm, setShowAddForm] = useState(false);
-
-      // Check if child has any registrations (is a camper)
-      const isCamper = (childId) => registrations?.some(r => r.childId === childId);
-
-      return (
-        <div className="space-y-4">
-          {children.map(child => (
-            <div key={child.id} className="relative">
-              <ChildCard
-                child={child}
-                onUpdate={onUpdate}
-                onDelete={onDelete}
-              />
-              {isCamper(child.id) && (
-                <div className="absolute top-2 right-2">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                    🏕️ Registered Camper
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
-
-          {showAddForm ? (
-            <div className="border-t pt-4 mt-4">
-              <AddChildForm
-                onAdd={(child) => {
-                  onAdd(child);
-                  setShowAddForm(false);
-                }}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full py-4 border-2 border-dashed border-green-300 rounded-xl text-green-600 hover:bg-green-50 hover:border-green-400 transition-colors flex items-center justify-center gap-2 font-medium"
-            >
-              <span className="text-xl">+</span>
-              <span>Add Another Child</span>
-            </button>
-          )}
-        </div>
-      );
-    };
-
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
     const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast }) => {
       const [localContacts, setLocalContacts] = useState([]);
