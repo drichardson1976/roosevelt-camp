@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.193";
+    const VERSION = "12.194";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:16:00");
+    const BUILD_DATE = new Date("2026-02-08T08:17:00");
 
     const RELEASE_NOTES = [
+      { version: "12.194", date: "2026-02-08", time: "8:17 AM PST", author: "Derek Richardson", changes: [
+        "Parent Registration: Fixed Step 1 Continue button by adding specific field-by-field validation error messages",
+        "Parent Registration: Added email format validation (checks for valid email structure)",
+        "Parent Registration: Added minimum password length check (4 characters)",
+        "Parent Registration: Made duplicate email check case-insensitive",
+        "Parent Registration: Updated photo message to clarify photo on site or photo ID required at pickup"
+      ]},
       { version: "12.193", date: "2026-02-08", time: "8:16 AM PST", author: "Derek Richardson", changes: [
         "Dashboard: Added Camp Director Task Summary with prioritized task categories (Urgent, Important, Setup)",
         "Dashboard: Urgent tasks detect pending registrations, unpaid registrations, and pending counselor requests",
