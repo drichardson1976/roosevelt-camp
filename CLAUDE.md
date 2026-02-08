@@ -36,25 +36,26 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - **NEVER** run destructive git commands without explicit user permission
 - **NEVER** skip hooks (--no-verify) unless user explicitly requests
 - **ALWAYS** use heredoc for commit messages to preserve formatting
-- **ALWAYS** include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>`
+- **ALWAYS** include `Co-Authored-By:` with your actual model name (e.g. `Claude Opus 4.6`, `Claude Sonnet 4.5`) followed by `<noreply@anthropic.com>`
 
 ### Change Summary Table
 - **ALWAYS** provide a change summary table after every completed request
 - **ALWAYS** list ALL project files in the table, even if they were NOT changed
+- **ALWAYS** show version numbers: `vX.XXX → vY.YYY` for changed files, or `vX.XXX` (current) for unchanged
 - Mark unchanged files with "No changes" so it's clear they were reviewed
-- Format as a markdown table with File, Changed, and Changes columns
+- Format as a markdown table with File, Version, and Changes columns
 - Keep change descriptions brief but specific (what was added/changed/fixed)
 - Example format:
 
-| File | Changed | Changes |
+| File | Version | Changes |
 |------|---------|---------|
-| `admin.html` | Yes | Added new Dashboard feature, bumped to v12.XXX |
-| `index.html` | Yes | Version bump to v12.XXX |
-| `parent.html` | Yes | Version bump to v12.XXX |
-| `counselor.html` | Yes | Version bump to v12.XXX |
-| `CLAUDE.md` | Yes | Added new instruction for change summaries |
-| `index-backup-v12.142.html` | No | No changes |
-| `migrations/*` | No | No changes |
+| `admin.html` | v12.190 → v12.195 | Added new Dashboard feature, release notes |
+| `index.html` | v12.193 → v12.195 | Fixed registration bug |
+| `parent.html` | v12.190 | No changes |
+| `counselor.html` | v12.190 | No changes |
+| `CLAUDE.md` | — | Added new instruction for change summaries |
+| `index-backup-v12.142.html` | — | No changes |
+| `migrations/*` | — | No changes |
 
 ---
 
@@ -256,7 +257,7 @@ const getFoodPhoto = (key) => {
 
 ## 📝 ADMIN DASHBOARD STRUCTURE
 
-### Current Tab Structure (Flat - v12.187)
+### Current Tab Structure (Flat - as of v13.000)
 1. Dashboard
 2. Counselors
 3. Parents
@@ -328,7 +329,7 @@ python3 -m http.server
 
 ### Version Info Location
 - Red ribbon in top-right corner
-- Format: `DEVELOPMENT • v12.187 • ✓ DB (dev) • Built: 02-08-2026 7:22 AM (-Xs ago) • Notes`
+- Format: `DEVELOPMENT • v13.000 • ✓ DB (dev) • Built: 02-08-2026 8:31 AM (-Xs ago) • Notes`
 - Clicking "Notes" shows release notes modal
 
 ---
@@ -345,7 +346,7 @@ python3 -m http.server
 8. ✅ Use heredoc for git commit messages
 9. ✅ Never skip git hooks without permission
 10. ✅ Consult this document after conversation compaction
-11. ✅ Provide a change summary table after every completed request
+11. ✅ Provide a change summary table with version numbers after every completed request
 
 ---
 
