@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.190";
+    const VERSION = "12.191";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T07:49:00");
+    const BUILD_DATE = new Date("2026-02-08T07:55:00");
 
     const RELEASE_NOTES = [
+      { version: "12.191", date: "2026-02-08", time: "7:55 AM PST", author: "Derek Richardson", changes: [
+        "Reorganized Danger Zone into two clear sections: tables CLEARED vs PRESERVED by Delete All button",
+        "Red-bordered section shows 9 tables that will be wiped (parents, campers, registrations, assignments, emergency contacts, links, onboarding, change requests)",
+        "Green-bordered section shows 14 tables that are preserved (admins, counselors, availability, schedules, content, photos, etc.)",
+        "Each section has color-coded borders and hover states for visual clarity"
+      ]},
       { version: "12.190", date: "2026-02-08", time: "7:49 AM PST", author: "Derek Richardson", changes: [
         "Removed Registration Requests stats and Quick Navigation sections from Dashboard",
         "Moved History and Danger Zone under Camp Setup as sub-tabs",
@@ -9287,14 +9293,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   </div>
 
-                  {/* Database Records - View & Delete (Merged Section) */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg text-gray-800 mb-4">📊 Database Records</h3>
-                    <p className="text-sm text-gray-600 mb-4">View all records and delete individual items as needed.</p>
+                  {/* SECTION 1: Tables CLEARED by Delete All Button */}
+                  <div className="bg-white rounded-xl shadow p-6 border-2 border-red-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">🔴</span>
+                      <h3 className="font-bold text-lg text-red-800">Tables CLEARED by "Delete All" Button (9 tables)</h3>
+                    </div>
+                    <p className="text-sm text-red-600 mb-4">All data in these tables will be permanently wiped when you press the button above.</p>
                     <div className="space-y-4">
                       {/* Parents */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>👨‍👩‍👧 Parents ({parents.length} login accounts)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9327,117 +9336,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Counselor Users (Login Accounts) */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🔐 Counselor Users ({counselorUsers.length} login accounts)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {counselorUsers.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No counselor user accounts</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {counselorUsers.map(user => (
-                                <div key={user.email} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{user.name}</div>
-                                    <div className="text-sm text-gray-500">{user.email}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete counselor user account for ${user.name}?`)) return;
-                                      const newUsers = counselorUsers.filter(u => u.email !== user.email);
-                                      await saveCounselorUsers(newUsers, `Deleted counselor user ${user.name}`);
-                                      showToast(`Deleted ${user.name}`);
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Admins */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👑 Admins ({admins.length} accounts)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {admins.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No admin accounts</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {admins.map(admin => (
-                                <div key={admin.username} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{admin.name || admin.username}</div>
-                                    <div className="text-sm text-gray-500">Username: {admin.username}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (admins.length === 1) {
-                                        alert('Cannot delete the last admin account!');
-                                        return;
-                                      }
-                                      if (!confirm(`Delete admin ${admin.username}?`)) return;
-                                      const newAdmins = admins.filter(a => a.username !== admin.username);
-                                      await saveAdmins(newAdmins, `Deleted admin ${admin.username}`);
-                                      showToast(`Deleted ${admin.username}`);
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Counselors (Profiles) */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏀 Counselors ({counselors.length} profiles)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {counselors.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No counselor records</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {counselors.map(counselor => (
-                                <div key={counselor.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div>
-                                    <div className="font-medium">{counselor.name}</div>
-                                    <div className="text-sm text-gray-500">{counselor.email}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete counselor ${counselor.name}?`)) return;
-                                      await deleteCounselor(counselor.id, counselor.name);
-                                      showToast(`Deleted ${counselor.name}`);
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
                       {/* Campers */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>🏕️ Campers ({campers.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9470,8 +9371,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </details>
 
                       {/* Registrations */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>📝 Registrations ({registrations.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9505,8 +9406,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </details>
 
                       {/* Assignments */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>📋 Pod Assignments ({Object.keys(assignments).length} sessions)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9540,69 +9441,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Counselor Availability */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📅 Counselor Availability ({Object.keys(availability).length} counselors)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(availability).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No availability records</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(availability).map(([email, dates]) => {
-                                const counselor = counselors.find(c => c.email === email);
-                                const counselorName = counselor ? counselor.name : email;
-                                const dateCount = Object.keys(dates).length;
-                                return (
-                                  <div key={email} className="flex items-center justify-between p-3 bg-white rounded border">
-                                    <div>
-                                      <div className="font-medium">{counselorName}</div>
-                                      <div className="text-sm text-gray-500">{email} - {dateCount} date(s)</div>
-                                    </div>
-                                    <button
-                                      onClick={async () => {
-                                        if (!confirm(`Delete availability for ${counselorName}?`)) return;
-                                        // Delete from availability (keyed by email)
-                                        const newAvailability = { ...availability };
-                                        delete newAvailability[email];
-                                        await saveAvail(newAvailability, `Deleted availability for ${counselorName}`);
-
-                                        // Also delete from counselorSchedule (keyed by counselor ID)
-                                        const newSchedule = { ...counselorSchedule };
-                                        if (counselor && counselor.id) {
-                                          // Counselor exists, delete their schedule by ID
-                                          delete newSchedule[counselor.id];
-                                        } else {
-                                          // Counselor doesn't exist (orphaned record)
-                                          // Clean up any orphaned schedules by removing entries for counselors that no longer exist
-                                          const validCounselorIds = counselors.map(c => c.id);
-                                          Object.keys(newSchedule).forEach(scheduleId => {
-                                            if (!validCounselorIds.includes(scheduleId)) {
-                                              delete newSchedule[scheduleId];
-                                            }
-                                          });
-                                        }
-                                        await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselorName}`);
-
-                                        showToast('Availability deleted');
-                                      }}
-                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
                       {/* Emergency Contacts */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>🆘 Emergency Contacts ({emergencyContacts.length} contacts)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9639,8 +9480,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </details>
 
                       {/* Camper-Parent Links */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
                           <span>🔗 Camper-Parent Links ({camperParentLinks.length} links)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9677,30 +9518,32 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Blocked Sessions */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🚫 Blocked Sessions ({Object.keys(blockedSessions).length} dates)</span>
+                      {/* Onboarding Progress */}
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
+                          <span>🎯 Onboarding Progress ({Object.keys(onboardingProgress || {}).length} users)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(blockedSessions).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No blocked sessions</p>
+                          {Object.keys(onboardingProgress || {}).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No onboarding progress records</p>
                           ) : (
                             <div className="space-y-2">
-                              {Object.entries(blockedSessions).map(([date, data]) => (
-                                <div key={date} className="flex items-center justify-between p-3 bg-white rounded border">
+                              {Object.entries(onboardingProgress).map(([userEmail, progressData]) => (
+                                <div key={userEmail} className="flex items-center justify-between p-3 bg-white rounded border">
                                   <div className="flex-1">
-                                    <div className="font-medium">{date}</div>
-                                    <div className="text-sm text-gray-500">{data.reason || 'No reason provided'}</div>
+                                    <div className="font-medium">{userEmail}</div>
+                                    <div className="text-sm text-gray-500">Step: {progressData.step || 0} - {progressData.complete ? 'Complete' : 'In Progress'}</div>
                                   </div>
                                   <button
                                     onClick={async () => {
-                                      if (!confirm(`Unblock session on ${date}?`)) return;
-                                      const newBlocked = { ...blockedSessions };
-                                      delete newBlocked[date];
-                                      await saveBlockedSessions(newBlocked, `Unblocked session on ${date}`);
-                                      showToast('Session unblocked');
+                                      if (!confirm(`Delete onboarding progress for ${userEmail}?`)) return;
+                                      const newProgress = { ...onboardingProgress };
+                                      delete newProgress[userEmail];
+                                      setOnboardingProgress(newProgress);
+                                      await storage.set('camp_onboarding_progress', 'main', newProgress);
+                                      addToHistory('Onboarding Progress Deleted', `Deleted progress for ${userEmail}`);
+                                      showToast('Progress deleted');
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9713,9 +9556,250 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
+                      {/* Availability Change Requests */}
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
+                          <span>📝 Availability Change Requests ({availabilityChangeRequests.length} requests)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {availabilityChangeRequests.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No availability change requests</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {availabilityChangeRequests.map(request => (
+                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete availability change request?`)) return;
+                                      const newRequests = availabilityChangeRequests.filter(r => r.id !== request.id);
+                                      await saveAvailabilityChangeRequests(newRequests, `Deleted change request`);
+                                      showToast('Request deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Profile Change Requests */}
+                      <details className="border border-red-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-red-50 font-medium flex items-center justify-between">
+                          <span>👤 Profile Change Requests ({profileChangeRequests.length} requests)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {profileChangeRequests.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No profile change requests</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {profileChangeRequests.map(request => (
+                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete profile change request?`)) return;
+                                      const newRequests = profileChangeRequests.filter(r => r.id !== request.id);
+                                      await saveProfileChangeRequests(newRequests, `Deleted change request`);
+                                      showToast('Request deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+                    </div>
+                  </div>
+
+                  {/* SECTION 2: Tables NOT CLEARED by Delete All Button */}
+                  <div className="bg-white rounded-xl shadow p-6 border-2 border-green-200">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">🟢</span>
+                      <h3 className="font-bold text-lg text-green-800">Tables PRESERVED by "Delete All" Button (14 tables)</h3>
+                    </div>
+                    <p className="text-sm text-green-600 mb-4">These tables are NOT affected by the delete button. They can only be deleted individually.</p>
+                    <div className="space-y-4">
+                      {/* Admins */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>👑 Admins ({admins.length} accounts)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {admins.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No admin accounts</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {admins.map(admin => (
+                                <div key={admin.username} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{admin.name || admin.username}</div>
+                                    <div className="text-sm text-gray-500">Username: {admin.username}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (admins.length === 1) {
+                                        alert('Cannot delete the last admin account!');
+                                        return;
+                                      }
+                                      if (!confirm(`Delete admin ${admin.username}?`)) return;
+                                      const newAdmins = admins.filter(a => a.username !== admin.username);
+                                      await saveAdmins(newAdmins, `Deleted admin ${admin.username}`);
+                                      showToast(`Deleted ${admin.username}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselor Users (Login Accounts) */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>🔐 Counselor Users ({counselorUsers.length} login accounts)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {counselorUsers.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No counselor user accounts</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {counselorUsers.map(user => (
+                                <div key={user.email} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{user.name}</div>
+                                    <div className="text-sm text-gray-500">{user.email}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete counselor user account for ${user.name}?`)) return;
+                                      const newUsers = counselorUsers.filter(u => u.email !== user.email);
+                                      await saveCounselorUsers(newUsers, `Deleted counselor user ${user.name}`);
+                                      showToast(`Deleted ${user.name}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselors (Profiles) */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>🏀 Counselors ({counselors.length} profiles)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {counselors.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No counselor records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {counselors.map(counselor => (
+                                <div key={counselor.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div>
+                                    <div className="font-medium">{counselor.name}</div>
+                                    <div className="text-sm text-gray-500">{counselor.email}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete counselor ${counselor.name}?`)) return;
+                                      await deleteCounselor(counselor.id, counselor.name);
+                                      showToast(`Deleted ${counselor.name}`);
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselor Availability */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>📅 Counselor Availability ({Object.keys(availability).length} counselors)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(availability).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No availability records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(availability).map(([email, dates]) => {
+                                const counselor = counselors.find(c => c.email === email);
+                                const counselorName = counselor ? counselor.name : email;
+                                const dateCount = Object.keys(dates).length;
+                                return (
+                                  <div key={email} className="flex items-center justify-between p-3 bg-white rounded border">
+                                    <div>
+                                      <div className="font-medium">{counselorName}</div>
+                                      <div className="text-sm text-gray-500">{email} - {dateCount} date(s)</div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Delete availability for ${counselorName}?`)) return;
+                                        const newAvailability = { ...availability };
+                                        delete newAvailability[email];
+                                        await saveAvail(newAvailability, `Deleted availability for ${counselorName}`);
+                                        const newSchedule = { ...counselorSchedule };
+                                        if (counselor && counselor.id) {
+                                          delete newSchedule[counselor.id];
+                                        } else {
+                                          const validCounselorIds = counselors.map(c => c.id);
+                                          Object.keys(newSchedule).forEach(scheduleId => {
+                                            if (!validCounselorIds.includes(scheduleId)) {
+                                              delete newSchedule[scheduleId];
+                                            }
+                                          });
+                                        }
+                                        await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselorName}`);
+                                        showToast('Availability deleted');
+                                      }}
+                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
                       {/* Counselor Schedule */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>📆 Counselor Schedule ({Object.keys(counselorSchedule).length} counselors)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9753,9 +9837,56 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
+                      {/* Blocked Sessions */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>🚫 Blocked Sessions ({Object.keys(blockedSessions).length} dates)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(blockedSessions).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No blocked sessions</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(blockedSessions).map(([date, data]) => (
+                                <div key={date} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{date}</div>
+                                    <div className="text-sm text-gray-500">{data.reason || 'No reason provided'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Unblock session on ${date}?`)) return;
+                                      const newBlocked = { ...blockedSessions };
+                                      delete newBlocked[date];
+                                      await saveBlockedSessions(newBlocked, `Unblocked session on ${date}`);
+                                      showToast('Session unblocked');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Camp Dates */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>📅 Camp Dates (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">This table is managed automatically by the system and should not be manually edited.</p>
+                        </div>
+                      </details>
+
                       {/* Gym Rentals */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>🏀 Gym Rentals ({Object.keys(gymRentals || {}).length} dates)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9796,8 +9927,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </details>
 
                       {/* Website Content */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>✏️ Website Content ({Object.keys(content || {}).length} fields)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9832,49 +9963,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Messages */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>💬 Messages ({messages.length} messages)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {messages.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No messages</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {messages.map(msg => (
-                                <div key={msg.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{msg.subject || 'No subject'}</div>
-                                    <div className="text-sm text-gray-500">From: {msg.from || 'Unknown'} • {msg.timestamp}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete message "${msg.subject}"?`)) return;
-                                      const newMessages = messages.filter(m => m.id !== msg.id);
-                                      setMessages(newMessages);
-                                      for (const message of newMessages) {
-                                        await storage.set('camp_messages', message.id, message.data || message);
-                                      }
-                                      // Delete the removed message from storage
-                                      addToHistory('Message Deleted', `Deleted message: ${msg.subject}`);
-                                      showToast('Message deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
                       {/* Food Photos */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>🍽️ Food Photos ({Object.keys(foodPhotos || {}).length} photos)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9911,8 +10002,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </details>
 
                       {/* Site Photos */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>📸 Site Photos ({Object.keys(sitePhotos || {}).length} photos)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
@@ -9948,32 +10039,33 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Onboarding Progress */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🎯 Onboarding Progress ({Object.keys(onboardingProgress || {}).length} users)</span>
+                      {/* Messages */}
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
+                          <span>💬 Messages ({messages.length} messages)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(onboardingProgress || {}).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No onboarding progress records</p>
+                          {messages.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No messages</p>
                           ) : (
                             <div className="space-y-2">
-                              {Object.entries(onboardingProgress).map(([userEmail, progressData]) => (
-                                <div key={userEmail} className="flex items-center justify-between p-3 bg-white rounded border">
+                              {messages.map(msg => (
+                                <div key={msg.id} className="flex items-center justify-between p-3 bg-white rounded border">
                                   <div className="flex-1">
-                                    <div className="font-medium">{userEmail}</div>
-                                    <div className="text-sm text-gray-500">Step: {progressData.step || 0} - {progressData.complete ? 'Complete' : 'In Progress'}</div>
+                                    <div className="font-medium">{msg.subject || 'No subject'}</div>
+                                    <div className="text-sm text-gray-500">From: {msg.from || 'Unknown'} • {msg.timestamp}</div>
                                   </div>
                                   <button
                                     onClick={async () => {
-                                      if (!confirm(`Delete onboarding progress for ${userEmail}?`)) return;
-                                      const newProgress = { ...onboardingProgress };
-                                      delete newProgress[userEmail];
-                                      setOnboardingProgress(newProgress);
-                                      await storage.set('camp_onboarding_progress', 'main', newProgress);
-                                      addToHistory('Onboarding Progress Deleted', `Deleted progress for ${userEmail}`);
-                                      showToast('Progress deleted');
+                                      if (!confirm(`Delete message "${msg.subject}"?`)) return;
+                                      const newMessages = messages.filter(m => m.id !== msg.id);
+                                      setMessages(newMessages);
+                                      for (const message of newMessages) {
+                                        await storage.set('camp_messages', message.id, message.data || message);
+                                      }
+                                      addToHistory('Message Deleted', `Deleted message: ${msg.subject}`);
+                                      showToast('Message deleted');
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                                   >
@@ -9983,93 +10075,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               ))}
                             </div>
                           )}
-                        </div>
-                      </details>
-
-                      {/* Availability Change Requests */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📝 Availability Change Requests ({availabilityChangeRequests.length} requests)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {availabilityChangeRequests.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No availability change requests</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {availabilityChangeRequests.map(request => (
-                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
-                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete availability change request?`)) return;
-                                      const newRequests = availabilityChangeRequests.filter(r => r.id !== request.id);
-                                      await saveAvailabilityChangeRequests(newRequests, `Deleted change request`);
-                                      showToast('Request deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Profile Change Requests */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👤 Profile Change Requests ({profileChangeRequests.length} requests)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {profileChangeRequests.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No profile change requests</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {profileChangeRequests.map(request => (
-                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
-                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete profile change request?`)) return;
-                                      const newRequests = profileChangeRequests.filter(r => r.id !== request.id);
-                                      await saveProfileChangeRequests(newRequests, `Deleted change request`);
-                                      showToast('Request deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Camp Dates */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📅 Camp Dates (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">This table is managed automatically by the system and should not be manually edited.</p>
                         </div>
                       </details>
 
                       {/* Change History */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                      <details className="border border-green-200 rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
                           <span>📜 Change History ({(changeHistory || []).length} entries)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
