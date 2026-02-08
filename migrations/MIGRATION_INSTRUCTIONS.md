@@ -15,10 +15,20 @@ Before running ANY migration scripts, **backup your database**:
 
 ## Migration Steps
 
+### Step 0: Diagnose Your Table Structure (RUN THIS FIRST!)
+
+**The original SQL failed because table structures vary. Run this diagnostic first:**
+
+1. Open Supabase SQL Editor
+2. Copy and paste the contents of `00_diagnose_structure.sql`
+3. Click "Run" to execute
+4. **Copy the output results** - this shows your actual table column structure
+5. Share with Claude to get the correct SQL for your structure
+
 ### Step 1: Create New Tables
 
 1. Open Supabase SQL Editor
-2. Copy and paste the contents of `01_create_new_tables.sql`
+2. Copy and paste the contents of the **corrected** SQL (provided after Step 0)
 3. Click "Run" to execute
 4. Verify tables were created by running:
    ```sql
