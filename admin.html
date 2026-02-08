@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.003";
+    const VERSION = "13.004";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:48:00");
+    const BUILD_DATE = new Date("2026-02-08T09:52:00");
 
     const RELEASE_NOTES = [
+      { version: "13.004", date: "2026-02-08", time: "9:52 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Pickup policy modal text size increased for readability",
+        "Onboarding: Pickup policy modal now shows visual illustration (face photo OR photo ID)",
+        "Onboarding: Edit buttons added to 'Your Information' summary to jump back to any section",
+        "Onboarding: Removed redundant 'Everything looks good' review section from Step 4"
+      ]},
       { version: "13.003", date: "2026-02-08", time: "9:48 AM PST", author: "Derek Richardson", changes: [
         "Onboarding: Eliminated Step 5 intermediate screen to prevent flash to login page after completing setup",
         "Onboarding: Reduced from 5 steps to 4 — after policies, 'Complete Setup' goes directly to submission",
