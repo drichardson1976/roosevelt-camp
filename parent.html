@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.155";
+    const VERSION = "12.156";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:14:00");
+    const BUILD_DATE = new Date("2026-02-07T20:20:00");
 
     const RELEASE_NOTES = [
+      { version: "12.156", date: "2026-02-07", time: "8:20 PM PT", author: "Derek Richardson", changes: [
+        "Updated Session Calendar status indicators to show payment status",
+        "Green: Approved & Paid | Yellow: Approved - Payment Pending | Blue: Pending Approval",
+        "Updated legend with clearer status descriptions including payment info",
+        "Improved instructions: clarified selection process and status meanings",
+        "Added note about Camp Director payment confirmation process",
+        "Removed redundant 'View registration status' text"
+      ]},
       { version: "12.155", date: "2026-02-07", time: "8:14 PM PT", author: "Derek Richardson", changes: [
         "Moved legend below each camper's calendar for better context",
         "Legend now appears directly under each child's session calendar grid"
@@ -5153,7 +5161,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         <div className="bg-white rounded-xl shadow p-6">
           <div className="mb-6">
             <h3 className="font-bold text-xl mb-2">📅 Session Calendar</h3>
-            <p className="text-sm text-gray-500 mb-4">View registration status across July and August</p>
+            <p className="text-sm text-gray-600 mb-3">Select a camper below to view their registered sessions, approval status, and payment status.</p>
+            <p className="text-xs text-gray-500 italic mb-4">
+              Note: Sessions are marked as paid by the Camp Director after your child is accepted, assigned to a counselor, and payment receipt is confirmed.
+            </p>
 
             {/* Child Selector */}
             <div className="flex gap-2 flex-wrap mb-4">
@@ -5245,10 +5256,12 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                 key={day}
                                 className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
                                   hasRegistrations
-                                    ? regs.some(r => r.status === 'approved')
+                                    ? regs.some(r => r.status === 'approved' && r.paymentStatus === 'paid')
                                       ? 'bg-green-100 border-2 border-green-500 font-bold'
-                                      : regs.some(r => r.status === 'pending')
+                                      : regs.some(r => r.status === 'approved' && r.paymentStatus !== 'paid')
                                       ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
+                                      : regs.some(r => r.status === 'pending')
+                                      ? 'bg-blue-100 border-2 border-blue-500 font-bold'
                                       : 'bg-red-100 border-2 border-red-500 font-bold'
                                     : 'bg-gray-50 border border-gray-200'
                                 }`}
@@ -5269,11 +5282,15 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                                             <div className="font-bold">{child.name}</div>
                                             <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
                                             <div className={`text-xs ${
-                                              reg.status === 'approved' ? 'text-green-300' :
-                                              reg.status === 'pending' ? 'text-yellow-300' :
+                                              reg.status === 'approved' && reg.paymentStatus === 'paid' ? 'text-green-300' :
+                                              reg.status === 'approved' && reg.paymentStatus !== 'paid' ? 'text-yellow-300' :
+                                              reg.status === 'pending' ? 'text-blue-300' :
                                               'text-red-300'
                                             }`}>
-                                              {getStatusText(reg.status)}
+                                              {reg.status === 'approved' && reg.paymentStatus === 'paid' ? 'Approved & Paid' :
+                                               reg.status === 'approved' && reg.paymentStatus !== 'paid' ? 'Approved - Payment Pending' :
+                                               reg.status === 'pending' ? 'Pending Approval' :
+                                               'Rejected'}
                                             </div>
                                           </div>
                                         ))}
@@ -5294,11 +5311,15 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <div className="flex flex-wrap gap-4 text-sm mt-4 p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span>Approved</span>
+                    <span>Approved & Paid</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                    <span>Pending</span>
+                    <span>Approved - Payment Pending</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span>Pending Approval</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-red-500 rounded"></div>
