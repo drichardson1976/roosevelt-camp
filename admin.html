@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.183";
+    const VERSION = "12.184";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:23:00");
+    const BUILD_DATE = new Date("2026-02-08T08:26:00");
 
     const RELEASE_NOTES = [
+      { version: "12.184", date: "2026-02-08", time: "12:26 AM PST", author: "Derek Richardson", changes: [
+        "Danger Zone: Added 7 missing Supabase tables to Database Records viewer",
+        "New tables visible: Camp Dates, Referrals, Guest Requests, Players, RSVPs, Runs, Status History",
+        "Complete transparency: ALL Supabase tables now visible in Danger Zone",
+        "System tables marked as '(system table)' for clarity"
+      ]},
       { version: "12.183", date: "2026-02-08", time: "12:23 AM PST", author: "Derek Richardson", changes: [
         "Danger Zone: Added 'Delete All History' button in Change History section",
         "Improved user experience with single-click to clear all history entries",
@@ -10058,6 +10064,83 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               ))}
                             </div>
                           )}
+                        </div>
+                      </details>
+
+                      {/* Camp Dates */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📅 Camp Dates (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">This table is managed automatically by the system and should not be manually edited.</p>
+                        </div>
+                      </details>
+
+                      {/* Referrals */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🔗 Referrals (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">Referral tracking data.</p>
+                        </div>
+                      </details>
+
+                      {/* Guest Requests */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>👥 Guest Requests (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">Guest request data.</p>
+                        </div>
+                      </details>
+
+                      {/* Players */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🏀 Players (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">Player data - may be legacy or unused.</p>
+                        </div>
+                      </details>
+
+                      {/* RSVPs */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>✉️ RSVPs (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">RSVP data - may be legacy or unused.</p>
+                        </div>
+                      </details>
+
+                      {/* Runs */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🏃 Runs (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">Run data - may be legacy or unused.</p>
+                        </div>
+                      </details>
+
+                      {/* Status History */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📊 Status History (system table)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          <p className="text-gray-500 text-sm italic">Historical status tracking data.</p>
                         </div>
                       </details>
 
