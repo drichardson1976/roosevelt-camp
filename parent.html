@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.008";
+    const VERSION = "13.009";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T11:44:00");
+    const BUILD_DATE = new Date("2026-02-08T11:58:00");
 
     const RELEASE_NOTES = [
+      { version: "13.009", date: "2026-02-08", time: "11:58 AM PST", author: "Claude", changes: [
+        "Payments Tab: Per-camper breakdown within grouped orders (e.g. 'Camper1 and Camper2 Registration')",
+        "Payments Tab: Readable date ranges (e.g. 'Jul 3rd - Jul 7th') instead of raw ISO dates",
+        "Messages Tab: Redesigned as expandable list sorted by date with read/unread dot indicators",
+        "Messages Tab: Click to expand message body and reply inline (replaces 2-column layout)",
+      ]},
       { version: "13.008", date: "2026-02-08", time: "11:44 AM PST", author: "Claude", changes: [
         "Photo Preservation: Photos saved as {cropped, original, transform} objects — re-editing loads full original",
         "Add Photo Placeholder: Standardized grey circle with plus icon and 'add photo' text everywhere",
@@ -2161,109 +2167,109 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               <div className="text-3xl">📬</div>
               <div>
                 <div className="font-bold text-blue-800">You have {unreadMessages.length} unread message{unreadMessages.length > 1 ? 's' : ''}</div>
-                <div className="text-sm text-blue-600">Click on a message to read and reply</div>
+                <div className="text-sm text-blue-600">Click on a message to expand and reply</div>
               </div>
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Message List */}
-            <div className="bg-white rounded-xl shadow p-6">
-              <h3 className="font-bold text-lg text-green-800 mb-4">💬 Messages from Camp</h3>
-              {myMessages.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-4xl mb-2">📭</p>
-                  <p>No messages yet</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {myMessages.map(msg => {
-                    const isUnread = msg.from !== userEmail && !msg.readBy?.includes(userEmail);
-                    const isSelected = selectedMsg?.id === msg.id;
-                    const isFromMe = msg.from === userEmail;
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold text-lg text-green-800 mb-4">💬 Messages from Camp</h3>
+            {myMessages.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-4xl mb-2">📭</p>
+                <p>No messages yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {myMessages.map(msg => {
+                  const isUnread = msg.from !== userEmail && !msg.readBy?.includes(userEmail);
+                  const isExpanded = selectedMsg?.id === msg.id;
+                  const isFromMe = msg.from === userEmail;
+                  const dateStr = new Date(msg.sentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = new Date(msg.sentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-                    return (
+                  return (
+                    <div key={msg.id} className={`rounded-lg border-2 overflow-hidden ${
+                      isUnread ? 'border-blue-300 bg-blue-50' :
+                      isExpanded ? 'border-green-400' :
+                      'border-gray-200'
+                    }`}>
+                      {/* Message Row */}
                       <div
-                        key={msg.id}
-                        onClick={() => setSelectedMsg(msg)}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                          isSelected ? 'bg-green-100 border-2 border-green-500' :
-                          isUnread ? 'bg-blue-50 border-2 border-blue-300' :
-                          'bg-gray-50 hover:bg-gray-100'
-                        }`}
+                        onClick={() => {
+                          setSelectedMsg(isExpanded ? null : msg);
+                          if (!isExpanded && isUnread) markAsRead(msg.id, userEmail);
+                        }}
+                        className={`p-4 cursor-pointer hover:bg-gray-50 flex items-center gap-3 ${isExpanded ? 'bg-green-50' : ''}`}
                       >
-                        <div className="flex justify-between items-start mb-1">
-                          <span className={`text-sm ${isUnread ? 'font-bold text-blue-800' : 'text-gray-600'}`}>
-                            {isFromMe ? '📤 You' : '📥 Camp Admin'}
-                            {msg.to === 'all' && !isFromMe && <span className="ml-1 text-xs text-purple-600">(Broadcast)</span>}
-                          </span>
-                          <span className="text-xs text-gray-400">{formatTimestamp(msg.sentAt)}</span>
+                        {/* Read/Unread indicator */}
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                          isUnread ? 'bg-blue-500' : 'bg-gray-300'
+                        }`} title={isUnread ? 'Unread' : 'Read'} />
+
+                        {/* Sender icon */}
+                        <span className="text-lg flex-shrink-0">{isFromMe ? '📤' : '📥'}</span>
+
+                        {/* Message preview */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm ${isUnread ? 'font-bold text-blue-800' : 'font-medium text-gray-700'}`}>
+                              {isFromMe ? 'You' : 'Camp Admin'}
+                            </span>
+                            {msg.to === 'all' && !isFromMe && (
+                              <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded">Broadcast</span>
+                            )}
+                            {isUnread && <span className="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded">New</span>}
+                          </div>
+                          {msg.subject && <div className={`text-sm ${isUnread ? 'font-bold' : ''} truncate`}>{msg.subject}</div>}
+                          {!isExpanded && <div className="text-sm text-gray-500 truncate">{msg.body}</div>}
                         </div>
-                        {msg.subject && <div className={`text-sm ${isUnread ? 'font-bold' : 'font-medium'}`}>{msg.subject}</div>}
-                        <div className="text-sm text-gray-600 truncate">{msg.body}</div>
-                        {isUnread && <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500 text-white text-xs rounded">New</span>}
+
+                        {/* Date */}
+                        <div className="text-xs text-gray-400 flex-shrink-0 text-right">
+                          <div>{dateStr}</div>
+                          <div>{timeStr}</div>
+                        </div>
+
+                        {/* Expand arrow */}
+                        <span className="text-gray-400 text-sm flex-shrink-0">{isExpanded ? '▼' : '▶'}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
 
-            {/* Message Detail / Reply */}
-            <div className="bg-white rounded-xl shadow p-6">
-              {!selectedMsg ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p className="text-4xl mb-2">👈</p>
-                  <p>Select a message to read</p>
-                </div>
-              ) : (
-                <div className="flex flex-col h-full">
-                  <div className="mb-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="font-bold text-lg">
-                        {selectedMsg.from === userEmail ? '📤 You sent' : '📥 From Camp Admin'}
-                      </span>
-                      <span className="text-sm text-gray-500">{formatTimestamp(selectedMsg.sentAt)}</span>
+                      {/* Expanded Content */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 border-t border-gray-200">
+                          <div className="bg-white rounded-lg p-4 mt-3 whitespace-pre-wrap text-sm text-gray-700">
+                            {msg.body}
+                          </div>
+
+                          {/* Reply section */}
+                          {!isFromMe && (
+                            <div className="mt-3">
+                              <textarea
+                                value={replyText}
+                                onChange={e => setReplyText(e.target.value)}
+                                className="w-full px-3 py-2 border rounded-lg resize-none text-sm"
+                                rows={2}
+                                placeholder="Type your reply..."
+                                autoComplete="off"
+                                data-1p-ignore="true"
+                              />
+                              <button
+                                onClick={handleSendReply}
+                                disabled={!replyText.trim()}
+                                className="mt-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 text-sm"
+                              >
+                                Send Reply
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    {selectedMsg.subject && (
-                      <div className="font-medium text-gray-800 mb-2">{selectedMsg.subject}</div>
-                    )}
-                    {selectedMsg.to === 'all' && selectedMsg.from !== userEmail && (
-                      <span className="inline-block px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded mb-2">
-                        📢 Sent to all parents
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex-1 bg-gray-50 rounded-lg p-4 mb-4 whitespace-pre-wrap overflow-y-auto max-h-48">
-                    {selectedMsg.body}
-                  </div>
-
-                  {/* Reply section - only show for messages from admin */}
-                  {selectedMsg.from !== userEmail && (
-                    <div className="border-t pt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Reply:</label>
-                      <textarea
-                        value={replyText}
-                        onChange={e => setReplyText(e.target.value)}
-                        className="w-full px-4 py-2 border rounded-lg resize-none"
-                        rows={3}
-                        placeholder="Type your reply..."
-                        autoComplete="off"
-                        data-1p-ignore="true"
-                      />
-                      <button
-                        onClick={handleSendReply}
-                        disabled={!replyText.trim()}
-                        className="mt-2 w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300"
-                      >
-                        Send Reply
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -4995,33 +5001,70 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       if (activeRegs.length === 0) {
                         return <p className="text-gray-500 text-center py-8">No registrations to show payment status for.</p>;
                       }
-                      // Group by orderId
+
+                      // Helper: format date range like "Jul 3rd - Jul 7th"
+                      const formatDateRange = (dates) => {
+                        const sorted = [...dates].sort();
+                        const fmt = (d) => {
+                          const dt = new Date(d + 'T12:00:00');
+                          const month = dt.toLocaleDateString('en-US', { month: 'short' });
+                          const day = dt.getDate();
+                          const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+                          return `${month} ${day}${suffix}`;
+                        };
+                        if (sorted.length === 1) return fmt(sorted[0]);
+                        // Check if consecutive dates form ranges
+                        const ranges = [];
+                        let rangeStart = sorted[0];
+                        let prev = sorted[0];
+                        for (let i = 1; i <= sorted.length; i++) {
+                          const cur = sorted[i];
+                          const prevDate = new Date(prev + 'T12:00:00');
+                          const curDate = cur ? new Date(cur + 'T12:00:00') : null;
+                          const isConsecutive = curDate && (curDate - prevDate) <= 86400000 * 3; // within 3 days (skip weekends)
+                          if (!isConsecutive) {
+                            ranges.push(rangeStart === prev ? fmt(rangeStart) : `${fmt(rangeStart)} - ${fmt(prev)}`);
+                            rangeStart = cur;
+                          }
+                          prev = cur;
+                        }
+                        return ranges.join(', ');
+                      };
+
+                      // Group by orderId, then by camper within each order
                       const regsByOrder = {};
                       activeRegs.forEach(reg => {
                         const orderKey = reg.orderId || reg.id;
                         if (!regsByOrder[orderKey]) regsByOrder[orderKey] = [];
                         regsByOrder[orderKey].push(reg);
                       });
+
                       return (
                         <div className="space-y-4">
                           {Object.entries(regsByOrder).map(([orderKey, regs]) => {
-                            const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                            const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
-                            const paymentStatus = sortedRegs[0]?.paymentStatus || 'unpaid';
-                            const paymentSubmittedAt = sortedRegs[0]?.paymentSubmittedAt;
+                            const paymentStatus = regs[0]?.paymentStatus || 'unpaid';
+                            const paymentSubmittedAt = regs[0]?.paymentSubmittedAt;
                             const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
                             const isSubmitted = paymentStatus === 'submitted';
                             const canRemind = isSubmitted && paymentSubmittedAt && (Date.now() - new Date(paymentSubmittedAt).getTime() > 48 * 60 * 60 * 1000);
+                            const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+
+                            // Group by camper within this order
+                            const byCamper = {};
+                            regs.forEach(r => {
+                              const name = r.childName || r.camperName || 'Unknown';
+                              if (!byCamper[name]) byCamper[name] = [];
+                              byCamper[name].push(r);
+                            });
+                            const camperNames = Object.keys(byCamper);
+                            const title = camperNames.length === 1
+                              ? `${camperNames[0]}'s Registration`
+                              : `${camperNames.join(' and ')} Registration`;
 
                             return (
                               <div key={orderKey} className="border rounded-lg p-4">
                                 <div className="flex justify-between items-start mb-3">
-                                  <div>
-                                    <div className="font-bold">{sortedRegs[0]?.childName || sortedRegs[0]?.camperName}</div>
-                                    <div className="text-sm text-gray-600">
-                                      {sortedRegs.length} session{sortedRegs.length > 1 ? 's' : ''} &mdash; {sortedRegs.map(r => r.date).join(', ')}
-                                    </div>
-                                  </div>
+                                  <div className="font-bold text-lg">{title}</div>
                                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                                     isPaid ? 'bg-green-100 text-green-700' :
                                     isSubmitted ? 'bg-blue-100 text-blue-700' :
@@ -5030,13 +5073,37 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     {isPaid ? 'Confirmed' : isSubmitted ? 'Submitted - Awaiting Confirmation' : 'Unpaid'}
                                   </span>
                                 </div>
-                                <div className="flex justify-between items-center">
+                                {/* Per-camper breakdown */}
+                                <div className="space-y-2 mb-3">
+                                  {Object.entries(byCamper).map(([camperName, camperRegs]) => {
+                                    const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                                    const dates = sortedCamperRegs.map(r => r.date);
+                                    const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                                    const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
+                                    const hasAM = sessions.includes('morning');
+                                    const hasPM = sessions.includes('afternoon');
+                                    const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                                    return (
+                                      <div key={camperName} className="bg-gray-50 rounded-lg p-3">
+                                        <div className="flex justify-between items-center">
+                                          <div>
+                                            <span className="font-medium">{camperName}</span>
+                                            <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
+                                          </div>
+                                          <span className="font-medium">${camperTotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="text-sm text-gray-600 mt-1">{formatDateRange(dates)}</div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex justify-between items-center pt-2 border-t">
                                   <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
                                   <div className="flex gap-2">
                                     {paymentStatus === 'unpaid' && (
                                       <button
                                         onClick={async () => {
-                                          for (const reg of sortedRegs) {
+                                          for (const reg of regs) {
                                             await saveReg({ ...reg, paymentStatus: 'submitted', paymentSubmittedAt: new Date().toISOString() });
                                           }
                                           showToast('Payment marked as submitted', 'success');
@@ -5055,7 +5122,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             fromName: user?.name,
                                             to: 'admin',
                                             subject: 'Payment Reminder',
-                                            body: `Payment reminder: I submitted Venmo payment for ${sortedRegs[0]?.childName || sortedRegs[0]?.camperName} (${sortedRegs.length} sessions, $${totalAmount.toFixed(2)}) on ${new Date(paymentSubmittedAt).toLocaleDateString()}. Please check and confirm.`,
+                                            body: `Payment reminder: I submitted Venmo payment for ${camperNames.join(' and ')} (${regs.length} sessions, $${totalAmount.toFixed(2)}) on ${new Date(paymentSubmittedAt).toLocaleDateString()}. Please check and confirm.`,
                                             sentAt: new Date().toISOString(),
                                             readBy: []
                                           };
