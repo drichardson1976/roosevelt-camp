@@ -4224,6 +4224,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     <RegistrationCalendarView
                       myChildren={myChildren}
                       registrations={myRegs}
+                      activeCampDates={activeCampDates}
+                      campDates={campDates}
                     />
                   )}
 
@@ -5074,7 +5076,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
     };
 
     // ==================== REGISTRATION CALENDAR VIEW ====================
-    const RegistrationCalendarView = ({ myChildren, registrations }) => {
+    const RegistrationCalendarView = ({ myChildren, registrations, activeCampDates, campDates }) => {
       const [selectedChildren, setSelectedChildren] = useState(myChildren.length > 0 ? [myChildren[0].id] : []);
 
       // Get all registration dates for a specific child
