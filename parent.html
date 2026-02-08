@@ -50,6 +50,24 @@
     const BUILD_DATE = new Date("2026-02-08T01:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.167", date: "2026-02-08", time: "2:00 AM PT", author: "Derek Richardson", changes: [
+        "Emergency Contacts: Complete overhaul to modal-based editing interface",
+        "Emergency Contacts: Added EmergencyContactEditModal component with photo upload capability",
+        "Emergency Contacts: Moved delete button into edit modal with confirmation",
+        "Emergency Contacts: Email field now displays in modal but locked for family members with login access",
+        "Emergency Contacts: Smart detection of family members via users table email matching",
+        "Emergency Contacts: Consolidated photo upload using existing ImageCropper component",
+        "Emergency Contacts: Main contacts list now displays photos with fallback to initials",
+        "Emergency Contacts: Photo display with 12x12 rounded circle and border styling",
+        "Sessions Tab: NEW dedicated tab for viewing registered and approved sessions",
+        "Sessions Tab: Calendar/list interface showing all approved registrations by date",
+        "Sessions Tab: Pod information display when selecting a session date",
+        "Sessions Tab: Counselor profile with photo, name, and clickable bio modal popup",
+        "Sessions Tab: CounselorBioModal displays full counselor background from public website",
+        "Sessions Tab: Shows campers in selected camper's pod and other pods at camp",
+        "Sessions Tab: Organized view separating 'Your Pod' from 'Other Pods at Camp'",
+        "UX: Removed inline editing from Emergency Contacts in favor of cleaner modal workflow"
+      ]},
       { version: "12.166", date: "2026-02-08", time: "1:00 AM PT", author: "Derek Richardson", changes: [
         "Session Registration: Changed 'Available' from grey to light blue for better visibility",
         "Session Registration: Changed 'Pending Approval' from blue to yellow",
