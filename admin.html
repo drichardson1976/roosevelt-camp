@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.004";
+    const VERSION = "13.005";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:52:00");
+    const BUILD_DATE = new Date("2026-02-08T09:58:00");
 
     const RELEASE_NOTES = [
+      { version: "13.005", date: "2026-02-08", time: "9:58 AM PST", author: "Derek Richardson", changes: [
+        "Parent Dashboard: Campers tab now shows Parents and Emergency Contacts for each camper",
+        "Parent Dashboard: Emergency contact email displayed for contacts that are parents",
+        "Parent Dashboard: Campers tab layout matches Parents tab (green button at top, white card below)",
+        "Parent Dashboard: Emergency Contacts tab layout matches Parents tab (green button at top, white card below)",
+        "Parent Dashboard: Consistent button sizing across all tabs (py-4 px-8 text-lg)"
+      ]},
       { version: "13.004", date: "2026-02-08", time: "9:52 AM PST", author: "Derek Richardson", changes: [
         "Onboarding: Pickup policy modal text size increased for readability",
         "Onboarding: Pickup policy modal now shows visual illustration (face photo OR photo ID)",

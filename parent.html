@@ -45,11 +45,100 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.002";
+    const VERSION = "13.005";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:39:00");
+    const BUILD_DATE = new Date("2026-02-08T09:58:00");
 
     const RELEASE_NOTES = [
+      { version: "13.004", date: "2026-02-08", time: "9:52 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Pickup policy modal text size increased for readability",
+        "Onboarding: Pickup policy modal now shows visual illustration (face photo OR photo ID)",
+        "Onboarding: Edit buttons added to 'Your Information' summary to jump back to any section",
+        "Onboarding: Removed redundant 'Everything looks good' review section from Step 4"
+      ]},
+      { version: "13.003", date: "2026-02-08", time: "9:48 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Eliminated Step 5 intermediate screen to prevent flash to login page after completing setup",
+        "Onboarding: Reduced from 5 steps to 4 — after policies, 'Complete Setup' goes directly to submission",
+        "Onboarding: Uses location.replace instead of location.href to prevent back-button returning to onboarding",
+        "Admin Dashboard: Emergency contact warning now camper-based instead of parent-based",
+        "Admin Dashboard: Counts emergency contacts from all parents linked to each camper via camperParentLinks",
+        "Admin Dashboard: Warning navigates to Campers tab instead of Parents tab"
+      ]},
+      { version: "13.002", date: "2026-02-08", time: "9:39 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: EC photo guidance now matches parent photo guidance (photo on site or photo ID at pickup required)",
+        "Onboarding: Policies now display as popup modals instead of inline checkboxes",
+        "Onboarding: Final review summary shown after both policies signed, before completing setup",
+        "Onboarding: Parent EC now stored as reference-only record (no duplicated name/phone/photo)",
+        "Parent Dashboard: Renamed 'My Campers' tab to 'Campers'",
+        "Parent Dashboard: Add Child button moved to prominent green button at top of Campers tab",
+        "Parent Dashboard: Emergency Contacts tab redesigned with photos, edit button, delete moved inside edit form",
+        "Parent Dashboard: Parents tab redesigned with edit modal, remove moved inside modal",
+        "Parent Dashboard: Camper photos shown above names in session registration child selectors and calendar headers",
+        "Parent Dashboard: Registration dates now sourced from Gym Booked Dates (camp_gym_rentals) instead of camp_dates",
+        "Parent Dashboard: Session-level availability from gym rentals (AM/PM disabled if not booked)"
+      ]},
+      { version: "13.001", date: "2026-02-08", time: "9:14 AM PST", author: "Derek Richardson", changes: [
+        "Emergency Contacts: After adding a contact, prompt to create a parent login for them",
+        "Emergency Contacts: Invited parents get full access to view camp details and manage registrations",
+        "Emergency Contacts: Same invitation flow works during onboarding (index.html) and from dashboard (parent.html)",
+        "Parent Dashboard: Added Activity History tab showing all actions related to the logged-in parent",
+        "History: Admin actions (approve/reject registration, send messages, edit parent info) now tagged with parent email",
+        "History: All parent-side actions auto-tagged with logged-in parent email for filtering",
+        "History: Increased entry cap from 100 to 500 across all pages",
+        "Admin: Added storage.deleteRow() method and 12 addToHistory calls now include relatedEmails"
+      ]},
+      { version: "13.000", date: "2026-02-08", time: "8:31 AM PST", author: "Derek Richardson", changes: [
+        "MAJOR: Version bump to 13.x — significant admin interface and database restructuring milestone",
+        "CRITICAL FIX: Parent registration Continue button was completely broken due to prop name mismatch (users→parents)",
+        "CRITICAL FIX: Counselor registration had same broken prop issue (users→counselorUsers)",
+        "Root cause: ParentOnboarding expected 'users'/'saveUsers' props but received 'parents'/'saveParents' — caused silent TypeError in async handler",
+        "Added null safety to duplicate-email checks with (parents || []) and (counselorUsers || []) fallbacks",
+        "Improved counselor registration with same field-by-field validation as parent registration",
+        "Photo message updated: now explains photo on site or photo ID required at pickup"
+      ]},
+      { version: "12.195", date: "2026-02-08", time: "8:25 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Message delete in Danger Zone now actually deletes the row from Supabase",
+        "Added storage.deleteRow() method for per-row table deletions",
+        "Previously delete only updated React state but left the row in the database"
+      ]},
+      { version: "12.194", date: "2026-02-08", time: "8:17 AM PST", author: "Derek Richardson", changes: [
+        "Parent Registration: Fixed Step 1 Continue button by adding specific field-by-field validation error messages",
+        "Parent Registration: Added email format validation (checks for valid email structure)",
+        "Parent Registration: Added minimum password length check (4 characters)",
+        "Parent Registration: Made duplicate email check case-insensitive",
+        "Parent Registration: Updated photo message to clarify photo on site or photo ID required at pickup"
+      ]},
+      { version: "12.193", date: "2026-02-08", time: "8:16 AM PST", author: "Derek Richardson", changes: [
+        "Dashboard: Added Camp Director Task Summary with prioritized task categories (Urgent, Important, Setup)",
+        "Dashboard: Urgent tasks detect pending registrations, unpaid registrations, and pending counselor requests",
+        "Dashboard: Important tasks detect missing emergency contacts, camper photos, unassigned registrations, and sessions without counselors",
+        "Dashboard: Setup tasks detect unbooked gym days, missing counselors, and uncustomized website content",
+        "Dashboard: Quick stats bar shows parent, camper, counselor, and approved registration counts",
+        "Dashboard: Each task includes a quick link button to navigate directly to the relevant admin section"
+      ]},
+      { version: "12.192", date: "2026-02-08", time: "8:01 AM PST", author: "Derek Richardson", changes: [
+        "Gym Rentals: Removed 'Book Whole Week' feature, organized days in Mon-Fri rows",
+        "Gym Rentals: Color-coded days — green (fully booked), yellow (partial), red (not booked)",
+        "Content: Added editable fields for location details, pricing/discounts, policies, and scholarship info",
+        "Content: Added 'Data From Other Tables' info panel showing counselor profiles and camp dates come from separate tables",
+        "Pod Setup: Calendar now shows camper counts (assigned/registered), counselor counts (assigned/eligible), and pod count per session"
+      ]},
+      { version: "12.191", date: "2026-02-08", time: "7:55 AM PST", author: "Derek Richardson", changes: [
+        "Reorganized Danger Zone into two clear sections: tables CLEARED vs PRESERVED by Delete All button",
+        "Red-bordered section shows 9 tables that will be wiped (parents, campers, registrations, assignments, emergency contacts, links, onboarding, change requests)",
+        "Green-bordered section shows 14 tables that are preserved (admins, counselors, availability, schedules, content, photos, etc.)",
+        "Each section has color-coded borders and hover states for visual clarity"
+      ]},
+      { version: "12.190", date: "2026-02-08", time: "7:49 AM PST", author: "Derek Richardson", changes: [
+        "Removed Registration Requests stats and Quick Navigation sections from Dashboard",
+        "Moved History and Danger Zone under Camp Setup as sub-tabs",
+        "Simplified Dashboard to clean welcome message"
+      ]},
+      { version: "12.189", date: "2026-02-08", time: "7:44 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Resolved getFoodPhoto ReferenceError that caused blank page when navigating to Content tab",
+        "Moved getFoodPhoto helper from SitePhotosManager scope to Admin component scope where foodPhotos state is accessible",
+        "Updated date format in red ribbon from '02-08-2026 7:44 AM' to 'Sun Feb 8 7:44 AM PST' across all 4 pages"
+      ]},
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to parent.html"
       ]},
@@ -4748,59 +4837,55 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {parentTab === 'campers' && (
                 <div className="space-y-6">
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-2">Campers</h3>
-                    <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
-                    {myChildren.length > 0 ? (
-                      <ChildrenManager
-                        children={myChildren}
-                        onUpdate={(updatedChild) => {
-                          saveCampers(campers.map(c => c.id === updatedChild.id ? updatedChild : c), `Updated camper ${updatedChild.name}`);
-                          showToast('Child updated!');
-                        }}
-                        onDelete={(childId) => {
-                          const childToDelete = campers.find(c => c.id === childId);
-                          saveCampers(campers.filter(c => c.id !== childId), `Deleted camper ${childToDelete?.name || childId}`);
-                          saveCamperParentLinks(camperParentLinks.filter(l => l.camperId !== childId));
-                          showToast('Child removed');
-                        }}
-                        onAdd={addChild}
-                        registrations={myRegs}
-                        emergencyContacts={emergencyContacts}
-                        getEmergencyContactsForCamper={getEmergencyContactsForCamper}
-                        addEmergencyContactToCamper={addEmergencyContactToCamper}
-                        removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
-                      />
-                    ) : (
+                  {myChildren.length > 0 ? (
+                    <ChildrenManager
+                      children={myChildren}
+                      onUpdate={(updatedChild) => {
+                        saveCampers(campers.map(c => c.id === updatedChild.id ? updatedChild : c), `Updated camper ${updatedChild.name}`);
+                        showToast('Child updated!');
+                      }}
+                      onDelete={(childId) => {
+                        const childToDelete = campers.find(c => c.id === childId);
+                        saveCampers(campers.filter(c => c.id !== childId), `Deleted camper ${childToDelete?.name || childId}`);
+                        saveCamperParentLinks(camperParentLinks.filter(l => l.camperId !== childId));
+                        showToast('Child removed');
+                      }}
+                      onAdd={addChild}
+                      registrations={myRegs}
+                      emergencyContacts={emergencyContacts}
+                      getEmergencyContactsForCamper={getEmergencyContactsForCamper}
+                      addEmergencyContactToCamper={addEmergencyContactToCamper}
+                      removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
+                      parents={parents}
+                      camperParentLinks={camperParentLinks}
+                    />
+                  ) : (
+                    <div className="bg-white rounded-xl shadow p-6">
+                      <h3 className="font-bold text-lg mb-2">Campers</h3>
+                      <p className="text-sm text-gray-500 mb-4">Add your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
                       <AddChildForm onAdd={addChild} />
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {parentTab === 'emergency' && (
                 <div className="space-y-6">
                   {/* Emergency Contacts Management */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                      <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
-                    </p>
-                    <ParentEmergencyContactsManager
-                      parentEmail={user?.email}
-                      emergencyContacts={emergencyContacts}
-                      onSave={(contacts) => {
-                        saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
-                        showToast('Emergency contacts updated!');
-                      }}
-                      showToast={showToast}
-                      parents={parents}
-                      addParentToFamily={addParentToFamily}
-                      myChildren={myChildren}
-                      currentUser={{ email: user?.email }}
-                      addToHistory={addToHistory}
-                    />
-                  </div>
+                  <ParentEmergencyContactsManager
+                    parentEmail={user?.email}
+                    emergencyContacts={emergencyContacts}
+                    onSave={(contacts) => {
+                      saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
+                      showToast('Emergency contacts updated!');
+                    }}
+                    showToast={showToast}
+                    parents={parents}
+                    addParentToFamily={addParentToFamily}
+                    myChildren={myChildren}
+                    currentUser={{ email: user?.email }}
+                    addToHistory={addToHistory}
+                  />
                 </div>
               )}
 
@@ -5109,7 +5194,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       // ==================== CHILD CARD ====================
-      const ChildCard = ({ child, onUpdate, onDelete, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper }) => {
+      const ChildCard = ({ child, onUpdate, onDelete, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, childParents }) => {
         const inputRef = useRef(null);
         const [tempImg, setTempImg] = useState(null);
         const [showCrop, setShowCrop] = useState(false);
@@ -5379,6 +5464,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 )}
                 {child.phone && <div>Phone: {child.phone}</div>}
 
+                {/* Parents */}
+                {(childParents || []).length > 0 && (
+                  <div className="mt-2 pt-2 border-t">
+                    <div className="font-medium text-gray-700 mb-1">Parents:</div>
+                    {childParents.map(parent => (
+                      <div key={parent.email} className="text-xs bg-blue-50 rounded p-2 mb-1 flex items-center gap-2">
+                        {parent.photo ? (
+                          <img src={parent.photo} className="w-6 h-6 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 text-xs font-bold">{parent.name?.charAt(0) || '?'}</div>
+                        )}
+                        <div>
+                          <span className="font-medium">{parent.name}</span>
+                          {parent.phone && <span className="text-gray-500"> • {parent.phone}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Emergency Contacts */}
                 {childEmergencyContacts.length > 0 && (
                   <div className="mt-2 pt-2 border-t">
@@ -5387,11 +5492,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <div key={contact.id} className="text-xs bg-gray-50 rounded p-2 mb-1">
                         <div className="font-medium">
                           {contact.name}
-                          {contact.isAutoCreated && (
+                          {(contact.isAutoCreated || contact.isParent) && (
                             <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
                           )}
                         </div>
                         <div>{contact.relationship && `${contact.relationship} • `}{contact.phone}</div>
+                        {(contact.isAutoCreated || contact.isParent) && contact.email && (
+                          <div className="text-gray-500">{contact.email}</div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -5414,14 +5522,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // ==================== COUNSELOR ====================
     // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
-    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper }) => {
+    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, parents, camperParentLinks }) => {
       const [showAddForm, setShowAddForm] = useState(false);
 
       // Check if child has any registrations (is a camper)
       const isCamper = (childId) => registrations?.some(r => r.childId === childId);
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Green + Add Child button at top */}
           {showAddForm ? (
             <div className="border-2 border-dashed border-green-300 rounded-xl p-4 bg-green-50">
@@ -5434,27 +5542,40 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               />
             </div>
           ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl text-base shadow-lg flex items-center gap-2 mx-auto transition-colors"
-            >
-              <span className="text-xl">+</span>
-              <span>Add Child</span>
-            </button>
+            <div className="text-center">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+              >
+                <span className="text-2xl">➕</span>
+                <span>Add Child</span>
+              </button>
+            </div>
           )}
 
-          {children.map(child => (
-            <ChildCard
-              key={child.id}
-              child={child}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              emergencyContacts={emergencyContacts}
-              getEmergencyContactsForCamper={getEmergencyContactsForCamper}
-              addEmergencyContactToCamper={addEmergencyContactToCamper}
-              removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
-            />
-          ))}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold text-lg mb-2">Campers</h3>
+            <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
+            <div className="space-y-4">
+              {children.map(child => {
+                const childParentEmails = (camperParentLinks || []).filter(l => l.camperId === child.id).map(l => l.parentEmail);
+                const childParents = (parents || []).filter(p => childParentEmails.includes(p.email));
+                return (
+                  <ChildCard
+                    key={child.id}
+                    child={child}
+                    onUpdate={onUpdate}
+                    onDelete={onDelete}
+                    emergencyContacts={emergencyContacts}
+                    getEmergencyContactsForCamper={getEmergencyContactsForCamper}
+                    addEmergencyContactToCamper={addEmergencyContactToCamper}
+                    removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
+                    childParents={childParents}
+                  />
+                );
+              })}
+            </div>
+          </div>
         </div>
       );
     };
@@ -5766,6 +5887,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           )}
 
           {/* Contact List */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
+            </p>
           {localContacts.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 2 contacts.</p>
           ) : (
@@ -5927,6 +6053,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               </button>
             </div>
           )}
+          </div>
 
           {/* Invite as Parent Modal */}
           {invitePrompt && (

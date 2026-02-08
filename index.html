@@ -50,6 +50,95 @@
     const BUILD_DATE = new Date("2026-02-08T09:52:00");
 
     const RELEASE_NOTES = [
+      { version: "13.004", date: "2026-02-08", time: "9:52 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Pickup policy modal text size increased for readability",
+        "Onboarding: Pickup policy modal now shows visual illustration (face photo OR photo ID)",
+        "Onboarding: Edit buttons added to 'Your Information' summary to jump back to any section",
+        "Onboarding: Removed redundant 'Everything looks good' review section from Step 4"
+      ]},
+      { version: "13.003", date: "2026-02-08", time: "9:48 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Eliminated Step 5 intermediate screen to prevent flash to login page after completing setup",
+        "Onboarding: Reduced from 5 steps to 4 — after policies, 'Complete Setup' goes directly to submission",
+        "Onboarding: Uses location.replace instead of location.href to prevent back-button returning to onboarding",
+        "Admin Dashboard: Emergency contact warning now camper-based instead of parent-based",
+        "Admin Dashboard: Counts emergency contacts from all parents linked to each camper via camperParentLinks",
+        "Admin Dashboard: Warning navigates to Campers tab instead of Parents tab"
+      ]},
+      { version: "13.002", date: "2026-02-08", time: "9:39 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: EC photo guidance now matches parent photo guidance (photo on site or photo ID at pickup required)",
+        "Onboarding: Policies now display as popup modals instead of inline checkboxes",
+        "Onboarding: Final review summary shown after both policies signed, before completing setup",
+        "Onboarding: Parent EC now stored as reference-only record (no duplicated name/phone/photo)",
+        "Parent Dashboard: Renamed 'My Campers' tab to 'Campers'",
+        "Parent Dashboard: Add Child button moved to prominent green button at top of Campers tab",
+        "Parent Dashboard: Emergency Contacts tab redesigned with photos, edit button, delete moved inside edit form",
+        "Parent Dashboard: Parents tab redesigned with edit modal, remove moved inside modal",
+        "Parent Dashboard: Camper photos shown above names in session registration child selectors and calendar headers",
+        "Parent Dashboard: Registration dates now sourced from Gym Booked Dates (camp_gym_rentals) instead of camp_dates",
+        "Parent Dashboard: Session-level availability from gym rentals (AM/PM disabled if not booked)"
+      ]},
+      { version: "13.001", date: "2026-02-08", time: "9:14 AM PST", author: "Derek Richardson", changes: [
+        "Emergency Contacts: After adding a contact, prompt to create a parent login for them",
+        "Emergency Contacts: Invited parents get full access to view camp details and manage registrations",
+        "Emergency Contacts: Same invitation flow works during onboarding (index.html) and from dashboard (parent.html)",
+        "Parent Dashboard: Added Activity History tab showing all actions related to the logged-in parent",
+        "History: Admin actions (approve/reject registration, send messages, edit parent info) now tagged with parent email",
+        "History: All parent-side actions auto-tagged with logged-in parent email for filtering",
+        "History: Increased entry cap from 100 to 500 across all pages",
+        "Admin: Added storage.deleteRow() method and 12 addToHistory calls now include relatedEmails"
+      ]},
+      { version: "13.000", date: "2026-02-08", time: "8:31 AM PST", author: "Derek Richardson", changes: [
+        "MAJOR: Version bump to 13.x — significant admin interface and database restructuring milestone",
+        "CRITICAL FIX: Parent registration Continue button was completely broken due to prop name mismatch (users→parents)",
+        "CRITICAL FIX: Counselor registration had same broken prop issue (users→counselorUsers)",
+        "Root cause: ParentOnboarding expected 'users'/'saveUsers' props but received 'parents'/'saveParents' — caused silent TypeError in async handler",
+        "Added null safety to duplicate-email checks with (parents || []) and (counselorUsers || []) fallbacks",
+        "Improved counselor registration with same field-by-field validation as parent registration",
+        "Photo message updated: now explains photo on site or photo ID required at pickup"
+      ]},
+      { version: "12.195", date: "2026-02-08", time: "8:25 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Message delete in Danger Zone now actually deletes the row from Supabase",
+        "Added storage.deleteRow() method for per-row table deletions",
+        "Previously delete only updated React state but left the row in the database"
+      ]},
+      { version: "12.194", date: "2026-02-08", time: "8:17 AM PST", author: "Derek Richardson", changes: [
+        "Parent Registration: Fixed Step 1 Continue button by adding specific field-by-field validation error messages",
+        "Parent Registration: Added email format validation (checks for valid email structure)",
+        "Parent Registration: Added minimum password length check (4 characters)",
+        "Parent Registration: Made duplicate email check case-insensitive",
+        "Parent Registration: Updated photo message to clarify photo on site or photo ID required at pickup"
+      ]},
+      { version: "12.193", date: "2026-02-08", time: "8:16 AM PST", author: "Derek Richardson", changes: [
+        "Dashboard: Added Camp Director Task Summary with prioritized task categories (Urgent, Important, Setup)",
+        "Dashboard: Urgent tasks detect pending registrations, unpaid registrations, and pending counselor requests",
+        "Dashboard: Important tasks detect missing emergency contacts, camper photos, unassigned registrations, and sessions without counselors",
+        "Dashboard: Setup tasks detect unbooked gym days, missing counselors, and uncustomized website content",
+        "Dashboard: Quick stats bar shows parent, camper, counselor, and approved registration counts",
+        "Dashboard: Each task includes a quick link button to navigate directly to the relevant admin section"
+      ]},
+      { version: "12.192", date: "2026-02-08", time: "8:01 AM PST", author: "Derek Richardson", changes: [
+        "Gym Rentals: Removed 'Book Whole Week' feature, organized days in Mon-Fri rows",
+        "Gym Rentals: Color-coded days — green (fully booked), yellow (partial), red (not booked)",
+        "Content: Added editable fields for location details, pricing/discounts, policies, and scholarship info",
+        "Content: Added 'Data From Other Tables' info panel showing counselor profiles and camp dates come from separate tables",
+        "Pod Setup: Calendar now shows camper counts (assigned/registered), counselor counts (assigned/eligible), and pod count per session"
+      ]},
+      { version: "12.191", date: "2026-02-08", time: "7:55 AM PST", author: "Derek Richardson", changes: [
+        "Reorganized Danger Zone into two clear sections: tables CLEARED vs PRESERVED by Delete All button",
+        "Red-bordered section shows 9 tables that will be wiped (parents, campers, registrations, assignments, emergency contacts, links, onboarding, change requests)",
+        "Green-bordered section shows 14 tables that are preserved (admins, counselors, availability, schedules, content, photos, etc.)",
+        "Each section has color-coded borders and hover states for visual clarity"
+      ]},
+      { version: "12.190", date: "2026-02-08", time: "7:49 AM PST", author: "Derek Richardson", changes: [
+        "Removed Registration Requests stats and Quick Navigation sections from Dashboard",
+        "Moved History and Danger Zone under Camp Setup as sub-tabs",
+        "Simplified Dashboard to clean welcome message"
+      ]},
+      { version: "12.189", date: "2026-02-08", time: "7:44 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Resolved getFoodPhoto ReferenceError that caused blank page when navigating to Content tab",
+        "Moved getFoodPhoto helper from SitePhotosManager scope to Admin component scope where foodPhotos state is accessible",
+        "Updated date format in red ribbon from '02-08-2026 7:44 AM' to 'Sun Feb 8 7:44 AM PST' across all 4 pages"
+      ]},
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
         "Danger Zone: Added 13 missing data tables to Database Records viewer",
         "All tables now visible: Camper-Parent Links, Blocked Sessions, Counselor Schedule, Gym Rentals",
