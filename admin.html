@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.182";
+    const VERSION = "12.183";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:13:00");
+    const BUILD_DATE = new Date("2026-02-08T08:23:00");
 
     const RELEASE_NOTES = [
+      { version: "12.183", date: "2026-02-08", time: "12:23 AM PST", author: "Derek Richardson", changes: [
+        "Danger Zone: Added 'Delete All History' button in Change History section",
+        "Improved user experience with single-click to clear all history entries",
+        "Confirmation dialog prevents accidental deletion of all history"
+      ]},
       { version: "12.182", date: "2026-02-08", time: "12:13 AM PST", author: "Derek Richardson", changes: [
         "CRITICAL BUG FIX: Fixed Danger Zone crash - changed 'history' to 'changeHistory'",
         "Fixed TypeError: history.slice is not a function in Change History display",
@@ -10066,8 +10071,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           {(changeHistory || []).length === 0 ? (
                             <p className="text-gray-500 text-sm">No history entries</p>
                           ) : (
-                            <div className="space-y-2">
-                              {(changeHistory || []).slice(-20).reverse().map(entry => (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Delete ALL ${changeHistory.length} history entries? This cannot be undone.`)) return;
+                                  setChangeHistory([]);
+                                  await storage.set('camp_change_history', 'main', []);
+                                  showToast('All history deleted');
+                                }}
+                                className="w-full mb-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
+                              >
+                                Delete All History ({changeHistory.length} entries)
+                              </button>
+                              <div className="space-y-2">
+                                {(changeHistory || []).slice(-20).reverse().map(entry => (
                                 <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded border">
                                   <div className="flex-1">
                                     <div className="font-medium">{entry.action}</div>
@@ -10087,7 +10104,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   </button>
                                 </div>
                               ))}
-                            </div>
+                              </div>
+                            </>
                           )}
                         </div>
                       </details>
