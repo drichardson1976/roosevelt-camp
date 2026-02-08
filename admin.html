@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.195";
+    const VERSION = "13.000";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:25:00");
+    const BUILD_DATE = new Date("2026-02-08T08:31:00");
 
     const RELEASE_NOTES = [
+      { version: "13.000", date: "2026-02-08", time: "8:31 AM PST", author: "Derek Richardson", changes: [
+        "MAJOR: Version bump to 13.x — significant admin interface and database restructuring milestone",
+        "CRITICAL FIX: Parent registration Continue button was completely broken due to prop name mismatch (users→parents)",
+        "CRITICAL FIX: Counselor registration had same broken prop issue (users→counselorUsers)",
+        "Root cause: ParentOnboarding expected 'users'/'saveUsers' props but received 'parents'/'saveParents' — caused silent TypeError in async handler",
+        "Added null safety to duplicate-email checks with (parents || []) and (counselorUsers || []) fallbacks",
+        "Improved counselor registration with same field-by-field validation as parent registration",
+        "Photo message updated: now explains photo on site or photo ID required at pickup"
+      ]},
       { version: "12.195", date: "2026-02-08", time: "8:25 AM PST", author: "Derek Richardson", changes: [
         "FIX: Message delete in Danger Zone now actually deletes the row from Supabase",
         "Added storage.deleteRow() method for per-row table deletions",

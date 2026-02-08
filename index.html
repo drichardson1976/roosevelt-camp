@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.195";
+    const VERSION = "13.000";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:25:00");
+    const BUILD_DATE = new Date("2026-02-08T08:31:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -1319,7 +1319,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT ONBOARDING WIZARD ====================
-    const ParentOnboarding = ({ onComplete, onBack, users, saveUsers, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks }) => {
+    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks }) => {
       const [step, setStep] = useState(1);
       const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '', photo: null });
       const [showPassword, setShowPassword] = useState(false);
@@ -1461,7 +1461,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             setError('Password must be at least 4 characters');
             return false;
           }
-          if (users.some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase())) {
+          if ((parents || []).some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase())) {
             setError('An account with this email already exists. Please use a different email or log in instead.');
             return false;
           }
@@ -1521,7 +1521,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             acceptedAt: new Date().toISOString()
           } : null
         };
-        await saveUsers([...users, newUser]);
+        await saveParents([...(parents || []), newUser]);
 
         // Save campers and create parent links
         if (campersData.length > 0 && saveCampers && saveCamperParentLinks) {
@@ -3718,7 +3718,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           </div>
         </div>
       );
-      const CounselorOnboarding = ({ onComplete, onBack, users, saveUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule }) => {
+      const CounselorOnboarding = ({ onComplete, onBack, counselorUsers, saveCounselorUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule }) => {
         const [step, setStep] = useState(1);
         const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
         const [showPassword, setShowPassword] = useState(false);
@@ -3807,16 +3807,36 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const validateStep = () => {
           setError('');
           if (step === 1) {
-            if (!userData.name || !userData.email || !userData.phone || !userData.password) {
-              setError('Please fill in all required fields');
+            if (!userData.name.trim()) {
+              setError('Please enter your full name');
+              return false;
+            }
+            if (!userData.email.trim()) {
+              setError('Please enter your email address');
+              return false;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email.trim())) {
+              setError('Please enter a valid email address (e.g. name@example.com)');
+              return false;
+            }
+            if (!userData.phone) {
+              setError('Please enter your phone number');
               return false;
             }
             if (!isValidPhone(userData.phone)) {
-              setError('Please enter a valid phone number');
+              setError('Please enter a valid 10-digit phone number: (555) 555-1234');
               return false;
             }
-            if (users.some(u => u.email === userData.email) || counselors.some(c => c.email === userData.email)) {
-              setError('An account with this email already exists');
+            if (!userData.password) {
+              setError('Please create a password');
+              return false;
+            }
+            if (userData.password.length < 4) {
+              setError('Password must be at least 4 characters');
+              return false;
+            }
+            if ((counselorUsers || []).some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase()) || (counselors || []).some(c => c.email.toLowerCase() === userData.email.trim().toLowerCase())) {
+              setError('An account with this email already exists. Please use a different email or log in instead.');
               return false;
             }
           }
@@ -3859,7 +3879,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               onboardingComplete: true,
               onboardingCompletedAt: new Date().toISOString()
             };
-            await saveUsers([...users, newUser]);
+            await saveCounselorUsers([...(counselorUsers || []), newUser]);
 
             // Create counselor profile (pending approval)
             const newCounselor = {
@@ -4296,8 +4316,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 window.location.href = '/counselor.html';
               }}
               onBack={() => setMode('selectRole')}
-              users={users}
-              saveUsers={saveUsers}
+              counselorUsers={counselorUsers}
+              saveCounselorUsers={saveCounselorUsers}
               counselors={counselors}
               saveCounselors={saveCounselors}
               availability={availability}
