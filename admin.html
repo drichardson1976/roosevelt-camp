@@ -45,12 +45,57 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.171";
+    const VERSION = "12.179";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T04:00:00");
+    const BUILD_DATE = new Date("2026-02-08T07:45:00");
 
     const RELEASE_NOTES = [
-      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
+      { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
+        "Danger Zone: Added 13 missing data tables to Database Records viewer",
+        "All tables now visible: Camper-Parent Links, Blocked Sessions, Counselor Schedule, Gym Rentals",
+        "Added: Website Content, Messages, Food Photos, Site Photos, Onboarding Progress",
+        "Added: Availability Change Requests, Profile Change Requests, Change History",
+        "Complete data transparency: Every table that stores data can now be viewed and deleted"
+      ]},
+      { version: "12.178", date: "2026-02-08", time: "11:30 PM PT", author: "Derek Richardson", changes: [
+        "Fixed CampersTab component after users table split",
+        "Updated component to use 'parents' prop instead of 'users' prop",
+        "Resolved blank screen issue when viewing Campers tab in Family Setup"
+      ]},
+      { version: "12.177", date: "2026-02-08", time: "11:15 PM PT", author: "Derek Richardson", changes: [
+        "Danger Zone: Merged 'Delete Individual Records' and 'Supabase Table Viewer' into one section",
+        "Database Records: View and delete all records in organized, readable format",
+        "Added icons to all sections for better visual organization",
+        "Added missing sections: Counselor Users (login accounts) and Admins",
+        "Admin deletion safety: Requires at least 1 admin to remain"
+      ]},
+      { version: "12.176", date: "2026-02-08", time: "10:45 PM PT", author: "Derek Richardson", changes: [
+        "Database migration: Created corrected SQL matching actual Supabase structure",
+        "Tables use: id (TEXT), data (JSONB), updated_at (TIMESTAMP WITH TIME ZONE)",
+        "Migration scripts ready for camp_parents and camp_counselor_users tables"
+      ]},
+      { version: "12.175", date: "2026-02-08", time: "10:30 PM PT", author: "Derek Richardson", changes: [
+        "Added diagnostic SQL to determine correct Supabase table structure",
+        "Created 00_diagnose_structure.sql for schema inspection",
+        "Updated migration instructions with diagnostic step"
+      ]},
+      { version: "12.174", date: "2026-02-08", time: "10:15 PM PT", author: "Derek Richardson", changes: [
+        "Fixed Dashboard quick access buttons to use new hierarchical navigation",
+        "Updated all setAdminTab calls to navigateToTab for new tab structure",
+        "Resolved 'setAdminTab is not defined' error"
+      ]},
+      { version: "12.173", date: "2026-02-08", time: "10:00 PM PT", author: "Derek Richardson", changes: [
+        "Created database migration scripts for users table split",
+        "Added 01_create_new_tables.sql and 02_migrate_data.sql",
+        "Comprehensive migration instructions with backup and rollback procedures"
+      ]},
+      { version: "12.172", date: "2026-02-08", time: "9:45 PM PT", author: "Derek Richardson", changes: [
+        "Added backward compatibility layer for users table refactoring",
+        "Created combined users array (parents + counselorUsers) for gradual migration",
+        "Intelligent saveUsers function routes to correct table based on role",
+        "Fixed Dashboard parent count and Danger Zone table viewer"
+      ]},
+      { version: "12.171", date: "2026-02-08", time: "9:00 PM PT", author: "Derek Richardson", changes: [
         "DATABASE RESTRUCTURING: Split camp_registered_users into camp_parents, camp_counselor_users, camp_admins",
         "Authentication updated to check all three separate tables for login",
         "Danger Zone: DELETE ALL DATA now preserves counselors and admins (only deletes parents)",
