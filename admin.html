@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.181";
+    const VERSION = "12.182";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T07:55:00");
+    const BUILD_DATE = new Date("2026-02-08T08:13:00");
 
     const RELEASE_NOTES = [
+      { version: "12.182", date: "2026-02-08", time: "12:13 AM PST", author: "Derek Richardson", changes: [
+        "CRITICAL BUG FIX: Fixed Danger Zone crash - changed 'history' to 'changeHistory'",
+        "Fixed TypeError: history.slice is not a function in Change History display",
+        "Added null safety checks for changeHistory (|| [])",
+        "Corrected history entry details field reference"
+      ]},
       { version: "12.181", date: "2026-02-07", time: "11:55 PM PST", author: "Derek Richardson", changes: [
         "CRITICAL BUG FIX: Fixed Danger Zone crash when viewing Database Records",
         "Fixed TypeError: .map() is not a function for object-based tables",
@@ -10053,25 +10059,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Change History */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📜 Change History ({history.length} entries)</span>
+                          <span>📜 Change History ({(changeHistory || []).length} entries)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {history.length === 0 ? (
+                          {(changeHistory || []).length === 0 ? (
                             <p className="text-gray-500 text-sm">No history entries</p>
                           ) : (
                             <div className="space-y-2">
-                              {history.slice(-20).reverse().map(entry => (
+                              {(changeHistory || []).slice(-20).reverse().map(entry => (
                                 <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded border">
                                   <div className="flex-1">
                                     <div className="font-medium">{entry.action}</div>
-                                    <div className="text-sm text-gray-500">{entry.type} • {new Date(entry.timestamp).toLocaleString()}</div>
+                                    <div className="text-sm text-gray-500">{entry.details} • {new Date(entry.timestamp).toLocaleString()}</div>
                                   </div>
                                   <button
                                     onClick={async () => {
                                       if (!confirm(`Delete history entry "${entry.action}"?`)) return;
-                                      const newHistory = history.filter(h => h.id !== entry.id);
-                                      await saveHistory(newHistory);
+                                      const newHistory = changeHistory.filter(h => h.id !== entry.id);
+                                      setChangeHistory(newHistory);
+                                      await storage.set('camp_change_history', 'main', newHistory);
                                       showToast('History entry deleted');
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
