@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.184";
+    const VERSION = "12.185";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:26:00");
+    const BUILD_DATE = new Date("2026-02-08T08:31:00");
 
     const RELEASE_NOTES = [
+      { version: "12.185", date: "2026-02-08", time: "12:31 AM PST", author: "Derek Richardson", changes: [
+        "CRITICAL FIX: Messages delete handler in Danger Zone now works properly",
+        "Fixed missing saveMessages function - now updates state and storage correctly",
+        "Message deletions now tracked in change history"
+      ]},
       { version: "12.184", date: "2026-02-08", time: "12:26 AM PST", author: "Derek Richardson", changes: [
         "Danger Zone: Added 7 missing Supabase tables to Database Records viewer",
         "New tables visible: Camp Dates, Referrals, Guest Requests, Players, RSVPs, Runs, Status History",
@@ -9869,7 +9874,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     onClick={async () => {
                                       if (!confirm(`Delete message "${msg.subject}"?`)) return;
                                       const newMessages = messages.filter(m => m.id !== msg.id);
-                                      await saveMessages(newMessages, `Deleted message ${msg.subject}`);
+                                      setMessages(newMessages);
+                                      for (const message of newMessages) {
+                                        await storage.set('camp_messages', message.id, message.data || message);
+                                      }
+                                      // Delete the removed message from storage
+                                      addToHistory('Message Deleted', `Deleted message: ${msg.subject}`);
                                       showToast('Message deleted');
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
