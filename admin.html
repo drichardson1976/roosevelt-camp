@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.000";
+    const VERSION = "13.001";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:31:00");
+    const BUILD_DATE = new Date("2026-02-08T09:14:00");
 
     const RELEASE_NOTES = [
+      { version: "13.001", date: "2026-02-08", time: "9:14 AM PST", author: "Derek Richardson", changes: [
+        "Emergency Contacts: After adding a contact, prompt to create a parent login for them",
+        "Emergency Contacts: Invited parents get full access to view camp details and manage registrations",
+        "Emergency Contacts: Same invitation flow works during onboarding (index.html) and from dashboard (parent.html)",
+        "Parent Dashboard: Added Activity History tab showing all actions related to the logged-in parent",
+        "History: Admin actions (approve/reject registration, send messages, edit parent info) now tagged with parent email",
+        "History: All parent-side actions auto-tagged with logged-in parent email for filtering",
+        "History: Increased entry cap from 100 to 500 across all pages",
+        "Admin: Added storage.deleteRow() method and 12 addToHistory calls now include relatedEmails"
+      ]},
       { version: "13.000", date: "2026-02-08", time: "8:31 AM PST", author: "Derek Richardson", changes: [
         "MAJOR: Version bump to 13.x — significant admin interface and database restructuring milestone",
         "CRITICAL FIX: Parent registration Continue button was completely broken due to prop name mismatch (users→parents)",
@@ -2501,7 +2511,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 const recipientDesc = composerMode === 'all' ? 'all parents' :
                   composerMode === 'selected' ? `${selectedParents.length} parents` :
                   composerRecipient?.name;
-                addToHistory('Message Sent', `Sent message to ${recipientDesc}: "${msg.subject}"`);
+                const msgEmails = msg.to === 'all' ? parentUsers.map(p => p.email) : Array.isArray(msg.to) ? msg.to : [msg.to];
+                addToHistory('Message Sent', `Sent message to ${recipientDesc}: "${msg.subject}"`, msgEmails.filter(Boolean));
                 showToast('Message sent!');
                 setShowComposer(false);
                 setSelectedParents([]);
@@ -2517,7 +2528,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               messages={messages}
               onSendReply={(msg) => {
                 onSendMessage(msg);
-                addToHistory('Message Sent', `Replied to ${viewingThread.parent.name}`);
+                addToHistory('Message Sent', `Replied to ${viewingThread.parent.name}`, [viewingThread.parent.email]);
                 showToast('Reply sent!');
               }}
               onClose={() => setViewingThread(null)}
@@ -2531,7 +2542,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               onClose={() => setEditingParent(null)}
               onSave={() => {
                 onUpdateUsers(users.map(u => u.email === editingParent.originalEmail ? { ...u, name: editingParent.name, email: editingParent.email, phone: editingParent.phone } : u));
-                addToHistory('Admin Edit', `Updated parent: ${editingParent.name}`);
+                addToHistory('Admin Edit', `Updated parent: ${editingParent.name}`, [editingParent.email]);
                 showToast('Parent updated!');
                 setEditingParent(null);
               }}
@@ -2578,7 +2589,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 if (parent) {
                   const updatedChildren = parent.children.map(c => c.id === editingChild.originalChildId ? { ...editingChild.child } : c);
                   onUpdateUsers(users.map(u => u.email === editingChild.parentEmail ? { ...u, children: updatedChildren } : u));
-                  addToHistory('Admin Edit', `Updated child: ${editingChild.child.name}`);
+                  addToHistory('Admin Edit', `Updated child: ${editingChild.child.name}`, [editingChild.parentEmail]);
                   showToast('Child updated!');
                 }
                 setEditingChild(null);
@@ -2652,7 +2663,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   createdBy: 'admin'
                 };
                 onUpdateRegistrations(registration);
-                addToHistory('Admin', `Created registration for ${camper?.name} on ${newReg.date}`);
+                addToHistory('Admin', `Created registration for ${camper?.name} on ${newReg.date}`, [creatingRegFor.email]);
                 showToast('Registration created!');
                 setCreatingRegFor(null);
               }}
@@ -2735,7 +2746,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               onClose={() => setEditingReg(null)}
               onSave={() => {
                 onUpdateRegistrations(editingReg);
-                addToHistory('Admin Edit', `Updated registration for ${editingReg.camperName || editingReg.childName} on ${editingReg.date}`);
+                addToHistory('Admin Edit', `Updated registration for ${editingReg.camperName || editingReg.childName} on ${editingReg.date}`, [editingReg.parentEmail]);
                 showToast('Registration updated!');
                 setEditingReg(null);
               }}
@@ -2819,7 +2830,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     await onDeleteParent(confirmDelete.data.email, confirmDelete.data.name);
                   } else {
                     onUpdateUsers(users.filter(u => u.email !== confirmDelete.data.email));
-                    addToHistory('Admin Delete', `Deleted parent: ${confirmDelete.data.name}`);
+                    addToHistory('Admin Delete', `Deleted parent: ${confirmDelete.data.name}`, [confirmDelete.data.email]);
                     showToast('Parent deleted');
                   }
                   setExpandedParent(null);
@@ -2829,12 +2840,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   if (parent) {
                     const updatedChildren = parent.children.filter(c => c.id !== child.id);
                     onUpdateUsers(users.map(u => u.email === parentEmail ? { ...u, children: updatedChildren } : u));
-                    addToHistory('Admin Delete', `Deleted child: ${child.name}`);
+                    addToHistory('Admin Delete', `Deleted child: ${child.name}`, [parentEmail]);
                     showToast('Child deleted');
                   }
                 } else if (confirmDelete.type === 'registration') {
                   onDeleteRegistration(confirmDelete.data);
-                  addToHistory('Admin Delete', `Deleted registration: ${confirmDelete.data.childName} on ${confirmDelete.data.date}`);
+                  addToHistory('Admin Delete', `Deleted registration: ${confirmDelete.data.childName} on ${confirmDelete.data.date}`, [confirmDelete.data.parentEmail]);
                   showToast('Registration deleted');
                 }
                 setConfirmDelete(null);
@@ -2851,7 +2862,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               </div>
               <ParentOnboarding
                 onComplete={(newUser) => {
-                  addToHistory('Parent', `Added parent ${newUser.name} via onboarding`);
+                  addToHistory('Parent', `Added parent ${newUser.name} via onboarding`, [newUser.email]);
                   setShowAddParent(false);
                   showToast(`Parent ${newUser.name} added successfully!`);
                 }}
@@ -6697,14 +6708,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         load();
       }, []);
 
-      const addToHistory = useCallback(async (action, details) => {
+      const addToHistory = useCallback(async (action, details, relatedEmails = []) => {
         const entry = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
           action,
-          details
+          details,
+          ...(relatedEmails.length > 0 ? { relatedEmails } : {})
         };
-        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        const newHistory = [entry, ...changeHistory].slice(0, 500);
         setChangeHistory(newHistory);
         await storage.set('camp_change_history', 'main', newHistory);
       }, [changeHistory]);
@@ -8232,7 +8244,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 setAssignments(updatedAssignments);
                                 await storage.set('camp_assignments', 'main', updatedAssignments);
                               }
-                              addToHistory('Delete', `Permanently deleted registration: ${reg.camperName || reg.childName} for ${reg.date}`);
+                              addToHistory('Delete', `Permanently deleted registration: ${reg.camperName || reg.childName} for ${reg.date}`, [reg.parentEmail]);
                               showToast('Registration deleted permanently');
                               setDeleteRegConfirm(null);
                             }}
@@ -8553,7 +8565,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   await storage.set('camp_registrations', reg.id, reg);
                                 }
 
-                                addToHistory('Admin', `Created ${newRegs.length} registration(s) for ${parent?.name}`);
+                                addToHistory('Admin', `Created ${newRegs.length} registration(s) for ${parent?.name}`, [bulkRegModal.parentEmail]);
                                 showToast(`Created ${newRegs.length} registration(s)!`);
                                 setBulkRegModal(null);
                                 setBulkRegMonth(null);
@@ -9070,7 +9082,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                       if (!confirm(`Approve registration for ${reg.childName}?\n\nPlease verify that payment has been received before approving.`)) return;
                                       const updated = { ...reg, status: 'approved', approvedAt: new Date().toISOString(), approvedBy: user?.name };
                                       await saveReg(updated);
-                                      addToHistory('Approval', `Approved registration for ${reg.childName} on ${reg.date}`);
+                                      addToHistory('Approval', `Approved registration for ${reg.childName} on ${reg.date}`, [reg.parentEmail]);
                                       showToast(`Registration approved for ${reg.childName}!`);
                                     }}
                                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
@@ -9082,7 +9094,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                       if (!confirm(`Reject registration for ${reg.childName}?`)) return;
                                       const updated = { ...reg, status: 'rejected', rejectedAt: new Date().toISOString(), rejectedBy: user?.name };
                                       await saveReg(updated);
-                                      addToHistory('Approval', `Rejected registration for ${reg.childName} on ${reg.date}`);
+                                      addToHistory('Approval', `Rejected registration for ${reg.childName} on ${reg.date}`, [reg.parentEmail]);
                                       showToast(`Registration rejected.`);
                                     }}
                                     className="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium"

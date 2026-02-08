@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.000";
+    const VERSION = "13.001";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:31:00");
+    const BUILD_DATE = new Date("2026-02-08T09:14:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -1398,6 +1398,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // Helper functions for emergency contacts
       const [contactError, setContactError] = useState('');
+      const [pendingInvitations, setPendingInvitations] = useState([]);
+      const [invitePrompt, setInvitePrompt] = useState(null);
+      const [inviteForm, setInviteForm] = useState({ email: '', password: '' });
+      const [inviteError, setInviteError] = useState('');
+      const [showInvitePassword, setShowInvitePassword] = useState(false);
       const addContact = () => {
         setContactError('');
         if (!newContact.name || !newContact.phone || !newContact.relationship) return;
@@ -1406,6 +1411,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setContactError('Please enter a valid 10-digit phone number');
           return;
         }
+        const addedName = newContact.name;
+        const addedPhone = newContact.phone;
         setEmergencyData([...emergencyData, {
           ...newContact,
           id: 'contact_' + Date.now(),
@@ -1414,6 +1421,39 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }]);
         setNewContact({ name: '', phone: '', relationship: '', otherRelationship: '', photo: null });
         setShowAddContact(false);
+        // Show invite prompt
+        setInviteForm({ email: '', password: '' });
+        setInviteError('');
+        setInvitePrompt({ name: addedName, phone: addedPhone });
+      };
+
+      const handleInviteAccept = () => {
+        if (!inviteForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteForm.email)) {
+          setInviteError('Please enter a valid email address');
+          return;
+        }
+        if (!inviteForm.password || inviteForm.password.length < 4) {
+          setInviteError('Password must be at least 4 characters');
+          return;
+        }
+        if ((parents || []).find(p => p.email.toLowerCase() === inviteForm.email.toLowerCase()) ||
+            pendingInvitations.find(p => p.email.toLowerCase() === inviteForm.email.toLowerCase())) {
+          setInviteError('A user with this email already exists');
+          return;
+        }
+        setPendingInvitations([...pendingInvitations, {
+          name: invitePrompt.name,
+          phone: invitePrompt.phone,
+          email: inviteForm.email,
+          password: inviteForm.password
+        }]);
+        setInvitePrompt(null);
+      };
+
+      const handleInviteDismiss = () => {
+        setInvitePrompt(null);
+        setInviteForm({ email: '', password: '' });
+        setInviteError('');
       };
 
       const removeContact = (id) => {
@@ -1546,6 +1586,32 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             ...emergencyData.map((c, i) => ({ ...c, userEmail: userData.email, priority: i + 2 }))
           ];
           await saveEmergencyContacts([...emergencyContacts, ...allContacts]);
+        }
+
+        // Process pending parent invitations
+        if (pendingInvitations.length > 0) {
+          let currentParentsList = [...(parents || []), newUser];
+          let currentLinksList = [...(camperParentLinks || []), ...campersData.map(c => ({ camperId: c.id, parentEmail: userData.email }))];
+          for (const invitation of pendingInvitations) {
+            const invitedParent = {
+              email: invitation.email,
+              name: invitation.name,
+              password: invitation.password,
+              phone: invitation.phone,
+              photo: null,
+              role: 'parent',
+              roles: ['parent'],
+              onboardingComplete: true,
+              onboardingCompletedAt: new Date().toISOString(),
+              createdBy: userData.email,
+              createdAt: new Date().toISOString()
+            };
+            currentParentsList = [...currentParentsList, invitedParent];
+            const inviteLinks = campersData.map(c => ({ camperId: c.id, parentEmail: invitation.email }));
+            currentLinksList = [...currentLinksList, ...inviteLinks];
+          }
+          await saveParents(currentParentsList);
+          await saveCamperParentLinks(currentLinksList);
         }
 
         onComplete(newUser);
@@ -1939,6 +2005,68 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   ) : (
                     <button onClick={() => { setShowAddContact(true); setContactError(''); }} className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-500 hover:text-blue-600">+ Add Emergency Contact</button>
+                  )}
+
+                  {/* Pending parent logins indicator */}
+                  {pendingInvitations.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
+                      <strong className="text-blue-800">Parent logins to be created:</strong>
+                      {pendingInvitations.map((inv, i) => (
+                        <div key={i} className="flex items-center justify-between mt-1">
+                          <span className="text-blue-700">{inv.name} ({inv.email})</span>
+                          <button onClick={() => setPendingInvitations(pendingInvitations.filter((_, idx) => idx !== i))} className="text-red-500 text-xs hover:text-red-700">Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Invite as Parent Modal */}
+                  {invitePrompt && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                      <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-lg text-green-800 mb-2">Create Login for {invitePrompt.name}?</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Would you like to give <strong>{invitePrompt.name}</strong> their own login so they can view camp details, manage registrations, and see your campers' information?
+                        </p>
+                        <div className="space-y-3 mb-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                            <input
+                              value={inviteForm.email}
+                              onChange={e => { setInviteForm({ ...inviteForm, email: e.target.value }); setInviteError(''); }}
+                              className="w-full px-3 py-2 border rounded-lg"
+                              placeholder="their@email.com"
+                              autoComplete="off" data-1p-ignore="true"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                            <div className="relative">
+                              <input
+                                type={showInvitePassword ? 'text' : 'password'}
+                                value={inviteForm.password}
+                                onChange={e => { setInviteForm({ ...inviteForm, password: e.target.value }); setInviteError(''); }}
+                                className="w-full px-3 py-2 border rounded-lg pr-16"
+                                placeholder="At least 4 characters"
+                                autoComplete="off" data-1p-ignore="true"
+                              />
+                              <button type="button" onClick={() => setShowInvitePassword(!showInvitePassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-700">
+                                {showInvitePassword ? 'Hide' : 'Show'}
+                              </button>
+                            </div>
+                          </div>
+                          {inviteError && <p className="text-red-600 text-sm">{inviteError}</p>}
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={handleInviteAccept} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                            Create Login
+                          </button>
+                          <button onClick={handleInviteDismiss} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                            Skip
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                 </div>
@@ -2905,14 +3033,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         load();
       }, []);
 
-      const addToHistory = useCallback(async (action, details) => {
+      const addToHistory = useCallback(async (action, details, relatedEmails = []) => {
         const entry = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
           action,
-          details
+          details,
+          ...(relatedEmails.length > 0 ? { relatedEmails } : {})
         };
-        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        const newHistory = [entry, ...changeHistory].slice(0, 500);
         setChangeHistory(newHistory);
         await storage.set('camp_change_history', 'main', newHistory);
       }, [changeHistory]);

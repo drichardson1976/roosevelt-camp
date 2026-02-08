@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.000";
+    const VERSION = "13.001";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:31:00");
+    const BUILD_DATE = new Date("2026-02-08T09:14:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -2554,14 +2554,15 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         load();
       }, []);
 
-      const addToHistory = useCallback(async (action, details) => {
+      const addToHistory = useCallback(async (action, details, relatedEmails = []) => {
         const entry = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
           action,
-          details
+          details,
+          ...(relatedEmails.length > 0 ? { relatedEmails } : {})
         };
-        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        const newHistory = [entry, ...changeHistory].slice(0, 500);
         setChangeHistory(newHistory);
         await storage.set('camp_change_history', 'main', newHistory);
       }, [changeHistory]);

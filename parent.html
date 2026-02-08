@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.000";
+    const VERSION = "13.001";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:31:00");
+    const BUILD_DATE = new Date("2026-02-08T09:14:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -3091,17 +3091,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         load();
       }, []);
 
-      const addToHistory = useCallback(async (action, details) => {
+      const addToHistory = useCallback(async (action, details, extraEmails = []) => {
+        const relatedEmails = [...new Set([user?.email, ...extraEmails].filter(Boolean))];
         const entry = {
           id: Date.now(),
           timestamp: new Date().toISOString(),
           action,
-          details
+          details,
+          relatedEmails
         };
-        const newHistory = [entry, ...changeHistory].slice(0, 100);
+        const newHistory = [entry, ...changeHistory].slice(0, 500);
         setChangeHistory(newHistory);
         await storage.set('camp_change_history', 'main', newHistory);
-      }, [changeHistory]);
+      }, [changeHistory, user?.email]);
 
       const saveContent = async (c, field = null) => {
         setContent(c);
@@ -4192,9 +4194,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'messages'].map(t => (
+                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'messages', 'history'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'history' ? '📜 History' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -4741,6 +4743,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         showToast('Emergency contacts updated!');
                       }}
                       showToast={showToast}
+                      parents={parents}
+                      addParentToFamily={addParentToFamily}
+                      myChildren={myChildren}
+                      currentUser={{ email: user?.email }}
+                      addToHistory={addToHistory}
                     />
                   </div>
                 </div>
@@ -4756,6 +4763,39 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   showToast={showToast}
                 />
               )}
+
+              {parentTab === 'history' && (() => {
+                const myHistory = (changeHistory || []).filter(
+                  entry => entry.relatedEmails && entry.relatedEmails.includes(user?.email)
+                );
+                return (
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-green-800 mb-2">Activity History</h3>
+                    <p className="text-sm text-gray-500 mb-4">Recent activity related to your account, campers, and registrations.</p>
+                    {myHistory.length === 0 ? (
+                      <div className="text-center py-12">
+                        <div className="text-4xl mb-3">📜</div>
+                        <p className="text-gray-500">No activity recorded yet.</p>
+                        <p className="text-sm text-gray-400 mt-1">Actions you take and camp director updates will appear here.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[600px] overflow-y-auto">
+                        {myHistory.map(entry => (
+                          <div key={entry.id} className="flex items-start gap-3 p-3 border rounded-lg hover:bg-gray-50">
+                            <div className="text-xs text-gray-400 whitespace-nowrap pt-0.5">
+                              {formatTimestamp(entry.timestamp)}
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-800">{entry.action}</div>
+                              <div className="text-sm text-gray-600">{entry.details}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {showConfirm && (
@@ -5368,12 +5408,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
-    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast }) => {
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, addParentToFamily, myChildren, currentUser, addToHistory }) => {
       const [localContacts, setLocalContacts] = useState([]);
       const [editingId, setEditingId] = useState(null);
       const [showAddForm, setShowAddForm] = useState(false);
       const [editForm, setEditForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
       const [hasChanges, setHasChanges] = useState(false);
+      const [invitePrompt, setInvitePrompt] = useState(null);
+      const [inviteForm, setInviteForm] = useState({ email: '', password: '' });
+      const [inviteError, setInviteError] = useState('');
+      const [inviteSuccess, setInviteSuccess] = useState(null);
+      const [showInvitePassword, setShowInvitePassword] = useState(false);
 
       // Initialize local contacts from props
       useEffect(() => {
@@ -5429,8 +5474,47 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         };
         setLocalContacts([...localContacts, newContact]);
         setShowAddForm(false);
+        const addedName = editForm.name;
+        const addedPhone = editForm.phone;
+        const addedEmail = editForm.email || '';
         setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
         setHasChanges(true);
+        // Show invite prompt if addParentToFamily is available
+        if (addParentToFamily) {
+          setInviteForm({ email: addedEmail, password: '' });
+          setInviteError('');
+          setInvitePrompt({ name: addedName, phone: addedPhone });
+        }
+      };
+
+      const handleInviteSubmit = async () => {
+        if (!inviteForm.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteForm.email)) {
+          setInviteError('Please enter a valid email address');
+          return;
+        }
+        if (!inviteForm.password || inviteForm.password.length < 4) {
+          setInviteError('Password must be at least 4 characters');
+          return;
+        }
+        if ((parents || []).find(p => p.email.toLowerCase() === inviteForm.email.toLowerCase())) {
+          setInviteError('A parent with this email already exists');
+          return;
+        }
+        try {
+          const newParent = await addParentToFamily(
+            { name: invitePrompt.name, phone: invitePrompt.phone, email: inviteForm.email, password: inviteForm.password },
+            myChildren,
+            currentUser
+          );
+          if (addToHistory) {
+            addToHistory('Parent Invited', `Invited ${newParent.name} (${newParent.email}) as a parent via emergency contact`, [newParent.email]);
+          }
+          setInviteSuccess(newParent);
+          setInvitePrompt(null);
+        } catch (error) {
+          console.error('Error creating parent login:', error);
+          setInviteError('Error creating login. Please try again.');
+        }
       };
 
       const handleSaveChanges = () => {
@@ -5632,6 +5716,86 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               >
                 Cancel
               </button>
+            </div>
+          )}
+
+          {/* Invite as Parent Modal */}
+          {invitePrompt && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-lg text-green-800 mb-2">Create Login for {invitePrompt.name}?</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Would you like to give <strong>{invitePrompt.name}</strong> their own login so they can view camp details, manage registrations, and see your campers' information?
+                </p>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <input
+                      value={inviteForm.email}
+                      onChange={e => { setInviteForm({ ...inviteForm, email: e.target.value }); setInviteError(''); }}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder="their@email.com"
+                      autoComplete="off" data-1p-ignore="true"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                    <div className="relative">
+                      <input
+                        type={showInvitePassword ? 'text' : 'password'}
+                        value={inviteForm.password}
+                        onChange={e => { setInviteForm({ ...inviteForm, password: e.target.value }); setInviteError(''); }}
+                        className="w-full px-3 py-2 border rounded-lg pr-16"
+                        placeholder="At least 4 characters"
+                        autoComplete="off" data-1p-ignore="true"
+                      />
+                      <button type="button" onClick={() => setShowInvitePassword(!showInvitePassword)} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-700">
+                        {showInvitePassword ? 'Hide' : 'Show'}
+                      </button>
+                    </div>
+                  </div>
+                  {inviteError && <p className="text-red-600 text-sm">{inviteError}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleInviteSubmit} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                    Create Login
+                  </button>
+                  <button onClick={() => { setInvitePrompt(null); setInviteError(''); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Skip
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Invite Success Modal */}
+          {inviteSuccess && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+                <div className="text-center mb-4">
+                  <div className="text-4xl mb-2">🎉</div>
+                  <h3 className="font-bold text-lg text-green-800">Login Created!</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-4 text-center">
+                  Share these credentials with <strong>{inviteSuccess.name}</strong> so they can log in:
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2 mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Email:</span>
+                    <span className="font-medium">{inviteSuccess.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Password:</span>
+                    <span className="font-medium">{inviteSuccess.password}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 text-center mb-4">
+                  They will have full access to view camp details and manage registrations for your campers.
+                </p>
+                <button onClick={() => setInviteSuccess(null)} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                  Done
+                </button>
+              </div>
             </div>
           )}
         </div>
