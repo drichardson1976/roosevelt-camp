@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.150";
+    const VERSION = "12.151";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-07T15:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.151", date: "2026-02-07", time: "7:41 PM PT", author: "Derek Richardson", changes: [
+        "Removed green 'Registered' tag from campers in Campers tab",
+        "Moved delete button to edit modal with secondary confirmation",
+        "Renamed 'Registrations' tab to 'Sessions'",
+        "Renamed 'Registration Calendar' to 'Session Calendar'",
+        "Removed 'All Campers' option from selector",
+        "Added multi-select functionality - show separate calendar for each selected camper",
+        "Updated legend: 'Not registered' changed to 'Available'"
+      ]},
       { version: "12.150", date: "2026-02-07", time: "3:18 PM PT", author: "Derek Richardson", changes: [
         "Removed camp schedule by day section from parent dashboard Campers tab",
         "Moved 'Registered Camper' tag to inline position beside camper name",
@@ -3727,7 +3736,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <ScrollableTabs>
                   {['dashboard', 'campers', 'register', 'messages'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Registrations' : t === 'dashboard' ? '📊 Dashboard' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Sessions' : t === 'dashboard' ? '📊 Dashboard' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -4133,7 +4142,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <div className="space-y-6">
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg mb-2">My Campers</h3>
-                    <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Registrations tab to make them campers!</p>
+                    <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
                     {myChildren.length > 0 ? (
                       <ChildrenManager
                         children={myChildren}
@@ -4454,7 +4463,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       };
 
       // ==================== CHILD CARD ====================
-      const ChildCard = ({ child, onUpdate, onDelete, isRegistered }) => {
+      const ChildCard = ({ child, onUpdate, onDelete }) => {
         const inputRef = useRef(null);
         const [tempImg, setTempImg] = useState(null);
         const [showCrop, setShowCrop] = useState(false);
@@ -4641,6 +4650,16 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     Save Changes
                   </button>
                 </div>
+
+                {/* Delete Child Button */}
+                <div className="pt-3 border-t mt-4">
+                  <button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium"
+                  >
+                    🗑️ Delete Child
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -4671,14 +4690,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
             {/* Info */}
             <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <div className="font-bold text-lg">{child.name}</div>
-                {isRegistered && (
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                    🏕️ Registered
-                  </span>
-                )}
-              </div>
+              <div className="font-bold text-lg">{child.name}</div>
               <div className="text-sm text-gray-600 space-y-1">
                 {child.grade && <div>Grade: {child.grade}</div>}
                 {child.birthdate && (
@@ -4698,12 +4710,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
               >
                 ✏️ Edit
-              </button>
-              <button
-                onClick={() => setShowDeleteConfirm(true)}
-                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 text-sm"
-              >
-                🗑️ Delete
               </button>
             </div>
           </div>
@@ -4726,7 +4732,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               child={child}
               onUpdate={onUpdate}
               onDelete={onDelete}
-              isRegistered={isCamper(child.id)}
             />
           ))}
 
@@ -5020,17 +5025,12 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
     // ==================== REGISTRATION CALENDAR VIEW ====================
     const RegistrationCalendarView = ({ myChildren, registrations }) => {
-      const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || 'all');
+      const [selectedChildren, setSelectedChildren] = useState(myChildren.length > 0 ? [myChildren[0].id] : []);
 
-      // Get all registration dates for selected child or all children
-      const getRegistrationsForDisplay = () => {
-        if (selectedChild === 'all') {
-          return registrations;
-        }
-        return registrations.filter(r => r.childId === selectedChild);
+      // Get all registration dates for a specific child
+      const getRegistrationsForChild = (childId) => {
+        return registrations.filter(r => r.childId === childId);
       };
-
-      const displayRegs = getRegistrationsForDisplay();
 
       // Generate calendar for July, August 2026
       const months = [
@@ -5088,32 +5088,28 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       return (
         <div className="bg-white rounded-xl shadow p-6">
           <div className="mb-6">
-            <h3 className="font-bold text-xl mb-2">📅 Registration Calendar</h3>
+            <h3 className="font-bold text-xl mb-2">📅 Session Calendar</h3>
             <p className="text-sm text-gray-500 mb-4">View registration status across July and August</p>
 
             {/* Child Selector */}
             <div className="flex gap-2 flex-wrap mb-4">
-              <button
-                onClick={() => setSelectedChild('all')}
-                className={`px-4 py-2 rounded-lg font-medium ${
-                  selectedChild === 'all'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                All Campers
-              </button>
               {myChildren.map(child => (
                 <button
                   key={child.id}
-                  onClick={() => setSelectedChild(child.id)}
+                  onClick={() => {
+                    setSelectedChildren(prev =>
+                      prev.includes(child.id)
+                        ? prev.filter(id => id !== child.id)
+                        : [...prev, child.id]
+                    );
+                  }}
                   className={`px-4 py-2 rounded-lg font-medium ${
-                    selectedChild === child.id
+                    selectedChildren.includes(child.id)
                       ? 'bg-green-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  {child.name}
+                  {selectedChildren.includes(child.id) ? '✓ ' : ''}{child.name}
                 </button>
               ))}
             </div>
@@ -5134,84 +5130,109 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-                <span>Not Registered</span>
+                <span>Available</span>
               </div>
             </div>
           </div>
 
-          {/* Calendar Grid */}
-          <div className="grid md:grid-cols-3 gap-6">
-            {months.map(({ name, year, month }) => {
-              const days = getDaysInMonth(year, month);
-              return (
-                <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
-                  <div className="bg-green-700 text-white text-center py-2 font-bold">
-                    {name} {year}
-                  </div>
-                  <div className="grid grid-cols-7 gap-1 p-2">
-                    {/* Day headers */}
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                      <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
-                        {d}
-                      </div>
-                    ))}
-                    {/* Days */}
-                    {days.map((day, i) => {
-                      if (day === null) {
-                        return <div key={`empty-${i}`} className="aspect-square"></div>;
-                      }
-                      const regs = getRegistrationForDate(year, month, day);
-                      const hasRegistrations = regs.length > 0;
+          {/* Display message if no campers selected */}
+          {selectedChildren.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Select one or more campers above to view their session calendars</p>
+            </div>
+          )}
 
-                      return (
-                        <div
-                          key={day}
-                          className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
-                            hasRegistrations
-                              ? regs.some(r => r.status === 'approved')
-                                ? 'bg-green-100 border-2 border-green-500 font-bold'
-                                : regs.some(r => r.status === 'pending')
-                                ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
-                                : 'bg-red-100 border-2 border-red-500 font-bold'
-                              : 'bg-gray-50 border border-gray-200'
-                          }`}
-                        >
-                          <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
-                            {day}
-                          </span>
-                          {hasRegistrations && (
-                            <>
-                              <div className="text-[8px] leading-none mt-1">
-                                {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
-                              </div>
-                              {/* Tooltip on hover */}
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
-                                <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
-                                  {regs.map((reg, idx) => (
-                                    <div key={idx} className="mb-1 last:mb-0">
-                                      <div className="font-bold">{reg.childName || myChildren.find(c => c.id === reg.childId)?.name}</div>
-                                      <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
-                                      <div className={`text-xs ${
-                                        reg.status === 'approved' ? 'text-green-300' :
-                                        reg.status === 'pending' ? 'text-yellow-300' :
-                                        'text-red-300'
-                                      }`}>
-                                        {getStatusText(reg.status)}
+          {/* Calendar Grid - One per selected child */}
+          {selectedChildren.map(childId => {
+            const child = myChildren.find(c => c.id === childId);
+            if (!child) return null;
+
+            const childRegs = getRegistrationsForChild(childId);
+
+            const getRegistrationForDate = (year, month, day) => {
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return childRegs.filter(r => r.date === dateStr);
+            };
+
+            return (
+              <div key={childId} className="mb-8 last:mb-0">
+                <h4 className="font-bold text-lg mb-3">{child.name}'s Session Calendar</h4>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  {months.map(({ name, year, month }) => {
+                    const days = getDaysInMonth(year, month);
+                    return (
+                      <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
+                        <div className="bg-green-700 text-white text-center py-2 font-bold">
+                          {name} {year}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 p-2">
+                          {/* Day headers */}
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                            <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
+                              {d}
+                            </div>
+                          ))}
+                          {/* Days */}
+                          {days.map((day, i) => {
+                            if (day === null) {
+                              return <div key={`empty-${i}`} className="aspect-square"></div>;
+                            }
+                            const regs = getRegistrationForDate(year, month, day);
+                            const hasRegistrations = regs.length > 0;
+
+                            return (
+                              <div
+                                key={day}
+                                className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
+                                  hasRegistrations
+                                    ? regs.some(r => r.status === 'approved')
+                                      ? 'bg-green-100 border-2 border-green-500 font-bold'
+                                      : regs.some(r => r.status === 'pending')
+                                      ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
+                                      : 'bg-red-100 border-2 border-red-500 font-bold'
+                                    : 'bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
+                                  {day}
+                                </span>
+                                {hasRegistrations && (
+                                  <>
+                                    <div className="text-[8px] leading-none mt-1">
+                                      {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
+                                    </div>
+                                    {/* Tooltip on hover */}
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
+                                      <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
+                                        {regs.map((reg, idx) => (
+                                          <div key={idx} className="mb-1 last:mb-0">
+                                            <div className="font-bold">{child.name}</div>
+                                            <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
+                                            <div className={`text-xs ${
+                                              reg.status === 'approved' ? 'text-green-300' :
+                                              reg.status === 'pending' ? 'text-yellow-300' :
+                                              'text-red-300'
+                                            }`}>
+                                              {getStatusText(reg.status)}
+                                            </div>
+                                          </div>
+                                        ))}
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
+                                  </>
+                                )}
                               </div>
-                            </>
-                          )}
+                            );
+                          })}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
       );
     };

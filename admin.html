@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.150";
+    const VERSION = "12.151";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T15:18:00");
+    const BUILD_DATE = new Date("2026-02-07T19:41:00");
 
     const RELEASE_NOTES = [
+      { version: "12.151", date: "2026-02-07", time: "7:41 PM PT", author: "Derek Richardson", changes: [
+        "Removed green 'Registered' tag from campers in Campers tab",
+        "Moved delete button to edit modal with secondary confirmation",
+        "Renamed 'Registrations' tab to 'Sessions'",
+        "Renamed 'Registration Calendar' to 'Session Calendar'",
+        "Removed 'All Campers' option from selector",
+        "Added multi-select functionality - show separate calendar for each selected camper",
+        "Updated legend: 'Not registered' changed to 'Available'"
+      ]},
       { version: "12.150", date: "2026-02-07", time: "3:18 PM PT", author: "Derek Richardson", changes: [
         "Removed camp schedule by day section from parent dashboard Campers tab",
         "Moved 'Registered Camper' tag to inline position beside camper name",
