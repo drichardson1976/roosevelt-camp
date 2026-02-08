@@ -559,6 +559,8 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.159 | 2026-02-07 | Derek Richardson | Sessions Tab Restructuring: Moved registration calendar from My Campers to Sessions tab; added 'New Registration' button to launch modal; created registration modal with Step 1 & 2 content; draft persistence saves partial work when closing with X; Submit and Cancel buttons; auto-restores draft on reopen |
+| 12.158 | 2026-02-07 | Derek Richardson | Gym Rental Days: Expanded to show ALL weekdays (Mon-Fri) in July and August 2026; Camp Directors can mark any weekday as gym booked/not booked; generates all 43 weekdays for comprehensive gym tracking |
 | 12.157 | 2026-02-07 | Derek Richardson | Added 'Gym Rental Days' admin tab with calendar view for July/August 2026; three-level booking control (sessions/days/weeks); color-coded status (blue=fully booked, yellow=partial, green=not booked); week bulk actions; created camp_gym_rentals Supabase table |
 | 12.156 | 2026-02-07 | Derek Richardson | Updated Session Calendar status indicators to show payment status; green=Approved & Paid, yellow=Approved - Payment Pending, blue=Pending Approval; improved legend and instructions; added Camp Director payment confirmation note |
 | 12.155 | 2026-02-07 | Derek Richardson | Moved legend below each camper's calendar for better context; legend now appears directly under each child's session calendar grid |

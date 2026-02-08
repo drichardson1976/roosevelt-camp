@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.157";
+    const VERSION = "12.159";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:34:00");
+    const BUILD_DATE = new Date("2026-02-07T20:45:00");
 
     const RELEASE_NOTES = [
+      { version: "12.159", date: "2026-02-07", time: "8:45 PM PT", author: "Derek Richardson", changes: [
+        "Sessions Tab Restructuring: Moved registration calendar from My Campers to Sessions tab",
+        "Added prominent 'New Registration' button on Sessions tab to launch modal workflow",
+        "Created registration modal containing all Step 1 and Step 2 content for better UX",
+        "Implemented draft registration persistence - partial work saved when closing modal with X",
+        "Added Submit Registration button to modal (submits and closes)",
+        "Added Cancel button to modal (discards draft and closes)",
+        "Auto-restores draft when reopening modal to continue incomplete registrations",
+        "Improved registration flow: calendar overview → button → modal → submit"
+      ]},
       { version: "12.157", date: "2026-02-07", time: "8:34 PM PT", author: "Derek Richardson", changes: [
         "Emergency Contacts: Complete infrastructure overhaul for camper-based linking",
         "Emergency contacts now linked to specific campers instead of parents",
@@ -3518,6 +3528,12 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const [selectedChildren, setSelectedChildren] = useState([]);
         const [showConfirm, setShowConfirm] = useState(null); // Not used but kept for backward compatibility
         const [justRegistered, setJustRegistered] = useState(false);
+        const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+        const [draftRegistration, setDraftRegistration] = useState(() => {
+          // Load draft from localStorage if exists
+          const saved = localStorage.getItem('registration_draft');
+          return saved ? JSON.parse(saved) : { selectedChildren: [], selectedDates: {}, selectedMonth: null };
+        });
         
         const myUser = users.find(u => u.email === user?.email) || user;
         // Get children via camper-parent links
@@ -3655,6 +3671,49 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             if (!pmBlocked) sessions.push('afternoon');
             return { ...p, [date]: sessions };
           });
+        };
+
+        // ==================== REGISTRATION MODAL HELPERS ====================
+        const openRegistrationModal = () => {
+          // Load draft if exists
+          if (draftRegistration.selectedChildren.length > 0 || Object.keys(draftRegistration.selectedDates).length > 0) {
+            setSelectedChildren(draftRegistration.selectedChildren);
+            setSelectedDates(draftRegistration.selectedDates);
+            if (draftRegistration.selectedMonth) {
+              setSelectedRegistrationMonth(draftRegistration.selectedMonth);
+            }
+          }
+          setShowRegistrationModal(true);
+        };
+
+        const closeModalAndSaveDraft = () => {
+          // Save current state as draft
+          const draft = {
+            selectedChildren,
+            selectedDates,
+            selectedMonth: selectedRegistrationMonth
+          };
+          localStorage.setItem('registration_draft', JSON.stringify(draft));
+          setDraftRegistration(draft);
+          setShowRegistrationModal(false);
+        };
+
+        const closeModalAndDiscard = () => {
+          // Clear draft and reset selections
+          localStorage.removeItem('registration_draft');
+          setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonth: null });
+          setSelectedChildren([]);
+          setSelectedDates({});
+          setShowRegistrationModal(false);
+        };
+
+        const submitRegistrationFromModal = async () => {
+          // Submit the registration
+          await handleRegister();
+          // Clear draft after successful submission
+          localStorage.removeItem('registration_draft');
+          setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonth: null });
+          setShowRegistrationModal(false);
         };
 
         // Get contextual hints for dashboard
@@ -3962,6 +4021,34 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
               {parentTab === 'register' && (
                 <div className="space-y-6">
+                  {/* Registration Calendar View */}
+                  {myChildren.length > 0 && (
+                    <RegistrationCalendarView
+                      myChildren={myChildren}
+                      registrations={myRegs}
+                      activeCampDates={activeCampDates}
+                      campDates={campDates}
+                    />
+                  )}
+
+                  {/* New Registration Button */}
+                  {myChildren.length > 0 ? (
+                    <div className="text-center">
+                      <button
+                        onClick={openRegistrationModal}
+                        className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+                      >
+                        <span className="text-2xl">➕</span>
+                        <span>New Registration</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 text-center">
+                      <p className="text-yellow-700 font-bold text-lg">⚠️ Add campers first</p>
+                      <p className="text-yellow-600 text-sm mt-2">Go to the "My Campers" tab to add your children before registering for camp sessions.</p>
+                    </div>
+                  )}
+
                   {/* Existing Registrations Section */}
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
@@ -4043,19 +4130,38 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     </div>
                   )}
 
-                  <div className={'bg-white rounded-xl shadow p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
-                    <h3 className="font-bold text-lg mb-2">Step 1: Select Children to Register</h3>
+                  {/* Registration Modal */}
+                  {showRegistrationModal && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={(e) => { if (e.target === e.currentTarget) closeModalAndSaveDraft(); }}>
+                      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                        {/* Modal Header */}
+                        <div className="sticky top-0 bg-white border-b-2 border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
+                          <h2 className="text-2xl font-bold text-gray-800">New Registration</h2>
+                          <button
+                            onClick={closeModalAndSaveDraft}
+                            className="text-gray-400 hover:text-gray-600 text-3xl font-bold leading-none"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-6 space-y-6">
+                          {/* Step 1: Select Children */}
+                          <div className={'bg-white rounded-xl border-2 border-gray-200 p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
+                            <h3 className="font-bold text-lg mb-2">Step 1: Select Children to Register</h3>
                     <p className="text-sm text-gray-500 mb-4">Choose which of your children to register for camp sessions. Once registered, they become campers!</p>
                     {myChildren.length === 0 ? <p className="text-gray-500">Add campers in the "My Campers" tab first</p> : (
                       <div className="flex flex-wrap gap-2">{myChildren.map(c => (
                         <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'px-4 py-2 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50 font-bold' : 'border-gray-200')}>{selectedChildren.includes(c.id) ? '✓ ' : ''}{c.name}</button>
                       ))}</div>
                     )}
-                    {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {selectedChildren.length} camper{selectedChildren.length > 1 ? 's' : ''} selected</p>}
-                  </div>
-                  
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-4">Step 2: Select Dates & Sessions</h3>
+                            {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {selectedChildren.length} camper{selectedChildren.length > 1 ? 's' : ''} selected</p>}
+                          </div>
+
+                          {/* Step 2: Select Dates & Sessions */}
+                          <div className="bg-white rounded-xl border-2 border-gray-200 p-6">
+                            <h3 className="font-bold text-lg mb-4">Step 2: Select Dates & Sessions</h3>
 
                     {/* Month Selector */}
                     <div className="flex flex-wrap gap-2 mb-4">
@@ -4207,12 +4313,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                             </div>
                           );
                         });
-                      })()}
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-4">Order Summary</h3>
+                            })()}
+                          </div>
+                          </div>
+
+                          {/* Order Summary */}
+                          <div className="bg-white rounded-xl border-2 border-gray-200 p-6">
+                            <h3 className="font-bold text-lg mb-4">Order Summary</h3>
                     {(() => {
                       const pricing = getPricingBreakdown();
                       const hasSelections = pricing.totalSessions > 0;
@@ -4268,14 +4375,34 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                         </div>
                       );
                     })()}
-                    {!selectedChildren.length && Object.values(selectedDates).flat().length > 0 && (
-                      <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
-                        <span className="text-yellow-700 font-bold text-lg">⚠️ Please select a camper above before registering!</span>
-                        <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Children to Register" and click on your child's name.</p>
+                            {!selectedChildren.length && Object.values(selectedDates).flat().length > 0 && (
+                              <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
+                                <span className="text-yellow-700 font-bold text-lg">⚠️ Please select a camper above before registering!</span>
+                                <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Children to Register" and click on your child's name.</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Modal Footer with Action Buttons */}
+                        <div className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200 px-6 py-4 flex gap-3 rounded-b-2xl">
+                          <button
+                            onClick={closeModalAndDiscard}
+                            className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 rounded-lg"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={submitRegistrationFromModal}
+                            disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length}
+                            className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold py-3 rounded-lg"
+                          >
+                            Submit Registration
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    <button onClick={handleRegister} disabled={!selectedChildren.length || !Object.values(selectedDates).flat().length} className="w-full mt-4 bg-green-700 hover:bg-green-800 disabled:bg-gray-300 text-white font-bold py-3 rounded-lg">Submit Registration</button>
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -4320,16 +4447,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <AddChildForm onAdd={addChild} />
                     )}
                   </div>
-
-                  {/* Registration Calendar View */}
-                  {myChildren.length > 0 && (
-                    <RegistrationCalendarView
-                      myChildren={myChildren}
-                      registrations={myRegs}
-                      activeCampDates={activeCampDates}
-                      campDates={campDates}
-                    />
-                  )}
 
                   {/* Emergency Contacts Management */}
                   <div className="bg-white rounded-xl shadow p-6">
