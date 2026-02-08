@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.164";
+    const VERSION = "12.165";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T23:00:00");
+    const BUILD_DATE = new Date("2026-02-08T00:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.165", date: "2026-02-08", time: "12:00 AM PT", author: "Derek Richardson", changes: [
+        "Next Steps: Now shows camper names instead of count when photos are missing",
+        "Next Steps: Added alert for emergency contacts missing photos",
+        "Photo Cropper: Updated silhouette to red thin-lined face with eyes, mouth, and face outline",
+        "Family Access: Removed password length requirement when adding family members",
+        "Family Access: Moved section above My Campers for better visibility",
+        "Family Access: Now displays ALL family members including current user (marked with 'You')",
+        "UI: Family members without photos show initials in circle placeholder"
+      ]},
       { version: "12.164", date: "2026-02-07", time: "11:00 PM PT", author: "Derek Richardson", changes: [
         "Emergency Contact Improvements: Auto-focus cursor on name field when adding contact",
         "Phone Number Placeholders: All phone fields now show (555) 555-1234 format as placeholder",
@@ -2421,9 +2430,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             {/* Red face silhouette overlay for circle shape */}
             {shape === 'circle' && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <svg width={displayW} height={displayH} viewBox="0 0 100 100" className="opacity-40">
-                  <circle cx="50" cy="35" r="15" fill="#dc2626" />
-                  <path d="M 50 55 Q 35 55 25 70 Q 25 85 50 85 Q 75 85 75 70 Q 65 55 50 55 Z" fill="#dc2626" />
+                <svg width={displayW} height={displayH} viewBox="0 0 100 100" className="opacity-50">
+                  {/* Face outline */}
+                  <ellipse cx="50" cy="50" rx="28" ry="35" fill="none" stroke="#dc2626" strokeWidth="1.5" />
+                  {/* Left eye */}
+                  <ellipse cx="42" cy="42" rx="4" ry="5" fill="none" stroke="#dc2626" strokeWidth="1.5" />
+                  {/* Right eye */}
+                  <ellipse cx="58" cy="42" rx="4" ry="5" fill="none" stroke="#dc2626" strokeWidth="1.5" />
+                  {/* Nose - simple line */}
+                  <line x1="50" y1="48" x2="50" y2="56" stroke="#dc2626" strokeWidth="1.5" />
+                  {/* Mouth - smile curve */}
+                  <path d="M 38 62 Q 50 68 62 62" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </div>
             )}
@@ -3848,6 +3865,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             return daysUntil >= 0 && daysUntil <= 7;
           });
           const childrenWithoutPhotos = myChildren.filter(c => !c.photo);
+          const contactsWithoutPhotos = myContacts.filter(c => !c.photo);
           const unreadCount = getUnreadCount(user?.email);
 
           // Priority 1: No campers added
@@ -3863,9 +3881,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
           // Priority 2: Campers missing photos
           if (childrenWithoutPhotos.length > 0) {
+            const camperNames = childrenWithoutPhotos.map(c => c.name).join(', ');
             hints.push({
               icon: '📸',
-              text: `Add photos to ${childrenWithoutPhotos.length} camper profile${childrenWithoutPhotos.length > 1 ? 's' : ''}`,
+              text: `Add photos to ${camperNames}`,
               action: () => setParentTab('campers'),
               actionText: 'Add Photos',
               priority: 2
@@ -3877,51 +3896,63 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => setParentTab('campers'),
+              action: () => setParentTab('emergency'),
               actionText: 'Add Contacts',
               priority: 3
             });
           }
 
-          // Priority 4: No registrations
+          // Priority 4: Emergency contacts missing photos
+          if (contactsWithoutPhotos.length > 0 && myContacts.length >= 2) {
+            const contactNames = contactsWithoutPhotos.map(c => c.name).join(', ');
+            hints.push({
+              icon: '📸',
+              text: `Add photos to emergency contacts: ${contactNames}`,
+              action: () => setParentTab('emergency'),
+              actionText: 'Add Photos',
+              priority: 4
+            });
+          }
+
+          // Priority 5: No registrations
           if (myRegs.length === 0 && myChildren.length > 0) {
             hints.push({
               icon: '📝',
               text: 'Register your campers for camp sessions',
               action: () => setParentTab('register'),
               actionText: 'Register Now',
-              priority: 4
+              priority: 5
             });
           }
 
-          // Priority 5: Pending registrations (need payment)
+          // Priority 6: Pending registrations (need payment)
           if (pendingRegs.length > 0) {
             hints.push({
               icon: '💳',
               text: `Pay for ${pendingRegs.length} pending session${pendingRegs.length > 1 ? 's' : ''}`,
               action: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
               actionText: 'View Payment Info',
-              priority: 5
-            });
-          }
-
-          // Priority 6: Upcoming sessions
-          if (upcomingSessions.length > 0) {
-            hints.push({
-              icon: '🎒',
-              text: 'Get ready for camp: ensure your camper has snacks, water bottle, basketball, appropriate clothes (shorts, socks, basketball shoes, t-shirt)',
               priority: 6
             });
           }
 
-          // Priority 7: Unread messages
+          // Priority 7: Upcoming sessions
+          if (upcomingSessions.length > 0) {
+            hints.push({
+              icon: '🎒',
+              text: 'Get ready for camp: ensure your camper has snacks, water bottle, basketball, appropriate clothes (shorts, socks, basketball shoes, t-shirt)',
+              priority: 7
+            });
+          }
+
+          // Priority 8: Unread messages
           if (unreadCount > 0) {
             hints.push({
               icon: '💬',
               text: `You have ${unreadCount} unread message${unreadCount > 1 ? 's' : ''} from camp`,
               action: () => setParentTab('messages'),
               actionText: 'Read Messages',
-              priority: 7
+              priority: 8
             });
           }
 
@@ -4510,6 +4541,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {parentTab === 'campers' && (
                 <div className="space-y-6">
+                  {/* Family Access Management */}
+                  {myChildren.length > 0 && (
+                    <FamilyAccessManager
+                      myChildren={myChildren}
+                      users={users}
+                      saveUsers={saveUsers}
+                      camperParentLinks={camperParentLinks}
+                      saveCamperParentLinks={saveCamperParentLinks}
+                      emergencyContacts={emergencyContacts}
+                      saveEmergencyContacts={saveEmergencyContacts}
+                      camperEmergencyContactLinks={camperEmergencyContactLinks}
+                      saveCamperEmergencyContactLinks={saveCamperEmergencyContactLinks}
+                      currentUserEmail={user?.email}
+                      showToast={showToast}
+                      addParentToFamily={addParentToFamily}
+                      removeParentAccess={removeParentAccess}
+                      getOtherParentsForMyFamily={getOtherParentsForMyFamily}
+                    />
+                  )}
+
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg mb-2">My Campers</h3>
                     <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
@@ -4537,26 +4588,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <AddChildForm onAdd={addChild} />
                     )}
                   </div>
-
-                  {/* Family Access Management */}
-                  {myChildren.length > 0 && (
-                    <FamilyAccessManager
-                      myChildren={myChildren}
-                      users={users}
-                      saveUsers={saveUsers}
-                      camperParentLinks={camperParentLinks}
-                      saveCamperParentLinks={saveCamperParentLinks}
-                      emergencyContacts={emergencyContacts}
-                      saveEmergencyContacts={saveEmergencyContacts}
-                      camperEmergencyContactLinks={camperEmergencyContactLinks}
-                      saveCamperEmergencyContactLinks={saveCamperEmergencyContactLinks}
-                      currentUserEmail={user?.email}
-                      showToast={showToast}
-                      addParentToFamily={addParentToFamily}
-                      removeParentAccess={removeParentAccess}
-                      getOtherParentsForMyFamily={getOtherParentsForMyFamily}
-                    />
-                  )}
                 </div>
               )}
 
@@ -5500,12 +5531,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           return;
         }
 
-        // Password validation
-        if (formData.password.length < 8) {
-          setError('Password must be at least 8 characters');
-          return;
-        }
-
         onAdd(formData);
       };
 
@@ -5568,7 +5593,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   value={formData.password}
                   onChange={e => setFormData({ ...formData, password: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg pr-10"
-                  placeholder="At least 8 characters"
+                  placeholder="Create a password"
                 />
                 <button
                   type="button"
@@ -5644,6 +5669,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [successModal, setSuccessModal] = useState(null);
 
       const otherParents = getOtherParentsForMyFamily(myChildren, camperParentLinks, users, currentUserEmail);
+      const currentUser = users.find(u => u.email === currentUserEmail);
+      const allFamilyMembers = currentUser ? [currentUser, ...otherParents] : otherParents;
 
       const handleAddParent = async (parentData) => {
         try {
@@ -5678,28 +5705,40 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             Add other parents or guardians who should have access to your campers. They will be able to log in with their own credentials.
           </p>
 
-          {/* List of other parents */}
-          {otherParents.length > 0 && (
+          {/* List of all family members */}
+          {allFamilyMembers.length > 0 && (
             <div className="space-y-3 mb-4">
-              {otherParents.map(parent => (
-                <div key={parent.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    {parent.photo && (
-                      <img src={parent.photo} alt={parent.name} className="w-10 h-10 rounded-full object-cover" />
-                    )}
-                    <div>
-                      <div className="font-medium">{parent.name}</div>
-                      <div className="text-sm text-gray-600">{parent.email}</div>
+              {allFamilyMembers.map(parent => {
+                const isCurrentUser = parent.email === currentUserEmail;
+                return (
+                  <div key={parent.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {parent.photo ? (
+                        <img src={parent.photo} alt={parent.name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
+                          {parent.name?.charAt(0) || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-medium">
+                          {parent.name}
+                          {isCurrentUser && <span className="ml-2 text-xs text-green-600">(You)</span>}
+                        </div>
+                        <div className="text-sm text-gray-600">{parent.email}</div>
+                      </div>
                     </div>
+                    {!isCurrentUser && (
+                      <button
+                        onClick={() => handleRemoveParent(parent.email, parent.name)}
+                        className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={() => handleRemoveParent(parent.email, parent.name)}
-                    className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
