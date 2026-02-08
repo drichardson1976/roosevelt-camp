@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.188";
+    const VERSION = "12.189";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T07:38:00");
+    const BUILD_DATE = new Date("2026-02-08T07:44:00");
 
     const RELEASE_NOTES = [
+      { version: "12.189", date: "2026-02-08", time: "7:44 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Resolved getFoodPhoto ReferenceError that caused blank page when navigating to Content tab",
+        "Moved getFoodPhoto helper from SitePhotosManager scope to Admin component scope where foodPhotos state is accessible",
+        "Updated date format in red ribbon from '02-08-2026 7:44 AM' to 'Sun Feb 8 7:44 AM PST' across all 4 pages"
+      ]},
       { version: "12.188", date: "2026-02-08", time: "7:38 AM PST", author: "Derek Richardson", changes: [
         "DATABASE CLEANUP: Removed 8 unused/legacy tables from Danger Zone",
         "Deleted tables: camp_registered_users, camp_child_parent_links, camp_children, guest_requests, players, runs, status_history, camp_referrals",
@@ -5769,17 +5774,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [dbStatus, setDbStatus] = useState('checking');
       const [showNotes, setShowNotes] = useState(false);
 
-      // Format BUILD_DATE as MM-DD-YYYY HH:MM AM/PM
+      // Format BUILD_DATE as "Sun Feb 8 7:40 AM PST"
       const formatBuildDate = () => {
         const d = BUILD_DATE;
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const yyyy = d.getFullYear();
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let hours = d.getHours();
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12 || 12;
         const min = String(d.getMinutes()).padStart(2, '0');
-        return `${mm}-${dd}-${yyyy} ${hours}:${min} ${ampm}`;
+        return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()} ${hours}:${min} ${ampm} PST`;
       };
 
       useEffect(() => {
@@ -6340,13 +6344,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (!data) return null;
         if (typeof data === 'string') return { cropped: data, original: null, transform: null };
         return data;
-      };
-
-      // Helper to get food photo
-      const getFoodPhoto = (key) => {
-        const data = foodPhotos?.[key];
-        if (!data) return null;
-        return typeof data === 'string' ? data : data.cropped;
       };
 
       const handleFileSelect = (e) => {
@@ -7569,6 +7566,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       // ==================== LOGIN ====================
+      // Helper to get food photo (must be in Admin scope where foodPhotos is available)
+      const getFoodPhoto = (key) => {
+        const data = foodPhotos?.[key];
+        if (!data) return null;
+        return typeof data === 'string' ? data : data.cropped;
+      };
+
       const Admin = () => {
         const [editCounselor, setEditCounselor] = useState(null);
         const [showModal, setShowModal] = useState(false);

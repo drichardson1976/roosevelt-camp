@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.188";
+    const VERSION = "12.189";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T07:38:00");
+    const BUILD_DATE = new Date("2026-02-08T07:44:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -2213,17 +2213,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [dbStatus, setDbStatus] = useState('checking');
       const [showNotes, setShowNotes] = useState(false);
 
-      // Format BUILD_DATE as MM-DD-YYYY HH:MM AM/PM
+      // Format BUILD_DATE as "Sun Feb 8 7:40 AM PST"
       const formatBuildDate = () => {
         const d = BUILD_DATE;
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const dd = String(d.getDate()).padStart(2, '0');
-        const yyyy = d.getFullYear();
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let hours = d.getHours();
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12 || 12;
         const min = String(d.getMinutes()).padStart(2, '0');
-        return `${mm}-${dd}-${yyyy} ${hours}:${min} ${ampm}`;
+        return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()} ${hours}:${min} ${ampm} PST`;
       };
 
       useEffect(() => {
