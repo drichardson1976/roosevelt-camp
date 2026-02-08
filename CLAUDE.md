@@ -6,6 +6,13 @@
 
 ## 🚨 CRITICAL INSTRUCTIONS - READ FIRST
 
+### Pre-Work Checklist (EVERY task)
+Before starting ANY work, complete this checklist:
+1. **Read CLAUDE.md** — Re-read this file to ensure you follow all rules (especially after conversation compaction)
+2. **`git pull`** — Pull latest changes to avoid conflicts
+3. **Check current versions** — Run: `grep 'const VERSION' *.html` to know the starting state
+4. **Plan your changes** — Identify which files will be modified so you know where to bump versions and add release notes
+
 ### Version & Timestamp Updates
 - **ONLY** bump the version in files that actually changed — do NOT touch files that had no modifications
 - When bumping, use the **next global version number**: `max(VERSION across all files) + 1`
@@ -25,7 +32,9 @@ Change index.html: admin=v4, index=v5, parent=v3, counselor=v1
 Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 
 ### Release Notes
-- **ALWAYS** add release notes to `admin.html` RELEASE_NOTES array
+- **ALWAYS** add release notes to the `RELEASE_NOTES` array in **ALL 4 files**: `admin.html`, `index.html`, `parent.html`, `counselor.html`
+- All 4 files have their own `RELEASE_NOTES` array (line ~52) and their own "Notes" button in the ribbon
+- The same release note entries must be kept in sync across all 4 files
 - Include version, date, time (PST), author, and detailed changes array
 - Be specific about what was fixed/added/changed
 
@@ -336,17 +345,18 @@ python3 -m http.server
 
 ## ⚠️ NEVER FORGET
 
-1. ✅ Only bump version in files that changed (use max version + 1)
-2. ✅ Use external time source for timestamps
-3. ✅ Add release notes to admin.html
-4. ✅ Check if table is object or array before rendering
-5. ✅ Add null safety: `(data || [])` or `(data || {})`
-6. ✅ Test in incognito window if browser cache issues
-7. ✅ Update Danger Zone when adding new tables
-8. ✅ Use heredoc for git commit messages
-9. ✅ Never skip git hooks without permission
-10. ✅ Consult this document after conversation compaction
-11. ✅ Provide a change summary table with version numbers after every completed request
+1. ✅ Run the Pre-Work Checklist before every task (read CLAUDE.md, git pull, check versions)
+2. ✅ Only bump version in files that changed (use max version + 1)
+3. ✅ Use external time source for timestamps
+4. ✅ Add release notes to ALL 4 files (admin.html, index.html, parent.html, counselor.html)
+5. ✅ Check if table is object or array before rendering
+6. ✅ Add null safety: `(data || [])` or `(data || {})`
+7. ✅ Test in incognito window if browser cache issues
+8. ✅ Update Danger Zone when adding new tables
+9. ✅ Use heredoc for git commit messages
+10. ✅ Never skip git hooks without permission
+11. ✅ Consult this document after conversation compaction
+12. ✅ Provide a change summary table with version numbers after every completed request
 
 ---
 
