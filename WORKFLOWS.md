@@ -559,6 +559,7 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.162 | 2026-02-07 | Derek Richardson | Parent Dashboard Simplification: Removed Payment and My Registrations sections from dashboard (keeping Next Steps only); created dedicated Emergency Contacts tab; moved Emergency Contacts from My Campers to new tab; renamed 'Sessions' to 'Session Registration'; moved '+New Registration' button to top of Session Registration tab |
 | 12.160 | 2026-02-07 | Derek Richardson | Multi-Parent Family Access: Parents can add other parents/guardians with own login credentials; all parents auto-added as emergency contacts; Family Access section in My Campers tab. Admin Dashboard Reorganization: Hierarchical parent/child tab structure; Family Setup (Parents, Campers, Session Registrations); Counselor Setup (Counselors, Work Availability); Pod Setup; Camp Setup tabs |
 | 12.159 | 2026-02-07 | Derek Richardson | Sessions Tab Restructuring: Moved registration calendar from My Campers to Sessions tab; added 'New Registration' button to launch modal; created registration modal with Step 1 & 2 content; draft persistence saves partial work when closing with X; Submit and Cancel buttons; auto-restores draft on reopen |
 | 12.158 | 2026-02-07 | Derek Richardson | Gym Rental Days: Expanded to show ALL weekdays (Mon-Fri) in July and August 2026; Camp Directors can mark any weekday as gym booked/not booked; generates all 43 weekdays for comprehensive gym tracking |

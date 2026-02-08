@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.160";
+    const VERSION = "12.162";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T21:00:00");
+    const BUILD_DATE = new Date("2026-02-07T21:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.162", date: "2026-02-07", time: "9:30 PM PT", author: "Derek Richardson", changes: [
+        "Dashboard Simplification: Removed Payment and My Registrations sections, keeping only Next Steps",
+        "Added dedicated Emergency Contacts tab with full management interface",
+        "Moved Emergency Contacts from My Campers tab to new Emergency Contacts tab",
+        "Renamed 'Sessions' tab to 'Session Registration' for clarity",
+        "Moved '+New Registration' button to top of Session Registration tab for better visibility"
+      ]},
       { version: "12.160", date: "2026-02-07", time: "9:00 PM PT", author: "Derek Richardson", changes: [
         "Multi-Parent Family Access: Parents can now add other parents/guardians to their family",
         "Added 'Family Access' section to My Campers tab with Add Parent form",
@@ -4029,9 +4036,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'campers', 'register', 'messages'].map(t => (
+                  {['dashboard', 'campers', 'emergency', 'register', 'messages'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'register' ? '📝 Sessions' : t === 'dashboard' ? '📊 Dashboard' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -4069,51 +4076,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       ))}
                     </div>
                   </div>
-
-                  <div className={'rounded-xl shadow p-6 ' + (getAmountDue() > 0 ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50')}>
-                    <h3 className="font-bold text-lg mb-4">Payment</h3>
-                    <div className="grid md:grid-cols-2 gap-4 mb-4">
-                      <div className="text-center"><p className="text-sm text-gray-600">Due</p><p className="text-2xl font-bold text-red-600">${getAmountDue()}</p></div>
-                      <div className="text-center"><p className="text-sm text-gray-600">Your Code</p><p className="text-2xl font-bold text-blue-600">{venmoCode}</p></div>
-                    </div>
-                    <div className="bg-white rounded-lg p-4">
-                      <p><strong>Venmo:</strong> {content.venmoUsername}</p>
-                      <p className="text-sm text-gray-600">Include code: <span className="font-mono bg-gray-100 px-2 rounded">{venmoCode}</span></p>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-4">My Registrations</h3>
-                    {myRegs.length === 0 ? <p className="text-gray-500">None yet</p> : (
-                      <div className="space-y-2">{myRegs.map(r => (
-                        <div key={r.id} className="flex justify-between p-3 border rounded-lg">
-                          <div>
-                            <span className="font-medium">{r.childName}</span>
-                            <span className="text-gray-500 ml-2">{r.date} • {r.sessions?.join(', ')}</span>
-                          </div>
-                          <div className="flex gap-2">
-                            <span className={'px-2 py-0.5 rounded text-xs ' + (r.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700')}>{r.status}</span>
-                            <span className={'px-2 py-0.5 rounded text-xs ' + (r.paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{r.paymentStatus || 'unpaid'}</span>
-                          </div>
-                        </div>
-                      ))}</div>
-                    )}
-                  </div>
                 </div>
               )}
 
               {parentTab === 'register' && (
                 <div className="space-y-6">
-                  {/* Registration Calendar View */}
-                  {myChildren.length > 0 && (
-                    <RegistrationCalendarView
-                      myChildren={myChildren}
-                      registrations={myRegs}
-                      activeCampDates={activeCampDates}
-                      campDates={campDates}
-                    />
-                  )}
-
                   {/* New Registration Button */}
                   {myChildren.length > 0 ? (
                     <div className="text-center">
@@ -4130,6 +4097,16 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <p className="text-yellow-700 font-bold text-lg">⚠️ Add campers first</p>
                       <p className="text-yellow-600 text-sm mt-2">Go to the "My Campers" tab to add your children before registering for camp sessions.</p>
                     </div>
+                  )}
+
+                  {/* Registration Calendar View */}
+                  {myChildren.length > 0 && (
+                    <RegistrationCalendarView
+                      myChildren={myChildren}
+                      registrations={myRegs}
+                      activeCampDates={activeCampDates}
+                      campDates={campDates}
+                    />
                   )}
 
                   {/* Existing Registrations Section */}
@@ -4531,23 +4508,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     )}
                   </div>
 
-                  {/* Emergency Contacts Management */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                      <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
-                    </p>
-                    <ParentEmergencyContactsManager
-                      parentEmail={user?.email}
-                      emergencyContacts={emergencyContacts}
-                      onSave={(contacts) => {
-                        saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
-                        showToast('Emergency contacts updated!');
-                      }}
-                      showToast={showToast}
-                    />
-                  </div>
-
                   {/* Family Access Management */}
                   {myChildren.length > 0 && (
                     <FamilyAccessManager
@@ -4567,6 +4527,27 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       getOtherParentsForMyFamily={getOtherParentsForMyFamily}
                     />
                   )}
+                </div>
+              )}
+
+              {parentTab === 'emergency' && (
+                <div className="space-y-6">
+                  {/* Emergency Contacts Management */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg mb-2">Emergency Contacts</h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      <strong>Required:</strong> At least 3 emergency contacts, including at least 1 who is not a parent
+                    </p>
+                    <ParentEmergencyContactsManager
+                      parentEmail={user?.email}
+                      emergencyContacts={emergencyContacts}
+                      onSave={(contacts) => {
+                        saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
+                        showToast('Emergency contacts updated!');
+                      }}
+                      showToast={showToast}
+                    />
+                  </div>
                 </div>
               )}
 
