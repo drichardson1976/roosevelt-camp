@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.156";
+    const VERSION = "12.157";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:20:00");
+    const BUILD_DATE = new Date("2026-02-07T20:34:00");
 
     const RELEASE_NOTES = [
+      { version: "12.157", date: "2026-02-07", time: "8:34 PM PT", author: "Derek Richardson", changes: [
+        "Emergency Contacts: Complete infrastructure overhaul for camper-based linking",
+        "Emergency contacts now linked to specific campers instead of parents",
+        "Smart contact reuse: Same-named contacts automatically shared across campers",
+        "Added camperEmergencyContactLinks data structure with storage",
+        "Emergency contacts display beside each camper in My Campers tab",
+        "Can remove emergency contacts from individual campers in edit mode",
+        "Helper functions: getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper",
+        "Automatic deduplication by contact name for efficient storage"
+      ]},
       { version: "12.156", date: "2026-02-07", time: "8:20 PM PT", author: "Derek Richardson", changes: [
         "Updated Session Calendar status indicators to show payment status",
         "Green: Approved & Paid | Yellow: Approved - Payment Pending | Blue: Pending Approval",

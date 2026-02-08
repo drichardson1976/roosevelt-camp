@@ -559,6 +559,13 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.157 | 2026-02-07 | Derek Richardson | Added 'Gym Rental Days' admin tab with calendar view for July/August 2026; three-level booking control (sessions/days/weeks); color-coded status (blue=fully booked, yellow=partial, green=not booked); week bulk actions; created camp_gym_rentals Supabase table |
+| 12.156 | 2026-02-07 | Derek Richardson | Updated Session Calendar status indicators to show payment status; green=Approved & Paid, yellow=Approved - Payment Pending, blue=Pending Approval; improved legend and instructions; added Camp Director payment confirmation note |
+| 12.155 | 2026-02-07 | Derek Richardson | Moved legend below each camper's calendar for better context; legend now appears directly under each child's session calendar grid |
+| 12.154 | 2026-02-07 | Derek Richardson | Added legend item showing red X means 'No Day Camp' on Session Calendar; improved calendar readability with clear symbol explanations |
+| 12.153 | 2026-02-07 | Derek Richardson | Fixed critical bug: RegistrationCalendarView now receives activeCampDates prop; resolved ReferenceError breaking Campers tab |
+| 12.152 | 2026-02-07 | Derek Richardson | Added red face silhouette guide in photo cropper; made rotate button larger (2xl); fixed save child button database updates; reorganized edit child form; added camp_dates database table for centralized date management; calendars show X marks on non-camp dates |
+| 12.151 | 2026-02-07 | Derek Richardson | Removed green 'Registered' tag from campers; moved delete button to edit modal; renamed 'Registrations' to 'Sessions' tab; renamed 'Registration Calendar' to 'Session Calendar'; removed 'All Campers' option; added multi-select functionality; updated legend |
 | 12.150 | 2026-02-07 | Derek Richardson | Removed camp schedule by day section from parent Campers tab; moved 'Registered Camper' tag inline beside camper name; simplified Campers tab layout |
 | 12.149 | 2026-02-07 | Derek Richardson | Added contextual hints/advice system to parent dashboard; added current registrations list grouped by camper; 'Select Both Sessions' and 'Add Whole Week' buttons; fixed share button |
 | 12.148 | 2026-02-07 | Derek Richardson | Fixed critical bug: added missing CamperScheduleTab, AddChildForm, ChildCard components to split files; all dashboards now load correctly |

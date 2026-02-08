@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.156";
+    const VERSION = "12.157";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:20:00");
+    const BUILD_DATE = new Date("2026-02-07T20:34:00");
 
     const RELEASE_NOTES = [
+      { version: "12.157", date: "2026-02-07", time: "8:34 PM PT", author: "Derek Richardson", changes: [
+        "Emergency Contacts: Complete infrastructure overhaul for camper-based linking",
+        "Emergency contacts now linked to specific campers instead of parents",
+        "Smart contact reuse: Same-named contacts automatically shared across campers",
+        "Added camperEmergencyContactLinks data structure with storage",
+        "Emergency contacts display beside each camper in My Campers tab",
+        "Can remove emergency contacts from individual campers in edit mode",
+        "Helper functions: getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper",
+        "Automatic deduplication by contact name for efficient storage"
+      ]},
       { version: "12.156", date: "2026-02-07", time: "8:20 PM PT", author: "Derek Richardson", changes: [
         "Updated Session Calendar status indicators to show payment status",
         "Green: Approved & Paid | Yellow: Approved - Payment Pending | Blue: Pending Approval",
@@ -2845,6 +2855,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [blockedSessions, setBlockedSessions] = useState({}); // { date: { morning: bool, afternoon: bool } }
       const [counselorSchedule, setCounselorSchedule] = useState({}); // { counselorId: { date: { morning: bool, afternoon: bool } } }
       const [campDates, setCampDates] = useState([]); // Array of { date: "YYYY-MM-DD", sessions: ["morning", "afternoon"] }
+      const [camperEmergencyContactLinks, setCamperEmergencyContactLinks] = useState([]); // Array of { camperId, emergencyContactId }
 
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -2909,6 +2920,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
             const campDatesData = await storage.get('camp_dates');
             if (campDatesData?.[0]?.data) setCampDates(Array.isArray(campDatesData[0].data) ? campDatesData[0].data : []);
+            const cecl = await storage.get('camp_camper_emergency_contact_links');
+            if (cecl?.[0]?.data) setCamperEmergencyContactLinks(Array.isArray(cecl[0].data) ? cecl[0].data : []);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -3072,6 +3085,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const saveCampDates = async (dates) => {
         setCampDates(dates);
         await storage.set('camp_dates', 'main', dates);
+      };
+
+      const saveCamperEmergencyContactLinks = async (links) => {
+        setCamperEmergencyContactLinks(links);
+        await storage.set('camp_camper_emergency_contact_links', 'main', links);
       };
 
       const saveBlockedSessions = async (sessions, action = null) => {
@@ -3547,6 +3565,66 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             months[m].weeks.push({ ...week, idx });
           });
           return months;
+        };
+
+        // ==================== EMERGENCY CONTACT HELPERS ====================
+        // Get emergency contacts for a specific camper
+        const getEmergencyContactsForCamper = (camperId) => {
+          const linkIds = camperEmergencyContactLinks
+            .filter(link => link.camperId === camperId)
+            .map(link => link.emergencyContactId);
+          return emergencyContacts.filter(contact => linkIds.includes(contact.id));
+        };
+
+        // Find emergency contact by name (for smart reuse)
+        const findContactByName = (name) => {
+          return emergencyContacts.find(c => c.name.toLowerCase() === name.toLowerCase());
+        };
+
+        // Add emergency contact to camper (with smart reuse)
+        const addEmergencyContactToCamper = async (camperId, contactData) => {
+          // Check if contact with same name exists
+          let contact = findContactByName(contactData.name);
+
+          if (!contact) {
+            // Create new contact
+            contact = {
+              id: `ec_${Date.now()}`,
+              name: contactData.name,
+              phone: contactData.phone,
+              email: contactData.email || '',
+              photo: contactData.photo || null,
+              relationship: contactData.relationship || ''
+            };
+            await saveEmergencyContacts([...emergencyContacts, contact]);
+          }
+
+          // Link contact to camper (if not already linked)
+          const alreadyLinked = camperEmergencyContactLinks.some(
+            link => link.camperId === camperId && link.emergencyContactId === contact.id
+          );
+
+          if (!alreadyLinked) {
+            const newLinks = [...camperEmergencyContactLinks, { camperId, emergencyContactId: contact.id }];
+            await saveCamperEmergencyContactLinks(newLinks);
+          }
+
+          return contact;
+        };
+
+        // Remove emergency contact from camper
+        const removeEmergencyContactFromCamper = async (camperId, contactId) => {
+          const newLinks = camperEmergencyContactLinks.filter(
+            link => !(link.camperId === camperId && link.emergencyContactId === contactId)
+          );
+          await saveCamperEmergencyContactLinks(newLinks);
+
+          // Optionally delete contact if no longer linked to any camper
+          const stillLinked = newLinks.some(link => link.emergencyContactId === contactId);
+          if (!stillLinked) {
+            const newContacts = emergencyContacts.filter(c => c.id !== contactId);
+            await saveEmergencyContacts(newContacts);
+          }
         };
 
         const toggleDate = (date, session) => {
@@ -4233,6 +4311,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                         }}
                         onAdd={addChild}
                         registrations={myRegs}
+                        emergencyContacts={emergencyContacts}
+                        getEmergencyContactsForCamper={getEmergencyContactsForCamper}
+                        addEmergencyContactToCamper={addEmergencyContactToCamper}
+                        removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
                       />
                     ) : (
                       <AddChildForm onAdd={addChild} />
@@ -4540,7 +4622,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       };
 
       // ==================== CHILD CARD ====================
-      const ChildCard = ({ child, onUpdate, onDelete }) => {
+      const ChildCard = ({ child, onUpdate, onDelete, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper }) => {
         const inputRef = useRef(null);
         const [tempImg, setTempImg] = useState(null);
         const [showCrop, setShowCrop] = useState(false);
@@ -4548,6 +4630,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const [editForm, setEditForm] = useState({ ...child });
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
         const age = calculateAge(child.birthdate);
+
+        // Get emergency contacts for this child
+        const childEmergencyContacts = getEmergencyContactsForCamper ? getEmergencyContactsForCamper(child.id) : [];
 
         const handleFile = (e) => {
           const file = e.target.files?.[0];
@@ -4714,6 +4799,35 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   />
                 </div>
 
+                {/* Emergency Contacts */}
+                {getEmergencyContactsForCamper && (
+                  <div className="pt-3 border-t mt-4">
+                    <h5 className="font-medium text-gray-700 mb-2">Emergency Contacts</h5>
+                    <div className="space-y-2 mb-3">
+                      {childEmergencyContacts.map(contact => (
+                        <div key={contact.id} className="flex items-start justify-between bg-gray-50 rounded p-2 text-sm">
+                          <div className="flex-1">
+                            <div className="font-medium">{contact.name}</div>
+                            <div className="text-xs text-gray-600">{contact.relationship} • {contact.phone}</div>
+                          </div>
+                          <button
+                            onClick={() => removeEmergencyContactFromCamper && removeEmergencyContactFromCamper(child.id, contact.id)}
+                            className="text-red-600 hover:text-red-800 text-xs px-2"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                      {childEmergencyContacts.length === 0 && (
+                        <p className="text-sm text-gray-500 italic">No emergency contacts yet. Add at least 2.</p>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 italic mb-2">
+                      Note: Emergency contacts are shared across all your campers for easy reuse.
+                    </div>
+                  </div>
+                )}
+
                 {/* Save and Delete Buttons */}
                 <div className="pt-3 border-t mt-4">
                   <div className="flex gap-3">
@@ -4772,6 +4886,19 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   </div>
                 )}
                 {child.phone && <div>Phone: {child.phone}</div>}
+
+                {/* Emergency Contacts */}
+                {childEmergencyContacts.length > 0 && (
+                  <div className="mt-2 pt-2 border-t">
+                    <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
+                    {childEmergencyContacts.map(contact => (
+                      <div key={contact.id} className="text-xs bg-gray-50 rounded p-2 mb-1">
+                        <div className="font-medium">{contact.name}</div>
+                        <div>{contact.relationship && `${contact.relationship} • `}{contact.phone}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4790,7 +4917,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       // ==================== COUNSELOR ====================
     // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
-    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations }) => {
+    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper }) => {
       const [showAddForm, setShowAddForm] = useState(false);
 
       // Check if child has any registrations (is a camper)
@@ -4804,6 +4931,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               child={child}
               onUpdate={onUpdate}
               onDelete={onDelete}
+              emergencyContacts={emergencyContacts}
+              getEmergencyContactsForCamper={getEmergencyContactsForCamper}
+              addEmergencyContactToCamper={addEmergencyContactToCamper}
+              removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
             />
           ))}
 

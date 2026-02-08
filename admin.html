@@ -45,11 +45,28 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.156";
+    const VERSION = "12.157";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:20:00");
+    const BUILD_DATE = new Date("2026-02-07T20:34:00");
 
     const RELEASE_NOTES = [
+      { version: "12.157", date: "2026-02-07", time: "8:34 PM PT", author: "Derek Richardson", changes: [
+        "Emergency Contacts: Complete infrastructure overhaul for camper-based linking",
+        "Emergency contacts now linked to specific campers instead of parents",
+        "Smart contact reuse: Same-named contacts automatically shared across campers",
+        "Added camperEmergencyContactLinks data structure with storage",
+        "Emergency contacts display beside each camper in My Campers tab",
+        "Can remove emergency contacts from individual campers in edit mode",
+        "Added new 'Gym Rental Days' admin tab for tracking gym booking status",
+        "Calendar view for July and August 2026 showing DayCamp gym rental days",
+        "Three-level booking control: toggle individual sessions (AM/PM), whole days, or entire weeks",
+        "Color-coded status: Blue (fully booked), Yellow (partially booked), Green (not booked)",
+        "Week bulk actions: 'Book/Unbook Whole Week' buttons for efficient management",
+        "Summary stats display: Total days, booked sessions, and unbooked sessions",
+        "All changes tracked in History tab with action logging",
+        "Created camp_gym_rentals Supabase table for data persistence",
+        "Added quick navigation button on admin dashboard for easy access"
+      ]},
       { version: "12.156", date: "2026-02-07", time: "8:20 PM PT", author: "Derek Richardson", changes: [
         "Updated Session Calendar status indicators to show payment status",
         "Green: Approved & Paid | Yellow: Approved - Payment Pending | Blue: Pending Approval",
@@ -7356,9 +7373,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'approval', 'content', 'history', 'dangerzone'].map(t => (
+                  {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'gymrentals', 'approval', 'content', 'history', 'dangerzone'].map(t => (
                     <button key={t} onClick={(e) => { setAdminTab(t); setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 50); }} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
+                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'gymrentals' ? '🏀 Gym Rentals' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
                       {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
                       {t === 'parents' && users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</span>}
                       {t === 'sessions' && Object.keys(blockedSessions).length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{Object.values(blockedSessions).reduce((sum, day) => sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0)}</span>}
@@ -7412,6 +7429,10 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <button onClick={() => setAdminTab('sessions')} className="flex flex-col items-center justify-center p-4 bg-teal-50 hover:bg-teal-100 rounded-xl border-2 border-teal-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📅</span>
                         <span className="font-medium text-teal-700">Sessions</span>
+                      </button>
+                      <button onClick={() => setAdminTab('gymrentals')} className="flex flex-col items-center justify-center p-4 bg-sky-50 hover:bg-sky-100 rounded-xl border-2 border-sky-200 min-h-[80px] transition-colors">
+                        <span className="text-2xl mb-1">🏀</span>
+                        <span className="font-medium text-sky-700">Gym Rentals</span>
                       </button>
                       <button onClick={() => setAdminTab('approval')} className="flex flex-col items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl border-2 border-indigo-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">✅</span>
@@ -8855,6 +8876,17 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   showToast={showToast}
                   selectedMonth={sessionsTabMonth}
                   setSelectedMonth={setSessionsTabMonth}
+                />
+              )}
+
+              {adminTab === 'gymrentals' && (
+                <GymRentalDaysTab
+                  gymRentals={gymRentals}
+                  allDates={CAMP_DATES}
+                  onSaveGymRentals={saveGymRentals}
+                  showToast={showToast}
+                  selectedMonth={gymRentalsTabMonth}
+                  setSelectedMonth={setGymRentalsTabMonth}
                 />
               )}
 
