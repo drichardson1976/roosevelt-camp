@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.169";
+    const VERSION = "12.170";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:00:00");
+    const BUILD_DATE = new Date("2026-02-08T03:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
+        "Version sync only - no functional changes to admin.html",
+        "Changes in parent.html: New Parents tab with Family Access and prominent '+ Add Parent' button"
+      ]},
       { version: "12.169", date: "2026-02-08", time: "3:00 AM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to admin.html",
         "Changes in parent.html: Prominent '+ New Emergency Contact' button styled like '+ New Registration'"

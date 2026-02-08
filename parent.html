@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.169";
+    const VERSION = "12.170";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:00:00");
+    const BUILD_DATE = new Date("2026-02-08T03:30:00");
 
     const RELEASE_NOTES = [
+      { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
+        "Parent Dashboard: NEW 'Parents' tab added between Dashboard and My Campers",
+        "Family Access: Moved from My Campers tab to dedicated Parents tab",
+        "Family Access: Added prominent '+ Add Parent' button at top (green, centered)",
+        "Family Access: Button styled to match '+ New Registration' and '+ New Emergency Contact'",
+        "Family Access: Improved section organization with family members list below button",
+        "Navigation: Tab order now: Dashboard → Parents → My Campers → Emergency Contacts → Session Registration → Messages",
+        "UX: Consistent call-to-action button styling across all major tabs"
+      ]},
       { version: "12.169", date: "2026-02-08", time: "3:00 AM PT", author: "Derek Richardson", changes: [
         "Emergency Contacts: Added prominent '+ New Emergency Contact' button at top of tab",
         "Emergency Contacts: Button styled to match '+ New Registration' button (green, large, centered)",
@@ -4138,9 +4147,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'campers', 'emergency', 'register', 'messages'].map(t => (
+                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'messages'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 My Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -4178,6 +4187,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       ))}
                     </div>
                   </div>
+                </div>
+              )}
+
+              {parentTab === 'parents' && (
+                <div className="space-y-6">
+                  {/* Family Access Management */}
+                  <FamilyAccessManager
+                    myChildren={myChildren}
+                    users={users}
+                    saveUsers={saveUsers}
+                    camperParentLinks={camperParentLinks}
+                    saveCamperParentLinks={saveCamperParentLinks}
+                    emergencyContacts={emergencyContacts}
+                    saveEmergencyContacts={saveEmergencyContacts}
+                    camperEmergencyContactLinks={camperEmergencyContactLinks}
+                    saveCamperEmergencyContactLinks={saveCamperEmergencyContactLinks}
+                    currentUserEmail={user?.email}
+                    showToast={showToast}
+                    addParentToFamily={addParentToFamily}
+                    removeParentAccess={removeParentAccess}
+                    getOtherParentsForMyFamily={getOtherParentsForMyFamily}
+                  />
                 </div>
               )}
 
@@ -4619,26 +4650,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {parentTab === 'campers' && (
                 <div className="space-y-6">
-                  {/* Family Access Management */}
-                  {myChildren.length > 0 && (
-                    <FamilyAccessManager
-                      myChildren={myChildren}
-                      users={users}
-                      saveUsers={saveUsers}
-                      camperParentLinks={camperParentLinks}
-                      saveCamperParentLinks={saveCamperParentLinks}
-                      emergencyContacts={emergencyContacts}
-                      saveEmergencyContacts={saveEmergencyContacts}
-                      camperEmergencyContactLinks={camperEmergencyContactLinks}
-                      saveCamperEmergencyContactLinks={saveCamperEmergencyContactLinks}
-                      currentUserEmail={user?.email}
-                      showToast={showToast}
-                      addParentToFamily={addParentToFamily}
-                      removeParentAccess={removeParentAccess}
-                      getOtherParentsForMyFamily={getOtherParentsForMyFamily}
-                    />
-                  )}
-
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg mb-2">My Campers</h3>
                     <p className="text-sm text-gray-500 mb-4">Manage your children's profiles here. Register them for camp sessions in the Sessions tab to make them campers!</p>
@@ -5783,63 +5794,73 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       return (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="font-bold text-lg mb-2">Family Access</h3>
-          <p className="text-sm text-gray-500 mb-4">
-            Add other parents or guardians who should have access to your campers. They will be able to log in with their own credentials.
-          </p>
-
-          {/* List of all family members */}
-          {allFamilyMembers.length > 0 && (
-            <div className="space-y-3 mb-4">
-              {allFamilyMembers.map(parent => {
-                const isCurrentUser = parent.email === currentUserEmail;
-                return (
-                  <div key={parent.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      {parent.photo ? (
-                        <img src={parent.photo} alt={parent.name} className="w-10 h-10 rounded-full object-cover" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
-                          {parent.name?.charAt(0) || '?'}
-                        </div>
-                      )}
-                      <div>
-                        <div className="font-medium">
-                          {parent.name}
-                          {isCurrentUser && <span className="ml-2 text-xs text-green-600">(You)</span>}
-                        </div>
-                        <div className="text-sm text-gray-600">{parent.email}</div>
-                      </div>
-                    </div>
-                    {!isCurrentUser && (
-                      <button
-                        onClick={() => handleRemoveParent(parent.email, parent.name)}
-                        className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
+        <div className="space-y-6">
+          {/* Add Parent Button */}
+          {!showAddForm && (
+            <div className="text-center">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+              >
+                <span className="text-2xl">➕</span>
+                <span>Add Parent</span>
+              </button>
             </div>
           )}
 
-          {/* Add parent form or button */}
-          {showAddForm ? (
+          {/* Add Parent Form */}
+          {showAddForm && (
             <AddParentForm
               onAdd={handleAddParent}
               onCancel={() => setShowAddForm(false)}
             />
-          ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full py-3 border-2 border-dashed border-green-300 rounded-lg text-green-600 hover:bg-green-50 hover:border-green-400"
-            >
-              + Add Another Parent
-            </button>
           )}
+
+          {/* Family Members List */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h3 className="font-bold text-lg mb-2">Family Access</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              All parents and guardians with access to your campers. Each can log in with their own credentials.
+            </p>
+
+            {allFamilyMembers.length > 0 ? (
+              <div className="space-y-3">
+                {allFamilyMembers.map(parent => {
+                  const isCurrentUser = parent.email === currentUserEmail;
+                  return (
+                    <div key={parent.email} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {parent.photo ? (
+                          <img src={parent.photo} alt={parent.name} className="w-10 h-10 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600 font-bold">
+                            {parent.name?.charAt(0) || '?'}
+                          </div>
+                        )}
+                        <div>
+                          <div className="font-medium">
+                            {parent.name}
+                            {isCurrentUser && <span className="ml-2 text-xs text-green-600">(You)</span>}
+                          </div>
+                          <div className="text-sm text-gray-600">{parent.email}</div>
+                        </div>
+                      </div>
+                      {!isCurrentUser && (
+                        <button
+                          onClick={() => handleRemoveParent(parent.email, parent.name)}
+                          className="text-red-600 hover:text-red-800 text-sm px-3 py-1 border border-red-300 rounded hover:bg-red-50"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-center py-4">No family members yet.</p>
+            )}
+          </div>
 
           {/* Success modal */}
           {successModal && (
