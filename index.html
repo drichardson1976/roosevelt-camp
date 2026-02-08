@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.154";
+    const VERSION = "12.155";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:12:00");
+    const BUILD_DATE = new Date("2026-02-07T20:14:00");
 
     const RELEASE_NOTES = [
+      { version: "12.155", date: "2026-02-07", time: "8:14 PM PT", author: "Derek Richardson", changes: [
+        "Moved legend below each camper's calendar for better context",
+        "Legend now appears directly under each child's session calendar grid"
+      ]},
       { version: "12.154", date: "2026-02-07", time: "8:12 PM PT", author: "Derek Richardson", changes: [
         "Added legend item showing red X means 'No Day Camp' on Session Calendar",
         "Improved calendar readability with clear explanation of all symbols"
