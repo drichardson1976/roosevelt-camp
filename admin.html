@@ -45,11 +45,24 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.001";
+    const VERSION = "13.002";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:14:00");
+    const BUILD_DATE = new Date("2026-02-08T09:39:00");
 
     const RELEASE_NOTES = [
+      { version: "13.002", date: "2026-02-08", time: "9:39 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: EC photo guidance now matches parent photo guidance (photo on site or photo ID at pickup required)",
+        "Onboarding: Policies now display as popup modals instead of inline checkboxes",
+        "Onboarding: Final review summary shown after both policies signed, before completing setup",
+        "Onboarding: Parent EC now stored as reference-only record (no duplicated name/phone/photo)",
+        "Parent Dashboard: Renamed 'My Campers' tab to 'Campers'",
+        "Parent Dashboard: Add Child button moved to prominent green button at top of Campers tab",
+        "Parent Dashboard: Emergency Contacts tab redesigned with photos, edit button, delete moved inside edit form",
+        "Parent Dashboard: Parents tab redesigned with edit modal, remove moved inside modal",
+        "Parent Dashboard: Camper photos shown above names in session registration child selectors and calendar headers",
+        "Parent Dashboard: Registration dates now sourced from Gym Booked Dates (camp_gym_rentals) instead of camp_dates",
+        "Parent Dashboard: Session-level availability from gym rentals (AM/PM disabled if not booked)"
+      ]},
       { version: "13.001", date: "2026-02-08", time: "9:14 AM PST", author: "Derek Richardson", changes: [
         "Emergency Contacts: After adding a contact, prompt to create a parent login for them",
         "Emergency Contacts: Invited parents get full access to view camp details and manage registrations",
