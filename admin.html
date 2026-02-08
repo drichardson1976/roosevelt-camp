@@ -4191,7 +4191,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== CAMPERS TAB ====================
-    const CampersTab = ({ users, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, showToast, addToHistory }) => {
+    const CampersTab = ({ parents, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, showToast, addToHistory }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [sortBy, setSortBy] = useState('name');
       const [editingCamper, setEditingCamper] = useState(null);
@@ -4212,7 +4212,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           ...c,
           parents: camperParentLinks
             .filter(link => link.camperId === c.id)
-            .map(link => users.find(u => u.email === link.parentEmail))
+            .map(link => parents.find(u => u.email === link.parentEmail))
             .filter(Boolean),
           registrations: registrations.filter(r => r.camperId === c.id || r.childId === c.id)
         }));
@@ -9098,7 +9098,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {adminParentTab === 'family' && getActiveChildTab('family') === 'campers' && (
                 <CampersTab
-                  users={users}
+                  parents={parents}
                   registrations={registrations}
                   campers={campers}
                   camperParentLinks={camperParentLinks}
