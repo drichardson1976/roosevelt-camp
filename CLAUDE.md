@@ -38,6 +38,11 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - Include version, date, time (PST), author, and detailed changes array
 - Be specific about what was fixed/added/changed
 
+### SQL for Supabase
+- When providing SQL to run in the Supabase SQL Editor, **ALWAYS** present it in a single fenced code block (```sql ... ```) so the user can click the copy icon directly from the chat
+- Do NOT split SQL across multiple code blocks — keep it all in one copyable block
+- Include comments in the SQL explaining what each section does
+
 ### Git Commit Protocol
 - **ALWAYS** commit and push all file changes after every completed request — multiple people work on this project simultaneously (Derek Richardson, Audrey Richardson), so changes must be pushed promptly to avoid conflicts
 - **ALWAYS** pull before starting work to get the latest changes
