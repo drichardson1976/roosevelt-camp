@@ -7668,31 +7668,31 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         <span className="text-2xl mb-1">🏕️</span>
                         <span className="font-medium text-green-700">Campers</span>
                       </button>
-                      <button onClick={() => setAdminTab('assignments')} className="flex flex-col items-center justify-center p-4 bg-orange-50 hover:bg-orange-100 rounded-xl border-2 border-orange-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('pod', 'assignments')} className="flex flex-col items-center justify-center p-4 bg-orange-50 hover:bg-orange-100 rounded-xl border-2 border-orange-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📋</span>
                         <span className="font-medium text-orange-700">Assignments</span>
                       </button>
-                      <button onClick={() => setAdminTab('sessions')} className="flex flex-col items-center justify-center p-4 bg-teal-50 hover:bg-teal-100 rounded-xl border-2 border-teal-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('family', 'sessionregs')} className="flex flex-col items-center justify-center p-4 bg-teal-50 hover:bg-teal-100 rounded-xl border-2 border-teal-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📅</span>
                         <span className="font-medium text-teal-700">Sessions</span>
                       </button>
-                      <button onClick={() => setAdminTab('gymrentals')} className="flex flex-col items-center justify-center p-4 bg-sky-50 hover:bg-sky-100 rounded-xl border-2 border-sky-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('camp', 'gymrentals')} className="flex flex-col items-center justify-center p-4 bg-sky-50 hover:bg-sky-100 rounded-xl border-2 border-sky-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">🏀</span>
                         <span className="font-medium text-sky-700">Gym Rentals</span>
                       </button>
-                      <button onClick={() => setAdminTab('approval')} className="flex flex-col items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl border-2 border-indigo-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('registrations')} className="flex flex-col items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 rounded-xl border-2 border-indigo-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">✅</span>
                         <span className="font-medium text-indigo-700">Approval</span>
                       </button>
-                      <button onClick={() => setAdminTab('content')} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 rounded-xl border-2 border-cyan-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('camp', 'content')} className="flex flex-col items-center justify-center p-4 bg-cyan-50 hover:bg-cyan-100 rounded-xl border-2 border-cyan-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">✏️</span>
                         <span className="font-medium text-cyan-700">Content</span>
                       </button>
-                      <button onClick={() => setAdminTab('history')} className="flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border-2 border-gray-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('history')} className="flex flex-col items-center justify-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl border-2 border-gray-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📜</span>
                         <span className="font-medium text-gray-700">History</span>
                       </button>
-                      <button onClick={() => setAdminTab('dangerzone')} className="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 rounded-xl border-2 border-red-300 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('dangerzone')} className="flex flex-col items-center justify-center p-4 bg-red-50 hover:bg-red-100 rounded-xl border-2 border-red-300 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">⚠️</span>
                         <span className="font-medium text-red-700">Danger Zone</span>
                       </button>
