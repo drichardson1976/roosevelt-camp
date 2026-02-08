@@ -4490,7 +4490,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               <div className="text-gray-600">Pending Registrations</div>
             </div>
             <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-purple-600">{users.length}</div>
+              <div className="text-3xl font-bold text-purple-600">{parents.length}</div>
               <div className="text-gray-600">Parent Accounts</div>
             </div>
           </div>
@@ -4621,11 +4621,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 <h3 className="font-bold text-xl mb-2">Manage Parents for {managingParents.name}</h3>
                 <p className="text-sm text-gray-500 mb-4">Select which parents are associated with this camper. A camper can have multiple parents.</p>
 
-                {users.length === 0 ? (
+                {parents.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">No parent accounts exist yet.</p>
                 ) : (
                   <div className="space-y-2 mb-4">
-                    {users.map(parent => {
+                    {parents.map(parent => {
                       const isLinked = managingParents.isStandalone
                         ? camperParentLinks.some(l => l.camperId === managingParents.id && l.parentEmail === parent.email)
                         : managingParents.parentEmail === parent.email;
@@ -6472,6 +6472,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [gymRentalsTabMonth, setGymRentalsTabMonth] = useState(null); // Persist selected month in Gym Rentals tab
 
       const [adminParentTab, setAdminParentTab] = useState('dashboard');
+
+      // Backward compatibility: Combined users array for components not yet refactored
+      const users = [...parents, ...counselorUsers];
       const [adminChildTab, setAdminChildTab] = useState({
         family: 'parents',
         counselor: 'counselors',
@@ -6633,6 +6636,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         setCounselorUsers(cu);
         await storage.set('camp_counselor_users', 'main', cu);
         if (action) addToHistory('Counselor User', action);
+      };
+
+      // Backward compatibility: saveUsers intelligently routes to correct table
+      const saveUsers = async (u, action = null) => {
+        const newParents = u.filter(user => user.role === 'parent' || user.roles?.includes('parent'));
+        const newCounselorUsers = u.filter(user => user.role === 'counselor' || user.roles?.includes('counselor'));
+
+        if (newParents.length > 0) await saveParents(newParents, action);
+        if (newCounselorUsers.length > 0) await saveCounselorUsers(newCounselorUsers, action);
       };
 
       const deleteParent = async (parentEmail, parentName) => {
@@ -9504,8 +9516,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div className="space-y-4">
                       {(() => {
                         const tables = [
-                          { name: 'Users', data: users, key: 'email' },
-                          { name: 'Counselors', data: counselors, key: 'id' },
+                          { name: 'Parents', data: parents, key: 'email' },
+                          { name: 'Counselor Users', data: counselorUsers, key: 'email' },
+                          { name: 'Admins', data: admins, key: 'username' },
+                          { name: 'Counselors (Profiles)', data: counselors, key: 'id' },
                           { name: 'Campers', data: campers, key: 'id' },
                           { name: 'Registrations', data: registrations, key: 'id' },
                           { name: 'Assignments', data: Object.entries(assignments).map(([k, v]) => ({ session: k, ...v })), key: 'session' },
