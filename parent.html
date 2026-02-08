@@ -45,11 +45,24 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.170";
+    const VERSION = "12.171";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:30:00");
+    const BUILD_DATE = new Date("2026-02-08T04:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
+        "DATABASE RESTRUCTURING: Split camp_registered_users into separate tables",
+        "New table: camp_parents - stores all parent login accounts",
+        "New table: camp_counselor_users - stores counselor login accounts",
+        "Existing table: camp_admins - unchanged, stores admin accounts",
+        "Authentication: Updated login to check all three tables (parents, counselor_users, admins)",
+        "Parent Onboarding: Now saves to camp_parents table",
+        "Counselor Creation: Now saves to camp_counselor_users table",
+        "Danger Zone: DELETE ALL DATA now PRESERVES counselors and admins (only deletes parents)",
+        "Data Safety: Counselor and admin accounts can never be accidentally deleted",
+        "Code: Updated all user references to use appropriate table (parents/counselorUsers/admins)",
+        "Breaking Change: Requires data migration - old camp_registered_users table deprecated"
+      ]},
       { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
         "Parent Dashboard: NEW 'Parents' tab added between Dashboard and My Campers",
         "Family Access: Moved from My Campers tab to dedicated Parents tab",
@@ -1221,7 +1234,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     `.trim();
 
     // ==================== PARENT ONBOARDING WIZARD ====================
-    const ParentOnboarding = ({ onComplete, onBack, users, saveUsers, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks }) => {
+    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks }) => {
       const [step, setStep] = useState(1);
       const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '', photo: null });
       const [showPassword, setShowPassword] = useState(false);
@@ -1365,7 +1378,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             setError('Please enter a valid 10-digit phone number: (555) 555-1234');
             return false;
           }
-          if (users.some(u => u.email === userData.email)) {
+          if (parents.some(p => p.email === userData.email)) {
             setError('An account with this email already exists');
             return false;
           }
@@ -1417,7 +1430,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             acceptedAt: new Date().toISOString()
           } : null
         };
-        await saveUsers([...users, newUser]);
+        await saveParents([...parents, newUser]);
 
         // Save campers and create parent links
         if (campersData.length > 0 && saveCampers && saveCamperParentLinks) {
@@ -2959,7 +2972,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
       const [registrations, setRegistrations] = useState([]);
-      const [users, setUsers] = useState([]);
+      const [parents, setParents] = useState([]);
+      const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
       const [messages, setMessages] = useState([]);
@@ -3008,8 +3022,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             const rg = await storage.get('camp_registrations');
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            const us = await storage.get('camp_registered_users');
-            if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
+            const pr = await storage.get('camp_parents');
+            if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
+            const cu = await storage.get('camp_counselor_users');
+            if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
             const ch = await storage.get('camp_change_history');
@@ -3129,17 +3145,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Registration', action);
       };
 
-      const saveUsers = async (u, action = null) => {
-        setUsers(u);
-        await storage.set('camp_registered_users', 'main', u);
+      const saveParents = async (p, action = null) => {
+        setParents(p);
+        await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
       };
 
+      const saveCounselorUsers = async (cu, action = null) => {
+        setCounselorUsers(cu);
+        await storage.set('camp_counselor_users', 'main', cu);
+        if (action) addToHistory('Counselor User', action);
+      };
+
       const deleteParent = async (parentEmail, parentName) => {
-        // Remove from users state
-        const updatedUsers = users.filter(u => u.email !== parentEmail);
-        setUsers(updatedUsers);
-        await storage.set('camp_registered_users', 'main', updatedUsers);
+        // Remove from parents state
+        const updatedParents = parents.filter(p => p.email !== parentEmail);
+        setParents(updatedParents);
+        await storage.set('camp_parents', 'main', updatedParents);
         // Remove camper-parent links for this parent
         const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
         setCamperParentLinks(updatedLinks);
@@ -3323,7 +3345,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       // ==================== CAMPER SCHEDULE TAB (Visual Schedule for Parents) ====================
-      const CamperScheduleTab = ({ myChildren, registrations, allRegistrations, assignments, counselors, campers, users }) => {
+      const CamperScheduleTab = ({ myChildren, registrations, allRegistrations, assignments, counselors, campers, parents }) => {
         const [selectedChild, setSelectedChild] = useState(myChildren[0]?.id || null);
 
         // Get registrations for selected child
@@ -3367,12 +3389,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               // Get all other campers in this pod
               const otherCamperIds = pod.camperIds.filter(id => id !== childId);
               return otherCamperIds.map(camperId => {
-                // Try to find in campers first, then in users' children
+                // Try to find in campers first, then in parents' children (legacy)
                 const camper = campers.find(c => c.id === camperId);
                 if (camper) return camper;
 
-                for (const user of users) {
-                  const child = user.children?.find(c => c.id === camperId);
+                for (const parent of parents) {
+                  const child = parent.children?.find(c => c.id === camperId);
                   if (child) return child;
                 }
                 return null;
@@ -3394,8 +3416,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             const camper = campers.find(c => c.id === r.childId);
             if (camper) return { ...camper, status: r.status };
 
-            for (const user of users) {
-              const child = user.children?.find(c => c.id === r.childId);
+            for (const parent of parents) {
+              const child = parent.children?.find(c => c.id === r.childId);
               if (child) return { ...child, status: r.status };
             }
             return { name: r.childName, status: r.status };
@@ -3649,7 +3671,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           return saved ? JSON.parse(saved) : { selectedChildren: [], selectedDates: {}, selectedMonth: null };
         });
         
-        const myUser = users.find(u => u.email === user?.email) || user;
+        const myUser = parents.find(p => p.email === user?.email) || user;
         // Get children via camper-parent links
         const myChildrenIds = (camperParentLinks || [])
           .filter(link => link.parentEmail === user?.email)
@@ -3759,7 +3781,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
         // ==================== MULTI-PARENT FAMILY ACCESS HELPERS ====================
         // Get other parents who have access to any of my campers
-        const getOtherParentsForMyFamily = (myChildren, camperParentLinks, users, myEmail) => {
+        const getOtherParentsForMyFamily = (myChildren, camperParentLinks, parents, myEmail) => {
           const myChildIds = myChildren.map(c => c.id);
           const otherParentEmails = new Set();
 
@@ -3767,7 +3789,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             .filter(link => myChildIds.includes(link.camperId) && link.parentEmail !== myEmail)
             .forEach(link => otherParentEmails.add(link.parentEmail));
 
-          return users.filter(u => otherParentEmails.has(u.email));
+          return parents.filter(p => otherParentEmails.has(p.email));
         };
 
         // Add parent to family with auto emergency contact creation
@@ -3786,7 +3808,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             createdBy: currentUser.email,
             createdAt: new Date().toISOString()
           };
-          await saveUsers([...users, newParent]);
+          await saveParents([...parents, newParent]);
 
           // 2. Link to ALL of my campers
           const newLinks = myChildren.map(child => ({
@@ -4195,8 +4217,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {/* Family Access Management */}
                   <FamilyAccessManager
                     myChildren={myChildren}
-                    users={users}
-                    saveUsers={saveUsers}
+                    parents={parents}
+                    saveParents={saveParents}
                     camperParentLinks={camperParentLinks}
                     saveCamperParentLinks={saveCamperParentLinks}
                     emergencyContacts={emergencyContacts}
@@ -4644,7 +4666,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   assignments={assignments}
                   counselors={counselors}
                   campers={campers}
-                  users={users}
+                  parents={parents}
                 />
               )}
 
@@ -5746,8 +5768,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     // ==================== FAMILY ACCESS MANAGER ====================
     const FamilyAccessManager = ({
       myChildren,
-      users,
-      saveUsers,
+      parents,
+      saveParents,
       camperParentLinks,
       saveCamperParentLinks,
       emergencyContacts,
@@ -5763,15 +5785,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showAddForm, setShowAddForm] = useState(false);
       const [successModal, setSuccessModal] = useState(null);
 
-      const otherParents = getOtherParentsForMyFamily(myChildren, camperParentLinks, users, currentUserEmail);
-      const currentUser = users.find(u => u.email === currentUserEmail);
+      const otherParents = getOtherParentsForMyFamily(myChildren, camperParentLinks, parents, currentUserEmail);
+      const currentUser = parents.find(p => p.email === currentUserEmail);
       const allFamilyMembers = currentUser ? [currentUser, ...otherParents] : otherParents;
 
       const handleAddParent = async (parentData) => {
         try {
           // Check if email already exists
-          const existingUser = users.find(u => u.email === parentData.email);
-          if (existingUser) {
+          const existingParent = parents.find(p => p.email === parentData.email);
+          if (existingParent) {
             showToast('A user with this email already exists');
             return;
           }

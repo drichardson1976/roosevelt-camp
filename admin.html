@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.170";
+    const VERSION = "12.171";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:30:00");
+    const BUILD_DATE = new Date("2026-02-08T04:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
+        "DATABASE RESTRUCTURING: Split camp_registered_users into camp_parents, camp_counselor_users, camp_admins",
+        "Authentication updated to check all three separate tables for login",
+        "Danger Zone: DELETE ALL DATA now preserves counselors and admins (only deletes parents)",
+        "Data Safety: Counselor and admin accounts cannot be accidentally deleted"
+      ]},
       { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to admin.html",
         "Changes in parent.html: New Parents tab with Family Access and prominent '+ Add Parent' button"
@@ -1976,7 +1982,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENTS TAB ====================
-    const ParentsTab = ({ users, registrations, messages, onSendMessage, onUpdateUsers, onDeleteParent, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks, onSaveCampers, onSaveCamperParentLinks, emergencyContacts, saveEmergencyContacts, saveOnboardingProgress }) => {
+    const ParentsTab = ({ parents, registrations, messages, onSendMessage, onUpdateParents, onDeleteParent, onUpdateRegistrations, onDeleteRegistration, showToast, addToHistory, campers, camperParentLinks, onSaveLinks, onSaveCampers, onSaveCamperParentLinks, emergencyContacts, saveEmergencyContacts, saveOnboardingProgress }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [selectedParents, setSelectedParents] = useState([]);
       const [expandedParent, setExpandedParent] = useState(null);
@@ -2018,7 +2024,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }
       };
 
-      const parentUsers = users.filter(u => u.role === 'parent' || u.roles?.includes('parent'));
+      const parentUsers = parents; // Now using separate parents table
       const filteredUsers = parentUsers.filter(u =>
         u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -6442,7 +6448,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
       const [registrations, setRegistrations] = useState([]);
-      const [users, setUsers] = useState([]);
+      const [parents, setParents] = useState([]);
+      const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
       const [messages, setMessages] = useState([]);
@@ -6495,8 +6502,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             const rg = await storage.get('camp_registrations');
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            const us = await storage.get('camp_registered_users');
-            if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
+            const pr = await storage.get('camp_parents');
+            if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
+            const cu = await storage.get('camp_counselor_users');
+            if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
             const ch = await storage.get('camp_change_history');
@@ -6614,17 +6623,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Registration', action);
       };
 
-      const saveUsers = async (u, action = null) => {
-        setUsers(u);
-        await storage.set('camp_registered_users', 'main', u);
+      const saveParents = async (p, action = null) => {
+        setParents(p);
+        await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
       };
 
+      const saveCounselorUsers = async (cu, action = null) => {
+        setCounselorUsers(cu);
+        await storage.set('camp_counselor_users', 'main', cu);
+        if (action) addToHistory('Counselor User', action);
+      };
+
       const deleteParent = async (parentEmail, parentName) => {
-        // Remove from users state
-        const updatedUsers = users.filter(u => u.email !== parentEmail);
-        setUsers(updatedUsers);
-        await storage.set('camp_registered_users', 'main', updatedUsers);
+        // Remove from parents state
+        const updatedParents = parents.filter(p => p.email !== parentEmail);
+        setParents(updatedParents);
+        await storage.set('camp_parents', 'main', updatedParents);
         // Remove camper-parent links for this parent
         const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
         setCamperParentLinks(updatedLinks);
@@ -6789,7 +6804,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           label: '👨‍👩‍👧 Family Setup',
           hasChildren: true,
           children: {
-            'parents': { label: 'Parents', badge: () => users.filter(u => u.role === 'parent').length },
+            'parents': { label: 'Parents', badge: () => parents.length },
             'campers': { label: 'Campers' },
             'sessionregs': { label: 'Session Registrations', badge: () => getPending() }
           },
@@ -7086,7 +7101,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               onboardingComplete: true,
               onboardingCompletedAt: new Date().toISOString()
             };
-            await saveUsers([...users, newUser]);
+            await saveCounselorUsers([...counselorUsers, newUser]);
 
             // Create counselor profile (pending approval)
             const newCounselor = {
@@ -9020,11 +9035,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {adminParentTab === 'family' && getActiveChildTab('family') === 'parents' && (
                 <ParentsTab
-                  users={users}
+                  parents={parents}
                   registrations={registrations}
                   messages={messages}
                   onSendMessage={saveMessage}
-                  onUpdateUsers={saveUsers}
+                  onUpdateParents={saveParents}
                   onDeleteParent={deleteParent}
                   onUpdateRegistrations={saveReg}
                   onDeleteRegistration={async (reg) => {
@@ -9183,8 +9198,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               showToast('Deletion cancelled', 'error');
                               return;
                             }
-                            // Delete all parent/camper data (but preserve counselors and admin)
-                            await saveUsers(users.filter(u => u.role === 'counselor' || u.roles?.includes('counselor')), 'Total Wipe: Deleted all parent users');
+                            // Delete all parent/camper data (but preserve counselors and admins)
+                            await saveParents([], 'Total Wipe: Deleted all parents');
+                            // Note: counselorUsers and admins tables are NOT touched - they are preserved
                             await saveCampers([], 'Total Wipe: Deleted all campers');
                             await saveRegistrations([], 'Total Wipe: Deleted all registrations');
                             await saveAssignments({}, 'Total Wipe: Deleted all assignments');
@@ -9211,15 +9227,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Parents */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>Parents ({users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length} records)</span>
+                          <span>Parents ({parents.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length === 0 ? (
+                          {parents.length === 0 ? (
                             <p className="text-gray-500 text-sm">No parent records</p>
                           ) : (
                             <div className="space-y-2">
-                              {users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).map(parent => (
+                              {parents.map(parent => (
                                 <div key={parent.email} className="flex items-center justify-between p-3 bg-white rounded border">
                                   <div>
                                     <div className="font-medium">{parent.name}</div>
@@ -9228,8 +9244,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   <button
                                     onClick={async () => {
                                       if (!confirm(`Delete parent ${parent.name}? This will also remove their children and registrations.`)) return;
-                                      const newUsers = users.filter(u => u.email !== parent.email);
-                                      await saveUsers(newUsers, `Deleted parent ${parent.name}`);
+                                      const newParents = parents.filter(p => p.email !== parent.email);
+                                      await saveParents(newParents, `Deleted parent ${parent.name}`);
                                       showToast(`Deleted ${parent.name}`);
                                     }}
                                     className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"

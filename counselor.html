@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.170";
+    const VERSION = "12.171";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:30:00");
+    const BUILD_DATE = new Date("2026-02-08T04:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
+        "DATABASE RESTRUCTURING: Split camp_registered_users into camp_parents, camp_counselor_users, camp_admins",
+        "Authentication updated to check all three separate tables for login",
+        "Danger Zone: DELETE ALL DATA now preserves counselors and admins (only deletes parents)",
+        "Data Safety: Counselor and admin accounts cannot be accidentally deleted"
+      ]},
       { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to counselor.html",
         "Changes in parent.html: New Parents tab with Family Access and prominent '+ Add Parent' button"

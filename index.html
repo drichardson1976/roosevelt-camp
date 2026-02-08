@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.170";
+    const VERSION = "12.171";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T03:30:00");
+    const BUILD_DATE = new Date("2026-02-08T04:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
+        "DATABASE RESTRUCTURING: Split camp_registered_users into camp_parents, camp_counselor_users, camp_admins",
+        "Authentication updated to check all three separate tables for login",
+        "Danger Zone: DELETE ALL DATA now preserves counselors and admins (only deletes parents)",
+        "Data Safety: Counselor and admin accounts cannot be accidentally deleted"
+      ]},
       { version: "12.170", date: "2026-02-08", time: "3:30 AM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to index.html",
         "Changes in parent.html: New Parents tab with Family Access and prominent '+ Add Parent' button"
@@ -2744,7 +2750,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
       const [registrations, setRegistrations] = useState([]);
-      const [users, setUsers] = useState([]);
+      const [parents, setParents] = useState([]);
+      const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
       const [messages, setMessages] = useState([]);
@@ -2791,8 +2798,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             const rg = await storage.get('camp_registrations');
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            const us = await storage.get('camp_registered_users');
-            if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
+            const pr = await storage.get('camp_parents');
+            if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
+            const cu = await storage.get('camp_counselor_users');
+            if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
             const ch = await storage.get('camp_change_history');
@@ -2908,17 +2917,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Registration', action);
       };
 
-      const saveUsers = async (u, action = null) => {
-        setUsers(u);
-        await storage.set('camp_registered_users', 'main', u);
+      const saveParents = async (p, action = null) => {
+        setParents(p);
+        await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
       };
 
+      const saveCounselorUsers = async (cu, action = null) => {
+        setCounselorUsers(cu);
+        await storage.set('camp_counselor_users', 'main', cu);
+        if (action) addToHistory('Counselor User', action);
+      };
+
       const deleteParent = async (parentEmail, parentName) => {
-        // Remove from users state
-        const updatedUsers = users.filter(u => u.email !== parentEmail);
-        setUsers(updatedUsers);
-        await storage.set('camp_registered_users', 'main', updatedUsers);
+        // Remove from parents state
+        const updatedParents = parents.filter(p => p.email !== parentEmail);
+        setParents(updatedParents);
+        await storage.set('camp_parents', 'main', updatedParents);
         // Remove camper-parent links for this parent
         const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
         setCamperParentLinks(updatedLinks);
@@ -4150,12 +4165,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             window.location.href = '/admin.html';
             return;
           }
-          const u = users.find(x => x.email === email && x.password === password);
-          if (u) {
-            sessionStorage.setItem('user', JSON.stringify(u));
-            window.location.href = u.role === 'counselor' ? '/counselor.html' : '/parent.html';
+          // Check if logging in as parent
+          const parent = parents.find(p => p.email === email && p.password === password);
+          if (parent) {
+            sessionStorage.setItem('user', JSON.stringify(parent));
+            window.location.href = '/parent.html';
             return;
           }
+          // Check if logging in as counselor (with login credentials)
+          const counselorUser = counselorUsers.find(cu => cu.email === email && cu.password === password);
+          if (counselorUser) {
+            sessionStorage.setItem('user', JSON.stringify(counselorUser));
+            window.location.href = '/counselor.html';
+            return;
+          }
+          // Legacy: Check counselor profiles (no password)
           const c = counselors.find(x => x.email === email);
           if (c) {
             const user = { ...c, role: 'counselor' };
@@ -4185,8 +4209,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 window.location.href = '/parent.html';
               }}
               onBack={() => setMode('selectRole')}
-              users={users}
-              saveUsers={saveUsers}
+              parents={parents}
+              saveParents={saveParents}
               saveEmergencyContacts={saveEmergencyContacts}
               emergencyContacts={emergencyContacts}
               saveOnboardingProgress={saveOnboardingProgress}
