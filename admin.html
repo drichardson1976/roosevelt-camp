@@ -9582,6 +9582,436 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           )}
                         </div>
                       </details>
+
+                      {/* Camper-Parent Links */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🔗 Camper-Parent Links ({camperParentLinks.length} links)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {camperParentLinks.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No camper-parent links</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {camperParentLinks.map((link, idx) => {
+                                const camper = campers.find(c => c.id === link.camperId);
+                                const parent = parents.find(p => p.email === link.parentEmail);
+                                return (
+                                  <div key={`${link.camperId}-${link.parentEmail}-${idx}`} className="flex items-center justify-between p-3 bg-white rounded border">
+                                    <div className="flex-1">
+                                      <div className="font-medium">{camper?.name || 'Unknown Camper'} ↔ {parent?.name || link.parentEmail}</div>
+                                      <div className="text-sm text-gray-500">Camper ID: {link.camperId}</div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Delete link between ${camper?.name} and ${parent?.name}?`)) return;
+                                        const newLinks = camperParentLinks.filter((l, i) => i !== idx);
+                                        await saveCamperParentLinks(newLinks, `Deleted link for ${camper?.name}`);
+                                        showToast('Link deleted');
+                                      }}
+                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Blocked Sessions */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🚫 Blocked Sessions ({Object.keys(blockedSessions).length} dates)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(blockedSessions).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No blocked sessions</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(blockedSessions).map(([date, data]) => (
+                                <div key={date} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{date}</div>
+                                    <div className="text-sm text-gray-500">{data.reason || 'No reason provided'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Unblock session on ${date}?`)) return;
+                                      const newBlocked = { ...blockedSessions };
+                                      delete newBlocked[date];
+                                      await saveBlockedSessions(newBlocked, `Unblocked session on ${date}`);
+                                      showToast('Session unblocked');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Counselor Schedule */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📆 Counselor Schedule ({Object.keys(counselorSchedule).length} counselors)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {Object.keys(counselorSchedule).length === 0 ? (
+                            <p className="text-gray-500 text-sm">No counselor schedules</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {Object.entries(counselorSchedule).map(([counselorId, schedule]) => {
+                                const counselor = counselors.find(c => c.id === counselorId);
+                                const dateCount = Object.keys(schedule).length;
+                                return (
+                                  <div key={counselorId} className="flex items-center justify-between p-3 bg-white rounded border">
+                                    <div className="flex-1">
+                                      <div className="font-medium">{counselor?.name || counselorId}</div>
+                                      <div className="text-sm text-gray-500">{dateCount} scheduled date(s)</div>
+                                    </div>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Delete schedule for ${counselor?.name || counselorId}?`)) return;
+                                        const newSchedule = { ...counselorSchedule };
+                                        delete newSchedule[counselorId];
+                                        await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselor?.name}`);
+                                        showToast('Schedule deleted');
+                                      }}
+                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Gym Rentals */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🏀 Gym Rentals ({gymRentals.length} rentals)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {gymRentals.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No gym rental records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {gymRentals.map(rental => (
+                                <div key={rental.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{rental.date}</div>
+                                    <div className="text-sm text-gray-500">{rental.startTime} - {rental.endTime}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete gym rental on ${rental.date}?`)) return;
+                                      const newRentals = gymRentals.filter(r => r.id !== rental.id);
+                                      await saveGymRentals(newRentals, `Deleted gym rental on ${rental.date}`);
+                                      showToast('Gym rental deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Website Content */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>✏️ Website Content ({content.length} items)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {content.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No content items</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {content.map(item => (
+                                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{item.title || item.id}</div>
+                                    <div className="text-sm text-gray-500">{item.type || 'Content'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete content item "${item.title || item.id}"?`)) return;
+                                      const newContent = content.filter(c => c.id !== item.id);
+                                      await saveContent(newContent, `Deleted content ${item.title || item.id}`);
+                                      showToast('Content deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Messages */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>💬 Messages ({messages.length} messages)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {messages.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No messages</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {messages.map(msg => (
+                                <div key={msg.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{msg.subject || 'No subject'}</div>
+                                    <div className="text-sm text-gray-500">From: {msg.from || 'Unknown'} • {msg.timestamp}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete message "${msg.subject}"?`)) return;
+                                      const newMessages = messages.filter(m => m.id !== msg.id);
+                                      await saveMessages(newMessages, `Deleted message ${msg.subject}`);
+                                      showToast('Message deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Food Photos */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🍽️ Food Photos ({foodPhotos.length} photos)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {foodPhotos.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No food photos</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {foodPhotos.map(photo => (
+                                <div key={photo.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{photo.caption || 'Untitled Photo'}</div>
+                                    <div className="text-sm text-gray-500">{photo.date || 'No date'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete food photo?`)) return;
+                                      const newPhotos = foodPhotos.filter(p => p.id !== photo.id);
+                                      await saveFoodPhotos(newPhotos, `Deleted food photo`);
+                                      showToast('Photo deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Site Photos */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📸 Site Photos ({sitePhotos.length} photos)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {sitePhotos.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No site photos</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {sitePhotos.map(photo => (
+                                <div key={photo.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{photo.caption || 'Untitled Photo'}</div>
+                                    <div className="text-sm text-gray-500">{photo.location || 'No location'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete site photo?`)) return;
+                                      const newPhotos = sitePhotos.filter(p => p.id !== photo.id);
+                                      await saveSitePhotos(newPhotos, `Deleted site photo`);
+                                      showToast('Photo deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Onboarding Progress */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>🎯 Onboarding Progress ({onboardingProgress.length} records)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {onboardingProgress.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No onboarding progress records</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {onboardingProgress.map(progress => (
+                                <div key={progress.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{progress.userEmail || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Step: {progress.currentStep || 0}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete onboarding progress for ${progress.userEmail}?`)) return;
+                                      const newProgress = onboardingProgress.filter(p => p.id !== progress.id);
+                                      await saveOnboardingProgress(newProgress, `Deleted onboarding progress`);
+                                      showToast('Progress deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Availability Change Requests */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📝 Availability Change Requests ({availabilityChangeRequests.length} requests)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {availabilityChangeRequests.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No availability change requests</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {availabilityChangeRequests.map(request => (
+                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete availability change request?`)) return;
+                                      const newRequests = availabilityChangeRequests.filter(r => r.id !== request.id);
+                                      await saveAvailabilityChangeRequests(newRequests, `Deleted change request`);
+                                      showToast('Request deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Profile Change Requests */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>👤 Profile Change Requests ({profileChangeRequests.length} requests)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {profileChangeRequests.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No profile change requests</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {profileChangeRequests.map(request => (
+                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
+                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete profile change request?`)) return;
+                                      const newRequests = profileChangeRequests.filter(r => r.id !== request.id);
+                                      await saveProfileChangeRequests(newRequests, `Deleted change request`);
+                                      showToast('Request deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
+
+                      {/* Change History */}
+                      <details className="border rounded-lg">
+                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                          <span>📜 Change History ({history.length} entries)</span>
+                          <span className="text-gray-400">▼</span>
+                        </summary>
+                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                          {history.length === 0 ? (
+                            <p className="text-gray-500 text-sm">No history entries</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {history.slice(-20).reverse().map(entry => (
+                                <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded border">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{entry.action}</div>
+                                    <div className="text-sm text-gray-500">{entry.type} • {new Date(entry.timestamp).toLocaleString()}</div>
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Delete history entry "${entry.action}"?`)) return;
+                                      const newHistory = history.filter(h => h.id !== entry.id);
+                                      await saveHistory(newHistory);
+                                      showToast('History entry deleted');
+                                    }}
+                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </details>
                     </div>
                   </div>
 
