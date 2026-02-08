@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.007";
+    const VERSION = "13.008";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T10:50:00");
+    const BUILD_DATE = new Date("2026-02-08T11:44:00");
 
     const RELEASE_NOTES = [
+      { version: "13.008", date: "2026-02-08", time: "11:44 AM PST", author: "Claude", changes: [
+        "Photo Preservation: Photos saved as {cropped, original, transform} objects — re-editing loads full original",
+        "Add Photo Placeholder: Standardized grey circle with plus icon and 'add photo' text everywhere",
+      ]},
       { version: "13.007", date: "2026-02-08", time: "10:50 AM PST", author: "Claude", changes: [
         "ImageCropper: Updated silhouette overlay with almond-shaped eyes, no nose, natural mouth",
         "Payment Status: Updated getUnpaid for 3-state compatibility (unpaid/submitted/confirmed)",
@@ -919,6 +923,11 @@
     };
 
     // ==================== UTILITIES ====================
+    const getDisplayPhoto = (photo) => {
+      if (!photo) return null;
+      return typeof photo === 'string' ? photo : (photo.cropped || null);
+    };
+
     const formatPhone = (value) => {
       const digits = value.replace(/\D/g, '').slice(0, 10);
       if (digits.length === 0) return '';
@@ -1120,21 +1129,19 @@
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            {form.photo ? (
+            {getDisplayPhoto(form.photo) ? (
               <img
-                src={form.photo}
+                src={getDisplayPhoto(form.photo)}
                 className="w-20 h-20 rounded-full object-cover border-2 border-green-600 cursor-pointer hover:opacity-80"
                 onClick={() => setShowPhotoModal(true)}
               />
             ) : (
-              <div onClick={() => setShowPhotoModal(true)} className="w-20 h-20 rounded-full bg-gray-200 border-2 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-                  <ellipse cx="12" cy="11" rx="8" ry="10" stroke="#9CA3AF" strokeWidth="1.5"/><circle cx="9" cy="9" r="1.5" fill="#EF4444"/><circle cx="15" cy="9" r="1.5" fill="#EF4444"/><path d="M8.5 14.5Q12 17.5 15.5 14.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                <span className="text-xs text-gray-500">Add</span>
+              <div onClick={() => setShowPhotoModal(true)} className="w-20 h-20 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                <span className="text-[9px] text-gray-500 font-medium">add photo</span>
               </div>
             )}
-            <div className="flex-1 text-sm text-gray-500">{form.photo ? 'Click photo to update' : 'Click to add photo'}</div>
+            <div className="flex-1 text-sm text-gray-500">{getDisplayPhoto(form.photo) ? 'Click photo to update' : 'Click to add photo'}</div>
             {showPhotoModal && (
               <PhotoUploadModal
                 currentPhoto={form.photo}
@@ -1541,17 +1548,15 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   <div className="space-y-4">
                     <p className="text-gray-600 mb-4">Tell us about your basketball background. This will appear on the camp website once approved.</p>
                     <div className="flex justify-center mb-4">
-                      {profileData.photo ? (
+                      {getDisplayPhoto(profileData.photo) ? (
                         <div className="relative cursor-pointer" onClick={() => setShowPhotoModal(true)}>
-                          <img src={profileData.photo} className="w-32 h-32 rounded-full object-cover border-4 border-blue-600" />
+                          <img src={getDisplayPhoto(profileData.photo)} className="w-32 h-32 rounded-full object-cover border-4 border-blue-600" />
                           <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-blue-600 rounded-full text-white flex items-center justify-center">✎</div>
                         </div>
                       ) : (
-                        <div onClick={() => setShowPhotoModal(true)} className="w-32 h-32 rounded-full bg-gray-200 border-4 border-dashed border-gray-400 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                          <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none">
-                            <ellipse cx="12" cy="11" rx="8" ry="10" stroke="#9CA3AF" strokeWidth="1.5"/><circle cx="9" cy="9" r="1.5" fill="#EF4444"/><circle cx="15" cy="9" r="1.5" fill="#EF4444"/><path d="M8.5 14.5Q12 17.5 15.5 14.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
-                          </svg>
-                          <span className="text-xs text-gray-500 mt-1">Add Photo</span>
+                        <div onClick={() => setShowPhotoModal(true)} className="w-32 h-32 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                          <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                          <span className="text-xs text-gray-500 font-medium">add photo</span>
                         </div>
                       )}
                       {showPhotoModal && (
@@ -2098,6 +2103,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const fileInputRef = useRef(null);
       const [tempImage, setTempImage] = useState(null);
       const [showCropper, setShowCropper] = useState(false);
+      const [isNewUpload, setIsNewUpload] = useState(false);
+
+      const displayPhoto = getDisplayPhoto(currentPhoto);
+      const originalPhoto = currentPhoto && typeof currentPhoto === 'object' ? currentPhoto.original : currentPhoto;
+      const savedTransform = currentPhoto && typeof currentPhoto === 'object' ? currentPhoto.transform : null;
 
       const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
@@ -2105,6 +2115,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           const reader = new FileReader();
           reader.onloadend = () => {
             setTempImage(reader.result);
+            setIsNewUpload(true);
             setShowCropper(true);
           };
           reader.readAsDataURL(file);
@@ -2120,27 +2131,24 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <h3 className="text-lg font-bold text-center mb-4">Adjust Photo</h3>
                 <ImageCropper
                   image={tempImage}
-                  onSave={(img) => { onSave(img); setShowCropper(false); setTempImage(null); }}
-                  onCancel={() => { setShowCropper(false); setTempImage(null); }}
+                  onSave={(croppedImg, transform) => { onSave({ cropped: croppedImg, original: isNewUpload ? tempImage : (originalPhoto || tempImage), transform }); setShowCropper(false); setTempImage(null); setIsNewUpload(false); }}
+                  onCancel={() => { setShowCropper(false); setTempImage(null); setIsNewUpload(false); }}
                   shape={shape}
+                  initialTransform={!isNewUpload ? savedTransform : null}
                 />
               </div>
             ) : (
               <div>
                 <h3 className="text-lg font-bold text-center mb-4">
-                  {currentPhoto ? 'Update Photo' : 'Add Photo'}
+                  {displayPhoto ? 'Update Photo' : 'Add Photo'}
                 </h3>
                 <div className="flex justify-center mb-6">
-                  {currentPhoto ? (
-                    <img src={currentPhoto} className={`w-32 h-32 object-cover border-2 border-gray-300 ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`} />
+                  {displayPhoto ? (
+                    <img src={displayPhoto} className={`w-32 h-32 object-cover border-2 border-gray-300 ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`} />
                   ) : (
-                    <div className={`w-32 h-32 bg-gray-100 border-2 border-dashed border-gray-400 flex items-center justify-center ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`}>
-                      <svg className="w-16 h-16" viewBox="0 0 24 24" fill="none">
-                        <ellipse cx="12" cy="11" rx="8" ry="10" stroke="#9CA3AF" strokeWidth="1.5"/>
-                        <circle cx="9" cy="9" r="1.5" fill="#EF4444"/>
-                        <circle cx="15" cy="9" r="1.5" fill="#EF4444"/>
-                        <path d="M8.5 14.5Q12 17.5 15.5 14.5" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
+                    <div className="w-32 h-32 bg-gray-200 rounded-full flex flex-col items-center justify-center">
+                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      <span className="text-xs text-gray-500 font-medium">add photo</span>
                     </div>
                   )}
                 </div>
@@ -2149,17 +2157,17 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700"
                   >
-                    {currentPhoto ? 'Upload New Photo' : 'Choose Photo'}
+                    {displayPhoto ? 'Upload New Photo' : 'Choose Photo'}
                   </button>
-                  {currentPhoto && (
+                  {displayPhoto && (
                     <button
-                      onClick={() => { setTempImage(currentPhoto); setShowCropper(true); }}
+                      onClick={() => { setTempImage(originalPhoto || displayPhoto); setIsNewUpload(false); setShowCropper(true); }}
                       className="w-full py-3 bg-blue-50 text-blue-600 font-medium rounded-xl hover:bg-blue-100"
                     >
                       Adjust Current Photo
                     </button>
                   )}
-                  {currentPhoto && (
+                  {displayPhoto && (
                     <button
                       onClick={() => onSave(null)}
                       className="w-full py-2 text-red-500 font-medium hover:text-red-600"

@@ -125,7 +125,7 @@ These tables are actively used in the application code:
 4. **camp_counselors** - Counselor profiles (separate from login accounts)
 5. **camp_campers** - Camper profiles
 6. **camp_camper_parent_links** - Junction table linking campers to parents
-7. **camp_camper_emergency_contact_links** - Junction table (PUBLIC schema only)
+7. **camp_camper_emergency_contact_links** - Junction table linking campers to emergency contacts
 8. **camp_emergency_contacts** - Emergency contact records
 
 ### Camp Operations
