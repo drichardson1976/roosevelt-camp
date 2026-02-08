@@ -45,11 +45,23 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.006";
+    const VERSION = "13.007";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T10:22:00");
+    const BUILD_DATE = new Date("2026-02-08T10:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.007", date: "2026-02-08", time: "10:50 AM PST", author: "Claude", changes: [
+        "EC Fix: Emergency contacts now properly associated to campers via parent email fallback (DEV schema)",
+        "Parent EC Tab: Removed blue 'Parent' badge from emergency contacts list",
+        "ImageCropper: Updated silhouette overlay with almond-shaped eyes, no nose, natural mouth",
+        "Onboarding Edit: Clicking edit from review step now returns you to review after editing (not next step)",
+        "Payment Status: Expanded from 2-state (unpaid/paid) to 3-state (unpaid/submitted/confirmed)",
+        "Payment Status: Badges show red=unpaid, blue=submitted, green=confirmed across all views",
+        "Registration Modal: Enhanced Venmo payment modal with QR code image display",
+        "Registration Modal: Added 'I've Sent Payment' and 'I'll Pay Later' buttons",
+        "Parent Dashboard: New Payments tab showing payment status for all registrations grouped by order",
+        "Payments Tab: Mark as Sent button for unpaid, Send Reminder button (available 48hrs after submission)",
+      ]},
       { version: "13.006", date: "2026-02-08", time: "10:22 AM PST", author: "Derek Richardson", changes: [
         "Photo Upload: New popup modal for all photo uploads across the app (replaces direct file picker)",
         "Photo Upload Modal: Preview current photo, upload new, adjust existing, or remove — all in one modal",
@@ -943,7 +955,10 @@
       // Policies
       cancellationPolicy: "All cancellation requests must be submitted at least 14 days (2 weeks) before the scheduled session to receive a full refund. Cancellations made less than 14 days in advance are non-refundable but may be credited toward a future session at the camp director's discretion. No-shows are non-refundable.",
       latePickupPolicy: "Camp sessions end promptly at the scheduled time. Our counselors volunteer their time and have other commitments after camp. If you anticipate being late, please call us immediately. As a gesture of appreciation for counselors who stay late due to delayed pickups, we kindly suggest purchasing a small Starbucks gift card ($5-10) for the counselor who waited with your child. Repeated late pickups may result in dismissal from the camp.",
-      scholarshipInfo: "We believe every child deserves the chance to experience our camp. Apply for scholarship assistance through your Parent Dashboard."
+      scholarshipInfo: "We believe every child deserves the chance to experience our camp. Apply for scholarship assistance through your Parent Dashboard.",
+      // Pickup policy illustration images
+      pickupPolicyFacePhoto: null,
+      pickupPolicyIdPhoto: null
     };
 
     const DEFAULT_COUNSELORS = [
@@ -2542,17 +2557,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             {/* Red face silhouette overlay for circle shape */}
             {shape === 'circle' && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <svg width={displayW} height={displayH} viewBox="0 0 100 100" className="opacity-50">
-                  {/* Face outline */}
+                <svg width={displayW} height={displayH} viewBox="0 0 100 100" className="opacity-40">
                   <ellipse cx="50" cy="50" rx="28" ry="35" fill="none" stroke="#dc2626" strokeWidth="1.5" />
-                  {/* Left eye */}
-                  <ellipse cx="42" cy="42" rx="4" ry="5" fill="none" stroke="#dc2626" strokeWidth="1.5" />
-                  {/* Right eye */}
-                  <ellipse cx="58" cy="42" rx="4" ry="5" fill="none" stroke="#dc2626" strokeWidth="1.5" />
-                  {/* Nose - simple line */}
-                  <line x1="50" y1="48" x2="50" y2="56" stroke="#dc2626" strokeWidth="1.5" />
-                  {/* Mouth - smile curve */}
-                  <path d="M 38 62 Q 50 68 62 62" fill="none" stroke="#dc2626" strokeWidth="1.5" strokeLinecap="round" />
+                  <path d="M 36 42 Q 42 37 48 42 Q 42 47 36 42 Z" fill="none" stroke="#dc2626" strokeWidth="1.2" />
+                  <path d="M 52 42 Q 58 37 64 42 Q 58 47 52 42 Z" fill="none" stroke="#dc2626" strokeWidth="1.2" />
+                  <path d="M 38 60 Q 44 66 50 66 Q 56 66 62 60" fill="none" stroke="#dc2626" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
               </div>
             )}
@@ -3470,7 +3479,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const getPending = () => registrations.filter(r => r.status === 'pending').length;
       const getApproved = () => registrations.filter(r => r.status === 'approved').length;
       const getCancelled = () => registrations.filter(r => r.status === 'cancelled' || r.status === 'rejected').length;
-      const getUnpaid = () => registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').length;
+      const getUnpaid = () => registrations.filter(r => r.status === 'approved' && !['paid', 'confirmed'].includes(r.paymentStatus)).length;
 
       // ==================== NAV ====================
       // ==================== NAV (PARENT) ====================
@@ -3859,7 +3868,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           return weeks;
         }, [campDates]);
         
-        const getAmountDue = () => myRegs.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').reduce((s, r) => s + (r.totalAmount || sessionCost), 0);
+        const getAmountDue = () => myRegs.filter(r => r.status === 'approved' && !['paid', 'confirmed'].includes(r.paymentStatus)).reduce((s, r) => s + (r.totalAmount || sessionCost), 0);
         
         const getMonthWeeks = () => {
           const months = {};
@@ -3893,10 +3902,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
         // Get emergency contacts for a specific camper
         const getEmergencyContactsForCamper = (camperId) => {
+          // Try explicit camper-EC links first (PUBLIC schema)
           const linkIds = camperEmergencyContactLinks
             .filter(link => link.camperId === camperId)
             .map(link => link.emergencyContactId);
-          return emergencyContacts.filter(contact => linkIds.includes(contact.id)).map(resolveEmergencyContact);
+          if (linkIds.length > 0) {
+            return emergencyContacts.filter(contact => linkIds.includes(contact.id)).map(resolveEmergencyContact);
+          }
+          // Fallback: find all parent emails for this camper, then find their ECs
+          const parentEmails = (camperParentLinks || [])
+            .filter(link => link.camperId === camperId)
+            .map(link => link.parentEmail);
+          return emergencyContacts
+            .filter(contact => parentEmails.includes(contact.userEmail))
+            .map(resolveEmergencyContact);
         };
 
         // Find emergency contact by name (for smart reuse)
@@ -4339,9 +4358,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'messages', 'history'].map(t => (
+                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'payments', 'messages', 'history'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'history' ? '📜 History' : t}
+                      {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'payments' ? '💰 Payments' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'history' ? '📜 History' : t}
                       {t === 'messages' && getUnreadCount(user?.email) > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getUnreadCount(user?.email)}</span>
                       )}
@@ -4509,13 +4528,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                         </div>
                                         <div className="flex gap-2 flex-wrap items-center">
                                           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                            status === 'approved' && paymentStatus === 'paid' ? 'bg-green-100 text-green-700' :
+                                            status === 'approved' && ['paid', 'confirmed'].includes(paymentStatus) ? 'bg-green-100 text-green-700' :
+                                            status === 'approved' && paymentStatus === 'submitted' ? 'bg-blue-100 text-blue-700' :
                                             status === 'approved' ? 'bg-orange-100 text-orange-700' :
                                             status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                                             'bg-gray-100 text-gray-700'
                                           }`}>
-                                            {status === 'approved' && paymentStatus === 'paid' ? '✓ Paid' :
-                                             status === 'approved' && paymentStatus !== 'paid' ? 'Payment Pending' :
+                                            {status === 'approved' && ['paid', 'confirmed'].includes(paymentStatus) ? '✓ Confirmed' :
+                                             status === 'approved' && paymentStatus === 'submitted' ? '⏳ Submitted' :
+                                             status === 'approved' ? 'Payment Pending' :
                                              status === 'pending' ? 'Pending Approval' :
                                              status}
                                           </span>
@@ -4905,6 +4926,104 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </div>
               )}
 
+              {parentTab === 'payments' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-xl mb-4">💰 Payment Status</h3>
+                    {(() => {
+                      const activeRegs = myRegs.filter(r => r.status !== 'cancelled' && r.status !== 'rejected');
+                      if (activeRegs.length === 0) {
+                        return <p className="text-gray-500 text-center py-8">No registrations to show payment status for.</p>;
+                      }
+                      // Group by orderId
+                      const regsByOrder = {};
+                      activeRegs.forEach(reg => {
+                        const orderKey = reg.orderId || reg.id;
+                        if (!regsByOrder[orderKey]) regsByOrder[orderKey] = [];
+                        regsByOrder[orderKey].push(reg);
+                      });
+                      return (
+                        <div className="space-y-4">
+                          {Object.entries(regsByOrder).map(([orderKey, regs]) => {
+                            const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                            const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                            const paymentStatus = sortedRegs[0]?.paymentStatus || 'unpaid';
+                            const paymentSubmittedAt = sortedRegs[0]?.paymentSubmittedAt;
+                            const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
+                            const isSubmitted = paymentStatus === 'submitted';
+                            const canRemind = isSubmitted && paymentSubmittedAt && (Date.now() - new Date(paymentSubmittedAt).getTime() > 48 * 60 * 60 * 1000);
+
+                            return (
+                              <div key={orderKey} className="border rounded-lg p-4">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <div className="font-bold">{sortedRegs[0]?.childName || sortedRegs[0]?.camperName}</div>
+                                    <div className="text-sm text-gray-600">
+                                      {sortedRegs.length} session{sortedRegs.length > 1 ? 's' : ''} &mdash; {sortedRegs.map(r => r.date).join(', ')}
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    isPaid ? 'bg-green-100 text-green-700' :
+                                    isSubmitted ? 'bg-blue-100 text-blue-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {isPaid ? 'Confirmed' : isSubmitted ? 'Submitted - Awaiting Confirmation' : 'Unpaid'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                                  <div className="flex gap-2">
+                                    {paymentStatus === 'unpaid' && (
+                                      <button
+                                        onClick={async () => {
+                                          for (const reg of sortedRegs) {
+                                            await saveReg({ ...reg, paymentStatus: 'submitted', paymentSubmittedAt: new Date().toISOString() });
+                                          }
+                                          showToast('Payment marked as submitted', 'success');
+                                        }}
+                                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+                                      >
+                                        Mark as Sent
+                                      </button>
+                                    )}
+                                    {canRemind && (
+                                      <button
+                                        onClick={async () => {
+                                          const msg = {
+                                            id: `msg_${Date.now()}`,
+                                            from: user?.email,
+                                            fromName: user?.name,
+                                            to: 'admin',
+                                            subject: 'Payment Reminder',
+                                            body: `Payment reminder: I submitted Venmo payment for ${sortedRegs[0]?.childName || sortedRegs[0]?.camperName} (${sortedRegs.length} sessions, $${totalAmount.toFixed(2)}) on ${new Date(paymentSubmittedAt).toLocaleDateString()}. Please check and confirm.`,
+                                            sentAt: new Date().toISOString(),
+                                            readBy: []
+                                          };
+                                          await saveMessage(msg);
+                                          showToast('Reminder sent to camp director', 'success');
+                                        }}
+                                        className="px-3 py-1.5 bg-yellow-500 text-white rounded-lg text-sm hover:bg-yellow-600"
+                                      >
+                                        Send Reminder
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                {paymentSubmittedAt && (
+                                  <div className="text-xs text-gray-500 mt-2">
+                                    Payment submitted: {new Date(paymentSubmittedAt).toLocaleString()}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
               {parentTab === 'messages' && (
                 <ParentMessagesTab
                   userEmail={user?.email}
@@ -5010,6 +5129,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {/* Payment Info */}
                   <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
                     <h3 className="font-bold text-blue-800 mb-3 text-lg">💳 Next Step: Payment</h3>
+                    {content?.venmoImage && (
+                      <div className="text-center mb-4">
+                        <img src={content.venmoImage} alt="Venmo QR Code" className="w-48 h-48 mx-auto border-2 border-blue-200 rounded-lg" />
+                        <p className="text-xs text-gray-500 mt-1">Scan with Venmo app</p>
+                      </div>
+                    )}
                     <div className="text-left space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700">Send payment via Venmo to:</span>
@@ -5055,16 +5180,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {/* Buttons */}
                   <div className="flex gap-3">
                     <button
-                      onClick={() => { setShowConfirm(null); setParentTab('dashboard'); }}
-                      className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700"
-                    >
-                      View Payment Info
-                    </button>
-                    <button
-                      onClick={() => { setShowConfirm(null); setParentTab('campers'); }}
+                      onClick={async () => {
+                        const recentRegs = registrations.filter(r =>
+                          r.parentEmail === user?.email &&
+                          r.paymentStatus === 'unpaid' &&
+                          new Date(r.registeredAt) > new Date(Date.now() - 60000)
+                        );
+                        for (const reg of recentRegs) {
+                          await saveReg({ ...reg, paymentStatus: 'submitted', paymentSubmittedAt: new Date().toISOString() });
+                        }
+                        setShowConfirm(null);
+                        setParentTab('payments');
+                        showToast('Payment marked as submitted!', 'success');
+                      }}
                       className="flex-1 bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700"
                     >
-                      View Status
+                      I've Sent Payment
+                    </button>
+                    <button
+                      onClick={() => { setShowConfirm(null); setParentTab('payments'); }}
+                      className="flex-1 bg-gray-500 text-white font-bold py-3 rounded-lg hover:bg-gray-600"
+                    >
+                      I'll Pay Later
                     </button>
                   </div>
                 </div>
@@ -5930,9 +6067,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <div className="flex-1">
                         <div className="font-bold text-lg">
                           {contact.name}
-                          {(contact.isParent || contact.isAutoCreated) && (
-                            <span className="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
-                          )}
                         </div>
                         <div className="text-sm text-gray-600">{contact.relationship}</div>
                         <div className="text-sm text-gray-600">{contact.phone}</div>
@@ -6698,9 +6832,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 key={day}
                                 className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-pointer ${
                                   hasRegistrations
-                                    ? regs.some(r => r.status === 'approved' && r.paymentStatus === 'paid')
+                                    ? regs.some(r => r.status === 'approved' && ['paid', 'confirmed'].includes(r.paymentStatus))
                                       ? 'bg-green-100 border-2 border-green-500 font-bold'
-                                      : regs.some(r => r.status === 'approved' && r.paymentStatus !== 'paid')
+                                      : regs.some(r => r.status === 'approved' && !['paid', 'confirmed'].includes(r.paymentStatus))
                                       ? 'bg-orange-100 border-2 border-orange-500 font-bold'
                                       : regs.some(r => r.status === 'pending')
                                       ? 'bg-yellow-100 border-2 border-yellow-500 font-bold'
@@ -6724,13 +6858,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             <div className="font-bold">{child.name}</div>
                                             <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
                                             <div className={`text-xs ${
-                                              reg.status === 'approved' && reg.paymentStatus === 'paid' ? 'text-green-300' :
-                                              reg.status === 'approved' && reg.paymentStatus !== 'paid' ? 'text-orange-300' :
+                                              reg.status === 'approved' && ['paid', 'confirmed'].includes(reg.paymentStatus) ? 'text-green-300' :
+                                              reg.status === 'approved' && reg.paymentStatus === 'submitted' ? 'text-blue-300' :
+                                              reg.status === 'approved' && !['paid', 'confirmed'].includes(reg.paymentStatus) ? 'text-orange-300' :
                                               reg.status === 'pending' ? 'text-yellow-300' :
                                               'text-red-300'
                                             }`}>
-                                              {reg.status === 'approved' && reg.paymentStatus === 'paid' ? 'Approved & Paid' :
-                                               reg.status === 'approved' && reg.paymentStatus !== 'paid' ? 'Approved - Payment Pending' :
+                                              {reg.status === 'approved' && ['paid', 'confirmed'].includes(reg.paymentStatus) ? 'Approved & Paid' :
+                                               reg.status === 'approved' && reg.paymentStatus === 'submitted' ? 'Approved - Payment Submitted' :
+                                               reg.status === 'approved' && !['paid', 'confirmed'].includes(reg.paymentStatus) ? 'Approved - Payment Pending' :
                                                reg.status === 'pending' ? 'Pending Approval' :
                                                'Rejected'}
                                             </div>
