@@ -27,19 +27,22 @@
 - **ALWAYS** include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>`
 
 ### Change Summary Table
-- **ALWAYS** provide a summary table after every completed request showing ALL files that were changed
-- Include every file touched (HTML files, CLAUDE.md, migration scripts, etc.)
-- Format as a markdown table with File and Changes columns
+- **ALWAYS** provide a change summary table after every completed request
+- **ALWAYS** list ALL project files in the table, even if they were NOT changed
+- Mark unchanged files with "No changes" so it's clear they were reviewed
+- Format as a markdown table with File, Changed, and Changes columns
 - Keep change descriptions brief but specific (what was added/changed/fixed)
 - Example format:
 
-| File | Changes |
-|------|---------|
-| `admin.html` | Added new Dashboard feature, bumped to v12.XXX |
-| `index.html` | Version bump to v12.XXX |
-| `parent.html` | Version bump to v12.XXX |
-| `counselor.html` | Version bump to v12.XXX |
-| `CLAUDE.md` | Added new instruction for change summaries |
+| File | Changed | Changes |
+|------|---------|---------|
+| `admin.html` | Yes | Added new Dashboard feature, bumped to v12.XXX |
+| `index.html` | Yes | Version bump to v12.XXX |
+| `parent.html` | Yes | Version bump to v12.XXX |
+| `counselor.html` | Yes | Version bump to v12.XXX |
+| `CLAUDE.md` | Yes | Added new instruction for change summaries |
+| `index-backup-v12.142.html` | No | No changes |
+| `migrations/*` | No | No changes |
 
 ---
 
