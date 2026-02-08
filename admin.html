@@ -45,11 +45,23 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.158";
+    const VERSION = "12.160";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:37:00");
+    const BUILD_DATE = new Date("2026-02-07T21:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.160", date: "2026-02-07", time: "9:00 PM PT", author: "Derek Richardson", changes: [
+        "Admin Dashboard Reorganization: Transformed flat 12-tab structure into hierarchical parent/child tabs",
+        "New parent tabs: Family Setup, Counselor Setup, Registrations, Pod Setup, Camp Setup",
+        "Family Setup children: Parents, Campers, Session Registrations",
+        "Counselor Setup children: Counselors, Work Availability (placeholder)",
+        "Pod Setup child: Counselor and Camper Assignments",
+        "Camp Setup children: Gym Rental Days, Public Website Content",
+        "Two-row tab interface: parent tabs on top (larger), child tabs below (smaller, indented)",
+        "Improved navigation with navigateToTab() helper and ADMIN_TAB_CONFIG object",
+        "Badge counts preserved on relevant tabs (pending registrations, parent count, etc.)",
+        "Quick navigation buttons updated to use new hierarchical structure"
+      ]},
       { version: "12.158", date: "2026-02-07", time: "8:37 PM PT", author: "Derek Richardson", changes: [
         "Gym Rental Days: Expanded to show ALL weekdays (Mon-Fri) in July and August 2026",
         "Camp Directors can now mark any weekday as gym booked/not booked, not just camp days",
@@ -5704,6 +5716,70 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       );
     };
 
+    // ==================== ADMIN TAB CONFIGURATION ====================
+    const ADMIN_TAB_CONFIG = {
+      'dashboard': { label: '📊 Dashboard', hasChildren: false },
+      'family': {
+        label: '👨‍👩‍👧 Family Setup',
+        hasChildren: true,
+        children: {
+          'parents': { label: 'Parents', badge: () => users.filter(u => u.role === 'parent').length },
+          'campers': { label: 'Campers' },
+          'sessionregs': { label: 'Session Registrations', badge: () => getPending() }
+        },
+        defaultChild: 'parents'
+      },
+      'counselor': {
+        label: '🏀 Counselor Setup',
+        hasChildren: true,
+        children: {
+          'counselors': { label: 'Counselors' },
+          'availability': { label: 'Work Availability' }
+        },
+        defaultChild: 'counselors'
+      },
+      'registrations': {
+        label: '✅ Registrations',
+        hasChildren: false,
+        badge: () => registrations.filter(r => r.status === 'pending').length
+      },
+      'pod': {
+        label: '📋 Pod Setup',
+        hasChildren: true,
+        children: {
+          'assignments': { label: 'Counselor and Camper Assignments' }
+        },
+        defaultChild: 'assignments'
+      },
+      'camp': {
+        label: '⚙️ Camp Setup',
+        hasChildren: true,
+        children: {
+          'gymrentals': { label: 'Gym Rental Days' },
+          'content': { label: 'Public Website Content' }
+        },
+        defaultChild: 'gymrentals'
+      },
+      'history': { label: '📜 History', hasChildren: false },
+      'dangerzone': { label: '⚠️ Danger Zone', hasChildren: false }
+    };
+
+    // Navigation helper functions
+    const getActiveChildTab = (parentKey) => {
+      const config = ADMIN_TAB_CONFIG[parentKey];
+      if (!config?.hasChildren) return null;
+      return adminChildTab[parentKey] || config.defaultChild;
+    };
+
+    const navigateToTab = (parentKey, childKey = null) => {
+      setAdminParentTab(parentKey);
+      const config = ADMIN_TAB_CONFIG[parentKey];
+      if (config?.hasChildren) {
+        const targetChild = childKey || adminChildTab[parentKey] || config.defaultChild;
+        setAdminChildTab(prev => ({ ...prev, [parentKey]: targetChild }));
+      }
+    };
+
     // ==================== SCROLLABLE TABS ====================
     const ScrollableTabs = ({ children, className = '' }) => {
       const containerRef = useRef(null);
@@ -6398,9 +6474,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [gymRentals, setGymRentals] = useState({}); // { date: { morning: bool, afternoon: bool } }
       const [gymRentalsTabMonth, setGymRentalsTabMonth] = useState(null); // Persist selected month in Gym Rentals tab
 
-      const [adminTab, setAdminTab] = useState('dashboard');
-      const [parentTab, setParentTab] = useState('dashboard');
-      const [counselorTab, setCounselorTab] = useState('dashboard');
+      const [adminParentTab, setAdminParentTab] = useState('dashboard');
+      const [adminChildTab, setAdminChildTab] = useState({
+        family: 'parents',
+        counselor: 'counselors',
+        pod: 'assignments',
+        camp: 'gymrentals'
+      });
       const [sessionsTabMonth, setSessionsTabMonth] = useState(null); // Persist selected month in Sessions tab
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
@@ -7407,26 +7487,74 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               </div>
             </div>
 
+            {/* Parent Tabs Row */}
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs>
-                  {['dashboard', 'counselors', 'parents', 'campers', 'registrations', 'assignments', 'sessions', 'gymrentals', 'approval', 'content', 'history', 'dangerzone'].map(t => (
-                    <button key={t} onClick={(e) => { setAdminTab(t); setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 50); }} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (adminTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'history' ? '📜 History' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'campers' ? '🏕️ Campers' : t === 'assignments' ? '📋 Assignments' : t === 'sessions' ? '📅 Sessions' : t === 'gymrentals' ? '🏀 Gym Rentals' : t === 'registrations' ? '📝 Registrations' : t === 'counselors' ? '🏀 Counselors' : t === 'content' ? '✏️ Content' : t === 'dashboard' ? '📊 Dashboard' : t === 'approval' ? '✅ Approval' : t === 'dangerzone' ? '⚠️ Danger Zone' : t}
-                      {t === 'registrations' && getPending() > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{getPending()}</span>}
-                      {t === 'parents' && users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length > 0 && <span className="ml-2 bg-blue-500 text-white text-xs px-2 rounded-full">{users.filter(u => u.role === 'parent' || u.roles?.includes('parent')).length}</span>}
-                      {t === 'sessions' && Object.keys(blockedSessions).length > 0 && <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{Object.values(blockedSessions).reduce((sum, day) => sum + (day.morning ? 1 : 0) + (day.afternoon ? 1 : 0), 0)}</span>}
-                      {t === 'approval' && counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length > 0 && (
-                        <span className="ml-2 bg-orange-500 text-white text-xs px-2 rounded-full">{counselors.filter(c => !c.approvedByAdmin && c.approvedByAdmin !== undefined).length}</span>
-                      )}
-                    </button>
-                  ))}
+                  {Object.entries(ADMIN_TAB_CONFIG).map(([key, config]) => {
+                    const isActive = adminParentTab === key;
+                    const badge = config.badge ? config.badge() : null;
+
+                    return (
+                      <button
+                        key={key}
+                        onClick={(e) => {
+                          navigateToTab(key);
+                          setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 50);
+                        }}
+                        className={`px-4 sm:px-6 py-3 sm:py-4 border-b-3 font-semibold whitespace-nowrap select-none text-sm sm:text-base transition-colors ${
+                          isActive
+                            ? 'border-green-600 text-green-800 bg-green-100'
+                            : 'border-transparent text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        {config.label}
+                        {badge > 0 && (
+                          <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{badge}</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </ScrollableTabs>
               </div>
             </div>
 
+            {/* Child Tabs Row */}
+            {ADMIN_TAB_CONFIG[adminParentTab]?.hasChildren && (
+              <div className="bg-gray-50 border-t border-gray-200">
+                <div className="max-w-6xl mx-auto px-2 sm:px-4">
+                  <ScrollableTabs>
+                    {Object.entries(ADMIN_TAB_CONFIG[adminParentTab].children).map(([childKey, childConfig]) => {
+                      const isActive = getActiveChildTab(adminParentTab) === childKey;
+                      const badge = childConfig.badge ? childConfig.badge() : null;
+
+                      return (
+                        <button
+                          key={childKey}
+                          onClick={(e) => {
+                            setAdminChildTab(prev => ({ ...prev, [adminParentTab]: childKey }));
+                            setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 50);
+                          }}
+                          className={`px-3 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm transition-colors ${
+                            isActive
+                              ? 'border-green-500 text-green-700 bg-green-50'
+                              : 'border-transparent text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {childConfig.label}
+                          {badge > 0 && (
+                            <span className="ml-2 bg-red-500 text-white text-xs px-2 rounded-full">{badge}</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </ScrollableTabs>
+                </div>
+              </div>
+            )}
+
             <div className="max-w-6xl mx-auto px-4 py-6">
-              {adminTab === 'dashboard' && (
+              {adminParentTab === 'dashboard' && (
                 <div className="space-y-6">
                   {/* Stats Cards */}
                   <div className="bg-white rounded-xl shadow p-4">
@@ -7443,19 +7571,19 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   <div className="bg-white rounded-xl shadow p-6">
                     <h3 className="font-bold text-lg mb-4 text-gray-700">Quick Navigation</h3>
                     <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      <button onClick={() => setAdminTab('counselors')} className="flex flex-col items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-xl border-2 border-purple-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('counselor', 'counselors')} className="flex flex-col items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 rounded-xl border-2 border-purple-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">👥</span>
                         <span className="font-medium text-purple-700">Counselors</span>
                       </button>
-                      <button onClick={() => setAdminTab('parents')} className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border-2 border-blue-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('family', 'parents')} className="flex flex-col items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 rounded-xl border-2 border-blue-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">👨‍👩‍👧</span>
                         <span className="font-medium text-blue-700">Parents</span>
                       </button>
-                      <button onClick={() => setAdminTab('registrations')} className="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 rounded-xl border-2 border-yellow-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('family', 'sessionregs')} className="flex flex-col items-center justify-center p-4 bg-yellow-50 hover:bg-yellow-100 rounded-xl border-2 border-yellow-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">📝</span>
                         <span className="font-medium text-yellow-700">Registrations</span>
                       </button>
-                      <button onClick={() => setAdminTab('campers')} className="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-xl border-2 border-green-200 min-h-[80px] transition-colors">
+                      <button onClick={() => navigateToTab('family', 'campers')} className="flex flex-col items-center justify-center p-4 bg-green-50 hover:bg-green-100 rounded-xl border-2 border-green-200 min-h-[80px] transition-colors">
                         <span className="text-2xl mb-1">🏕️</span>
                         <span className="font-medium text-green-700">Campers</span>
                       </button>
@@ -7492,7 +7620,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'registrations' && (
+              {adminParentTab === 'family' && getActiveChildTab('family') === 'sessionregs' && (
                 <div className="space-y-6">
                   {/* Header with Create button */}
                   <div className="bg-white rounded-xl shadow p-6">
@@ -8189,7 +8317,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'counselors' && (
+              {adminParentTab === 'counselor' && getActiveChildTab('counselor') === 'counselors' && (
                 <div>
                   <div className="flex justify-between items-center mb-4">
                     <div>
@@ -8442,7 +8570,22 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'approval' && (
+              {adminParentTab === 'counselor' && getActiveChildTab('counselor') === 'availability' && (
+                <div className="bg-white rounded-xl shadow p-6">
+                  <h3 className="font-bold text-xl mb-4">Counselor Work Availability</h3>
+                  <p className="text-gray-600 mb-4">
+                    Manage counselor work schedules and availability here. This feature will allow you to view and edit which counselors are available for each camp session.
+                  </p>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-blue-800">
+                      <strong>Coming soon:</strong> Full counselor availability management interface.
+                      For now, use the "Edit Schedule" button in the Counselors tab.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {adminParentTab === 'registrations' && (
                 <div className="space-y-6">
                   {/* Pending Registration Approvals */}
                   <div className="bg-white rounded-xl shadow p-6">
@@ -8728,7 +8871,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'content' && (
+              {adminParentTab === 'camp' && getActiveChildTab('camp') === 'content' && (
                 <div className="space-y-6">
                   <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg">
                     <p className="text-green-800"><strong>Auto-save enabled:</strong> Changes are saved automatically when you click outside the field</p>
@@ -8821,7 +8964,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'parents' && (
+              {adminParentTab === 'family' && getActiveChildTab('family') === 'parents' && (
                 <ParentsTab
                   users={users}
                   registrations={registrations}
@@ -8863,7 +9006,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'admins' && (
+              {adminParentTab === 'admins' && (
                 <AdminsTab
                   admins={admins}
                   currentAdminId={user?.adminId}
@@ -8872,7 +9015,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'campers' && (
+              {adminParentTab === 'family' && getActiveChildTab('family') === 'campers' && (
                 <CampersTab
                   users={users}
                   registrations={registrations}
@@ -8887,7 +9030,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'assignments' && (
+              {adminParentTab === 'pod' && getActiveChildTab('pod') === 'assignments' && (
                 <AssignmentsTab
                   registrations={registrations}
                   counselors={counselors}
@@ -8901,7 +9044,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'sessions' && (
+              {adminParentTab === 'family' && getActiveChildTab('family') === 'sessionregs' && false && (
                 <SessionsTab
                   blockedSessions={blockedSessions}
                   allDates={CAMP_DATES}
@@ -8916,7 +9059,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'gymrentals' && (
+              {adminParentTab === 'camp' && getActiveChildTab('camp') === 'gymrentals' && (
                 <GymRentalDaysTab
                   gymRentals={gymRentals}
                   allDates={CAMP_DATES}
@@ -8927,7 +9070,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 />
               )}
 
-              {adminTab === 'history' && (
+              {adminParentTab === 'history' && (
                 <div className="bg-white rounded-xl shadow p-6">
                   <h3 className="font-bold text-lg text-green-800 mb-4">📜 Change History</h3>
                   {changeHistory.length === 0 ? (
@@ -8950,7 +9093,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 </div>
               )}
 
-              {adminTab === 'dangerzone' && (
+              {adminParentTab === 'dangerzone' && (
                 <div className="space-y-6">
                   {/* Warning Banner */}
                   <div className="bg-red-50 border-2 border-red-300 rounded-xl p-6">

@@ -45,11 +45,18 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.159";
+    const VERSION = "12.160";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:45:00");
+    const BUILD_DATE = new Date("2026-02-07T21:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.160", date: "2026-02-07", time: "9:00 PM PT", author: "Derek Richardson", changes: [
+        "Multi-Parent Family Access: Parents can now add other parents/guardians to share camper access",
+        "Admin Dashboard Reorganization: Hierarchical parent/child tab structure for better organization",
+        "Family Setup tab (Parents, Campers, Session Registrations)",
+        "Counselor Setup tab (Counselors, Work Availability)",
+        "Pod Setup and Camp Setup tabs with organized children"
+      ]},
       { version: "12.159", date: "2026-02-07", time: "8:45 PM PT", author: "Derek Richardson", changes: [
         "Sessions Tab Restructuring: Moved registration calendar from My Campers to Sessions tab",
         "Added prominent 'New Registration' button on Sessions tab to launch modal workflow",
