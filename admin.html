@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.002";
+    const VERSION = "13.003";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:39:00");
+    const BUILD_DATE = new Date("2026-02-08T09:48:00");
 
     const RELEASE_NOTES = [
+      { version: "13.003", date: "2026-02-08", time: "9:48 AM PST", author: "Derek Richardson", changes: [
+        "Onboarding: Eliminated Step 5 intermediate screen to prevent flash to login page after completing setup",
+        "Onboarding: Reduced from 5 steps to 4 — after policies, 'Complete Setup' goes directly to submission",
+        "Onboarding: Uses location.replace instead of location.href to prevent back-button returning to onboarding",
+        "Admin Dashboard: Emergency contact warning now camper-based instead of parent-based",
+        "Admin Dashboard: Counts emergency contacts from all parents linked to each camper via camperParentLinks",
+        "Admin Dashboard: Warning navigates to Campers tab instead of Parents tab"
+      ]},
       { version: "13.002", date: "2026-02-08", time: "9:39 AM PST", author: "Derek Richardson", changes: [
         "Onboarding: EC photo guidance now matches parent photo guidance (photo on site or photo ID at pickup required)",
         "Onboarding: Policies now display as popup modals instead of inline checkboxes",
@@ -7821,9 +7829,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 const unpaidRegs = registrations.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid');
                 const approvedRegs = registrations.filter(r => r.status === 'approved');
 
-                // Parents missing emergency contacts (need at least 2)
-                const parentsNeedingContacts = parents.filter(p => {
-                  const contactCount = emergencyContacts.filter(c => c.userEmail === p.email).length;
+                // Campers with fewer than 2 emergency contacts
+                const campersNeedingContacts = campers.filter(camper => {
+                  const parentEmails = (camperParentLinks || [])
+                    .filter(l => l.camperId === camper.id)
+                    .map(l => l.parentEmail);
+                  const contactCount = emergencyContacts.filter(c => parentEmails.includes(c.userEmail)).length;
                   return contactCount < 2;
                 });
 
@@ -7913,13 +7924,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   });
                 }
 
-                // IMPORTANT: Parents missing emergency contacts
-                if (parentsNeedingContacts.length > 0) {
+                // IMPORTANT: Campers missing emergency contacts
+                if (campersNeedingContacts.length > 0) {
                   importantTasks.push({
-                    icon: '🆘', label: `${parentsNeedingContacts.length} parent${parentsNeedingContacts.length !== 1 ? 's' : ''} need${parentsNeedingContacts.length === 1 ? 's' : ''} more emergency contacts (minimum 2 required)`,
-                    detail: parentsNeedingContacts.slice(0, 3).map(p => p.name).join(', ') + (parentsNeedingContacts.length > 3 ? ` +${parentsNeedingContacts.length - 3} more` : ''),
-                    action: () => navigateToTab('family', 'parents'),
-                    linkText: 'Message Parents'
+                    icon: '🆘', label: `${campersNeedingContacts.length} camper${campersNeedingContacts.length !== 1 ? 's' : ''} need${campersNeedingContacts.length === 1 ? 's' : ''} more emergency contacts (minimum 2 required)`,
+                    detail: campersNeedingContacts.slice(0, 3).map(c => c.name).join(', ') + (campersNeedingContacts.length > 3 ? ` +${campersNeedingContacts.length - 3} more` : ''),
+                    action: () => navigateToTab('family', 'campers'),
+                    linkText: 'View Campers'
                   });
                 }
 

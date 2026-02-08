@@ -45,9 +45,9 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.002";
+    const VERSION = "13.003";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T09:39:00");
+    const BUILD_DATE = new Date("2026-02-08T09:48:00");
 
     const RELEASE_NOTES = [
       { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
@@ -1342,14 +1342,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const contactPhotoRef = useRef(null);
       const contactNameRef = useRef(null);
 
-      const totalSteps = 5;
+      const totalSteps = 4;
 
       const steps = [
         { num: 1, title: 'Your Account', icon: '👤' },
         { num: 2, title: 'Add Campers', icon: '🏀' },
         { num: 3, title: 'Emergency Contacts', icon: '📞' },
-        { num: 4, title: 'Policies', icon: '📋' },
-        { num: 5, title: 'Complete', icon: '✅' }
+        { num: 4, title: 'Review & Complete', icon: '✅' }
       ];
 
       // Photo upload handler
@@ -1621,7 +1620,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const handleNext = async () => {
         if (!validateStep()) return;
 
-        if (step === totalSteps) {
+        // After policies (step 4), skip step 5 display and go straight to saving
+        if (step === 4) {
           await handleComplete();
           return;
         }
@@ -2207,20 +2207,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </div>
               )}
 
-              {/* Step 5: Complete */}
-              {step === 5 && (
-                <div className="text-center space-y-6">
-                  <div className="text-6xl">🎉</div>
-                  <h3 className="font-display text-2xl text-green-800">You're All Set!</h3>
-                  <p className="text-gray-600">Your account is ready. You can now register your campers for sessions!</p>
-
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-green-800 font-medium">Next Step: Register for Sessions</p>
-                    <p className="text-sm text-green-700 mt-1">Go to the Register tab to sign up your campers for camp dates!</p>
-                  </div>
-                </div>
-              )}
-
               {/* Navigation */}
               <div className="flex flex-col gap-3 mt-8">
                 <div className="flex gap-4">
@@ -2234,16 +2220,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     onClick={handleNext}
                     className="flex-1 py-3 bg-green-700 hover:bg-green-800 text-white font-bold rounded-lg"
                   >
-                    {step === totalSteps ? 'Complete Setup' : 'Continue →'}
+                    {step >= 4 ? 'Complete Setup' : 'Continue →'}
                   </button>
                 </div>
-                {/* Skip to Policies option for steps 2-3 (Policies step 4 is required) */}
+                {/* Skip to Review & Complete option for steps 2-3 */}
                 {step > 1 && step < 4 && (
                   <button
                     onClick={() => setStep(4)}
                     className="w-full py-2 text-gray-500 hover:text-green-700 text-sm border border-gray-200 rounded-lg hover:border-green-300"
                   >
-                    Skip to policies & finish setup →
+                    Skip to review & finish setup →
                   </button>
                 )}
               </div>
@@ -4509,7 +4495,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <ParentOnboarding
               onComplete={(newUser) => {
                 sessionStorage.setItem('user', JSON.stringify(newUser));
-                window.location.href = '/parent.html';
+                // Use replace to prevent back-button returning to onboarding
+                window.location.replace('/parent.html');
               }}
               onBack={() => setMode('selectRole')}
               parents={parents}
