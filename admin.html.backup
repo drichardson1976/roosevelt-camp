@@ -45,66 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.181";
+    const VERSION = "12.171";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T07:55:00");
+    const BUILD_DATE = new Date("2026-02-08T04:00:00");
 
     const RELEASE_NOTES = [
-      { version: "12.181", date: "2026-02-07", time: "11:55 PM PST", author: "Derek Richardson", changes: [
-        "CRITICAL BUG FIX: Fixed Danger Zone crash when viewing Database Records",
-        "Fixed TypeError: .map() is not a function for object-based tables",
-        "Corrected data display for Gym Rentals (show dates with morning/afternoon sessions)",
-        "Corrected data display for Website Content (show as single record with field count)",
-        "Corrected data display for Food Photos, Site Photos (show photo keys)",
-        "Corrected data display for Onboarding Progress (show user emails with completion status)",
-        "Danger Zone now properly handles both array-based and object-based data tables"
-      ]},
-      { version: "12.179", date: "2026-02-08", time: "11:45 PM PT", author: "Derek Richardson", changes: [
-        "Danger Zone: Added 13 missing data tables to Database Records viewer",
-        "All tables now visible: Camper-Parent Links, Blocked Sessions, Counselor Schedule, Gym Rentals",
-        "Added: Website Content, Messages, Food Photos, Site Photos, Onboarding Progress",
-        "Added: Availability Change Requests, Profile Change Requests, Change History",
-        "Complete data transparency: Every table that stores data can now be viewed and deleted"
-      ]},
-      { version: "12.178", date: "2026-02-08", time: "11:30 PM PT", author: "Derek Richardson", changes: [
-        "Fixed CampersTab component after users table split",
-        "Updated component to use 'parents' prop instead of 'users' prop",
-        "Resolved blank screen issue when viewing Campers tab in Family Setup"
-      ]},
-      { version: "12.177", date: "2026-02-08", time: "11:15 PM PT", author: "Derek Richardson", changes: [
-        "Danger Zone: Merged 'Delete Individual Records' and 'Supabase Table Viewer' into one section",
-        "Database Records: View and delete all records in organized, readable format",
-        "Added icons to all sections for better visual organization",
-        "Added missing sections: Counselor Users (login accounts) and Admins",
-        "Admin deletion safety: Requires at least 1 admin to remain"
-      ]},
-      { version: "12.176", date: "2026-02-08", time: "10:45 PM PT", author: "Derek Richardson", changes: [
-        "Database migration: Created corrected SQL matching actual Supabase structure",
-        "Tables use: id (TEXT), data (JSONB), updated_at (TIMESTAMP WITH TIME ZONE)",
-        "Migration scripts ready for camp_parents and camp_counselor_users tables"
-      ]},
-      { version: "12.175", date: "2026-02-08", time: "10:30 PM PT", author: "Derek Richardson", changes: [
-        "Added diagnostic SQL to determine correct Supabase table structure",
-        "Created 00_diagnose_structure.sql for schema inspection",
-        "Updated migration instructions with diagnostic step"
-      ]},
-      { version: "12.174", date: "2026-02-08", time: "10:15 PM PT", author: "Derek Richardson", changes: [
-        "Fixed Dashboard quick access buttons to use new hierarchical navigation",
-        "Updated all setAdminTab calls to navigateToTab for new tab structure",
-        "Resolved 'setAdminTab is not defined' error"
-      ]},
-      { version: "12.173", date: "2026-02-08", time: "10:00 PM PT", author: "Derek Richardson", changes: [
-        "Created database migration scripts for users table split",
-        "Added 01_create_new_tables.sql and 02_migrate_data.sql",
-        "Comprehensive migration instructions with backup and rollback procedures"
-      ]},
-      { version: "12.172", date: "2026-02-08", time: "9:45 PM PT", author: "Derek Richardson", changes: [
-        "Added backward compatibility layer for users table refactoring",
-        "Created combined users array (parents + counselorUsers) for gradual migration",
-        "Intelligent saveUsers function routes to correct table based on role",
-        "Fixed Dashboard parent count and Danger Zone table viewer"
-      ]},
-      { version: "12.171", date: "2026-02-08", time: "9:00 PM PT", author: "Derek Richardson", changes: [
+      { version: "12.171", date: "2026-02-08", time: "4:00 AM PT", author: "Derek Richardson", changes: [
         "DATABASE RESTRUCTURING: Split camp_registered_users into camp_parents, camp_counselor_users, camp_admins",
         "Authentication updated to check all three separate tables for login",
         "Danger Zone: DELETE ALL DATA now preserves counselors and admins (only deletes parents)",
@@ -4245,7 +4191,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== CAMPERS TAB ====================
-    const CampersTab = ({ parents, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, showToast, addToHistory }) => {
+    const CampersTab = ({ users, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, showToast, addToHistory }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [sortBy, setSortBy] = useState('name');
       const [editingCamper, setEditingCamper] = useState(null);
@@ -4266,7 +4212,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           ...c,
           parents: camperParentLinks
             .filter(link => link.camperId === c.id)
-            .map(link => parents.find(u => u.email === link.parentEmail))
+            .map(link => users.find(u => u.email === link.parentEmail))
             .filter(Boolean),
           registrations: registrations.filter(r => r.camperId === c.id || r.childId === c.id)
         }));
@@ -9152,7 +9098,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
               {adminParentTab === 'family' && getActiveChildTab('family') === 'campers' && (
                 <CampersTab
-                  parents={parents}
+                  users={users}
                   registrations={registrations}
                   campers={campers}
                   camperParentLinks={camperParentLinks}
@@ -9286,15 +9232,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   </div>
 
-                  {/* Database Records - View & Delete (Merged Section) */}
+                  {/* Individual Record Deletion */}
                   <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-lg text-gray-800 mb-4">📊 Database Records</h3>
-                    <p className="text-sm text-gray-600 mb-4">View all records and delete individual items as needed.</p>
+                    <h3 className="font-bold text-lg text-gray-800 mb-4">🎯 Delete Individual Records</h3>
                     <div className="space-y-4">
                       {/* Parents */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👨‍👩‍👧 Parents ({parents.length} login accounts)</span>
+                          <span>Parents ({parents.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9326,84 +9271,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </div>
                       </details>
 
-                      {/* Counselor Users (Login Accounts) */}
+                      {/* Counselors */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🔐 Counselor Users ({counselorUsers.length} login accounts)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {counselorUsers.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No counselor user accounts</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {counselorUsers.map(user => (
-                                <div key={user.email} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{user.name}</div>
-                                    <div className="text-sm text-gray-500">{user.email}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete counselor user account for ${user.name}?`)) return;
-                                      const newUsers = counselorUsers.filter(u => u.email !== user.email);
-                                      await saveCounselorUsers(newUsers, `Deleted counselor user ${user.name}`);
-                                      showToast(`Deleted ${user.name}`);
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Admins */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👑 Admins ({admins.length} accounts)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {admins.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No admin accounts</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {admins.map(admin => (
-                                <div key={admin.username} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{admin.name || admin.username}</div>
-                                    <div className="text-sm text-gray-500">Username: {admin.username}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (admins.length === 1) {
-                                        alert('Cannot delete the last admin account!');
-                                        return;
-                                      }
-                                      if (!confirm(`Delete admin ${admin.username}?`)) return;
-                                      const newAdmins = admins.filter(a => a.username !== admin.username);
-                                      await saveAdmins(newAdmins, `Deleted admin ${admin.username}`);
-                                      showToast(`Deleted ${admin.username}`);
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Counselors (Profiles) */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏀 Counselors ({counselors.length} profiles)</span>
+                          <span>Counselors ({counselors.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9437,7 +9308,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Campers */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏕️ Campers ({campers.length} records)</span>
+                          <span>Campers ({campers.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9471,7 +9342,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Registrations */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📝 Registrations ({registrations.length} records)</span>
+                          <span>Registrations ({registrations.length} records)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9506,7 +9377,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Assignments */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📋 Pod Assignments ({Object.keys(assignments).length} sessions)</span>
+                          <span>Pod Assignments ({Object.keys(assignments).length} sessions)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9542,7 +9413,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Counselor Availability */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📅 Counselor Availability ({Object.keys(availability).length} counselors)</span>
+                          <span>Counselor Availability ({Object.keys(availability).length} counselors)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9602,7 +9473,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Emergency Contacts */}
                       <details className="border rounded-lg">
                         <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🆘 Emergency Contacts ({emergencyContacts.length} contacts)</span>
+                          <span>Emergency Contacts ({emergencyContacts.length} contacts)</span>
                           <span className="text-gray-400">▼</span>
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
@@ -9636,457 +9507,47 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           )}
                         </div>
                       </details>
-
-                      {/* Camper-Parent Links */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🔗 Camper-Parent Links ({camperParentLinks.length} links)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {camperParentLinks.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No camper-parent links</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {camperParentLinks.map((link, idx) => {
-                                const camper = campers.find(c => c.id === link.camperId);
-                                const parent = parents.find(p => p.email === link.parentEmail);
-                                return (
-                                  <div key={`${link.camperId}-${link.parentEmail}-${idx}`} className="flex items-center justify-between p-3 bg-white rounded border">
-                                    <div className="flex-1">
-                                      <div className="font-medium">{camper?.name || 'Unknown Camper'} ↔ {parent?.name || link.parentEmail}</div>
-                                      <div className="text-sm text-gray-500">Camper ID: {link.camperId}</div>
-                                    </div>
-                                    <button
-                                      onClick={async () => {
-                                        if (!confirm(`Delete link between ${camper?.name} and ${parent?.name}?`)) return;
-                                        const newLinks = camperParentLinks.filter((l, i) => i !== idx);
-                                        await saveCamperParentLinks(newLinks, `Deleted link for ${camper?.name}`);
-                                        showToast('Link deleted');
-                                      }}
-                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Blocked Sessions */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🚫 Blocked Sessions ({Object.keys(blockedSessions).length} dates)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(blockedSessions).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No blocked sessions</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(blockedSessions).map(([date, data]) => (
-                                <div key={date} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{date}</div>
-                                    <div className="text-sm text-gray-500">{data.reason || 'No reason provided'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Unblock session on ${date}?`)) return;
-                                      const newBlocked = { ...blockedSessions };
-                                      delete newBlocked[date];
-                                      await saveBlockedSessions(newBlocked, `Unblocked session on ${date}`);
-                                      showToast('Session unblocked');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Counselor Schedule */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📆 Counselor Schedule ({Object.keys(counselorSchedule).length} counselors)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(counselorSchedule).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No counselor schedules</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(counselorSchedule).map(([counselorId, schedule]) => {
-                                const counselor = counselors.find(c => c.id === counselorId);
-                                const dateCount = Object.keys(schedule).length;
-                                return (
-                                  <div key={counselorId} className="flex items-center justify-between p-3 bg-white rounded border">
-                                    <div className="flex-1">
-                                      <div className="font-medium">{counselor?.name || counselorId}</div>
-                                      <div className="text-sm text-gray-500">{dateCount} scheduled date(s)</div>
-                                    </div>
-                                    <button
-                                      onClick={async () => {
-                                        if (!confirm(`Delete schedule for ${counselor?.name || counselorId}?`)) return;
-                                        const newSchedule = { ...counselorSchedule };
-                                        delete newSchedule[counselorId];
-                                        await saveCounselorSchedule(newSchedule, `Deleted schedule for ${counselor?.name}`);
-                                        showToast('Schedule deleted');
-                                      }}
-                                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Gym Rentals */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏀 Gym Rentals ({Object.keys(gymRentals || {}).length} dates)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(gymRentals || {}).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No gym rental records</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(gymRentals).map(([date, data]) => (
-                                <div key={date} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{date}</div>
-                                    <div className="text-sm text-gray-500">
-                                      {data.morning && 'Morning'}
-                                      {data.morning && data.afternoon && ' & '}
-                                      {data.afternoon && 'Afternoon'}
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete gym rental on ${date}?`)) return;
-                                      const newRentals = { ...gymRentals };
-                                      delete newRentals[date];
-                                      setGymRentals(newRentals);
-                                      await storage.set('camp_gym_rentals', 'main', newRentals);
-                                      addToHistory('Gym Rental Deleted', `Deleted rental on ${date}`);
-                                      showToast('Gym rental deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Website Content */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>✏️ Website Content ({Object.keys(content || {}).length} fields)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {!content || Object.keys(content).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No content data</p>
-                          ) : (
-                            <div className="space-y-2">
-                              <div className="p-3 bg-white rounded border">
-                                <div className="text-sm font-medium text-gray-700 mb-2">Website Content Record</div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  <div className="text-gray-500">Camp Name:</div>
-                                  <div className="truncate">{content.campName || 'N/A'}</div>
-                                  <div className="text-gray-500">Session Cost:</div>
-                                  <div>{content.sessionCost || 'N/A'}</div>
-                                  <div className="text-gray-500">Total Fields:</div>
-                                  <div>{Object.keys(content).length}</div>
-                                </div>
-                                <button
-                                  onClick={async () => {
-                                    if (!confirm('Reset website content to defaults? This will erase all customizations.')) return;
-                                    await saveContent(DEFAULT_CONTENT, 'Reset content to defaults');
-                                    showToast('Content reset to defaults');
-                                  }}
-                                  className="mt-3 w-full px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                >
-                                  Reset to Defaults
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Messages */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>💬 Messages ({messages.length} messages)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {messages.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No messages</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {messages.map(msg => (
-                                <div key={msg.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{msg.subject || 'No subject'}</div>
-                                    <div className="text-sm text-gray-500">From: {msg.from || 'Unknown'} • {msg.timestamp}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete message "${msg.subject}"?`)) return;
-                                      const newMessages = messages.filter(m => m.id !== msg.id);
-                                      await saveMessages(newMessages, `Deleted message ${msg.subject}`);
-                                      showToast('Message deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Food Photos */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🍽️ Food Photos ({Object.keys(foodPhotos || {}).length} photos)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(foodPhotos || {}).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No food photos</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(foodPhotos).map(([photoKey, photoData]) => (
-                                <div key={photoKey} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{photoKey}</div>
-                                    <div className="text-sm text-gray-500">{photoData ? 'Has image' : 'No image'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete food photo "${photoKey}"?`)) return;
-                                      const newPhotos = { ...foodPhotos };
-                                      delete newPhotos[photoKey];
-                                      setFoodPhotos(newPhotos);
-                                      await storage.set('camp_food_photos', 'main', newPhotos);
-                                      addToHistory('Food Photo Deleted', `Deleted ${photoKey}`);
-                                      showToast('Photo deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Site Photos */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📸 Site Photos ({Object.keys(sitePhotos || {}).length} photos)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(sitePhotos || {}).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No site photos</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(sitePhotos).map(([photoKey, photoData]) => (
-                                <div key={photoKey} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{photoKey}</div>
-                                    <div className="text-sm text-gray-500">{photoData ? 'Has image' : 'No image'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete site photo "${photoKey}"?`)) return;
-                                      const newPhotos = { ...sitePhotos };
-                                      delete newPhotos[photoKey];
-                                      setSitePhotos(newPhotos);
-                                      await storage.set('camp_site_photos', 'main', newPhotos);
-                                      addToHistory('Site Photo Deleted', `Deleted ${photoKey}`);
-                                      showToast('Photo deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Onboarding Progress */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🎯 Onboarding Progress ({Object.keys(onboardingProgress || {}).length} users)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {Object.keys(onboardingProgress || {}).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No onboarding progress records</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {Object.entries(onboardingProgress).map(([userEmail, progressData]) => (
-                                <div key={userEmail} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{userEmail}</div>
-                                    <div className="text-sm text-gray-500">Step: {progressData.step || 0} - {progressData.complete ? 'Complete' : 'In Progress'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete onboarding progress for ${userEmail}?`)) return;
-                                      const newProgress = { ...onboardingProgress };
-                                      delete newProgress[userEmail];
-                                      setOnboardingProgress(newProgress);
-                                      await storage.set('camp_onboarding_progress', 'main', newProgress);
-                                      addToHistory('Onboarding Progress Deleted', `Deleted progress for ${userEmail}`);
-                                      showToast('Progress deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Availability Change Requests */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📝 Availability Change Requests ({availabilityChangeRequests.length} requests)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {availabilityChangeRequests.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No availability change requests</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {availabilityChangeRequests.map(request => (
-                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
-                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete availability change request?`)) return;
-                                      const newRequests = availabilityChangeRequests.filter(r => r.id !== request.id);
-                                      await saveAvailabilityChangeRequests(newRequests, `Deleted change request`);
-                                      showToast('Request deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Profile Change Requests */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👤 Profile Change Requests ({profileChangeRequests.length} requests)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {profileChangeRequests.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No profile change requests</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {profileChangeRequests.map(request => (
-                                <div key={request.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{request.counselorEmail || 'Unknown'}</div>
-                                    <div className="text-sm text-gray-500">Status: {request.status || 'Pending'}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete profile change request?`)) return;
-                                      const newRequests = profileChangeRequests.filter(r => r.id !== request.id);
-                                      await saveProfileChangeRequests(newRequests, `Deleted change request`);
-                                      showToast('Request deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Change History */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📜 Change History ({history.length} entries)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {history.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No history entries</p>
-                          ) : (
-                            <div className="space-y-2">
-                              {history.slice(-20).reverse().map(entry => (
-                                <div key={entry.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{entry.action}</div>
-                                    <div className="text-sm text-gray-500">{entry.type} • {new Date(entry.timestamp).toLocaleString()}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete history entry "${entry.action}"?`)) return;
-                                      const newHistory = history.filter(h => h.id !== entry.id);
-                                      await saveHistory(newHistory);
-                                      showToast('History entry deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
                     </div>
                   </div>
 
+                  {/* Supabase Viewer */}
+                  <div className="bg-white rounded-xl shadow p-6">
+                    <h3 className="font-bold text-lg text-gray-800 mb-4">📊 Supabase Table Viewer (Read-Only)</h3>
+                    <div className="space-y-4">
+                      {(() => {
+                        const tables = [
+                          { name: 'Parents', data: parents, key: 'email' },
+                          { name: 'Counselor Users', data: counselorUsers, key: 'email' },
+                          { name: 'Admins', data: admins, key: 'username' },
+                          { name: 'Counselors (Profiles)', data: counselors, key: 'id' },
+                          { name: 'Campers', data: campers, key: 'id' },
+                          { name: 'Registrations', data: registrations, key: 'id' },
+                          { name: 'Assignments', data: Object.entries(assignments).map(([k, v]) => ({ session: k, ...v })), key: 'session' },
+                          { name: 'Camper-Parent Links', data: camperParentLinks, key: 'id' },
+                          { name: 'Availability', data: Object.entries(availability).map(([k, v]) => ({ email: k, dates: JSON.stringify(v) })), key: 'email' },
+                          { name: 'Blocked Sessions', data: Object.entries(blockedSessions).map(([k, v]) => ({ date: k, ...v })), key: 'date' }
+                        ];
+
+                        return tables.map(table => (
+                          <details key={table.name} className="border rounded-lg">
+                            <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
+                              <span>{table.name} ({table.data.length} records)</span>
+                              <span className="text-gray-400">▼</span>
+                            </summary>
+                            <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
+                              {table.data.length === 0 ? (
+                                <p className="text-gray-500 text-sm">No records</p>
+                              ) : (
+                                <pre className="text-xs bg-white p-4 rounded border overflow-x-auto">
+                                  {JSON.stringify(table.data, null, 2)}
+                                </pre>
+                              )}
+                            </div>
+                          </details>
+                        ));
+                      })()}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
