@@ -7,10 +7,22 @@
 ## 🚨 CRITICAL INSTRUCTIONS - READ FIRST
 
 ### Version & Timestamp Updates
-- **ALWAYS** update version numbers across ALL 4 files: `admin.html`, `index.html`, `parent.html`, `counselor.html`
-- **ALWAYS** use external time source for BUILD_DATE in Pacific timezone
+- **ONLY** bump the version in files that actually changed — do NOT touch files that had no modifications
+- When bumping, use the **next global version number**: `max(VERSION across all files) + 1`
+- This means files may be at different versions — that is expected and correct
+- **ALWAYS** use external time source for BUILD_DATE in Pacific timezone (only in changed files)
 - **Command:** `TZ='America/Los_Angeles' date '+%m-%d-%Y %I:%M %p'`
 - **Format:** `const BUILD_DATE = new Date("2026-02-08T07:22:00");`
+
+#### Versioning Example
+```
+Starting state:    admin=v1, index=v1, parent=v1, counselor=v1
+Change admin.html: admin=v2, index=v1, parent=v1, counselor=v1
+Change parent.html: admin=v2, index=v1, parent=v3, counselor=v1
+Change admin.html: admin=v4, index=v1, parent=v3, counselor=v1
+Change index.html: admin=v4, index=v5, parent=v3, counselor=v1
+```
+Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 
 ### Release Notes
 - **ALWAYS** add release notes to `admin.html` RELEASE_NOTES array
@@ -323,7 +335,7 @@ python3 -m http.server
 
 ## ⚠️ NEVER FORGET
 
-1. ✅ Update version in ALL 4 files
+1. ✅ Only bump version in files that changed (use max version + 1)
 2. ✅ Use external time source for timestamps
 3. ✅ Add release notes to admin.html
 4. ✅ Check if table is object or array before rendering
