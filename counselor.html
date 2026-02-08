@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.168";
+    const VERSION = "12.169";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T02:30:00");
+    const BUILD_DATE = new Date("2026-02-08T03:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.169", date: "2026-02-08", time: "3:00 AM PT", author: "Derek Richardson", changes: [
+        "Version sync only - no functional changes to counselor.html",
+        "Changes in parent.html: Prominent '+ New Emergency Contact' button styled like '+ New Registration'"
+      ]},
       { version: "12.168", date: "2026-02-08", time: "2:30 AM PT", author: "Derek Richardson", changes: [
         "Version sync only - no functional changes to counselor.html",
         "Changes in parent.html: Consolidated registration summary view with date ranges and session counts"

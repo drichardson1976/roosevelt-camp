@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.168";
+    const VERSION = "12.169";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T02:30:00");
+    const BUILD_DATE = new Date("2026-02-08T03:00:00");
 
     const RELEASE_NOTES = [
+      { version: "12.169", date: "2026-02-08", time: "3:00 AM PT", author: "Derek Richardson", changes: [
+        "Emergency Contacts: Added prominent '+ New Emergency Contact' button at top of tab",
+        "Emergency Contacts: Button styled to match '+ New Registration' button (green, large, centered)",
+        "Emergency Contacts: Improved visual hierarchy with call-to-action button placement",
+        "UX: Consistent button styling across Session Registration and Emergency Contacts tabs"
+      ]},
       { version: "12.168", date: "2026-02-08", time: "2:30 AM PT", author: "Derek Richardson", changes: [
         "Session Registration: Consolidated registration summary view",
         "Registration Display: Multiple dates/sessions now grouped into single registration entries",
@@ -5394,7 +5400,77 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const requirementsMet = meetsRequirements();
 
       return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* New Emergency Contact Button */}
+          {!showAddForm && (
+            <div className="text-center">
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+              >
+                <span className="text-2xl">➕</span>
+                <span>New Emergency Contact</span>
+              </button>
+            </div>
+          )}
+
+          {/* Add New Contact Form */}
+          {showAddForm && (
+            <div className="border-2 border-green-300 rounded-lg p-4 space-y-3 bg-green-50">
+              <h4 className="font-medium">Add Emergency Contact</h4>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                <input
+                  value={editForm.relationship}
+                  onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="e.g., Grandparent, Neighbor, Friend"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input
+                  value={editForm.phone}
+                  onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  value={editForm.email}
+                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAdd}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Add Contact
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
+                  }}
+                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Contact List */}
           {localContacts.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No emergency contacts yet. Add at least 2 contacts.</p>
@@ -5482,70 +5558,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </div>
               ))}
             </div>
-          )}
-
-          {/* Add New Contact Form */}
-          {showAddForm ? (
-            <div className="border-2 border-green-300 rounded-lg p-4 space-y-3 bg-green-50">
-              <h4 className="font-medium">Add Emergency Contact</h4>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                <input
-                  value={editForm.name}
-                  onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
-                <input
-                  value={editForm.relationship}
-                  onChange={e => setEditForm({ ...editForm, relationship: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="e.g., Grandparent, Neighbor, Friend"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                <input
-                  value={editForm.phone}
-                  onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  value={editForm.email}
-                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
-                />
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={handleAdd}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                >
-                  Add Contact
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddForm(false);
-                    setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal' });
-                  }}
-                  className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full py-3 border-2 border-dashed border-green-300 rounded-lg text-green-600 hover:bg-green-50 hover:border-green-400"
-            >
-              + Add Emergency Contact
-            </button>
           )}
 
           {/* Save/Cancel Changes */}
