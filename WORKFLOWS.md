@@ -559,6 +559,16 @@ Three roles interact with the camp system: **Parents**, **Counselors**, and **Ad
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 12.150 | 2026-02-07 | Derek Richardson | Removed camp schedule by day section from parent Campers tab; moved 'Registered Camper' tag inline beside camper name; simplified Campers tab layout |
+| 12.149 | 2026-02-07 | Derek Richardson | Added contextual hints/advice system to parent dashboard; added current registrations list grouped by camper; 'Select Both Sessions' and 'Add Whole Week' buttons; fixed share button |
+| 12.148 | 2026-02-07 | Derek Richardson | Fixed critical bug: added missing CamperScheduleTab, AddChildForm, ChildCard components to split files; all dashboards now load correctly |
+| 12.147 | 2026-02-07 | Derek Richardson | Removed credit card payment step from parent onboarding; simplified from 6 to 5 steps |
+| 12.146 | 2026-02-07 | Derek Richardson | Reduced emergency contact requirement from 3 to 2; removed non-parent contact requirement; simplified emergency contacts form |
+| 12.145 | 2026-02-07 | Derek Richardson | Fixed remaining duplicate components in admin.html (ParentEmergencyContactsManager, RegistrationCalendarView) |
+| 12.144 | 2026-02-07 | Derek Richardson | Fixed duplicate ChildrenManager component in admin.html causing syntax errors |
+| 12.143 | 2026-02-07 | Derek Richardson | **MAJOR: Split monolithic index.html into 4 files** (index.html, admin.html, parent.html, counselor.html); sessionStorage auth for cross-page navigation |
+| 12.142 | 2026-02-07 | Derek Richardson | Fixed timestamp inconsistency; converted all release notes to Pacific Time |
+| 12.141 | 2026-02-07 | Derek Richardson | Fixed admin tab bar scroll position; simplified Danger Zone to single DELETE ALL DATA button that preserves counselors |
 | 12.140 | 2026-02-06 | Derek Richardson | Danger Zone deletions no longer log out or reload page; DELETE ALL USER DATA now also removes emergency contacts and onboarding progress; added DELETE ALL DATA button for total system wipe; release notes now include timestamps |
 | 12.139 | 2026-02-06 | Audrey Richardson | Fixed birthdate picker not registering selections (separated year/month/day state); year dropdown now 2000-2026; requires at least one camper before continuing; improved login transition state |
 | 12.138 | 2026-02-06 | Audrey Richardson | Added loading screens during registration submission (prevents login flash); fixed counselor dashboard showing red availability from onboarding; replaced birthdate picker with year/month/day dropdowns |
