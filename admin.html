@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.152";
+    const VERSION = "12.153";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:02:00");
+    const BUILD_DATE = new Date("2026-02-07T20:09:00");
 
     const RELEASE_NOTES = [
+      { version: "12.153", date: "2026-02-07", time: "8:09 PM PT", author: "Derek Richardson", changes: [
+        "Fixed critical bug: RegistrationCalendarView now receives activeCampDates prop",
+        "Resolved ReferenceError that was breaking the Campers tab"
+      ]},
       { version: "12.152", date: "2026-02-07", time: "8:02 PM PT", author: "Derek Richardson", changes: [
         "Added red face silhouette guide in photo cropper to show proper face framing",
         "Made rotate button much larger (2xl size) for easier use",
