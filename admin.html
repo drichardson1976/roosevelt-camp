@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.185";
+    const VERSION = "12.186";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:31:00");
+    const BUILD_DATE = new Date("2026-02-08T08:43:00");
 
     const RELEASE_NOTES = [
+      { version: "12.186", date: "2026-02-08", time: "12:43 AM PST", author: "Derek Richardson", changes: [
+        "CRITICAL FIX: Added missing getFoodPhoto function",
+        "Fixed ReferenceError when navigating to Public Website Content tab",
+        "Food Photos Manager now works correctly in Content tab"
+      ]},
       { version: "12.185", date: "2026-02-08", time: "12:31 AM PST", author: "Derek Richardson", changes: [
         "CRITICAL FIX: Messages delete handler in Danger Zone now works properly",
         "Fixed missing saveMessages function - now updates state and storage correctly",
@@ -6320,6 +6325,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (!data) return null;
         if (typeof data === 'string') return { cropped: data, original: null, transform: null };
         return data;
+      };
+
+      // Helper to get food photo
+      const getFoodPhoto = (key) => {
+        const data = foodPhotos?.[key];
+        if (!data) return null;
+        return typeof data === 'string' ? data : data.cropped;
       };
 
       const handleFileSelect = (e) => {
