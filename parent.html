@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.153";
+    const VERSION = "12.154";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T20:09:00");
+    const BUILD_DATE = new Date("2026-02-07T20:12:00");
 
     const RELEASE_NOTES = [
+      { version: "12.154", date: "2026-02-07", time: "8:12 PM PT", author: "Derek Richardson", changes: [
+        "Added legend item showing red X means 'No Day Camp' on Session Calendar",
+        "Improved calendar readability with clear explanation of all symbols"
+      ]},
       { version: "12.153", date: "2026-02-07", time: "8:09 PM PT", author: "Derek Richardson", changes: [
         "Fixed critical bug: RegistrationCalendarView now receives activeCampDates prop",
         "Resolved ReferenceError that was breaking the Campers tab"
@@ -5187,6 +5191,12 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
                 <span>Available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
+                  <span className="text-red-400 text-lg font-bold leading-none">×</span>
+                </div>
+                <span>No Day Camp</span>
               </div>
             </div>
           </div>
