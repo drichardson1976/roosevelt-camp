@@ -26,6 +26,21 @@
 - **ALWAYS** use heredoc for commit messages to preserve formatting
 - **ALWAYS** include `Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>`
 
+### Change Summary Table
+- **ALWAYS** provide a summary table after every completed request showing ALL files that were changed
+- Include every file touched (HTML files, CLAUDE.md, migration scripts, etc.)
+- Format as a markdown table with File and Changes columns
+- Keep change descriptions brief but specific (what was added/changed/fixed)
+- Example format:
+
+| File | Changes |
+|------|---------|
+| `admin.html` | Added new Dashboard feature, bumped to v12.XXX |
+| `index.html` | Version bump to v12.XXX |
+| `parent.html` | Version bump to v12.XXX |
+| `counselor.html` | Version bump to v12.XXX |
+| `CLAUDE.md` | Added new instruction for change summaries |
+
 ---
 
 ## 📊 DATABASE SCHEMA
@@ -315,6 +330,7 @@ python3 -m http.server
 8. ✅ Use heredoc for git commit messages
 9. ✅ Never skip git hooks without permission
 10. ✅ Consult this document after conversation compaction
+11. ✅ Provide a change summary table after every completed request
 
 ---
 
