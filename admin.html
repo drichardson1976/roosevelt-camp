@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.010";
+    const VERSION = "13.013";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T13:59:00");
+    const BUILD_DATE = new Date("2026-02-08T15:30:00");
 
     const RELEASE_NOTES = [
+      { version: "13.011-13.013", date: "2026-02-08", time: "3:30 PM PST", author: "Claude", changes: [
+        "Onboarding: Edit button shows 'Edit' text instead of pencil icon",
+        "Onboarding: Photo upload added for campers in add/edit form",
+        "Onboarding: Photo upload available for emergency contacts",
+        "PhotoUploadModal: Add-photo placeholder circle is now clickable to upload directly",
+        "Parent Dashboard: EC list shows role, phone, email on single line",
+        "Parent Dashboard: Camper tab ECs now display photos and single-line format",
+        "Fix: Invited ECs now properly linked as parent-reference contacts in database",
+        "Fix: EC-to-parent conversion when inviting from parent dashboard EC tab",
+      ]},
       { version: "13.010", date: "2026-02-08", time: "1:59 PM PST", author: "Claude", changes: [
         "Fix: Moved getDisplayPhoto helper to top-level scope so all components can access it (was scoped inside SitePhotosManager causing ReferenceError crash)",
       ]},
@@ -6407,7 +6417,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {displayPhoto ? (
                     <img src={displayPhoto} className={`w-32 h-32 object-cover border-2 border-gray-300 ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`} />
                   ) : (
-                    <div className={`w-32 h-32 bg-gray-200 flex flex-col items-center justify-center ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`}>
+                    <div onClick={() => fileInputRef.current?.click()} className={`w-32 h-32 bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`}>
                       <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                       <span className="text-xs text-gray-500 font-medium">add photo</span>
                     </div>

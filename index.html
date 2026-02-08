@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.008";
+    const VERSION = "13.011";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T11:44:00");
+    const BUILD_DATE = new Date("2026-02-08T15:30:00");
 
     const RELEASE_NOTES = [
+      { version: "13.011-13.013", date: "2026-02-08", time: "3:30 PM PST", author: "Claude", changes: [
+        "Onboarding: Edit button shows 'Edit' text instead of pencil icon",
+        "Onboarding: Photo upload added for campers in add/edit form",
+        "Onboarding: Photo upload available for emergency contacts",
+        "PhotoUploadModal: Add-photo placeholder circle is now clickable to upload directly",
+        "Parent Dashboard: EC list shows role, phone, email on single line",
+        "Parent Dashboard: Camper tab ECs now display photos and single-line format",
+        "Fix: Invited ECs now properly linked as parent-reference contacts in database",
+        "Fix: EC-to-parent conversion when inviting from parent dashboard EC tab",
+      ]},
       { version: "13.010", date: "2026-02-08", time: "1:59 PM PST", author: "Claude", changes: [
         "Fix: Moved getDisplayPhoto helper to top-level scope in admin.html (was causing ReferenceError crash)",
       ]},
@@ -1440,13 +1450,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [submitting, setSubmitting] = useState(false); // Prevents flash during submission
       // State for adding campers/contacts (moved to parent level to avoid re-renders)
       const [showAddCamper, setShowAddCamper] = useState(false);
-      const [newCamper, setNewCamper] = useState({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' });
+      const [newCamper, setNewCamper] = useState({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null });
       const [editingCamperId, setEditingCamperId] = useState(null);
       const [showAddContact, setShowAddContact] = useState(false);
       const [newContact, setNewContact] = useState({ name: '', phone: '', relationship: '', otherRelationship: '', photo: null });
       // Photo modal state
       const [showParentPhotoModal, setShowParentPhotoModal] = useState(false);
       const [showContactPhotoModal, setShowContactPhotoModal] = useState(false);
+      const [showCamperPhotoModal, setShowCamperPhotoModal] = useState(false);
       const contactNameRef = useRef(null);
 
       const totalSteps = 4;
@@ -1467,7 +1478,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         } else {
           setCampersData([...campersData, { ...newCamper, id: 'camper_' + Date.now() }]);
         }
-        setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' });
+        setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null });
         setShowAddCamper(false);
       };
 
@@ -1480,7 +1491,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           birthMonth: parts[1] || '',
           birthDay: parts[2] || '',
           grade: camper.grade || '',
-          phone: camper.phone || ''
+          phone: camper.phone || '',
+          photo: camper.photo || null
         });
         setEditingCamperId(camper.id);
         setShowAddCamper(true);
@@ -1612,7 +1624,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Auto-save in-progress camper if fields are filled
           if (newCamper.name && newCamper.birthdate && newCamper.grade) {
             setCampersData([...campersData, { ...newCamper, id: 'camper_' + Date.now() }]);
-            setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' });
+            setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null });
             setShowAddCamper(false);
             // Don't validate yet - let the state update, then validation will pass on re-render
             return true;
@@ -1683,10 +1695,25 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         // Save emergency contacts — parent is always contact #1 as a reference-only record
         // (name/phone/photo pulled from camp_parents at display time to avoid duplicate data)
         const parentEcRef = { id: 'ec_' + Date.now(), parentEmail: userData.email, isParent: true, relationship: 'Parent', priority: 1, userEmail: userData.email };
-        const allContacts = [
-          parentEcRef,
-          ...emergencyData.map((c, i) => ({ ...c, userEmail: userData.email, priority: i + 2 }))
-        ];
+
+        // Build emergency contact list, upgrading any invited contacts to parent references
+        const invitedNames = new Set(pendingInvitations.map(inv => inv.name.toLowerCase()));
+        const processedEcData = emergencyData.map((c, i) => {
+          const contact = { ...c, userEmail: userData.email, priority: i + 2 };
+          // If this contact was invited as a parent, convert to a parent-reference EC
+          const matchingInvite = pendingInvitations.find(inv => inv.name.toLowerCase() === c.name.toLowerCase());
+          if (matchingInvite) {
+            contact.isParent = true;
+            contact.parentEmail = matchingInvite.email;
+            // Clear duplicated fields — will be resolved from camp_parents at display time
+            delete contact.name;
+            delete contact.phone;
+            delete contact.photo;
+          }
+          return contact;
+        });
+
+        const allContacts = [parentEcRef, ...processedEcData];
         await saveEmergencyContacts([...emergencyContacts, ...allContacts]);
 
         // Process pending parent invitations
@@ -1694,12 +1721,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           let currentParentsList = [...(parents || []), newUser];
           let currentLinksList = [...(camperParentLinks || []), ...campersData.map(c => ({ camperId: c.id, parentEmail: userData.email }))];
           for (const invitation of pendingInvitations) {
+            // Find the original EC to carry over photo
+            const originalEc = emergencyData.find(c => c.name.toLowerCase() === invitation.name.toLowerCase());
             const invitedParent = {
               email: invitation.email,
               name: invitation.name,
               password: invitation.password,
               phone: invitation.phone,
-              photo: null,
+              photo: originalEc?.photo || null,
               role: 'parent',
               roles: ['parent'],
               onboardingComplete: true,
@@ -1896,17 +1925,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         const elig = getEligibility(camper.grade, camper.birthdate);
                         return (
                           <div key={camper.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                            <div>
-                              <div className="font-medium">{camper.name}</div>
-                              <div className="text-sm text-gray-500">
-                                {camper.grade} Grade • Age {calculateAge(camper.birthdate)}
+                            <div className="flex items-center gap-3">
+                              {getDisplayPhoto(camper.photo) ? (
+                                <img src={getDisplayPhoto(camper.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500" />
+                              ) : (
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                </div>
+                              )}
+                              <div>
+                                <div className="font-medium">{camper.name}</div>
+                                <div className="text-sm text-gray-500">
+                                  {camper.grade} Grade • Age {calculateAge(camper.birthdate)}
+                                </div>
+                                <span className={`text-xs px-2 py-0.5 rounded ${elig.eligible ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                  {elig.status}
+                                </span>
                               </div>
-                              <span className={`text-xs px-2 py-0.5 rounded ${elig.eligible ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                {elig.status}
-                              </span>
                             </div>
                             <div className="flex items-center gap-1">
-                              <button onClick={() => editCamper(camper)} className="text-blue-500 hover:text-blue-700 p-2" title="Edit camper">✎</button>
+                              <button onClick={() => editCamper(camper)} className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 bg-blue-50 rounded hover:bg-blue-100" title="Edit camper">Edit</button>
                               <button onClick={() => removeCamper(camper.id)} className="text-red-500 hover:text-red-700 p-2" title="Remove camper">✕</button>
                             </div>
                           </div>
@@ -1919,6 +1957,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div className="border-2 border-dashed border-green-300 rounded-lg p-4 bg-green-50">
                       <h4 className="font-medium mb-3">{editingCamperId ? 'Edit Camper' : 'Add Camper'}</h4>
                       <div className="space-y-3">
+                        {/* Camper Photo Upload */}
+                        <div className="flex justify-center mb-2">
+                          {getDisplayPhoto(newCamper.photo) ? (
+                            <div className="relative cursor-pointer" onClick={() => setShowCamperPhotoModal(true)}>
+                              <img src={getDisplayPhoto(newCamper.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-500" />
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white flex items-center justify-center text-xs hover:bg-green-700">✎</div>
+                            </div>
+                          ) : (
+                            <div onClick={() => setShowCamperPhotoModal(true)} className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <span className="text-[8px] text-gray-500 font-medium">add photo</span>
+                            </div>
+                          )}
+                          {showCamperPhotoModal && <PhotoUploadModal currentPhoto={newCamper.photo} onSave={(img) => { setNewCamper({ ...newCamper, photo: img }); setShowCamperPhotoModal(false); }} onCancel={() => setShowCamperPhotoModal(false)} />}
+                        </div>
                         <input
                           value={newCamper.name}
                           onChange={e => setNewCamper({ ...newCamper, name: e.target.value })}
@@ -1990,7 +2043,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         />
                         <div className="flex gap-2">
                           <button onClick={addCamper} disabled={!newCamper.name || !newCamper.birthdate || !newCamper.grade} className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300">{editingCamperId ? 'Save Changes' : 'Add Camper'}</button>
-                          <button onClick={() => { setShowAddCamper(false); setEditingCamperId(null); setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '' }); }} className="px-4 py-2 border rounded-lg">Cancel</button>
+                          <button onClick={() => { setShowAddCamper(false); setEditingCamperId(null); setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null }); }} className="px-4 py-2 border rounded-lg">Cancel</button>
                         </div>
                       </div>
                     </div>
@@ -2751,7 +2804,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {displayPhoto ? (
                     <img src={displayPhoto} className={`w-32 h-32 object-cover border-2 border-gray-300 ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'}`} />
                   ) : (
-                    <div className="w-32 h-32 bg-gray-200 rounded-full flex flex-col items-center justify-center">
+                    <div onClick={() => fileInputRef.current?.click()} className="w-32 h-32 bg-gray-200 rounded-full flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors">
                       <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
                       <span className="text-xs text-gray-500 font-medium">add photo</span>
                     </div>

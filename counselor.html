@@ -50,6 +50,16 @@
     const BUILD_DATE = new Date("2026-02-08T11:44:00");
 
     const RELEASE_NOTES = [
+      { version: "13.011-13.013", date: "2026-02-08", time: "3:30 PM PST", author: "Claude", changes: [
+        "Onboarding: Edit button shows 'Edit' text instead of pencil icon",
+        "Onboarding: Photo upload added for campers in add/edit form",
+        "Onboarding: Photo upload available for emergency contacts",
+        "PhotoUploadModal: Add-photo placeholder circle is now clickable to upload directly",
+        "Parent Dashboard: EC list shows role, phone, email on single line",
+        "Parent Dashboard: Camper tab ECs now display photos and single-line format",
+        "Fix: Invited ECs now properly linked as parent-reference contacts in database",
+        "Fix: EC-to-parent conversion when inviting from parent dashboard EC tab",
+      ]},
       { version: "13.010", date: "2026-02-08", time: "1:59 PM PST", author: "Claude", changes: [
         "Fix: Moved getDisplayPhoto helper to top-level scope in admin.html (was causing ReferenceError crash)",
       ]},
