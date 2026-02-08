@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.194";
+    const VERSION = "12.195";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:17:00");
+    const BUILD_DATE = new Date("2026-02-08T08:25:00");
 
     const RELEASE_NOTES = [
+      { version: "12.195", date: "2026-02-08", time: "8:25 AM PST", author: "Derek Richardson", changes: [
+        "FIX: Message delete in Danger Zone now actually deletes the row from Supabase",
+        "Added storage.deleteRow() method for per-row table deletions",
+        "Previously delete only updated React state but left the row in the database"
+      ]},
       { version: "12.194", date: "2026-02-08", time: "8:17 AM PST", author: "Derek Richardson", changes: [
         "Parent Registration: Fixed Step 1 Continue button by adding specific field-by-field validation error messages",
         "Parent Registration: Added email format validation (checks for valid email structure)",
@@ -935,6 +940,17 @@
           return true;
         } catch (e) {
           console.error('Error saving to ' + table + ':', e);
+          return false;
+        }
+      },
+      async deleteRow(table, id) {
+        if (!supabase) return false;
+        try {
+          const { error } = await supabase.from(table).delete().eq('id', id);
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.error('Error deleting from ' + table + ':', e);
           return false;
         }
       }
@@ -10417,11 +10433,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   <button
                                     onClick={async () => {
                                       if (!confirm(`Delete message "${msg.subject}"?`)) return;
+                                      await storage.deleteRow('camp_messages', msg.id);
                                       const newMessages = messages.filter(m => m.id !== msg.id);
                                       setMessages(newMessages);
-                                      for (const message of newMessages) {
-                                        await storage.set('camp_messages', message.id, message.data || message);
-                                      }
                                       addToHistory('Message Deleted', `Deleted message: ${msg.subject}`);
                                       showToast('Message deleted');
                                     }}
