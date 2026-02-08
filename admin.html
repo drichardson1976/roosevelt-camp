@@ -45,11 +45,26 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.186";
+    const VERSION = "12.188";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T08:43:00");
+    const BUILD_DATE = new Date("2026-02-08T07:38:00");
 
     const RELEASE_NOTES = [
+      { version: "12.188", date: "2026-02-08", time: "7:38 AM PST", author: "Derek Richardson", changes: [
+        "DATABASE CLEANUP: Removed 8 unused/legacy tables from Danger Zone",
+        "Deleted tables: camp_registered_users, camp_child_parent_links, camp_children, guest_requests, players, runs, status_history, camp_referrals",
+        "Database now has exactly 23 active tables (DEV) and 24 active tables (PUBLIC)",
+        "25% reduction in table count - all remaining tables are actively used",
+        "Created comprehensive CLAUDE.md reference document to prevent information loss during conversation compaction",
+        "Created DATABASE_CLEANUP_ANALYSIS.md with detailed table usage analysis"
+      ]},
+      { version: "12.187", date: "2026-02-08", time: "7:22 AM PST", author: "Derek Richardson", changes: [
+        "Danger Zone: Added 4 missing database tables to Database Records viewer",
+        "New tables visible: Registered Users (LEGACY), Child-Parent Links (LEGACY), Children (LEGACY), Camper-Emergency Contact Links (PUBLIC schema)",
+        "Added warning labels for legacy tables that have been replaced by new split tables",
+        "Complete database transparency: ALL 32 tables now visible across both DEV and PUBLIC schemas",
+        "Legacy Registered Users table shows migration warning and path to split tables"
+      ]},
       { version: "12.186", date: "2026-02-08", time: "12:43 AM PST", author: "Derek Richardson", changes: [
         "CRITICAL FIX: Added missing getFoodPhoto function",
         "Fixed ReferenceError when navigating to Public Website Content tab",
@@ -10097,72 +10112,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </summary>
                         <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
                           <p className="text-gray-500 text-sm italic">This table is managed automatically by the system and should not be manually edited.</p>
-                        </div>
-                      </details>
-
-                      {/* Referrals */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🔗 Referrals (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">Referral tracking data.</p>
-                        </div>
-                      </details>
-
-                      {/* Guest Requests */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>👥 Guest Requests (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">Guest request data.</p>
-                        </div>
-                      </details>
-
-                      {/* Players */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏀 Players (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">Player data - may be legacy or unused.</p>
-                        </div>
-                      </details>
-
-                      {/* RSVPs */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>✉️ RSVPs (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">RSVP data - may be legacy or unused.</p>
-                        </div>
-                      </details>
-
-                      {/* Runs */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>🏃 Runs (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">Run data - may be legacy or unused.</p>
-                        </div>
-                      </details>
-
-                      {/* Status History */}
-                      <details className="border rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-gray-50 font-medium flex items-center justify-between">
-                          <span>📊 Status History (system table)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          <p className="text-gray-500 text-sm italic">Historical status tracking data.</p>
                         </div>
                       </details>
 
