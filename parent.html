@@ -45,11 +45,21 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "12.151";
+    const VERSION = "12.152";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-07T15:30:00");
+    const BUILD_DATE = new Date("2026-02-07T20:02:00");
 
     const RELEASE_NOTES = [
+      { version: "12.152", date: "2026-02-07", time: "8:02 PM PT", author: "Derek Richardson", changes: [
+        "Added red face silhouette guide in photo cropper to show proper face framing",
+        "Made rotate button much larger (2xl size) for easier use",
+        "Removed instructional text above photo cropper for cleaner interface",
+        "Fixed save child button - now correctly updates campers in database",
+        "Reorganized edit child form: removed Cancel button, Save and Delete now side-by-side",
+        "Added camp_dates database table for centralized day camp date management",
+        "Updated calendars to show X marks on non-camp dates (only valid dates selectable)",
+        "Parent Sessions tab calendar now respects official camp dates from database"
+      ]},
       { version: "12.151", date: "2026-02-07", time: "7:41 PM PT", author: "Derek Richardson", changes: [
         "Removed green 'Registered' tag from campers in Campers tab",
         "Moved delete button to edit modal with secondary confirmation",
@@ -588,7 +598,12 @@
     // Week 2: August 10-14, 2026
     // Week 3: August 17-21, 2026
     // Week 4: August 24-28, 2026
-    const generateCampDates = () => {
+    const generateCampDates = (loadedDates = null) => {
+      // If dates loaded from database, use those
+      if (loadedDates && loadedDates.length > 0) {
+        return loadedDates.map(d => d.date).sort();
+      }
+      // Otherwise fallback to hardcoded dates
       const weeks = [
         // July Week 1: July 13-17, 2026
         ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'],
@@ -601,7 +616,7 @@
       ];
       return weeks.flat();
     };
-    const CAMP_DATES = generateCampDates();
+    const CAMP_DATES = generateCampDates(); // Default fallback
 
     // Format camp date range for display
     const getCampDateRange = () => {
@@ -2305,16 +2320,26 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       return (
         <div className="flex flex-col items-center gap-4">
-          <p className="text-xs text-gray-500 text-center">Preview exactly as it will appear on the website.<br/>Drag to position, use sliders to zoom & rotate.</p>
-          <div
-            className={`overflow-hidden cursor-move bg-gray-100 shadow-md ${containerClass}`}
-            style={{ width: displayW, height: displayH }}
-            onMouseDown={onMouseDown}
-            onMouseMove={onMouseMove}
-            onMouseUp={onMouseUp}
-            onMouseLeave={onMouseUp}
-          >
-            <canvas ref={canvasRef} style={{ width: displayW, height: displayH }} />
+          <div className="relative">
+            <div
+              className={`overflow-hidden cursor-move bg-gray-100 shadow-md ${containerClass}`}
+              style={{ width: displayW, height: displayH }}
+              onMouseDown={onMouseDown}
+              onMouseMove={onMouseMove}
+              onMouseUp={onMouseUp}
+              onMouseLeave={onMouseUp}
+            >
+              <canvas ref={canvasRef} style={{ width: displayW, height: displayH }} />
+            </div>
+            {/* Red face silhouette overlay for circle shape */}
+            {shape === 'circle' && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                <svg width={displayW} height={displayH} viewBox="0 0 100 100" className="opacity-40">
+                  <circle cx="50" cy="35" r="15" fill="#dc2626" />
+                  <path d="M 50 55 Q 35 55 25 70 Q 25 85 50 85 Q 75 85 75 70 Q 65 55 50 55 Z" fill="#dc2626" />
+                </svg>
+              </div>
+            )}
           </div>
           <div className="flex flex-col gap-2 w-64">
             <div className="flex items-center gap-2">
@@ -2322,9 +2347,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               <input type="range" min="0.5" max="3" step="0.1" value={zoom} onChange={e => setZoom(parseFloat(e.target.value))} className="flex-1" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 w-12">Rotate</span>
+              <span className="text-xs text-gray-500 w-16">Rotate</span>
               <input type="range" min="0" max="360" step="1" value={rotation} onChange={e => setRotation(parseInt(e.target.value))} className="flex-1" />
-              <button onClick={rotate90} className="px-2 py-1 bg-gray-200 rounded text-xs" title="Rotate 90°">↻</button>
+              <button onClick={rotate90} className="px-6 py-3 bg-gray-200 rounded-lg text-2xl hover:bg-gray-300" title="Rotate 90°">↻</button>
             </div>
           </div>
           <div className="flex gap-3">
@@ -2799,6 +2824,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [profileChangeRequests, setProfileChangeRequests] = useState([]); // Counselor profile change requests
       const [blockedSessions, setBlockedSessions] = useState({}); // { date: { morning: bool, afternoon: bool } }
       const [counselorSchedule, setCounselorSchedule] = useState({}); // { counselorId: { date: { morning: bool, afternoon: bool } } }
+      const [campDates, setCampDates] = useState([]); // Array of { date: "YYYY-MM-DD", sessions: ["morning", "afternoon"] }
 
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
@@ -2861,6 +2887,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             const csch = await storage.get('camp_counselor_schedule');
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
+            const campDatesData = await storage.get('camp_dates');
+            if (campDatesData?.[0]?.data) setCampDates(Array.isArray(campDatesData[0].data) ? campDatesData[0].data : []);
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -3019,6 +3047,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const saveCamperParentLinks = async (links) => {
         setCamperParentLinks(links);
         await storage.set('camp_camper_parent_links', 'main', links);
+      };
+
+      const saveCampDates = async (dates) => {
+        setCampDates(dates);
+        await storage.set('camp_dates', 'main', dates);
       };
 
       const saveBlockedSessions = async (sessions, action = null) => {
@@ -3463,12 +3496,32 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         }, [myChildren.length]);
         const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
         const venmoCode = generateVenmoCode(user?.name);
+
+        // Use loaded camp dates if available, otherwise fall back to hardcoded
+        const activeCampDates = campDates.length > 0 ? generateCampDates(campDates) : CAMP_DATES;
+        const activeCampWeeks = React.useMemo(() => {
+          const weeks = [];
+          let currentWeek = [];
+          let weekStart = null;
+          activeCampDates.forEach((date, idx) => {
+            const d = new Date(date + 'T12:00:00');
+            if (d.getDay() === 1 || idx === 0) {
+              if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+              currentWeek = [date];
+              weekStart = date;
+            } else {
+              currentWeek.push(date);
+            }
+          });
+          if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+          return weeks;
+        }, [campDates]);
         
         const getAmountDue = () => myRegs.filter(r => r.status === 'approved' && r.paymentStatus !== 'paid').reduce((s, r) => s + (r.totalAmount || sessionCost), 0);
         
         const getMonthWeeks = () => {
           const months = {};
-          CAMP_WEEKS.forEach((week, idx) => {
+          activeCampWeeks.forEach((week, idx) => {
             const m = new Date(week.start + 'T12:00:00').getMonth();
             if (!months[m]) months[m] = { name: ['July', 'August'][m - 6], weeks: [] };
             months[m].weeks.push({ ...week, idx });
@@ -3717,9 +3770,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         };
 
         const addChild = async (child) => {
-          const updated = { ...myUser, children: [...(myUser.children || []), { ...child, id: 'child_' + Date.now() }] };
-          await saveUsers(users.map(u => u.email === myUser.email ? updated : u));
-          showToast('Child profile added! Go to Register tab to sign them up for camp.');
+          const newCamperId = 'camper_' + Date.now();
+          const newCamper = { ...child, id: newCamperId };
+          await saveCampers([...campers, newCamper], `Added camper ${child.name}`);
+          await saveCamperParentLinks([...camperParentLinks, { camperId: newCamperId, parentEmail: user?.email }]);
+          showToast('Child profile added! Go to Sessions tab to sign them up for camp.');
         };
 
         return (
@@ -4147,13 +4202,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       <ChildrenManager
                         children={myChildren}
                         onUpdate={(updatedChild) => {
-                          const updated = { ...myUser, children: myUser.children.map(ch => ch.id === updatedChild.id ? updatedChild : ch) };
-                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          saveCampers(campers.map(c => c.id === updatedChild.id ? updatedChild : c), `Updated camper ${updatedChild.name}`);
                           showToast('Child updated!');
                         }}
                         onDelete={(childId) => {
-                          const updated = { ...myUser, children: myUser.children.filter(ch => ch.id !== childId) };
-                          saveUsers(users.map(u => u.email === myUser.email ? updated : u));
+                          const childToDelete = campers.find(c => c.id === childId);
+                          saveCampers(campers.filter(c => c.id !== childId), `Deleted camper ${childToDelete?.name || childId}`);
+                          saveCamperParentLinks(camperParentLinks.filter(l => l.camperId !== childId));
                           showToast('Child removed');
                         }}
                         onAdd={addChild}
@@ -4637,28 +4692,23 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                   />
                 </div>
 
-                {/* Buttons */}
-                <div className="flex gap-3 pt-2">
-                  <button onClick={handleCancelEdit} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveEdit}
-                    disabled={!editForm.name || !editForm.birthdate || !editForm.grade}
-                    className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-
-                {/* Delete Child Button */}
+                {/* Save and Delete Buttons */}
                 <div className="pt-3 border-t mt-4">
-                  <button
-                    onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium"
-                  >
-                    🗑️ Delete Child
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSaveEdit}
+                      disabled={!editForm.name || !editForm.birthdate || !editForm.grade}
+                      className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 font-medium"
+                    >
+                      Save Changes
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium"
+                    >
+                      🗑️ Delete Child
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5178,8 +5228,23 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                             if (day === null) {
                               return <div key={`empty-${i}`} className="aspect-square"></div>;
                             }
+                            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                            const isValidCampDate = activeCampDates.includes(dateStr);
                             const regs = getRegistrationForDate(year, month, day);
                             const hasRegistrations = regs.length > 0;
+
+                            // If not a valid camp date, show X
+                            if (!isValidCampDate) {
+                              return (
+                                <div
+                                  key={day}
+                                  className="aspect-square flex flex-col items-center justify-center text-xs rounded relative bg-gray-100 border border-gray-300"
+                                >
+                                  <span className="text-gray-400 text-[10px] absolute top-0.5 left-1">{day}</span>
+                                  <span className="text-red-400 text-xl font-bold">×</span>
+                                </div>
+                              );
+                            }
 
                             return (
                               <div
