@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.009";
+    const VERSION = "13.010";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T11:58:00");
+    const BUILD_DATE = new Date("2026-02-08T13:59:00");
 
     const RELEASE_NOTES = [
+      { version: "13.010", date: "2026-02-08", time: "1:59 PM PST", author: "Claude", changes: [
+        "Fix: Moved getDisplayPhoto helper to top-level scope so all components can access it (was scoped inside SitePhotosManager causing ReferenceError crash)",
+      ]},
       { version: "13.009", date: "2026-02-08", time: "11:58 AM PST", author: "Claude", changes: [
         "Pod Setup: Drag-and-drop visual feedback — empty slots highlight green/purple when dragging over",
         "Pod Setup: Camper tiles show photo, age, and grade instead of parent name",
@@ -1154,6 +1157,12 @@
       let age = today.getFullYear() - birth.getFullYear();
       if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
       return age;
+    };
+
+    // Helper to get display photo for person photos (handles both old string format and new object format)
+    const getDisplayPhoto = (photo) => {
+      if (!photo) return null;
+      return typeof photo === 'string' ? photo : (photo.cropped || null);
     };
 
     const formatTimestamp = (date) => {
@@ -6635,12 +6644,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         { key: 'layups', label: 'Skills Training Photo', description: 'Counselor working with kids on layups/drills', aspectRatio: 4/3 },
         { key: 'lunch', label: 'Lunch Photo', description: 'Kids sitting together eating lunch', aspectRatio: 4/3 }
       ];
-
-      // Helper to get display photo for person photos (handles both old string format and new object format)
-      const getDisplayPhoto = (photo) => {
-        if (!photo) return null;
-        return typeof photo === 'string' ? photo : (photo.cropped || null);
-      };
 
       // Helper to get cropped image (handles both old string format and new object format)
       const getCroppedImage = (key) => {

@@ -50,6 +50,9 @@
     const BUILD_DATE = new Date("2026-02-08T11:44:00");
 
     const RELEASE_NOTES = [
+      { version: "13.010", date: "2026-02-08", time: "1:59 PM PST", author: "Claude", changes: [
+        "Fix: Moved getDisplayPhoto helper to top-level scope in admin.html (was causing ReferenceError crash)",
+      ]},
       { version: "13.009", date: "2026-02-08", time: "11:58 AM PST", author: "Claude", changes: [
         "Payments Tab: Per-camper breakdown and readable date ranges in parent.html",
         "Messages Tab: Redesigned as expandable list with read/unread indicators in parent.html",
