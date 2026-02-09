@@ -50,6 +50,15 @@
     const BUILD_DATE = new Date("2026-02-08T19:12:00");
 
     const RELEASE_NOTES = [
+      { version: "13.034", date: "2026-02-08", time: "9:16 PM PST", author: "Claude", changes: [
+        "EC/Parents: Fixed photo sync — adding photo to EC that is also a parent now updates parent record too",
+        "Parents tab: Grey add-photo circle is now clickable — opens photo upload directly from the card",
+        "Campers tab: Renamed all 'Child' references to 'Camper' (Add Camper, Camper's Name, Camper's Phone)",
+        "Payments: Venmo codes are now unique per registration order",
+        "Payments: Venmo Reference code shown on sent/paid payment cards",
+        "Payments: Added separate parent name filter alongside camper name filter",
+        "Payments: Venmo modal overhauled — 5-step instructions with screenshot upload requirement",
+      ]},
       { version: "13.033", date: "2026-02-08", time: "7:35 PM PST", author: "Claude", changes: [
         "Registration: Current Registrations refactored to show each order as a separate color-coded card",
         "Admin: Bulk approve/pay already groups by orderId — processes entire registration at once",
