@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.042";
+    const VERSION = "13.044";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T22:45:00");
+    const BUILD_DATE = new Date("2026-02-08T23:14:00");
 
     const RELEASE_NOTES = [
+      { version: "13.043-13.046", date: "2026-02-08", time: "11:14 PM PST", author: "Claude", changes: [
+        "Onboarding & Campers tab: Grade field clarified to 'Grade starting Sept 2026'",
+        "EC tab: Hidden synthetic nologin_ email from contact display",
+        "EC form: Now requires both a valid phone number AND valid email address",
+        "Registration modal: 'Select Children' replaced with 'Select Camper(s)', removed helper text",
+        "Registration modal: Removed 'Add Week' button and all 'Both' session buttons",
+        "Registration modal: Both months selected (green) by default, toggle independently, dates grouped by month with headers",
+      ]},
       { version: "13.039-13.042", date: "2026-02-08", time: "10:45 PM PST", author: "Claude", changes: [
         "All dashboards: Title bar center-justified; public website links added to dark green nav bar",
         "Counselor dashboard: Added title bar with welcome message",
@@ -2256,7 +2264,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             onChange={e => setNewCamper({ ...newCamper, grade: e.target.value })}
                             className="w-full px-3 py-2 border rounded-lg"
                           >
-                            <option value="">Grade (Fall 2026)</option>
+                            <option value="">Grade starting Sept 2026</option>
                             <option value="K">Kindergarten</option>
                             <option value="1st">1st Grade</option>
                             <option value="2nd">2nd Grade</option>
