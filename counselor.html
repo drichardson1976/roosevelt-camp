@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.046";
+    const VERSION = "13.050";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T23:14:00");
+    const BUILD_DATE = new Date("2026-02-08T23:47:00");
 
     const RELEASE_NOTES = [
+      { version: "13.047-13.050", date: "2026-02-08", time: "11:47 PM PST", author: "Claude", changes: [
+        "Parents tab: 'No login account' changed to 'No email provided'",
+        "Payments tab: Button text changed to '+ New Registration'",
+        "Registration modal: Single camper auto-selected; edit button on unpaid registrations",
+        "Registrations now start as 'pending' status until admin confirms payment",
+        "Admin Session Registrations: Restructured into 3 sections with Mark as Paid (double confirm)",
+        "History logging: All actions now logged with changedBy field",
+      ]},
       { version: "13.043-13.046", date: "2026-02-08", time: "11:14 PM PST", author: "Claude", changes: [
         "Onboarding & Campers tab: Grade field clarified to 'Grade starting Sept 2026'",
         "EC tab: Hidden synthetic nologin_ email from contact display",
