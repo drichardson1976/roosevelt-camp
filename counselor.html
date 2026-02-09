@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.050";
+    const VERSION = "13.054";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T23:47:00");
+    const BUILD_DATE = new Date("2026-02-09T00:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.051-13.054", date: "2026-02-09", time: "12:00 AM", author: "Claude", changes: ["Admin: Added Messages tab with unread badge from parents", "Admin: Messages tab with compose (broadcast/individual), reply, read/unread tracking", "Admin: Dashboard shows unread parent messages as urgent todo", "All files: Scroll to top on page load and tab navigation so red ribbon is visible"] },
       { version: "13.047-13.050", date: "2026-02-08", time: "11:47 PM PST", author: "Claude", changes: [
         "Parents tab: 'No login account' changed to 'No email provided'",
         "Payments tab: Button text changed to '+ New Registration'",
@@ -2798,6 +2799,11 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
       const sessionCost = getSessionCost(content);
+
+      // Scroll to top on tab change so red ribbon is visible
+      useEffect(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, [counselorTab]);
 
       useEffect(() => {
         const load = async () => {
