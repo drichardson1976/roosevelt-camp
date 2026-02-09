@@ -45,11 +45,23 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.034";
+    const VERSION = "13.035";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T21:16:00");
+    const BUILD_DATE = new Date("2026-02-08T21:46:00");
 
     const RELEASE_NOTES = [
+      { version: "13.035", date: "2026-02-08", time: "9:46 PM PST", author: "Claude", changes: [
+        "Campers tab: Cards now blue when <2 emergency contacts (green when complete)",
+        "Campers tab: Red warning shown when emergency contacts still needed for a camper",
+        "Campers tab: Removed 'Parent' badge from emergency contact list in camper cards",
+        "Registration tab: Session Calendar hidden until first registration created — shows informational note instead",
+        "Registration tab: Changed 'No current registrations' to 'No registrations yet'",
+        "Payments tab: Empty state now says 'No registrations submitted yet' with +Add Registration button",
+        "Messages tab: Added 'Send a Message to the Camp Director' button with compose modal",
+        "Messages tab: Compose modal has To (Camp Director), Cc (other parents, removable), Subject, Body, photo upload",
+        "Messages tab: Send, Save Draft, and Cancel options in compose modal",
+        "Messages tab: Message history shows sent messages and replies with expandable view",
+      ]},
       { version: "13.034", date: "2026-02-08", time: "9:16 PM PST", author: "Claude", changes: [
         "EC/Parents: Fixed photo sync — adding photo to EC that is also a parent now updates parent record too",
         "EC/Parents: Fixed resolveEmergencyContact to check both sourceEmail and parentEmail for auto-created contacts",
@@ -2254,9 +2266,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT MESSAGES TAB ====================
-    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast }) => {
+    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast, otherParents }) => {
       const [replyText, setReplyText] = useState('');
       const [selectedMsg, setSelectedMsg] = useState(null);
+      const [showCompose, setShowCompose] = useState(false);
+      const [composeForm, setComposeForm] = useState({ subject: '', body: '', cc: [], attachments: [] });
       const messagesEndRef = useRef(null);
 
       // Get messages for this parent (sent to them or to all, or from them)
@@ -2279,6 +2293,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           id: 'msg_' + Date.now(),
           threadId: selectedMsg.threadId || selectedMsg.from === 'admin' ? userEmail : selectedMsg.threadId,
           from: userEmail,
+          fromName: userName,
           to: ['admin'],
           subject: selectedMsg.subject ? `Re: ${selectedMsg.subject}` : '',
           body: replyText.trim(),
@@ -2290,8 +2305,95 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         showToast('Reply sent!');
       };
 
+      const openCompose = () => {
+        setComposeForm({
+          subject: '',
+          body: '',
+          cc: (otherParents || []).map(p => ({ email: p.email, name: p.name })),
+          attachments: []
+        });
+        setShowCompose(true);
+      };
+
+      const handleRemoveCc = (email) => {
+        setComposeForm(prev => ({ ...prev, cc: prev.cc.filter(c => c.email !== email) }));
+      };
+
+      const handleAttachImage = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          setComposeForm(prev => ({
+            ...prev,
+            attachments: [...prev.attachments, { name: file.name, data: ev.target.result }]
+          }));
+        };
+        reader.readAsDataURL(file);
+      };
+
+      const handleRemoveAttachment = (index) => {
+        setComposeForm(prev => ({
+          ...prev,
+          attachments: prev.attachments.filter((_, i) => i !== index)
+        }));
+      };
+
+      const handleSendMessage = () => {
+        if (!composeForm.subject.trim() || !composeForm.body.trim()) {
+          showToast('Please fill in subject and message', 'error');
+          return;
+        }
+        const msg = {
+          id: 'msg_' + Date.now(),
+          from: userEmail,
+          fromName: userName,
+          to: ['admin'],
+          cc: composeForm.cc.map(c => c.email),
+          subject: composeForm.subject.trim(),
+          body: composeForm.body.trim(),
+          attachments: composeForm.attachments,
+          sentAt: new Date().toISOString(),
+          readBy: [userEmail],
+          status: 'sent'
+        };
+        onSendReply(msg);
+        setShowCompose(false);
+        showToast('Message sent to Camp Director!', 'success');
+      };
+
+      const handleSaveDraft = () => {
+        const msg = {
+          id: 'msg_' + Date.now(),
+          from: userEmail,
+          fromName: userName,
+          to: ['admin'],
+          cc: composeForm.cc.map(c => c.email),
+          subject: composeForm.subject.trim() || '(No Subject)',
+          body: composeForm.body.trim(),
+          attachments: composeForm.attachments,
+          sentAt: new Date().toISOString(),
+          readBy: [userEmail],
+          status: 'draft'
+        };
+        onSendReply(msg);
+        setShowCompose(false);
+        showToast('Draft saved', 'success');
+      };
+
       return (
         <div className="space-y-6">
+          {/* Send New Message Button */}
+          <div className="text-center">
+            <button
+              onClick={openCompose}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg inline-flex items-center gap-3"
+            >
+              <span className="text-2xl">➕</span>
+              <span>Send a Message to the Camp Director</span>
+            </button>
+          </div>
+
           {/* Unread Alert */}
           {unreadMessages.length > 0 && (
             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 flex items-center gap-4">
@@ -2303,16 +2405,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow p-6">
-            <h3 className="font-bold text-lg text-green-800 mb-4">💬 Messages from Camp</h3>
-            {myMessages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="text-4xl mb-2">📭</p>
-                <p>No messages yet</p>
-              </div>
-            ) : (
+          {/* Message History */}
+          {myMessages.length > 0 && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-bold text-lg text-green-800 mb-4">Message History</h3>
               <div className="space-y-2">
-                {myMessages.map(msg => {
+                {myMessages.filter(m => m.status !== 'draft').map(msg => {
                   const isUnread = msg.from !== userEmail && !msg.readBy?.includes(userEmail);
                   const isExpanded = selectedMsg?.id === msg.id;
                   const isFromMe = msg.from === userEmail;
@@ -2369,9 +2467,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {/* Expanded Content */}
                       {isExpanded && (
                         <div className="px-4 pb-4 border-t border-gray-200">
-                          <div className="bg-white rounded-lg p-4 mt-3 whitespace-pre-wrap text-sm text-gray-700">
+                          {/* Show To/Cc info */}
+                          <div className="text-xs text-gray-500 mt-2 space-y-1">
+                            {isFromMe && <div><span className="font-medium">To:</span> Camp Director</div>}
+                            {msg.cc && msg.cc.length > 0 && (
+                              <div><span className="font-medium">Cc:</span> {msg.cc.join(', ')}</div>
+                            )}
+                          </div>
+                          <div className="bg-white rounded-lg p-4 mt-2 whitespace-pre-wrap text-sm text-gray-700">
                             {msg.body}
                           </div>
+
+                          {/* Attachments */}
+                          {msg.attachments && msg.attachments.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-xs font-medium text-gray-500 mb-1">Attachments:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {msg.attachments.map((att, i) => (
+                                  <img key={i} src={att.data} alt={att.name} className="w-20 h-20 object-cover rounded-lg border" />
+                                ))}
+                              </div>
+                            </div>
+                          )}
 
                           {/* Reply section */}
                           {!isFromMe && (
@@ -2400,8 +2517,125 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Empty state when no messages at all */}
+          {myMessages.filter(m => m.status !== 'draft').length === 0 && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-4xl mb-2">📭</p>
+                <p>No messages yet. Send a message to the Camp Director to get started.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Compose Message Modal */}
+          {showCompose && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCompose(false)}>
+              <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <h3 className="font-bold text-xl mb-4">New Message</h3>
+
+                <div className="space-y-4">
+                  {/* To field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">To:</label>
+                    <div className="px-3 py-2 bg-gray-100 border rounded-lg text-sm text-gray-700">
+                      Camp Director
+                    </div>
+                  </div>
+
+                  {/* Cc field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cc:</label>
+                    <div className="px-3 py-2 border rounded-lg min-h-[40px] flex flex-wrap gap-1">
+                      {composeForm.cc.length === 0 ? (
+                        <span className="text-sm text-gray-400">No other parents to Cc</span>
+                      ) : (
+                        composeForm.cc.map(c => (
+                          <span key={c.email} className="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
+                            {c.name || c.email}
+                            <button onClick={() => handleRemoveCc(c.email)} className="text-blue-500 hover:text-blue-700 font-bold">✕</button>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subject */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Subject:</label>
+                    <input
+                      type="text"
+                      value={composeForm.subject}
+                      onChange={e => setComposeForm(prev => ({ ...prev, subject: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                      placeholder="Message subject"
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Message:</label>
+                    <textarea
+                      value={composeForm.body}
+                      onChange={e => setComposeForm(prev => ({ ...prev, body: e.target.value }))}
+                      className="w-full px-3 py-2 border rounded-lg text-sm resize-none"
+                      rows={6}
+                      placeholder="Type your message..."
+                      autoComplete="off"
+                      data-1p-ignore="true"
+                    />
+                  </div>
+
+                  {/* Attachments */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Attachments:</label>
+                    {composeForm.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {composeForm.attachments.map((att, i) => (
+                          <div key={i} className="relative">
+                            <img src={att.data} alt={att.name} className="w-16 h-16 object-cover rounded-lg border" />
+                            <button onClick={() => handleRemoveAttachment(i)} className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600">✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-100 border rounded-lg cursor-pointer hover:bg-gray-200 text-sm">
+                      <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      <span>Add Photo/Image</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handleAttachImage} />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={!composeForm.subject.trim() || !composeForm.body.trim()}
+                    className="flex-1 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    Send
+                  </button>
+                  <button
+                    onClick={handleSaveDraft}
+                    className="px-4 py-3 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200"
+                  >
+                    Save Draft
+                  </button>
+                  <button
+                    onClick={() => setShowCompose(false)}
+                    className="px-4 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
@@ -4644,8 +4878,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   )}
 
-                  {/* Registration Calendar View */}
-                  {myChildren.length > 0 && (
+                  {/* Registration Calendar View — only show when registrations exist */}
+                  {myChildren.length > 0 && myRegs.length > 0 ? (
                     <RegistrationCalendarView
                       myChildren={myChildren}
                       registrations={myRegs}
@@ -4655,7 +4889,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       campers={campers}
                       saveCampers={saveCampers}
                     />
-                  )}
+                  ) : myChildren.length > 0 ? (
+                    <div className="bg-white rounded-xl shadow p-6 text-center">
+                      <div className="text-4xl mb-3">📅</div>
+                      <p className="text-gray-500">After you create a registration, your camper's schedule will appear here.</p>
+                    </div>
+                  ) : null}
 
                   {/* Existing Registrations Section */}
                   <div className="bg-white rounded-xl shadow p-6">
@@ -4664,7 +4903,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <span>Current Registrations</span>
                     </h3>
                     {myRegs.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No current registrations</p>
+                      <p className="text-gray-500 text-center py-4">No registrations yet</p>
                     ) : (
                       <div className="space-y-3">
                         {(() => {
@@ -5183,7 +5422,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     {(() => {
                       const activeRegs = myRegs.filter(r => r.status !== 'cancelled' && r.status !== 'rejected');
                       if (activeRegs.length === 0) {
-                        return <p className="text-gray-500 text-center py-8">No registrations to show payment status for.</p>;
+                        return (
+                          <div className="text-center py-8">
+                            <p className="text-gray-500 mb-4">No registrations submitted yet.</p>
+                            {myRegs.length === 0 && myChildren.length > 0 && (
+                              <button
+                                onClick={() => { setParentTab('register'); setTimeout(openRegistrationModal, 100); }}
+                                className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl text-base shadow-lg inline-flex items-center gap-2"
+                              >
+                                <span className="text-xl">➕</span>
+                                <span>Add Registration</span>
+                              </button>
+                            )}
+                          </div>
+                        );
                       }
 
                       // Helper: format date range like "Jul 3rd - Jul 7th"
@@ -5440,6 +5692,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   onSendReply={saveMessage}
                   markAsRead={markMessageRead}
                   showToast={showToast}
+                  otherParents={getOtherParentsForMyFamily(myChildren, camperParentLinks, parents, user?.email)}
                 />
               )}
 
@@ -5887,9 +6140,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           )}
                           <div className="flex-1 min-w-0">
                             <span className="font-medium">{contact.name}</span>
-                            {(contact.isAutoCreated || contact.isParent) && (
-                              <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
-                            )}
                             <span className="text-xs text-gray-600"> • {[contact.relationship, contact.phone].filter(Boolean).join(' • ')}</span>
                           </div>
                           <button
@@ -5934,9 +6184,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }
 
         // Normal display mode
+        const ecComplete = childEmergencyContacts.length >= 2;
+
         return (
           <div>
-            <div className="bg-green-50 rounded-lg p-4 border-2 border-green-500 relative">
+            <div className={`rounded-lg p-4 border-2 relative ${ecComplete ? 'bg-green-50 border-green-500' : 'bg-blue-50 border-blue-400'}`}>
               {/* Edit button top-right */}
               <button
                 onClick={() => { setEditForm({ ...child }); setIsEditing(true); }}
@@ -5949,9 +6201,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 <div className="flex-shrink-0">
                   {getDisplayPhoto(child.photo) ? (
                     <div className="relative">
-                      <img src={getDisplayPhoto(child.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-500" />
+                      <img src={getDisplayPhoto(child.photo)} className={`w-16 h-16 rounded-full object-cover border-2 ${ecComplete ? 'border-green-500' : 'border-blue-400'}`} />
                       <button onClick={() => setShowPhotoModal(true)}
-                        className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                        className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full text-white text-xs flex items-center justify-center ${ecComplete ? 'bg-green-600' : 'bg-blue-600'}`}>✎</button>
                     </div>
                   ) : (
                     <div onClick={() => setShowPhotoModal(true)}
@@ -5978,10 +6230,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                     {/* Parents */}
                     {(childParents || []).length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-green-300">
+                      <div className={`mt-2 pt-2 border-t ${ecComplete ? 'border-green-300' : 'border-blue-300'}`}>
                         <div className="font-medium text-gray-700 mb-1">Parents:</div>
                         {childParents.map(parent => (
-                          <div key={parent.email} className="text-xs bg-green-100 rounded p-2 mb-1 flex items-center gap-2">
+                          <div key={parent.email} className={`text-xs rounded p-2 mb-1 flex items-center gap-2 ${ecComplete ? 'bg-green-100' : 'bg-blue-100'}`}>
                             {getDisplayPhoto(parent.photo) ? (
                               <img src={getDisplayPhoto(parent.photo)} className="w-6 h-6 rounded-full object-cover" />
                             ) : (
@@ -5999,11 +6251,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     )}
 
                     {/* Emergency Contacts */}
-                    {childEmergencyContacts.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-green-300">
-                        <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
-                        {childEmergencyContacts.map(contact => (
-                          <div key={contact.id} className="text-xs bg-green-100 rounded p-2 mb-1 flex items-center gap-2">
+                    <div className={`mt-2 pt-2 border-t ${ecComplete ? 'border-green-300' : 'border-blue-300'}`}>
+                      <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
+                      {childEmergencyContacts.filter(c => !c.isAutoCreated && !c.isParent).length > 0 ? (
+                        childEmergencyContacts.filter(c => !c.isAutoCreated && !c.isParent).map(contact => (
+                          <div key={contact.id} className={`text-xs rounded p-2 mb-1 flex items-center gap-2 ${ecComplete ? 'bg-green-100' : 'bg-blue-100'}`}>
                             {getDisplayPhoto(contact.photo) ? (
                               <img src={getDisplayPhoto(contact.photo)} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
                             ) : (
@@ -6013,15 +6265,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             )}
                             <div className="flex-1 min-w-0">
                               <span className="font-medium">{contact.name}</span>
-                              {(contact.isAutoCreated || contact.isParent) && (
-                                <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
-                              )}
                               <span className="text-gray-500"> • {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}</span>
                             </div>
                           </div>
-                        ))}
-                      </div>
-                    )}
+                        ))
+                      ) : null}
+                      {!ecComplete && (
+                        <div className="text-xs text-red-600 font-medium bg-red-50 rounded p-2 mt-1">
+                          {childEmergencyContacts.length === 0
+                            ? `Add at least 2 emergency contacts for ${child.name}`
+                            : `Add ${2 - childEmergencyContacts.length} more emergency contact${2 - childEmergencyContacts.length > 1 ? 's' : ''} for ${child.name}`}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
