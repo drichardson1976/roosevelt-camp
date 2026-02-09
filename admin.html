@@ -45,11 +45,22 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.013";
+    const VERSION = "13.018";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T15:30:00");
+    const BUILD_DATE = new Date("2026-02-08T17:08:00");
 
     const RELEASE_NOTES = [
+      { version: "13.016-13.018", date: "2026-02-08", time: "5:08 PM PST", author: "Claude", changes: [
+        "Onboarding summary: info boxes now have thick green border matching policy cards",
+        "Birthdate format: 'May 8, 2014' instead of '2014-05-08' across entire website",
+        "EC tab: Relationship field now uses dropdown matching onboarding wizard options",
+        "EC tab: Phone placeholder shows (555) 555-1234",
+        "EC tab: Only offers parent login invite when relationship is 'Parent'",
+        "Removed helper text from Campers, Parents, and Session Registration tabs",
+        "Payments tab: Pay Now button opens Venmo modal with QR code and unique identifier",
+        "Venmo code stored with each registration for Camp Director matching",
+        "Payment flow: Pay Now → Venmo modal → confirm sends → 'Payment Sent' status",
+      ]},
       { version: "13.014-13.015", date: "2026-02-08", time: "4:38 PM PST", author: "Claude", changes: [
         "Onboarding summary: Parent shows name, phone + Parent label, then email",
         "Onboarding summary: Camper cards now show photo/silhouette with green background",
@@ -1177,6 +1188,12 @@
       let age = today.getFullYear() - birth.getFullYear();
       if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
       return age;
+    };
+
+    const formatBirthdate = (birthdate) => {
+      if (!birthdate) return '';
+      const d = new Date(birthdate + 'T12:00:00');
+      return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     };
 
     // Helper to get display photo for person photos (handles both old string format and new object format)
@@ -11414,7 +11431,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               {child.grade && <div>Grade: {child.grade}</div>}
               {child.birthdate && (
                 <div>
-                  Birthday: {new Date(child.birthdate + 'T12:00:00').toLocaleDateString()}
+                  Birthday: {formatBirthdate(child.birthdate)}
                   {age !== null && <span className="text-green-600 font-medium"> ({age} years old)</span>}
                 </div>
               )}
