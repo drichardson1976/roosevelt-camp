@@ -1,4 +1,5 @@
 # CLAUDE CODE REFERENCE DOCUMENT
+**Version:** 13.037
 **Last Updated:** 2026-02-08
 **Purpose:** Critical information that must NEVER be lost during conversation compaction
 

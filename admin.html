@@ -45,11 +45,15 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.030";
+    const VERSION = "13.037";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T19:12:00");
+    const BUILD_DATE = new Date("2026-02-08T21:58:00");
 
     const RELEASE_NOTES = [
+      { version: "13.037", date: "2026-02-08", time: "9:58 PM PST", author: "Derek Richardson", changes: [
+        "Version sync: All files aligned to v13.037",
+        "CLAUDE.md: Added version number to document header"
+      ]},
       { version: "13.036", date: "2026-02-08", time: "9:56 PM PST", author: "Claude", changes: [
         "Dashboard: Added parent photo alert in Next Steps — warns when family parents are missing photos",
         "Payments tab: Removed filter inputs, cleaner Venmo modal with 'Step' labels and less helper text",
