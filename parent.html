@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.052";
+    const VERSION = "13.056";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T00:00:00");
+    const BUILD_DATE = new Date("2026-02-09T00:09:00");
 
     const RELEASE_NOTES = [
+      { version: "13.055-13.058", date: "2026-02-09", time: "12:09 AM", author: "Claude", changes: ["Parent: Venmo wizard step ovals now uniform size (w-14 h-7) and top-aligned", "Admin: Registrations restructured — 3 sections: New (awaiting payment), Awaiting Confirmation, Paid", "Admin: Removed approval concept — registrations just need payment confirmation", "Admin: All 3 registration sections use same card format with Venmo screenshot always shown", "Admin: Screenshot placeholder shown when no payment screenshot exists", "Admin: Dashboard tasks updated to match new payment-focused workflow", "Admin: Registrations tab badge now shows count awaiting admin payment confirmation"] },
       { version: "13.051-13.054", date: "2026-02-09", time: "12:00 AM", author: "Claude", changes: ["Admin: Added Messages tab with unread badge from parents", "Admin: Messages tab with compose (broadcast/individual), reply, read/unread tracking", "Admin: Dashboard shows unread parent messages as urgent todo", "All files: Scroll to top on page load and tab navigation so red ribbon is visible"] },
       { version: "13.047-13.050", date: "2026-02-08", time: "11:47 PM PST", author: "Claude", changes: [
         "Parents tab: 'No login account' changed to 'No email provided'",
@@ -5656,32 +5657,32 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                         <div className="space-y-4">
                           {/* Step 1 */}
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full px-2 py-1">Step 1</div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 1</div>
                             <div>
                               <p className="font-medium text-gray-800">Open Venmo and tap "Pay or Request"</p>
                             </div>
                           </div>
 
                           {/* Step 2 */}
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full px-2 py-1">Step 2</div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 2</div>
                             <div>
                               <p className="font-medium text-gray-800">Search for <span className="text-blue-700 font-bold">{content?.venmoUsername || '@RHSDayCamp'}</span></p>
                             </div>
                           </div>
 
                           {/* Step 3 */}
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full px-2 py-1">Step 3</div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 3</div>
                             <div>
                               <p className="font-medium text-gray-800">Enter the amount: <span className="text-green-700 font-bold text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span></p>
                             </div>
                           </div>
 
                           {/* Step 4 */}
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full px-2 py-1">Step 4</div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 4</div>
                             <div>
                               <p className="font-medium text-gray-800">In the "What's it for?" section, add this unique registration code</p>
                               <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300 mt-1">
@@ -5692,8 +5693,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           </div>
 
                           {/* Step 5 */}
-                          <div className="flex gap-3">
-                            <div className="flex-shrink-0 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full px-2 py-1">Step 5</div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 5</div>
                             <div>
                               <p className="font-medium text-gray-800">Take a screenshot and upload it</p>
                               <div className="mt-2">
