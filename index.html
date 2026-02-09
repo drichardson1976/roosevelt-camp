@@ -45,12 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.062";
+    const VERSION = "13.063";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T10:41:00");
+    const BUILD_DATE = new Date("2026-02-09T13:33:00");
 
     const RELEASE_NOTES = [
-      { version: "13.062", date: "2026-02-09", time: "10:41 AM", author: "Audrey Richardson", changes: ["Onboarding EC: Clarified that parent counts as 1 EC — 'Please add at least 1 more contact'", "Onboarding EC: Continue now requires Add Contact click or shows error if form has partial data", "Onboarding EC: Auto-saves filled contact form when clicking Continue (like campers)", "Session Registration: Pay Now button now navigates to Payments tab instead of opening modal", "Payments: Fixed confirmation glitch — modal closes immediately, saves in background"] },
+      { version: "13.063", date: "2026-02-09", time: "1:33 PM", author: "Audrey Richardson", changes: ["Onboarding: Removed auto-save for campers — must click 'Add Camper' button before continuing", "Onboarding: Removed auto-save for emergency contacts — must click 'Add Contact' button before continuing", "Admin: Fixed Mark as Paid glitch — all sessions now update instantly instead of one-by-one"] },
+      { version: "13.062", date: "2026-02-09", time: "10:41 AM", author: "Audrey Richardson", changes: ["Onboarding EC: Clarified that parent counts as 1 EC — 'Please add at least 1 more contact'", "Session Registration: Pay Now button now navigates to Payments tab instead of opening modal", "Payments: Fixed confirmation glitch — modal closes immediately, saves in background"] },
       { version: "13.061", date: "2026-02-09", time: "9:02 AM", author: "Claude", changes: ["Admin EC popup: Removed Priority field from display", "Admin EC popup: Added large camper headshot photo at top in green box", "Admin EC popup: Added headshot photos for each emergency contact", "Admin EC popup: Photos clickable to view full-size in overlay", "Admin EC popup: Photos editable via PhotoUploadModal (add/change photo link)", "Admin EC popup: Placeholder shown for missing photos with add-photo prompt"] },
       { version: "13.059-13.060", date: "2026-02-09", time: "8:06 AM", author: "Claude", changes: ["Onboarding: Parent logins shown in green boxes, Remove button removed, edit via EC instead", "Onboarding: Edit buttons now blue text in top-right corner matching dashboard style", "Onboarding: Fixed login screen flash after wizard — now shows bouncing basketball transition", "Campers tab: Parent email shown next to phone number (hidden for nologin accounts)", "EC modal: Email now mandatory with asterisk, Add button disabled until email provided", "Registration cards: Blue border/bg for unpaid, red 'Payment Due' badge, blue Pay Now button", "Payments tab: Card style matches register tab — same blue colors, red badge, green title", "Venmo modal: Registration details box at top with camper names, dates, session types, total", "Messages: Drafts now visible in amber Drafts section, click to edit/send/delete", "Messages: Edit Draft modal with Send, Update Draft, and Delete (double confirmation) buttons"] },
       { version: "13.055-13.058", date: "2026-02-09", time: "12:09 AM", author: "Claude", changes: ["Parent: Venmo wizard step ovals now uniform size (w-14 h-7) and top-aligned", "Admin: Registrations restructured — 3 sections: New (awaiting payment), Awaiting Confirmation, Paid", "Admin: Removed approval concept — registrations just need payment confirmation", "Admin: All 3 registration sections use same card format with Venmo screenshot always shown", "Admin: Screenshot placeholder shown when no payment screenshot exists", "Admin: Dashboard tasks updated to match new payment-focused workflow", "Admin: Registrations tab badge now shows count awaiting admin payment confirmation"] },
@@ -1802,42 +1803,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             return false;
           }
         }
-        // Step 2: Auto-save in-progress camper, then require at least one camper
+        // Step 2: Require at least one camper - must click Add Camper button
         if (step === 2) {
-          // Auto-save in-progress camper if fields are filled
-          if (newCamper.name && newCamper.birthdate && newCamper.grade) {
-            setCampersData([...campersData, { ...newCamper, id: 'camper_' + Date.now() }]);
-            setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null });
-            setShowAddCamper(false);
-            // Don't validate yet - let the state update, then validation will pass on re-render
-            return true;
+          // If form is open with any data, require clicking Add Camper
+          if (showAddCamper && (newCamper.name || newCamper.birthdate || newCamper.grade)) {
+            setError('Please click "Add Camper" to save the camper, or click "Cancel" to discard');
+            return false;
           }
           if (campersData.length === 0) {
             setError('Please add at least one camper before continuing');
             return false;
           }
         }
-        // Step 3: Emergency contacts - require at least 2 (parent + 1 more)
+        // Step 3: Emergency contacts - require at least 2 (parent + 1 more) - must click Add Contact button
         if (step === 3) {
-          // Auto-save in-progress contact if fields are filled
-          if (showAddContact && newContact.name && newContact.phone && newContact.relationship && (newContact.relationship !== 'Other' || newContact.otherRelationship)) {
-            // Validate phone before auto-save
-            if (!isValidPhone(newContact.phone)) {
-              setError('Please enter a valid 10-digit phone number for the emergency contact');
-              return false;
-            }
-            // Auto-save the contact
-            const savedContact = { ...newContact, id: 'ec_' + Date.now() };
-            setEmergencyData([...emergencyData, savedContact]);
-            setNewContact({ name: '', phone: '', relationship: '', otherRelationship: '', photo: null, email: '' });
-            setShowAddContact(false);
-            setEditingContactId(null);
-            // Let state update, validation will pass on re-render
-            return true;
-          }
-          // If form is open with partial data, warn user
+          // If form is open with any data, require clicking Add Contact
           if (showAddContact && (newContact.name || newContact.phone || newContact.relationship)) {
-            setError('Please click "Add Contact" to save your emergency contact, or click "Cancel" to discard');
+            setError('Please click "Add Contact" to save the emergency contact, or click "Cancel" to discard');
             return false;
           }
           // Require at least 2 contacts (parent counts as 1)
