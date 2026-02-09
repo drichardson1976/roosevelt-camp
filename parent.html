@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.025";
+    const VERSION = "13.026";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T18:07:00");
+    const BUILD_DATE = new Date("2026-02-08T18:24:00");
 
     const RELEASE_NOTES = [
+      { version: "13.026", date: "2026-02-08", time: "6:24 PM PST", author: "Claude", changes: [
+        "Dashboard: All parent/camper/EC cards now green box with dark green border (bg-green-50 border-2 border-green-500)",
+        "Dashboard: Edit buttons moved to light blue outside the green box (matching onboarding pattern)",
+        "EC tab: All EC photos now clickable to add/edit photo via photo upload modal",
+        "EC tab: Inner sub-cards (parents, ECs within camper cards) now green-100 instead of blue/gray",
+        "Sessions tab: Camper photo placeholder hidden when no photo uploaded (no add-photo icon on selection buttons)",
+        "Sessions tab: Campers default deselected if no registrations, auto-selected if they have existing registrations",
+        "Sessions tab: Legend 'Available' renamed to 'Available for Registration'",
+      ]},
       { version: "13.024-13.025", date: "2026-02-08", time: "6:07 PM PST", author: "Claude", changes: [
         "Onboarding Step 2: Camper cards now green with thick border (matching ECs and summary)",
         "Onboarding Step 2: Removed red X delete button, added Delete inside edit form instead",
@@ -3946,10 +3955,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           .map(link => link.camperId);
         const myChildren = (campers || []).filter(c => myChildrenIds.includes(c.id));
 
-        // Auto-select if only one camper exists
+        // Auto-select campers that already have registrations
         useEffect(() => {
-          if (myChildren.length === 1 && selectedChildren.length === 0) {
-            setSelectedChildren([myChildren[0].id]);
+          if (myChildren.length > 0 && selectedChildren.length === 0) {
+            const childrenWithRegs = myChildren.filter(c =>
+              registrations.some(r => r.childId === c.id && r.parentEmail === user?.email && r.status !== 'cancelled')
+            ).map(c => c.id);
+            if (childrenWithRegs.length > 0) {
+              setSelectedChildren(childrenWithRegs);
+            }
           }
         }, [myChildren.length]);
         const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
@@ -4712,13 +4726,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           {getDisplayPhoto(c.photo) ? (
                             <img src={getDisplayPhoto(c.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500" />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex flex-col items-center justify-center">
-                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                              <span className="text-[7px] text-gray-500 font-medium">add photo</span>
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                             </div>
                           )}
                           <span className="text-sm">{selectedChildren.includes(c.id) ? '✓ ' : ''}{c.name}</span>
-                          {!getDisplayPhoto(c.photo) && <span className="text-xs text-blue-500">Add Photo</span>}
                         </button>
                       ))}</div>
                     )}
@@ -5744,89 +5756,90 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
         // Normal display mode
         return (
-          <div className="border rounded-lg p-4 flex items-start gap-4">
-            {/* Photo with edit button or add photo placeholder */}
-            <div className="flex-shrink-0">
-              {getDisplayPhoto(child.photo) ? (
-                <div className="relative">
-                  <img src={getDisplayPhoto(child.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-600" />
-                  <button onClick={() => setShowPhotoModal(true)}
-                    className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
-                </div>
-              ) : (
-                <div onClick={() => setShowPhotoModal(true)}
-                  className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                  <span className="text-[8px] text-gray-500 font-medium">add photo</span>
-                </div>
-              )}
-              {showPhotoModal && <PhotoUploadModal currentPhoto={child.photo} onSave={(img) => { onUpdate({ ...child, photo: img }); setShowPhotoModal(false); }} onCancel={() => setShowPhotoModal(false)} />}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1">
-              <div className="font-bold text-lg">{child.name}</div>
-              <div className="text-sm text-gray-600 space-y-1">
-                {child.grade && <div>Grade: {child.grade}</div>}
-                {child.birthdate && (
-                  <div>
-                    Birthday: {formatBirthdate(child.birthdate)}
-                    {age !== null && <span className="text-green-600 font-medium"> ({age} years old)</span>}
+          <div className="space-y-1">
+            <div className="bg-green-50 rounded-lg p-4 border-2 border-green-500 flex items-start gap-4">
+              {/* Photo with edit button or add photo placeholder */}
+              <div className="flex-shrink-0">
+                {getDisplayPhoto(child.photo) ? (
+                  <div className="relative">
+                    <img src={getDisplayPhoto(child.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-500" />
+                    <button onClick={() => setShowPhotoModal(true)}
+                      className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</button>
+                  </div>
+                ) : (
+                  <div onClick={() => setShowPhotoModal(true)}
+                    className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-[8px] text-gray-500 font-medium">add photo</span>
                   </div>
                 )}
-                {child.phone && <div>Phone: {child.phone}</div>}
+                {showPhotoModal && <PhotoUploadModal currentPhoto={child.photo} onSave={(img) => { onUpdate({ ...child, photo: img }); setShowPhotoModal(false); }} onCancel={() => setShowPhotoModal(false)} />}
+              </div>
 
-                {/* Parents */}
-                {(childParents || []).length > 0 && (
-                  <div className="mt-2 pt-2 border-t">
-                    <div className="font-medium text-gray-700 mb-1">Parents:</div>
-                    {childParents.map(parent => (
-                      <div key={parent.email} className="text-xs bg-blue-50 rounded p-2 mb-1 flex items-center gap-2">
-                        {getDisplayPhoto(parent.photo) ? (
-                          <img src={getDisplayPhoto(parent.photo)} className="w-6 h-6 rounded-full object-cover" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                          </div>
-                        )}
-                        <div>
-                          <span className="font-medium">{parent.name}</span>
-                          {parent.phone && <span className="text-gray-500"> • {parent.phone}</span>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Info */}
+              <div className="flex-1">
+                <div className="font-bold text-lg">{child.name}</div>
+                <div className="text-sm text-gray-600 space-y-1">
+                  {child.grade && <div>Grade: {child.grade}</div>}
+                  {child.birthdate && (
+                    <div>
+                      Birthday: {formatBirthdate(child.birthdate)}
+                      {age !== null && <span className="text-green-600 font-medium"> ({age} years old)</span>}
+                    </div>
+                  )}
+                  {child.phone && <div>Phone: {child.phone}</div>}
 
-                {/* Emergency Contacts */}
-                {childEmergencyContacts.length > 0 && (
-                  <div className="mt-2 pt-2 border-t">
-                    <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
-                    {childEmergencyContacts.map(contact => (
-                      <div key={contact.id} className="text-xs bg-gray-50 rounded p-2 mb-1 flex items-center gap-2">
-                        {getDisplayPhoto(contact.photo) ? (
-                          <img src={getDisplayPhoto(contact.photo)} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium">{contact.name}</span>
-                          {(contact.isAutoCreated || contact.isParent) && (
-                            <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
+                  {/* Parents */}
+                  {(childParents || []).length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-green-300">
+                      <div className="font-medium text-gray-700 mb-1">Parents:</div>
+                      {childParents.map(parent => (
+                        <div key={parent.email} className="text-xs bg-green-100 rounded p-2 mb-1 flex items-center gap-2">
+                          {getDisplayPhoto(parent.photo) ? (
+                            <img src={getDisplayPhoto(parent.photo)} className="w-6 h-6 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            </div>
                           )}
-                          <span className="text-gray-500"> • {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}</span>
+                          <div>
+                            <span className="font-medium">{parent.name}</span>
+                            {parent.phone && <span className="text-gray-500"> • {parent.phone}</span>}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Emergency Contacts */}
+                  {childEmergencyContacts.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-green-300">
+                      <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
+                      {childEmergencyContacts.map(contact => (
+                        <div key={contact.id} className="text-xs bg-green-100 rounded p-2 mb-1 flex items-center gap-2">
+                          {getDisplayPhoto(contact.photo) ? (
+                            <img src={getDisplayPhoto(contact.photo)} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                              <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{contact.name}</span>
+                            {(contact.isAutoCreated || contact.isParent) && (
+                              <span className="ml-1 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">Parent</span>
+                            )}
+                            <span className="text-gray-500"> • {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-
-            {/* Action buttons */}
-            <div className="flex flex-col gap-2">
+            {/* Edit button outside green box */}
+            <div className="flex justify-end">
               <button
                 onClick={() => { setEditForm({ ...child }); setIsEditing(true); }}
                 className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
@@ -5903,6 +5916,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
       const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
       const [showEditPhotoModal, setShowEditPhotoModal] = useState(false);
+      const [editingPhotoContactId, setEditingPhotoContactId] = useState(null);
 
       // Resolve parent-reference emergency contacts (pulls name/phone/photo from camp_parents)
       const resolveEmergencyContact = (contact) => {
@@ -6285,34 +6299,38 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   ) : (
                     /* List View Card */
-                    <div className="border rounded-lg p-4 flex items-start gap-4">
-                      {/* Circular Photo or Placeholder */}
-                      <div className="flex-shrink-0">
-                        {getDisplayPhoto(contact.photo) ? (
-                          <img src={getDisplayPhoto(contact.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-600" />
-                        ) : !contact.isParent && !contact.isAutoCreated ? (
-                          <div onClick={() => handleEdit(contact)} className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                            <span className="text-[8px] text-gray-500 font-medium">add photo</span>
-                          </div>
-                        ) : (
-                          <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                            <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                          </div>
-                        )}
-                      </div>
-                      {/* Info */}
-                      <div className="flex-1">
-                        <div className="font-bold text-lg">
-                          {contact.name}
+                    <div className="space-y-1">
+                      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-500 flex items-start gap-4">
+                        {/* Circular Photo or Placeholder - clickable to add/edit photo */}
+                        <div className="flex-shrink-0">
+                          {getDisplayPhoto(contact.photo) ? (
+                            <div className="relative cursor-pointer" onClick={() => { setEditingPhotoContactId(contact.id); setShowEditPhotoModal(true); }}>
+                              <img src={getDisplayPhoto(contact.photo)} className="w-16 h-16 rounded-full object-cover border-2 border-green-500 hover:opacity-80 transition-opacity" />
+                              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-600 rounded-full text-white text-xs flex items-center justify-center">✎</div>
+                            </div>
+                          ) : (
+                            <div onClick={() => { setEditingPhotoContactId(contact.id); setShowEditPhotoModal(true); }} className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                              <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <span className="text-[8px] text-gray-500 font-medium">add photo</span>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}
+                        {/* Info */}
+                        <div className="flex-1">
+                          <div className="font-bold text-lg">
+                            {contact.name}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}
+                          </div>
+                          {(contact.isParent || contact.isAutoCreated) && (
+                            <div className="text-xs text-gray-400 italic mt-1">Managed in Parents tab</div>
+                          )}
                         </div>
                       </div>
-                      {/* Edit Button (only for non-parent contacts) */}
+                      {/* Edit button outside green box (only for non-parent contacts) */}
                       {!contact.isParent && !contact.isAutoCreated && (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex justify-end">
                           <button
                             onClick={() => handleEdit(contact)}
                             className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
@@ -6321,16 +6339,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           </button>
                         </div>
                       )}
-                      {/* Parent contacts: managed from Parents tab */}
-                      {(contact.isParent || contact.isAutoCreated) && (
-                        <div className="text-xs text-gray-400 italic self-center">Managed in Parents tab</div>
-                      )}
                     </div>
                   )}
                 </div>
               ))}
             </div>
           )}
+
+          {/* Photo Upload Modal for EC list view photos */}
+          {editingPhotoContactId && showEditPhotoModal && (() => {
+            const contact = localContacts.find(c => c.id === editingPhotoContactId);
+            return (
+              <PhotoUploadModal
+                currentPhoto={contact?.photo}
+                onSave={(img) => {
+                  setLocalContacts(localContacts.map(c => c.id === editingPhotoContactId ? { ...c, photo: img } : c));
+                  setEditingPhotoContactId(null);
+                  setShowEditPhotoModal(false);
+                }}
+                onCancel={() => { setEditingPhotoContactId(null); setShowEditPhotoModal(false); }}
+              />
+            );
+          })()}
 
           {/* Save/Cancel Changes */}
           {hasChanges && (
@@ -6698,10 +6728,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 {allFamilyMembers.map(parent => {
                   const isCurrentUser = parent.email === currentUserEmail;
                   return (
-                    <div key={parent.email} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
+                    <div key={parent.email} className="space-y-1">
+                      <div className="bg-green-50 rounded-lg p-4 border-2 border-green-500 flex items-center gap-3">
                         {getDisplayPhoto(parent.photo) ? (
-                          <img src={getDisplayPhoto(parent.photo)} alt={parent.name} className="w-16 h-16 rounded-full object-cover border-2 border-green-600" />
+                          <img src={getDisplayPhoto(parent.photo)} alt={parent.name} className="w-16 h-16 rounded-full object-cover border-2 border-green-500" />
                         ) : (
                           <div className="w-16 h-16 rounded-full bg-gray-200 flex flex-col items-center justify-center">
                             <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -6717,12 +6747,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           {parent.phone && <div className="text-sm text-gray-500">{parent.phone}</div>}
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleEditParent(parent)}
-                        className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
-                      >
-                        Edit
-                      </button>
+                      {/* Edit button outside green box */}
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleEditParent(parent)}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
+                        >
+                          Edit
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -7108,7 +7141,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-blue-200 border border-blue-300 rounded"></div>
-                    <span>Available</span>
+                    <span>Available for Registration</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">

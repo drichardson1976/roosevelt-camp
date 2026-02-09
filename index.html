@@ -50,6 +50,14 @@
     const BUILD_DATE = new Date("2026-02-08T18:07:00");
 
     const RELEASE_NOTES = [
+      { version: "13.026", date: "2026-02-08", time: "6:24 PM PST", author: "Claude", changes: [
+        "Dashboard: All parent/camper/EC cards now green box with dark green border (bg-green-50 border-2 border-green-500)",
+        "Dashboard: Edit buttons moved to light blue outside the green box (matching onboarding pattern)",
+        "EC tab: All EC photos now clickable to add/edit photo via photo upload modal",
+        "Sessions tab: Camper photo placeholder hidden when no photo uploaded",
+        "Sessions tab: Campers default deselected if no registrations, auto-selected if they have existing registrations",
+        "Sessions tab: Legend 'Available' renamed to 'Available for Registration'",
+      ]},
       { version: "13.024-13.025", date: "2026-02-08", time: "6:07 PM PST", author: "Claude", changes: [
         "Onboarding Step 2: Camper cards now green with thick border (matching ECs and summary)",
         "Onboarding Step 2: Removed red X delete button, added Delete inside edit form instead",
