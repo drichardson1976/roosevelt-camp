@@ -50,6 +50,17 @@
     const BUILD_DATE = new Date("2026-02-08T11:44:00");
 
     const RELEASE_NOTES = [
+      { version: "13.027-13.028", date: "2026-02-08", time: "6:51 PM PST", author: "Claude", changes: [
+        "Onboarding: Edit button moved outside green box for camper cards (matching Parent Account pattern)",
+        "Dashboard: Edit buttons moved to top-right inside green boxes as plain blue text (no background)",
+        "Dashboard: Action buttons on Dashboard tab now uniform size and aligned (min-w-[140px])",
+        "Dashboard: Changed 'Register your campers for camp sessions' to 'Register your camper(s) for sessions'",
+        "Sessions: RegistrationCalendarView campers default deselected if no registrations (was auto-selecting first child)",
+        "Sessions: Removed 'Add Photo' text from camper selector buttons in calendar view",
+        "Sessions: Calendar 'add photo' circle next to child name now functional (opens PhotoUploadModal)",
+        "Sessions: Fixed displayRegs undefined reference bug in RegistrationCalendarView",
+        "Color convention: 'Both' session button now green when selected (was blue), matching AM/PM buttons",
+      ]},
       { version: "13.026", date: "2026-02-08", time: "6:24 PM PST", author: "Claude", changes: [
         "Dashboard: All parent/camper/EC cards now green box with dark green border (bg-green-50 border-2 border-green-500)",
         "Dashboard: Edit buttons moved to light blue outside the green box (matching onboarding pattern)",
