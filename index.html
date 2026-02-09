@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.038";
+    const VERSION = "13.042";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T22:34:00");
+    const BUILD_DATE = new Date("2026-02-08T22:45:00");
 
     const RELEASE_NOTES = [
+      { version: "13.039-13.042", date: "2026-02-08", time: "10:45 PM PST", author: "Claude", changes: [
+        "All dashboards: Title bar center-justified; public website links added to dark green nav bar",
+        "Counselor dashboard: Added title bar with welcome message",
+        "Public site: 'My Dashboard' button when logged in; hash-based page routing for dashboard links",
+        "Onboarding: All actions logged to History on completion (account, campers, ECs, policies)",
+        "Onboarding: Parents who skip login creation still stored in camp_parents as no-login parents",
+        "Onboarding: 'Skip' button renamed to 'Skip Login' for clarity",
+        "Camper cards: Parent-type ECs now shown in EC section (dual listing)",
+      ]},
       { version: "13.038", date: "2026-02-08", time: "10:34 PM PST", author: "Audrey Richardson", changes: [
         "Onboarding: Emergency contacts yellow warning now hides when 2+ contacts added (was always visible)",
         "Parent Dashboard: Camper photo alert now includes 'camper photos are required before camp sessions start'",
@@ -1553,7 +1562,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT ONBOARDING WIZARD ====================
-    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks, content }) => {
+    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks, content, addToHistory }) => {
       const [step, setStep] = useState(1);
       const [editReturnStep, setEditReturnStep] = useState(null);
       const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '', photo: null });
@@ -1630,6 +1639,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       // Helper functions for emergency contacts
       const [contactError, setContactError] = useState('');
       const [pendingInvitations, setPendingInvitations] = useState([]);
+      const [pendingNoLoginParents, setPendingNoLoginParents] = useState([]);
       const [invitePrompt, setInvitePrompt] = useState(null);
       const [inviteForm, setInviteForm] = useState({ email: '', password: '' });
       const [inviteError, setInviteError] = useState('');
@@ -1692,6 +1702,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const handleInviteDismiss = () => {
+        // Still add as a parent (without login) — they should appear on Parents tab
+        if (invitePrompt) {
+          setPendingNoLoginParents([...pendingNoLoginParents, {
+            name: invitePrompt.name,
+            phone: invitePrompt.phone
+          }]);
+        }
         setInvitePrompt(null);
         setInviteForm({ email: '', password: '' });
         setInviteError('');
@@ -1841,19 +1858,29 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         // (name/phone/photo pulled from camp_parents at display time to avoid duplicate data)
         const parentEcRef = { id: 'ec_' + Date.now(), parentEmail: userData.email, isParent: true, relationship: 'Parent', priority: 1, userEmail: userData.email };
 
-        // Build emergency contact list, upgrading any invited contacts to parent references
-        const invitedNames = new Set(pendingInvitations.map(inv => inv.name.toLowerCase()));
+        // Build no-login parent ID map for EC reference linking
+        const noLoginParentIds = {};
+        pendingNoLoginParents.forEach(nlp => {
+          noLoginParentIds[nlp.name.toLowerCase()] = `nologin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        });
+
+        // Build emergency contact list, upgrading any invited/no-login contacts to parent references
         const processedEcData = emergencyData.map((c, i) => {
           const contact = { ...c, userEmail: userData.email, priority: i + 2 };
-          // If this contact was invited as a parent, convert to a parent-reference EC
+          // If this contact was invited as a parent (with login), convert to parent-reference EC
           const matchingInvite = pendingInvitations.find(inv => inv.name.toLowerCase() === c.name.toLowerCase());
           if (matchingInvite) {
             contact.isParent = true;
             contact.parentEmail = matchingInvite.email;
-            // Clear duplicated fields — will be resolved from camp_parents at display time
             delete contact.name;
             delete contact.phone;
             delete contact.photo;
+          }
+          // If this contact was added as a no-login parent, also convert to parent-reference EC
+          const noLoginId = noLoginParentIds[c.name?.toLowerCase()];
+          if (!matchingInvite && noLoginId) {
+            contact.isParent = true;
+            contact.parentEmail = noLoginId;
           }
           return contact;
         });
@@ -1861,32 +1888,71 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const allContacts = [parentEcRef, ...processedEcData];
         await saveEmergencyContacts([...emergencyContacts, ...allContacts]);
 
-        // Process pending parent invitations
-        if (pendingInvitations.length > 0) {
-          let currentParentsList = [...(parents || []), newUser];
-          let currentLinksList = [...(camperParentLinks || []), ...campersData.map(c => ({ camperId: c.id, parentEmail: userData.email }))];
-          for (const invitation of pendingInvitations) {
-            // Find the original EC to carry over photo
-            const originalEc = emergencyData.find(c => c.name.toLowerCase() === invitation.name.toLowerCase());
-            const invitedParent = {
-              email: invitation.email,
-              name: invitation.name,
-              password: invitation.password,
-              phone: invitation.phone,
-              photo: originalEc?.photo || null,
-              role: 'parent',
-              roles: ['parent'],
-              onboardingComplete: true,
-              onboardingCompletedAt: new Date().toISOString(),
-              createdBy: userData.email,
-              createdAt: new Date().toISOString()
-            };
-            currentParentsList = [...currentParentsList, invitedParent];
-            const inviteLinks = campersData.map(c => ({ camperId: c.id, parentEmail: invitation.email }));
-            currentLinksList = [...currentLinksList, ...inviteLinks];
-          }
+        // Process pending parent invitations (with login) and no-login parents
+        let currentParentsList = [...(parents || []), newUser];
+        let currentLinksList = [...(camperParentLinks || []), ...campersData.map(c => ({ camperId: c.id, parentEmail: userData.email }))];
+
+        // Add invited parents (with login credentials)
+        for (const invitation of pendingInvitations) {
+          const originalEc = emergencyData.find(c => c.name.toLowerCase() === invitation.name.toLowerCase());
+          const invitedParent = {
+            email: invitation.email,
+            name: invitation.name,
+            password: invitation.password,
+            phone: invitation.phone,
+            photo: originalEc?.photo || null,
+            role: 'parent',
+            roles: ['parent'],
+            onboardingComplete: true,
+            onboardingCompletedAt: new Date().toISOString(),
+            createdBy: userData.email,
+            createdAt: new Date().toISOString()
+          };
+          currentParentsList = [...currentParentsList, invitedParent];
+          const inviteLinks = campersData.map(c => ({ camperId: c.id, parentEmail: invitation.email }));
+          currentLinksList = [...currentLinksList, ...inviteLinks];
+        }
+
+        // Add no-login parents (name/phone only, no credentials)
+        for (const nlp of pendingNoLoginParents) {
+          const noLoginId = noLoginParentIds[nlp.name.toLowerCase()];
+          const originalEc = emergencyData.find(c => c.name.toLowerCase() === nlp.name.toLowerCase());
+          const noLoginParent = {
+            email: noLoginId,
+            name: nlp.name,
+            phone: nlp.phone,
+            photo: originalEc?.photo || null,
+            role: 'parent',
+            roles: ['parent'],
+            noLogin: true,
+            createdBy: userData.email,
+            createdAt: new Date().toISOString()
+          };
+          currentParentsList = [...currentParentsList, noLoginParent];
+          const nlpLinks = campersData.map(c => ({ camperId: c.id, parentEmail: noLoginId }));
+          currentLinksList = [...currentLinksList, ...nlpLinks];
+        }
+
+        if (pendingInvitations.length > 0 || pendingNoLoginParents.length > 0) {
           await saveParents(currentParentsList);
           await saveCamperParentLinks(currentLinksList);
+        }
+
+        // Log onboarding completion to history
+        if (addToHistory) {
+          const camperNames = campersData.map(c => c.name).join(', ');
+          const ecNames = emergencyData.map(c => c.name).filter(Boolean).join(', ');
+          const inviteNames = pendingInvitations.map(inv => inv.name).join(', ');
+          const details = [
+            `Parent account created: ${userData.name} (${userData.email})`,
+            campersData.length > 0 ? `Campers added: ${camperNames}` : null,
+            emergencyData.length > 0 ? `Emergency contacts added: ${ecNames}` : null,
+            pendingInvitations.length > 0 ? `Additional parents invited: ${inviteNames}` : null,
+            pendingNoLoginParents.length > 0 ? `Parents added (no login): ${pendingNoLoginParents.map(p => p.name).join(', ')}` : null,
+            policiesAccepted.pickup && policiesAccepted.dropoff ? 'Pickup & dropoff policies accepted' : null
+          ].filter(Boolean).join(' | ');
+          const allEmails = [userData.email, ...pendingInvitations.map(inv => inv.email)];
+          await addToHistory('Parent Onboarding Complete', details, allEmails);
         }
 
         onComplete(newUser);
@@ -2408,7 +2474,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             Create Login
                           </button>
                           <button onClick={handleInviteDismiss} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                            Skip
+                            Skip Login
                           </button>
                         </div>
                       </div>
@@ -3420,7 +3486,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     function RooseveltCamp() {
-      const [page, setPage] = useState('home');
+      const getInitialPage = () => {
+        const hash = window.location.hash.replace('#', '');
+        const validPages = ['home', 'schedule', 'pricing', 'location', 'counselors', 'login'];
+        return validPages.includes(hash) ? hash : 'home';
+      };
+      const [page, setPage] = useState(getInitialPage());
       const [user, setUser] = useState(null);
       const [toast, setToast] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -3518,6 +3589,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setLoading(false);
         };
         load();
+      }, []);
+
+      // Hash-based page routing — allows dashboard links like /index.html#schedule
+      useEffect(() => {
+        const handleHash = () => {
+          const hash = window.location.hash.replace('#', '');
+          const validPages = ['home', 'schedule', 'pricing', 'location', 'counselors', 'login'];
+          if (validPages.includes(hash)) setPage(hash);
+        };
+        window.addEventListener('hashchange', handleHash);
+        return () => window.removeEventListener('hashchange', handleHash);
       }, []);
 
       const addToHistory = useCallback(async (action, details, relatedEmails = []) => {
@@ -3767,19 +3849,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const getUnpaid = () => registrations.filter(r => r.status === 'approved' && !['paid', 'confirmed'].includes(r.paymentStatus)).length;
 
       // ==================== NAV ====================
-      const Nav = () => (
-        <nav className="bg-green-900 text-white shadow-lg">
-          <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
-            <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => setPage('home')} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
-            <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
-              {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
-                <button key={p} onClick={() => setPage(p)} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base capitalize min-h-[44px] ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
-              ))}
-              <button onClick={() => setPage('login')} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base min-h-[44px] ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
+      const Nav = () => {
+        const sessionUser = (() => { try { return JSON.parse(sessionStorage.getItem('user')); } catch { return null; } })();
+        const dashUrl = sessionUser?.role === 'admin' ? '/admin.html' : sessionUser?.role === 'counselor' ? '/counselor.html' : '/parent.html';
+        return (
+          <nav className="bg-green-900 text-white shadow-lg">
+            <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => setPage('home')} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
+                {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
+                  <button key={p} onClick={() => setPage(p)} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base capitalize min-h-[44px] ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
+                ))}
+                {sessionUser ? (
+                  <a href={dashUrl} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-green-600 hover:bg-green-500 rounded text-sm sm:text-base min-h-[44px] font-semibold inline-flex items-center">My Dashboard</a>
+                ) : (
+                  <button onClick={() => setPage('login')} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base min-h-[44px] ' + (page === 'login' ? 'bg-green-700' : 'hover:bg-green-800')}>Login</button>
+                )}
+              </div>
             </div>
-          </div>
-        </nav>
-      );
+          </nav>
+        );
+      };
 
       // ==================== HOME ====================
       // Helper to get cropped image (handles both old string format and new object format)
@@ -4886,6 +4976,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               saveCamperParentLinks={saveCamperParentLinks}
               camperParentLinks={camperParentLinks}
               content={content}
+              addToHistory={addToHistory}
             />
           );
         }

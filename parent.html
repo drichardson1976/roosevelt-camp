@@ -45,11 +45,22 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.038";
+    const VERSION = "13.039";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T22:34:00");
+    const BUILD_DATE = new Date("2026-02-08T22:45:00");
 
     const RELEASE_NOTES = [
+      { version: "13.039-13.042", date: "2026-02-08", time: "10:45 PM PST", author: "Claude", changes: [
+        "All dashboards: Title bar (Dashboard name + Welcome) now center-justified",
+        "All dashboards: Public website links (Home, Schedule, Pricing, Location, Counselors) added to dark green nav bar",
+        "Counselor dashboard: Added title bar with 'Counselor Dashboard' and welcome message",
+        "Public site: 'My Dashboard' button shown when logged in (replaces Login button), links to correct dashboard by role",
+        "Public site: Hash-based page routing — dashboard links to /index.html#schedule etc. now work",
+        "Onboarding: All actions logged to History on completion (account, campers, ECs, invitations, policies)",
+        "Camper cards: Parent-type emergency contacts now shown in EC section (listed in both Parents and ECs)",
+        "EC tab: Parents who skip login creation still stored as parent in camp_parents and shown on Parents tab",
+        "Parents tab: No-login parents display 'No login account' instead of synthetic email",
+      ]},
       { version: "13.038", date: "2026-02-08", time: "10:34 PM PST", author: "Audrey Richardson", changes: [
         "Onboarding: Emergency contacts yellow warning now hides when 2+ contacts added (was always visible)",
         "Parent Dashboard: Camper photo alert now includes 'camper photos are required before camp sessions start'",
@@ -3917,6 +3928,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           <nav className="bg-green-900 text-white shadow-lg">
             <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => window.location.href = '/index.html'}>🏀 ROOSEVELT CAMP</div>
+              <div className="hidden md:flex gap-1 items-center">
+                {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
+                  <a key={p} href={'/index.html#' + p} className="px-3 py-1.5 rounded text-sm capitalize hover:bg-green-800 transition-colors">{p}</a>
+                ))}
+              </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                 <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user?.name || 'Parent'}</span>
                 <button onClick={handleLogout} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
@@ -4817,7 +4833,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         return (
           <div className="min-h-screen bg-amber-50">
             <div className="bg-green-800 text-white py-3 sm:py-4">
-              <div className="max-w-6xl mx-auto px-4">
+              <div className="max-w-6xl mx-auto px-4 text-center">
                 <h1 className="font-display text-2xl sm:text-3xl">Parent Dashboard</h1>
                 <p className="text-green-200 text-sm sm:text-base">Welcome, {user?.name}</p>
               </div>
@@ -6291,8 +6307,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     {/* Emergency Contacts */}
                     <div className={`mt-2 pt-2 border-t ${ecComplete ? 'border-green-300' : 'border-blue-300'}`}>
                       <div className="font-medium text-gray-700 mb-1">Emergency Contacts:</div>
-                      {childEmergencyContacts.filter(c => !c.isAutoCreated && !c.isParent).length > 0 ? (
-                        childEmergencyContacts.filter(c => !c.isAutoCreated && !c.isParent).map(contact => (
+                      {childEmergencyContacts.length > 0 ? (
+                        childEmergencyContacts.map(contact => (
                           <div key={contact.id} className={`text-xs rounded p-2 mb-1 flex items-center gap-2 ${ecComplete ? 'bg-green-100' : 'bg-blue-100'}`}>
                             {getDisplayPhoto(contact.photo) ? (
                               <img src={getDisplayPhoto(contact.photo)} className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
@@ -6303,7 +6319,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             )}
                             <div className="flex-1 min-w-0">
                               <span className="font-medium">{contact.name}</span>
-                              <span className="text-gray-500"> • {[contact.relationship, contact.phone, contact.email].filter(Boolean).join(' • ')}</span>
+                              {(contact.isParent || contact.isAutoCreated) && <span className="text-gray-400 italic"> (Parent)</span>}
+                              <span className="text-gray-500"> • {[contact.relationship !== 'Parent' ? contact.relationship : null, contact.phone, contact.email].filter(Boolean).join(' • ')}</span>
                             </div>
                           </div>
                         ))
@@ -6922,8 +6939,43 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   <button onClick={handleInviteSubmit} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
                     Create Login
                   </button>
-                  <button onClick={() => { setInvitePrompt(null); setInviteError(''); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
-                    Skip
+                  <button onClick={async () => {
+                    // Create parent record without login credentials
+                    const noLoginId = `nologin_${Date.now()}`;
+                    const noLoginParent = {
+                      email: noLoginId,
+                      name: invitePrompt.name,
+                      phone: invitePrompt.phone,
+                      photo: null,
+                      role: 'parent',
+                      roles: ['parent'],
+                      noLogin: true,
+                      createdBy: currentUser?.email,
+                      createdAt: new Date().toISOString()
+                    };
+                    const updatedParents = [...(parents || []), noLoginParent];
+                    if (saveParents) await saveParents(updatedParents, `Added ${invitePrompt.name} as parent (no login)`);
+                    // Link to campers
+                    if (myChildren?.length > 0) {
+                      const newLinks = myChildren.map(child => ({ camperId: child.id, parentEmail: noLoginId }));
+                      const cplData = await storage.get('camp_camper_parent_links');
+                      const currentLinks = cplData?.[0]?.data || [];
+                      await storage.set('camp_camper_parent_links', 'main', [...currentLinks, ...newLinks]);
+                    }
+                    // Mark EC as parent reference
+                    setLocalContacts(prev => prev.map(c => {
+                      if (c.name?.toLowerCase() === invitePrompt.name.toLowerCase() && !c.isParent && !c.isAutoCreated) {
+                        return { ...c, isParent: true, parentEmail: noLoginId };
+                      }
+                      return c;
+                    }));
+                    setHasChanges(true);
+                    if (addToHistory) addToHistory('Parent Added (No Login)', `Added ${invitePrompt.name} as a parent without login credentials`);
+                    showToast(`${invitePrompt.name} added as a parent`, 'success');
+                    setInvitePrompt(null);
+                    setInviteError('');
+                  }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                    Skip Login
                   </button>
                 </div>
               </div>
@@ -7251,7 +7303,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               {parent.name}
                               {isCurrentUser && <span className="ml-2 text-xs text-green-600">(You)</span>}
                             </div>
-                            <div className="text-sm text-gray-600">{parent.email}</div>
+                            {parent.noLogin ? (
+                              <div className="text-xs text-gray-400 italic">No login account</div>
+                            ) : (
+                              <div className="text-sm text-gray-600">{parent.email}</div>
+                            )}
                             {parent.phone && <div className="text-sm text-gray-500">{parent.phone}</div>}
                           </div>
                         </div>

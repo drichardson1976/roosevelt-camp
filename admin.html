@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.037";
+    const VERSION = "13.040";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T21:58:00");
+    const BUILD_DATE = new Date("2026-02-08T22:45:00");
 
     const RELEASE_NOTES = [
+      { version: "13.039-13.042", date: "2026-02-08", time: "10:45 PM PST", author: "Claude", changes: [
+        "All dashboards: Title bar center-justified; public website links added to dark green nav bar",
+        "Counselor dashboard: Added title bar with welcome message",
+        "Public site: 'My Dashboard' button when logged in; hash-based page routing for dashboard links",
+        "Onboarding: All actions logged to History on completion",
+        "Camper cards: Parent-type ECs now shown in EC section (dual listing)",
+        "EC tab: Parents who skip login still stored in camp_parents and shown on Parents tab",
+      ]},
       { version: "13.038", date: "2026-02-08", time: "10:34 PM PST", author: "Audrey Richardson", changes: [
         "Onboarding: Emergency contacts yellow warning now hides when 2+ contacts added (was always visible)",
         "Parent Dashboard: Camper photo alert now includes 'camper photos are required before camp sessions start'",
@@ -7439,6 +7447,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           <nav className="bg-green-900 text-white shadow-lg">
             <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
               <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => window.location.href = '/index.html'}>🏀 ROOSEVELT CAMP</div>
+              <div className="hidden md:flex gap-1 items-center">
+                {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
+                  <a key={p} href={'/index.html#' + p} className="px-3 py-1.5 rounded text-sm capitalize hover:bg-green-800 transition-colors">{p}</a>
+                ))}
+              </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                 <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user?.name || 'Admin'}</span>
                 <button onClick={handleLogout} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
@@ -8123,7 +8136,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         return (
           <div className="min-h-screen bg-gray-100">
             <div className="bg-green-800 text-white py-3 sm:py-4">
-              <div className="max-w-6xl mx-auto px-4">
+              <div className="max-w-6xl mx-auto px-4 text-center">
                 <h1 className="font-display text-2xl sm:text-3xl">Admin Dashboard</h1>
                 <p className="text-green-200 text-sm sm:text-base">Welcome, {user?.name}</p>
               </div>
