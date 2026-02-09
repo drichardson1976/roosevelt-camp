@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.032";
+    const VERSION = "13.033";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T19:30:00");
+    const BUILD_DATE = new Date("2026-02-08T19:35:00");
 
     const RELEASE_NOTES = [
+      { version: "13.033", date: "2026-02-08", time: "7:35 PM PST", author: "Claude", changes: [
+        "Registration: Current Registrations now shows each order as a separate card (grouped by orderId)",
+        "Registration: Cards color-coded — green=paid, blue=payment sent, yellow=pending approval, gray=payment due",
+        "Registration: Each card shows camper name, date range, session count, session type, and total amount",
+        "Registration: Orders sorted by most recent first",
+      ]},
       { version: "13.032", date: "2026-02-08", time: "7:30 PM PST", author: "Claude", changes: [
         "Registration: Already-registered sessions shown as green '✓ AM/PM Registered' (non-clickable)",
         "Registration: 'Both' button hidden when any session for that date is already registered",
@@ -4644,90 +4650,91 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     {myRegs.length === 0 ? (
                       <p className="text-gray-500 text-center py-4">No current registrations</p>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {(() => {
-                          // Group registrations by camper, then by submission batch (createdAt timestamp)
-                          const regsByCamper = {};
+                          // Group registrations by orderId — each order is one registration request
+                          const regsByOrder = {};
                           myRegs.forEach(reg => {
-                            if (!regsByCamper[reg.childId]) {
-                              regsByCamper[reg.childId] = {
-                                childName: reg.childName,
-                                batches: {}
-                              };
-                            }
-                            // Group by createdAt (rounded to nearest minute) to identify registrations submitted together
-                            const batchKey = reg.createdAt ? new Date(reg.createdAt).toISOString().slice(0, 16) : 'unknown';
-                            if (!regsByCamper[reg.childId].batches[batchKey]) {
-                              regsByCamper[reg.childId].batches[batchKey] = [];
-                            }
-                            regsByCamper[reg.childId].batches[batchKey].push(reg);
+                            const orderKey = reg.orderId || reg.id;
+                            if (!regsByOrder[orderKey]) regsByOrder[orderKey] = [];
+                            regsByOrder[orderKey].push(reg);
                           });
 
-                          return Object.entries(regsByCamper).map(([childId, data]) => (
-                            <div key={childId} className="border-2 border-gray-200 rounded-lg p-4">
-                              <h4 className="font-bold text-lg mb-3 text-green-800">{data.childName}</h4>
-                              <div className="space-y-3">
-                                {Object.entries(data.batches).map(([batchKey, regs]) => {
-                                  // Sort dates chronologically
-                                  const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                          // Sort orders by most recent first
+                          const sortedOrders = Object.entries(regsByOrder).sort((a, b) => {
+                            const aDate = a[1][0]?.createdAt || a[1][0]?.date || '';
+                            const bDate = b[1][0]?.createdAt || b[1][0]?.date || '';
+                            return new Date(bDate) - new Date(aDate);
+                          });
 
-                                  // Calculate summary info
-                                  const dates = sortedRegs.map(r => r.date);
-                                  const dateRange = dates.length === 1
-                                    ? dates[0]
-                                    : `${dates[0]} - ${dates[dates.length - 1]}`;
+                          return sortedOrders.map(([orderKey, regs]) => {
+                            const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                            const camperNames = [...new Set(sortedRegs.map(r => r.childName))];
+                            const dates = sortedRegs.map(r => r.date);
+                            const totalSessions = sortedRegs.reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
+                            const status = sortedRegs[0].status;
+                            const paymentStatus = sortedRegs[0].paymentStatus || 'unpaid';
+                            const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
+                            const isSent = paymentStatus === 'sent';
+                            const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
 
-                                  const totalSessions = sortedRegs.reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
-                                  const sessionBreakdown = sortedRegs.map(r =>
-                                    r.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join('+')
-                                  ).filter(Boolean);
+                            // Format date range nicely
+                            const formatDateRange = (dates) => {
+                              if (dates.length === 0) return '';
+                              const fmt = (d) => {
+                                const dt = new Date(d + 'T12:00:00');
+                                const month = dt.toLocaleDateString('en-US', { month: 'short' });
+                                const day = dt.getDate();
+                                const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+                                return `${month} ${day}${suffix}`;
+                              };
+                              if (dates.length === 1) return fmt(dates[0]);
+                              return `${fmt(dates[0])} - ${fmt(dates[dates.length - 1])}`;
+                            };
 
-                                  // Get status and payment info (assuming all in batch have same status)
-                                  const status = sortedRegs[0].status;
-                                  const paymentStatus = sortedRegs[0].paymentStatus || 'unpaid';
-                                  const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                            // Get session type label
+                            const sessions = sortedRegs.flatMap(r => r.sessions || []);
+                            const hasAM = sessions.includes('morning');
+                            const hasPM = sessions.includes('afternoon');
+                            const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
 
-                                  return (
-                                    <div key={batchKey} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                      <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-[250px]">
-                                          <div className="font-semibold text-gray-800 mb-1">
-                                            {dateRange}
-                                          </div>
-                                          <div className="text-sm text-gray-600 space-y-1">
-                                            <div>{dates.length} day{dates.length > 1 ? 's' : ''} • {totalSessions} session{totalSessions > 1 ? 's' : ''}</div>
-                                            {dates.length <= 5 && (
-                                              <div className="text-xs">
-                                                {sortedRegs.map((r, i) => (
-                                                  <div key={i}>
-                                                    {new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {r.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap items-center">
-                                          <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                            ['paid', 'confirmed'].includes(paymentStatus) ? 'bg-green-100 text-green-700' :
-                                            paymentStatus === 'sent' ? 'bg-blue-100 text-blue-700' :
-                                            'bg-orange-100 text-orange-700'
-                                          }`}>
-                                            {['paid', 'confirmed'].includes(paymentStatus) ? '✓ Registered & Paid' : paymentStatus === 'sent' ? 'Payment Sent' : 'Registered - Payment Due'}
-                                          </span>
-                                          {totalAmount > 0 && (
-                                            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
-                                              ${totalAmount.toFixed(2)}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </div>
+                            return (
+                              <div key={orderKey} className={`rounded-lg p-4 ${
+                                isPaid ? 'bg-green-50 border-2 border-green-500' :
+                                isSent ? 'bg-blue-50 border-2 border-blue-300' :
+                                status === 'pending' ? 'bg-yellow-50 border-2 border-yellow-300' :
+                                'border-2 border-gray-200'
+                              }`}>
+                                <div className="flex justify-between items-start mb-2">
+                                  <h4 className="font-bold text-lg text-green-800">
+                                    {camperNames.join(' & ')}
+                                  </h4>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                    isPaid ? 'bg-green-100 text-green-700' :
+                                    isSent ? 'bg-blue-100 text-blue-700' :
+                                    status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-orange-100 text-orange-700'
+                                  }`}>
+                                    {isPaid ? '✓ Registered & Paid' :
+                                     isSent ? 'Payment Sent' :
+                                     status === 'pending' ? 'Pending Approval' :
+                                     'Payment Due'}
+                                  </span>
+                                </div>
+                                <div className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : status === 'pending' ? 'bg-yellow-100' : 'bg-gray-50'}`}>
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <div className="font-semibold">{formatDateRange(dates)}</div>
+                                      <div className="text-sm text-gray-600">{dates.length} day{dates.length > 1 ? 's' : ''} • {totalSessions} session{totalSessions > 1 ? 's' : ''} • {sessionLabel}</div>
                                     </div>
-                                  );
-                                })}
+                                    {totalAmount > 0 && (
+                                      <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          ));
+                            );
+                          });
                         })()}
                       </div>
                     )}
