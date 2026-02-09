@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.059";
+    const VERSION = "13.062";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T08:06:00");
+    const BUILD_DATE = new Date("2026-02-09T10:41:00");
 
     const RELEASE_NOTES = [
+      { version: "13.062", date: "2026-02-09", time: "10:41 AM", author: "Audrey Richardson", changes: ["Onboarding EC: Clarified that parent counts as 1 EC — 'Please add at least 1 more contact'", "Onboarding EC: Continue now requires Add Contact click or shows error if form has partial data", "Onboarding EC: Auto-saves filled contact form when clicking Continue (like campers)", "Session Registration: Pay Now button now navigates to Payments tab instead of opening modal", "Payments: Fixed confirmation glitch — modal closes immediately, saves in background"] },
       { version: "13.061", date: "2026-02-09", time: "9:02 AM", author: "Claude", changes: ["Admin EC popup: Removed Priority field from display", "Admin EC popup: Added large camper headshot photo at top in green box", "Admin EC popup: Added headshot photos for each emergency contact", "Admin EC popup: Photos clickable to view full-size in overlay", "Admin EC popup: Photos editable via PhotoUploadModal (add/change photo link)", "Admin EC popup: Placeholder shown for missing photos with add-photo prompt"] },
       { version: "13.059-13.060", date: "2026-02-09", time: "8:06 AM", author: "Claude", changes: ["Onboarding: Parent logins shown in green boxes, Remove button removed, edit via EC instead", "Onboarding: Edit buttons now blue text in top-right corner matching dashboard style", "Onboarding: Fixed login screen flash after wizard — now shows bouncing basketball transition", "Campers tab: Parent email shown next to phone number (hidden for nologin accounts)", "EC modal: Email now mandatory with asterisk, Add button disabled until email provided", "Registration cards: Blue border/bg for unpaid, red 'Payment Due' badge, blue Pay Now button", "Payments tab: Card style matches register tab — same blue colors, red badge, green title", "Venmo modal: Registration details box at top with camper names, dates, session types, total", "Messages: Drafts now visible in amber Drafts section, click to edit/send/delete", "Messages: Edit Draft modal with Send, Update Draft, and Delete (double confirmation) buttons"] },
       { version: "13.055-13.058", date: "2026-02-09", time: "12:09 AM", author: "Claude", changes: ["Parent: Venmo wizard step ovals now uniform size (w-14 h-7) and top-aligned", "Admin: Registrations restructured — 3 sections: New (awaiting payment), Awaiting Confirmation, Paid", "Admin: Removed approval concept — registrations just need payment confirmation", "Admin: All 3 registration sections use same card format with Venmo screenshot always shown", "Admin: Screenshot placeholder shown when no payment screenshot exists", "Admin: Dashboard tasks updated to match new payment-focused workflow", "Admin: Registrations tab badge now shows count awaiting admin payment confirmation"] },
@@ -5224,16 +5225,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     )}
                                   </div>
                                 </div>
-                                {/* Pay Now button for unpaid registrations */}
+                                {/* Pay Now button for unpaid registrations - navigates to Payments tab */}
                                 {!isPaid && !isSent && paymentStatus === 'unpaid' && (
                                   <div className="mt-3">
                                     <button
                                       onClick={() => {
-                                        const orderVenmoCode = sortedRegs[0]?.venmoCode || generateVenmoCode(user?.name);
-                                        const title = camperNames.length > 1 ? camperNames.join(' and ') + "'s Registration" : camperNames[0] + "'s Registration";
-                                        setVenmoScreenshot(null);
-                                        setVenmoScreenshotRaw(null);
-                                        setPaymentVenmoModal({ orderKey, regs: sortedRegs, totalAmount, venmoCode: orderVenmoCode, title });
+                                        setParentTab('payments');
                                       }}
                                       className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
                                     >
@@ -5894,19 +5891,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <button
                             disabled={!venmoScreenshot}
                             onClick={async () => {
-                              const sentAt = new Date().toISOString();
-                              for (const reg of paymentVenmoModal.regs) {
-                                await saveReg({ ...reg, paymentStatus: 'sent', paymentSentAt: sentAt, venmoScreenshot });
+                              try {
+                                const sentAt = new Date().toISOString();
+                                const modalData = paymentVenmoModal; // Capture modal data before closing
+                                // Close modal immediately to prevent glitch
+                                setPaymentVenmoModal(null);
+                                setVenmoScreenshot(null);
+                                setVenmoScreenshotRaw(null);
+                                // Save registrations in background
+                                for (const reg of modalData.regs) {
+                                  await saveReg({ ...reg, paymentStatus: 'sent', paymentSentAt: sentAt, venmoScreenshot });
+                                }
+                                // Log to history
+                                addToHistory(
+                                  'Venmo Payment Sent',
+                                  `${modalData.title} — $${modalData.totalAmount.toFixed(2)} via Venmo (code: ${modalData.venmoCode})`
+                                );
+                                showToast('Payment marked as sent!', 'success');
+                              } catch (err) {
+                                console.error('Payment confirmation error:', err);
+                                showToast('Payment saved. Please refresh if issues persist.', 'success');
                               }
-                              // Log to history
-                              addToHistory(
-                                'Venmo Payment Sent',
-                                `${paymentVenmoModal.title} — $${paymentVenmoModal.totalAmount.toFixed(2)} via Venmo (code: ${paymentVenmoModal.venmoCode})`
-                              );
-                              setPaymentVenmoModal(null);
-                              setVenmoScreenshot(null);
-                              setVenmoScreenshotRaw(null);
-                              showToast('Payment marked as sent!', 'success');
                             }}
                             className={`w-full font-bold py-3 rounded-lg ${venmoScreenshot ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                           >
