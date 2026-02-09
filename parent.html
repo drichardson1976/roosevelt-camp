@@ -45,11 +45,17 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.031";
+    const VERSION = "13.032";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T19:26:00");
+    const BUILD_DATE = new Date("2026-02-08T19:30:00");
 
     const RELEASE_NOTES = [
+      { version: "13.032", date: "2026-02-08", time: "7:30 PM PST", author: "Claude", changes: [
+        "Registration: Already-registered sessions shown as green '✓ AM/PM Registered' (non-clickable)",
+        "Registration: 'Both' button hidden when any session for that date is already registered",
+        "Registration: 'Add Week' quick-select skips already-registered sessions",
+        "Registration: Toggle functions prevent re-selecting already-registered sessions",
+      ]},
       { version: "13.031", date: "2026-02-08", time: "7:26 PM PST", author: "Claude", changes: [
         "EC tab: Add Contact button disabled until all required fields (name, relationship, phone) are filled in",
       ]},
@@ -4189,7 +4195,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           showToast(`Removed ${parentEmail} from family access`);
         };
 
+        // Check if any selected child already has a registration for a date+session
+        const isAlreadyRegistered = (date, session) => {
+          return selectedChildren.some(childId =>
+            myRegs.some(r =>
+              r.childId === childId &&
+              r.date === date &&
+              (r.sessions || []).includes(session) &&
+              !['cancelled', 'rejected'].includes(r.status)
+            )
+          );
+        };
+
         const toggleDate = (date, session) => {
+          if (isAlreadyRegistered(date, session)) return; // Don't toggle already-registered sessions
           setSelectedDates(p => {
             const cur = p[date] || [];
             return { ...p, [date]: cur.includes(session) ? cur.filter(s => s !== session) : [...cur, session] };
@@ -4202,19 +4221,24 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             const cur = p[date] || [];
             const amBlocked = isSessionBlocked(date, 'morning') || !isSessionAvailableFromGym(date, 'morning');
             const pmBlocked = isSessionBlocked(date, 'afternoon') || !isSessionAvailableFromGym(date, 'afternoon');
+            const amReg = isAlreadyRegistered(date, 'morning');
+            const pmReg = isAlreadyRegistered(date, 'afternoon');
+            const amAvail = !amBlocked && !amReg;
+            const pmAvail = !pmBlocked && !pmReg;
             const amSelected = cur.includes('morning');
             const pmSelected = cur.includes('afternoon');
 
             // If both available sessions are selected, deselect all
-            const bothSelected = (!amBlocked && amSelected) && (!pmBlocked && pmSelected);
+            const bothSelected = (amAvail && amSelected) && (pmAvail && pmSelected);
             if (bothSelected) {
-              return { ...p, [date]: [] };
+              // Only deselect the available ones (keep registered ones out)
+              return { ...p, [date]: cur.filter(s => !((s === 'morning' && amAvail) || (s === 'afternoon' && pmAvail))) };
             }
 
             // Otherwise select both available sessions
-            const sessions = [];
-            if (!amBlocked) sessions.push('morning');
-            if (!pmBlocked) sessions.push('afternoon');
+            const sessions = [...cur];
+            if (amAvail && !amSelected) sessions.push('morning');
+            if (pmAvail && !pmSelected) sessions.push('afternoon');
             return { ...p, [date]: sessions };
           });
         };
@@ -4400,8 +4424,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             const newDates = { ...p };
             weekDates.forEach(date => {
               const sessions = [];
-              if (!isSessionBlocked(date, 'morning')) sessions.push('morning');
-              if (!isSessionBlocked(date, 'afternoon')) sessions.push('afternoon');
+              if (!isSessionBlocked(date, 'morning') && isSessionAvailableFromGym(date, 'morning') && !isAlreadyRegistered(date, 'morning')) sessions.push('morning');
+              if (!isSessionBlocked(date, 'afternoon') && isSessionAvailableFromGym(date, 'afternoon') && !isAlreadyRegistered(date, 'afternoon')) sessions.push('afternoon');
               if (sessions.length > 0) newDates[date] = sessions;
             });
             return newDates;
@@ -4869,11 +4893,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           const pmSelected = sel.includes('afternoon');
                           const bothSelected = amSelected && pmSelected;
 
+                          // Check existing registrations for this date
+                          const amRegistered = isAlreadyRegistered(date, 'morning');
+                          const pmRegistered = isAlreadyRegistered(date, 'afternoon');
+                          const bothRegistered = amRegistered && pmRegistered;
+
                           return (
                             <div key={date} className={`rounded-lg border-2 overflow-hidden ${
                               fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                              bothRegistered ? 'border-green-500 bg-green-50' :
                               bothSelected ? 'border-green-300 bg-green-50' :
                               (amSelected || pmSelected) ? 'border-yellow-300 bg-yellow-50' :
+                              (amRegistered || pmRegistered) ? 'border-green-300 bg-green-50' :
                               'border-gray-200 bg-white'
                             }`}>
                               <div className="p-2 text-center bg-gray-100 font-medium">
@@ -4882,10 +4913,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               </div>
                               {fullyBlocked ? (
                                 <div className="p-2 text-center text-xs text-red-500">🚫 Not Available</div>
+                              ) : bothRegistered ? (
+                                <div className="p-2 space-y-1">
+                                  <div className="w-full p-1.5 rounded text-xs font-medium bg-green-600 text-white text-center">✓ Both</div>
+                                  <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ AM Registered</div>
+                                  <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ PM Registered</div>
+                                </div>
                               ) : (
                                 <div className="p-2 space-y-1">
-                                  {/* Both Sessions Button (only show if both are available) */}
-                                  {!amBlocked && !pmBlocked && (
+                                  {/* Both Sessions Button (only show if both are available and neither is already registered) */}
+                                  {!amBlocked && !pmBlocked && !amRegistered && !pmRegistered && (
                                     <button
                                       onClick={() => toggleBothSessions(date)}
                                       className={`w-full p-1.5 rounded text-xs font-medium transition-colors ${
@@ -4898,14 +4935,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     </button>
                                   )}
 
-                                  {amBlocked ? (
+                                  {amRegistered ? (
+                                    <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ AM Registered</div>
+                                  ) : amBlocked ? (
                                     <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
                                   ) : (
                                     <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
                                       ☀️ AM {amSelected ? '✓' : ''}
                                     </button>
                                   )}
-                                  {pmBlocked ? (
+                                  {pmRegistered ? (
+                                    <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ PM Registered</div>
+                                  ) : pmBlocked ? (
                                     <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
                                   ) : (
                                     <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
