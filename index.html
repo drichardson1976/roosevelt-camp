@@ -45,11 +45,22 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.022";
+    const VERSION = "13.024";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T17:39:00");
+    const BUILD_DATE = new Date("2026-02-08T18:07:00");
 
     const RELEASE_NOTES = [
+      { version: "13.024-13.025", date: "2026-02-08", time: "6:07 PM PST", author: "Claude", changes: [
+        "Onboarding Step 2: Camper cards now green with thick border (matching ECs and summary)",
+        "Onboarding Step 2: Removed red X delete button, added Delete inside edit form instead",
+        "Onboarding Step 2: Camper photos now clickable to add/change photo",
+        "Dashboard: Standardized photo sizes to w-16 h-16 across Campers, EC, and Parents tabs",
+        "Dashboard: Parents tab cards now white with border (was gray bg, matching other tabs)",
+        "Dashboard: Parents tab photos now have green border (matching other tabs)",
+        "Dashboard: Removed emojis from all Edit/Delete buttons and headings",
+        "Dashboard: Add Emergency Contact converted to popup modal (was inline form)",
+        "Dashboard: EC edit form Save/Delete buttons now side-by-side (matching Campers tab)",
+      ]},
       { version: "13.021-13.023", date: "2026-02-08", time: "5:39 PM PST", author: "Claude", changes: [
         "Removed pickup policy advance notification text from all files",
         "Add Parent form: converted to popup modal with photo at top center",
@@ -2013,29 +2024,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       {campersData.map(camper => {
                         const elig = getEligibility(camper.grade, camper.birthdate);
                         return (
-                          <div key={camper.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                            <div className="flex items-center gap-3">
+                          <div key={camper.id} className="p-4 bg-green-50 rounded-lg border-2 border-green-500 flex items-center gap-3">
+                            <div onClick={() => setSummaryPhotoTarget({ type: 'camper', id: camper.id })} className="cursor-pointer flex-shrink-0">
                               {getDisplayPhoto(camper.photo) ? (
-                                <img src={getDisplayPhoto(camper.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500" />
+                                <img src={getDisplayPhoto(camper.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500 hover:opacity-80 transition-opacity" />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                <div className="w-10 h-10 rounded-full bg-gray-200 flex flex-col items-center justify-center hover:bg-gray-300 transition-colors">
+                                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                                  <span className="text-[7px] text-gray-500 font-medium">add photo</span>
                                 </div>
                               )}
-                              <div>
-                                <div className="font-medium">{camper.name}</div>
-                                <div className="text-sm text-gray-500">
-                                  {camper.grade} Grade • Age {calculateAge(camper.birthdate)}
-                                </div>
-                                <span className={`text-xs px-2 py-0.5 rounded ${elig.eligible ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                  {elig.status}
-                                </span>
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">{camper.name}</div>
+                              <div className="text-sm text-gray-500">
+                                {camper.grade} Grade • Age {calculateAge(camper.birthdate)}
                               </div>
+                              <span className={`text-xs px-2 py-0.5 rounded ${elig.eligible ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {elig.status}
+                              </span>
                             </div>
-                            <div className="flex items-center gap-1">
-                              <button onClick={() => editCamper(camper)} className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 bg-blue-50 rounded hover:bg-blue-100" title="Edit camper">Edit</button>
-                              <button onClick={() => removeCamper(camper.id)} className="text-red-500 hover:text-red-700 p-2" title="Remove camper">✕</button>
-                            </div>
+                            <button onClick={() => editCamper(camper)} className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 bg-blue-50 rounded hover:bg-blue-100">Edit</button>
                           </div>
                         );
                       })}
@@ -2134,6 +2143,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <button onClick={addCamper} disabled={!newCamper.name || !newCamper.birthdate || !newCamper.grade} className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300">{editingCamperId ? 'Save Changes' : 'Add Camper'}</button>
                           <button onClick={() => { setShowAddCamper(false); setEditingCamperId(null); setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null }); }} className="px-4 py-2 border rounded-lg">Cancel</button>
                         </div>
+                        {editingCamperId && (
+                          <button onClick={() => { removeCamper(editingCamperId); setShowAddCamper(false); setEditingCamperId(null); setNewCamper({ name: '', birthdate: '', birthYear: '', birthMonth: '', birthDay: '', grade: '', phone: '', photo: null }); }} className="w-full py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium mt-2">Delete Camper</button>
+                        )}
                       </div>
                     </div>
                   ) : (
