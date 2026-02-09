@@ -45,11 +45,20 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.023";
+    const VERSION = "13.030";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T17:39:00");
+    const BUILD_DATE = new Date("2026-02-08T19:12:00");
 
     const RELEASE_NOTES = [
+      { version: "13.029-13.030", date: "2026-02-08", time: "7:12 PM PST", author: "Claude", changes: [
+        "EC tab: Fixed bug where added emergency contacts didn't appear (now auto-saves immediately to DB)",
+        "EC tab: Removed Save Changes/Cancel buttons — all changes auto-save on Add/Edit/Delete",
+        "EC tab: Blue placeholder boxes shown for missing emergency contacts (clickable to add)",
+        "Payments tab: Confirmed/paid registrations now shown in green box with green border",
+        "Payments tab: Payment-sent registrations shown in blue box with blue border",
+        "Payments tab: Added filter by camper name when many payments exist",
+        "Admin: Add Parent button changed from purple to green",
+      ]},
       { version: "13.027-13.028", date: "2026-02-08", time: "6:51 PM PST", author: "Claude", changes: [
         "Onboarding: Edit button moved outside green box for camper cards (matching Parent Account pattern)",
         "Dashboard: Edit buttons moved to top-right inside green boxes as plain blue text (no background)",
@@ -2387,7 +2396,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </button>
                 <button
                   onClick={() => setShowAddParent(true)}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                 >
                   + Add Parent
                 </button>
