@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.029";
+    const VERSION = "13.031";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T19:12:00");
+    const BUILD_DATE = new Date("2026-02-08T19:26:00");
 
     const RELEASE_NOTES = [
+      { version: "13.031", date: "2026-02-08", time: "7:26 PM PST", author: "Claude", changes: [
+        "EC tab: Add Contact button disabled until all required fields (name, relationship, phone) are filled in",
+      ]},
       { version: "13.029-13.030", date: "2026-02-08", time: "7:12 PM PST", author: "Claude", changes: [
         "EC tab: Fixed bug where added emergency contacts didn't appear (now auto-saves immediately to DB)",
         "EC tab: Removed Save Changes/Cancel buttons — all changes auto-save on Add/Edit/Delete",
@@ -6252,7 +6255,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </button>
                   <button
                     onClick={handleAdd}
-                    className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    disabled={!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim()}
+                    className={`flex-1 py-2 rounded-lg font-medium ${!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
                   >
                     Add Contact
                   </button>
