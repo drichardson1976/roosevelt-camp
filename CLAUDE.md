@@ -10,9 +10,15 @@
 ### Pre-Work Checklist (EVERY task)
 Before starting ANY work, complete this checklist:
 1. **Read CLAUDE.md** — Re-read this file to ensure you follow all rules (especially after conversation compaction)
-2. **`git pull`** — Pull latest changes to avoid conflicts
+2. **`git pull`** — **MANDATORY** - Pull latest changes FIRST to avoid conflicts (do this EVERY time)
 3. **Check current versions** — Run: `grep 'const VERSION' *.html` to know the starting state
 4. **Plan your changes** — Identify which files will be modified so you know where to bump versions and add release notes
+
+### Post-Work Checklist (EVERY task)
+After completing ANY work:
+1. **`git add`** — Stage all changed files
+2. **`git commit`** — Commit with descriptive message including author attribution
+3. **`git push`** — **MANDATORY** - Push changes to remote so others have access immediately
 
 ### Version & Timestamp Updates
 - **ONLY** bump the version in files that actually changed — do NOT touch files that had no modifications
@@ -45,13 +51,19 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - Include comments in the SQL explaining what each section does
 
 ### Git Commit Protocol
+- **ALWAYS** run `git pull` FIRST before starting ANY work to get the latest changes
 - **ALWAYS** commit and push all file changes after every completed request — multiple people work on this project simultaneously (Derek Richardson, Audrey Richardson), so changes must be pushed promptly to avoid conflicts
-- **ALWAYS** pull before starting work to get the latest changes
+- **ALWAYS** run `git push` at the END of every task to ensure changes are shared
 - **NEVER** update git config
 - **NEVER** run destructive git commands without explicit user permission
 - **NEVER** skip hooks (--no-verify) unless user explicitly requests
 - **ALWAYS** use heredoc for commit messages to preserve formatting
 - **ALWAYS** include `Co-Authored-By:` with your actual model name (e.g. `Claude Opus 4.6`, `Claude Sonnet 4.5`) followed by `<noreply@anthropic.com>`
+
+### Author Attribution
+- When **Audrey Richardson** makes changes (current user), note in release notes: `Author: Audrey Richardson`
+- When **Derek Richardson** makes changes, note in release notes: `Author: Derek Richardson`
+- Always include the author name in commit messages and release notes so it's clear who requested the changes
 
 ### Change Summary Table
 - **ALWAYS** provide a change summary table after every completed request
@@ -351,18 +363,21 @@ python3 -m http.server
 
 ## ⚠️ NEVER FORGET
 
-1. ✅ Run the Pre-Work Checklist before every task (read CLAUDE.md, git pull, check versions)
-2. ✅ Only bump version in files that changed (use max version + 1)
-3. ✅ Use external time source for timestamps
-4. ✅ Add release notes to ALL 4 files (admin.html, index.html, parent.html, counselor.html)
-5. ✅ Check if table is object or array before rendering
-6. ✅ Add null safety: `(data || [])` or `(data || {})`
-7. ✅ Test in incognito window if browser cache issues
-8. ✅ Update Danger Zone when adding new tables
-9. ✅ Use heredoc for git commit messages
-10. ✅ Never skip git hooks without permission
-11. ✅ Consult this document after conversation compaction
-12. ✅ Provide a change summary table with version numbers after every completed request
+1. ✅ **`git pull` FIRST** — Always pull latest changes before starting ANY work
+2. ✅ Run the Pre-Work Checklist before every task (read CLAUDE.md, git pull, check versions)
+3. ✅ Only bump version in files that changed (use max version + 1)
+4. ✅ Use external time source for timestamps
+5. ✅ Add release notes to ALL 4 files (admin.html, index.html, parent.html, counselor.html)
+6. ✅ Check if table is object or array before rendering
+7. ✅ Add null safety: `(data || [])` or `(data || {})`
+8. ✅ Test in incognito window if browser cache issues
+9. ✅ Update Danger Zone when adding new tables
+10. ✅ Use heredoc for git commit messages
+11. ✅ Never skip git hooks without permission
+12. ✅ Consult this document after conversation compaction
+13. ✅ Provide a change summary table with version numbers after every completed request
+14. ✅ **`git push` LAST** — Always push changes at the END of every task
+15. ✅ **Author attribution** — Note that Audrey Richardson made the changes in release notes/commits
 
 ---
 
