@@ -45,11 +45,16 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.037";
+    const VERSION = "13.038";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T21:58:00");
+    const BUILD_DATE = new Date("2026-02-08T22:34:00");
 
     const RELEASE_NOTES = [
+      { version: "13.038", date: "2026-02-08", time: "10:34 PM PST", author: "Audrey Richardson", changes: [
+        "Onboarding: Emergency contacts yellow warning now hides when 2+ contacts added (was always visible)",
+        "Parent Dashboard: Camper photo alert now includes 'camper photos are required before camp sessions start'",
+        "Parent Dashboard: Fixed logout/login flash after onboarding — nav bar now visible during data loading",
+      ]},
       { version: "13.037", date: "2026-02-08", time: "9:58 PM PST", author: "Derek Richardson", changes: [
         "Version sync: All files aligned to v13.037",
         "CLAUDE.md: Added version number to document header"
@@ -2227,9 +2232,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               {/* Step 3: Emergency Contacts */}
               {step === 3 && (
                 <div className="space-y-4">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                    <strong>Required:</strong> At least 2 emergency contacts
-                  </div>
+                  {(emergencyData.length + 1) < 2 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                      <strong>Required:</strong> At least 2 emergency contacts
+                    </div>
+                  )}
 
                   {/* Parent auto-contact */}
                   <div className="p-4 bg-green-50 rounded-lg border-2 border-green-500">
