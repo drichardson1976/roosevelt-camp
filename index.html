@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.057";
+    const VERSION = "13.060";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T00:09:00");
+    const BUILD_DATE = new Date("2026-02-09T08:06:00");
 
     const RELEASE_NOTES = [
+      { version: "13.059-13.060", date: "2026-02-09", time: "8:06 AM", author: "Claude", changes: ["Onboarding: Parent logins shown in green boxes, Remove button removed, edit via EC instead", "Onboarding: Edit buttons now blue text in top-right corner matching dashboard style", "Onboarding: Fixed login screen flash after wizard — now shows bouncing basketball transition", "Campers tab: Parent email shown next to phone number (hidden for nologin accounts)", "EC modal: Email now mandatory with asterisk, Add button disabled until email provided", "Registration cards: Blue border/bg for unpaid, red 'Payment Due' badge, blue Pay Now button", "Payments tab: Card style matches register tab — same blue colors, red badge, green title", "Venmo modal: Registration details box at top with camper names, dates, session types, total", "Messages: Drafts now visible in amber Drafts section, click to edit/send/delete", "Messages: Edit Draft modal with Send, Update Draft, and Delete (double confirmation) buttons"] },
       { version: "13.055-13.058", date: "2026-02-09", time: "12:09 AM", author: "Claude", changes: ["Parent: Venmo wizard step ovals now uniform size (w-14 h-7) and top-aligned", "Admin: Registrations restructured — 3 sections: New (awaiting payment), Awaiting Confirmation, Paid", "Admin: Removed approval concept — registrations just need payment confirmation", "Admin: All 3 registration sections use same card format with Venmo screenshot always shown", "Admin: Screenshot placeholder shown when no payment screenshot exists", "Admin: Dashboard tasks updated to match new payment-focused workflow", "Admin: Registrations tab badge now shows count awaiting admin payment confirmation"] },
       { version: "13.051-13.054", date: "2026-02-09", time: "12:00 AM", author: "Claude", changes: ["Admin: Added Messages tab with unread badge from parents", "Admin: Messages tab with compose (broadcast/individual), reply, read/unread tracking", "Admin: Dashboard shows unread parent messages as urgent todo", "All files: Scroll to top on page load and tab navigation so red ribbon is visible"] },
       { version: "13.047-13.050", date: "2026-02-08", time: "11:47 PM PST", author: "Claude", changes: [
@@ -2007,14 +2008,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       // Submitting screen - prevents flash during async operations
       if (submitting) {
         return (
-          <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center">
-            <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
-              <div className="text-6xl mb-4">🏀</div>
-              <h2 className="font-display text-2xl text-green-800 mb-2">Creating Your Account...</h2>
-              <p className="text-gray-600">Please wait while we save your information.</p>
-              <div className="mt-4 flex justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
-              </div>
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-6xl animate-bounce mb-4">🏀</div>
+              <p className="text-gray-500">Setting up your dashboard...</p>
             </div>
           </div>
         );
@@ -2345,22 +2342,24 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                   {/* Additional contacts */}
                   {emergencyData.map((contact, idx) => (
-                    <div key={contact.id} className="p-4 bg-green-50 rounded-lg border-2 border-green-500 flex items-center gap-3">
-                      <div onClick={() => setSummaryPhotoTarget({ type: 'ec', id: contact.id })} className="cursor-pointer flex-shrink-0">
-                        {getDisplayPhoto(contact.photo) ? (
-                          <img src={getDisplayPhoto(contact.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500 hover:opacity-80 transition-opacity" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 flex flex-col items-center justify-center hover:bg-gray-300 transition-colors">
-                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                            <span className="text-[7px] text-gray-500 font-medium">add photo</span>
-                          </div>
-                        )}
+                    <div key={contact.id} className="p-4 bg-green-50 rounded-lg border-2 border-green-500 relative">
+                      <button onClick={() => editContact(contact)} className="absolute top-3 right-3 text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                      <div className="flex items-center gap-3">
+                        <div onClick={() => setSummaryPhotoTarget({ type: 'ec', id: contact.id })} className="cursor-pointer flex-shrink-0">
+                          {getDisplayPhoto(contact.photo) ? (
+                            <img src={getDisplayPhoto(contact.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500 hover:opacity-80 transition-opacity" />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-gray-200 flex flex-col items-center justify-center hover:bg-gray-300 transition-colors">
+                              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <span className="text-[7px] text-gray-500 font-medium">add photo</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium">{contact.name}</div>
+                          <div className="text-sm text-gray-500">{contact.phone} • {contact.relationship === 'Other' && contact.otherRelationship ? `Other: ${contact.otherRelationship}` : contact.relationship}</div>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <div className="font-medium">{contact.name}</div>
-                        <div className="text-sm text-gray-500">{contact.phone} • {contact.relationship === 'Other' && contact.otherRelationship ? `Other: ${contact.otherRelationship}` : contact.relationship}</div>
-                      </div>
-                      <button onClick={() => editContact(contact)} className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-1 bg-blue-50 rounded hover:bg-blue-100">Edit</button>
                     </div>
                   ))}
 
@@ -2439,12 +2438,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                   {/* Pending parent logins indicator */}
                   {pendingInvitations.length > 0 && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                      <strong className="text-blue-800">Parent logins to be created:</strong>
+                    <div className="bg-green-50 border-2 border-green-400 rounded-lg p-3 text-sm">
+                      <strong className="text-green-800">Parent logins to be created:</strong>
                       {pendingInvitations.map((inv, i) => (
-                        <div key={i} className="flex items-center justify-between mt-1">
-                          <span className="text-blue-700">{inv.name} ({inv.email})</span>
-                          <button onClick={() => setPendingInvitations(pendingInvitations.filter((_, idx) => idx !== i))} className="text-red-500 text-xs hover:text-red-700">Remove</button>
+                        <div key={i} className="mt-1">
+                          <span className="text-green-700">{inv.name} ({inv.email})</span>
                         </div>
                       ))}
                     </div>
@@ -4741,7 +4739,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                       <div className="relative">
-                        <input type={showPassword ? 'text' : 'password'} value={userData.password} onChange={e => setUserData({ ...userData, password: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none pr-16" placeholder="Create a password" autoComplete="off" data-1p-ignore="true" />
+                        <input type={showPassword ? 'text' : 'password'} value={userData.password} onChange={e => setUserData({ ...userData, password: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none pr-16" placeholder="Create a password" autoComplete="new-password" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
                       </div>
                     </div>

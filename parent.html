@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.056";
+    const VERSION = "13.059";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T00:09:00");
+    const BUILD_DATE = new Date("2026-02-09T08:06:00");
 
     const RELEASE_NOTES = [
+      { version: "13.059-13.060", date: "2026-02-09", time: "8:06 AM", author: "Claude", changes: ["Onboarding: Parent logins shown in green boxes, Remove button removed, edit via EC instead", "Onboarding: Edit buttons now blue text in top-right corner matching dashboard style", "Onboarding: Fixed login screen flash after wizard — now shows bouncing basketball transition", "Campers tab: Parent email shown next to phone number (hidden for nologin accounts)", "EC modal: Email now mandatory with asterisk, Add button disabled until email provided", "Registration cards: Blue border/bg for unpaid, red 'Payment Due' badge, blue Pay Now button", "Payments tab: Card style matches register tab — same blue colors, red badge, green title", "Venmo modal: Registration details box at top with camper names, dates, session types, total", "Messages: Drafts now visible in amber Drafts section, click to edit/send/delete", "Messages: Edit Draft modal with Send, Update Draft, and Delete (double confirmation) buttons"] },
       { version: "13.055-13.058", date: "2026-02-09", time: "12:09 AM", author: "Claude", changes: ["Parent: Venmo wizard step ovals now uniform size (w-14 h-7) and top-aligned", "Admin: Registrations restructured — 3 sections: New (awaiting payment), Awaiting Confirmation, Paid", "Admin: Removed approval concept — registrations just need payment confirmation", "Admin: All 3 registration sections use same card format with Venmo screenshot always shown", "Admin: Screenshot placeholder shown when no payment screenshot exists", "Admin: Dashboard tasks updated to match new payment-focused workflow", "Admin: Registrations tab badge now shows count awaiting admin payment confirmation"] },
       { version: "13.051-13.054", date: "2026-02-09", time: "12:00 AM", author: "Claude", changes: ["Admin: Added Messages tab with unread badge from parents", "Admin: Messages tab with compose (broadcast/individual), reply, read/unread tracking", "Admin: Dashboard shows unread parent messages as urgent todo", "All files: Scroll to top on page load and tab navigation so red ribbon is visible"] },
       { version: "13.047-13.050", date: "2026-02-08", time: "11:47 PM PST", author: "Claude", changes: [
@@ -2317,11 +2318,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT MESSAGES TAB ====================
-    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, markAsRead, showToast, otherParents }) => {
+    const ParentMessagesTab = ({ userEmail, userName, messages, onSendReply, onDeleteMessage, onUpdateMessage, markAsRead, showToast, otherParents }) => {
       const [replyText, setReplyText] = useState('');
       const [selectedMsg, setSelectedMsg] = useState(null);
       const [showCompose, setShowCompose] = useState(false);
       const [composeForm, setComposeForm] = useState({ subject: '', body: '', cc: [], attachments: [] });
+      const [editingDraftId, setEditingDraftId] = useState(null);
       const messagesEndRef = useRef(null);
 
       // Get messages for this parent (sent to them or to all, or from them)
@@ -2357,6 +2359,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const openCompose = () => {
+        setEditingDraftId(null);
         setComposeForm({
           subject: '',
           body: '',
@@ -2364,6 +2367,30 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           attachments: []
         });
         setShowCompose(true);
+      };
+
+      const openDraftForEditing = (draft) => {
+        setEditingDraftId(draft.id);
+        setComposeForm({
+          subject: draft.subject === '(No Subject)' ? '' : (draft.subject || ''),
+          body: draft.body || '',
+          cc: (draft.cc || []).map(email => {
+            const parent = (otherParents || []).find(p => p.email === email);
+            return { email, name: parent?.name || email };
+          }),
+          attachments: draft.attachments || []
+        });
+        setShowCompose(true);
+      };
+
+      const handleDeleteDraft = () => {
+        if (!editingDraftId) return;
+        if (!confirm('Are you sure you want to delete this draft?')) return;
+        if (!confirm('This cannot be undone. Delete this draft permanently?')) return;
+        onDeleteMessage(editingDraftId);
+        setEditingDraftId(null);
+        setShowCompose(false);
+        showToast('Draft deleted', 'success');
       };
 
       const handleRemoveCc = (email) => {
@@ -2390,10 +2417,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }));
       };
 
-      const handleSendMessage = () => {
+      const handleSendMessage = async () => {
         if (!composeForm.subject.trim() || !composeForm.body.trim()) {
           showToast('Please fill in subject and message', 'error');
           return;
+        }
+        // If editing a draft, delete the old draft first
+        if (editingDraftId) {
+          await onDeleteMessage(editingDraftId);
         }
         const msg = {
           id: 'msg_' + Date.now(),
@@ -2409,25 +2440,45 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           status: 'sent'
         };
         onSendReply(msg);
+        setEditingDraftId(null);
         setShowCompose(false);
         showToast('Message sent to Camp Director!', 'success');
       };
 
       const handleSaveDraft = () => {
-        const msg = {
-          id: 'msg_' + Date.now(),
-          from: userEmail,
-          fromName: userName,
-          to: ['admin'],
-          cc: composeForm.cc.map(c => c.email),
-          subject: composeForm.subject.trim() || '(No Subject)',
-          body: composeForm.body.trim(),
-          attachments: composeForm.attachments,
-          sentAt: new Date().toISOString(),
-          readBy: [userEmail],
-          status: 'draft'
-        };
-        onSendReply(msg);
+        if (editingDraftId) {
+          // Update existing draft
+          const updatedDraft = {
+            id: editingDraftId,
+            from: userEmail,
+            fromName: userName,
+            to: ['admin'],
+            cc: composeForm.cc.map(c => c.email),
+            subject: composeForm.subject.trim() || '(No Subject)',
+            body: composeForm.body.trim(),
+            attachments: composeForm.attachments,
+            sentAt: new Date().toISOString(),
+            readBy: [userEmail],
+            status: 'draft'
+          };
+          onUpdateMessage(editingDraftId, updatedDraft);
+        } else {
+          const msg = {
+            id: 'msg_' + Date.now(),
+            from: userEmail,
+            fromName: userName,
+            to: ['admin'],
+            cc: composeForm.cc.map(c => c.email),
+            subject: composeForm.subject.trim() || '(No Subject)',
+            body: composeForm.body.trim(),
+            attachments: composeForm.attachments,
+            sentAt: new Date().toISOString(),
+            readBy: [userEmail],
+            status: 'draft'
+          };
+          onSendReply(msg);
+        }
+        setEditingDraftId(null);
         setShowCompose(false);
         showToast('Draft saved', 'success');
       };
@@ -2456,8 +2507,44 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           )}
 
+          {/* Drafts Section */}
+          {myMessages.filter(m => m.status === 'draft').length > 0 && (
+            <div className="bg-white rounded-xl shadow p-6">
+              <h3 className="font-bold text-lg text-amber-700 mb-4">Drafts</h3>
+              <div className="space-y-2">
+                {myMessages.filter(m => m.status === 'draft').map(draft => {
+                  const dateStr = new Date(draft.sentAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+                  const timeStr = new Date(draft.sentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                  return (
+                    <div key={draft.id} className="rounded-lg border-2 border-amber-300 bg-amber-50 overflow-hidden">
+                      <div
+                        onClick={() => openDraftForEditing(draft)}
+                        className="p-4 cursor-pointer hover:bg-amber-100 flex items-center gap-3"
+                      >
+                        <span className="text-lg flex-shrink-0">📝</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-amber-800">Draft</span>
+                            <span className="text-xs bg-amber-200 text-amber-700 px-1.5 py-0.5 rounded">Not sent</span>
+                          </div>
+                          {draft.subject && <div className="text-sm font-medium truncate">{draft.subject}</div>}
+                          {draft.body && <div className="text-sm text-gray-500 truncate">{draft.body}</div>}
+                        </div>
+                        <div className="text-xs text-gray-400 flex-shrink-0 text-right">
+                          <div>{dateStr}</div>
+                          <div>{timeStr}</div>
+                        </div>
+                        <span className="text-amber-500 text-sm flex-shrink-0">Edit →</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Message History */}
-          {myMessages.length > 0 && (
+          {myMessages.filter(m => m.status !== 'draft').length > 0 && (
             <div className="bg-white rounded-xl shadow p-6">
               <h3 className="font-bold text-lg text-green-800 mb-4">Message History</h3>
               <div className="space-y-2">
@@ -2572,7 +2659,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           )}
 
           {/* Empty state when no messages at all */}
-          {myMessages.filter(m => m.status !== 'draft').length === 0 && (
+          {myMessages.length === 0 && (
             <div className="bg-white rounded-xl shadow p-6">
               <div className="text-center py-8 text-gray-500">
                 <p className="text-4xl mb-2">📭</p>
@@ -2583,9 +2670,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
           {/* Compose Message Modal */}
           {showCompose && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCompose(false)}>
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setEditingDraftId(null); setShowCompose(false); }}>
               <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                <h3 className="font-bold text-xl mb-4">New Message</h3>
+                <h3 className="font-bold text-xl mb-4">{editingDraftId ? 'Edit Draft' : 'New Message'}</h3>
 
                 <div className="space-y-4">
                   {/* To field */}
@@ -2675,10 +2762,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     onClick={handleSaveDraft}
                     className="px-4 py-3 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200"
                   >
-                    Save Draft
+                    {editingDraftId ? 'Update Draft' : 'Save Draft'}
                   </button>
+                  {editingDraftId && (
+                    <button
+                      onClick={handleDeleteDraft}
+                      className="px-4 py-3 bg-red-100 text-red-700 font-medium rounded-lg hover:bg-red-200"
+                    >
+                      Delete
+                    </button>
+                  )}
                   <button
-                    onClick={() => setShowCompose(false)}
+                    onClick={() => { setEditingDraftId(null); setShowCompose(false); }}
                     className="px-4 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300"
                   >
                     Cancel
@@ -3919,6 +4014,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         await storage.set('camp_messages', msg.id, msg);
       };
 
+      const deleteMessage = async (msgId) => {
+        const newMsgs = messages.filter(m => m.id !== msgId);
+        setMessages(newMsgs);
+        await supabase.from('camp_messages').delete().eq('id', msgId);
+      };
+
+      const updateMessage = async (msgId, updatedMsg) => {
+        const newMsgs = messages.map(m => m.id === msgId ? updatedMsg : m);
+        setMessages(newMsgs);
+        await storage.set('camp_messages', updatedMsg.id, updatedMsg);
+      };
+
       const markMessageRead = async (msgId, readerEmail) => {
         const updated = messages.map(m => {
           if (m.id === msgId && !m.readBy?.includes(readerEmail)) {
@@ -5065,8 +5172,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               <div key={orderKey} className={`rounded-lg p-4 ${
                                 isPaid ? 'bg-green-50 border-2 border-green-500' :
                                 isSent ? 'bg-blue-50 border-2 border-blue-300' :
-                                status === 'pending' ? 'bg-yellow-50 border-2 border-yellow-300' :
-                                'border-2 border-gray-200'
+                                'bg-blue-50 border-2 border-blue-300'
                               }`}>
                                 <div className="flex justify-between items-start mb-2">
                                   <h4 className="font-bold text-lg text-green-800">
@@ -5097,20 +5203,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                         </svg>
                                       </button>
                                     )}
-                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                      isPaid ? 'bg-green-100 text-green-700' :
-                                      isSent ? 'bg-blue-100 text-blue-700' :
-                                      status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-orange-100 text-orange-700'
-                                    }`}>
-                                      {isPaid ? '✓ Registered & Paid' :
-                                       isSent ? 'Payment Sent' :
-                                       status === 'pending' ? 'Pending Approval' :
-                                       'Payment Due'}
-                                    </span>
+                                    {isPaid ? (
+                                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
+                                    ) : isSent ? (
+                                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
+                                    ) : (
+                                      <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
+                                    )}
                                   </div>
                                 </div>
-                                <div className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : status === 'pending' ? 'bg-yellow-100' : 'bg-gray-50'}`}>
+                                <div className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-blue-100'}`}>
                                   <div className="flex justify-between items-center">
                                     <div>
                                       <div className="font-semibold">{formatDateRange(dates)}</div>
@@ -5121,6 +5223,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     )}
                                   </div>
                                 </div>
+                                {/* Pay Now button for unpaid registrations */}
+                                {!isPaid && !isSent && paymentStatus === 'unpaid' && (
+                                  <div className="mt-3">
+                                    <button
+                                      onClick={() => {
+                                        const orderVenmoCode = sortedRegs[0]?.venmoCode || generateVenmoCode(user?.name);
+                                        const title = camperNames.length > 1 ? camperNames.join(' and ') + "'s Registration" : camperNames[0] + "'s Registration";
+                                        setVenmoScreenshot(null);
+                                        setVenmoScreenshotRaw(null);
+                                        setPaymentVenmoModal({ orderKey, regs: sortedRegs, totalAmount, venmoCode: orderVenmoCode, title });
+                                      }}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                                    >
+                                      Pay Now
+                                    </button>
+                                  </div>
+                                )}
                               </div>
                             );
                           });
@@ -5568,17 +5687,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               <div key={orderKey} className={`rounded-lg p-4 ${
                                 isPaid ? 'bg-green-50 border-2 border-green-500' :
                                 isSent ? 'bg-blue-50 border-2 border-blue-300' :
-                                'border border-gray-200'
+                                'bg-blue-50 border-2 border-blue-300'
                               }`}>
                                 <div className="flex justify-between items-start mb-3">
-                                  <div className="font-bold text-lg">{title}</div>
-                                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                                    isPaid ? 'bg-green-100 text-green-700' :
-                                    isSent ? 'bg-blue-100 text-blue-700' :
-                                    'bg-orange-100 text-orange-700'
-                                  }`}>
-                                    {isPaid ? '✓ Paid' : isSent ? 'Payment Sent' : 'Payment Due'}
-                                  </span>
+                                  <div className="font-bold text-lg text-green-800">{title}</div>
+                                  {isPaid ? (
+                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
+                                  ) : isSent ? (
+                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
+                                  ) : (
+                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
+                                  )}
                                 </div>
                                 {/* Per-camper breakdown */}
                                 <div className="space-y-2 mb-3">
@@ -5591,7 +5710,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     const hasPM = sessions.includes('afternoon');
                                     const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
                                     return (
-                                      <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-gray-50'}`}>
+                                      <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-blue-100'}`}>
                                         <div className="flex justify-between items-center">
                                           <div>
                                             <span className="font-medium">{camperName}</span>
@@ -5653,7 +5772,38 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}>
                       <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="font-bold text-xl text-center mb-4">Pay via Venmo</h3>
-                        <p className="text-sm text-gray-600 text-center mb-4">{paymentVenmoModal.title}</p>
+
+                        {/* Registration Details Box */}
+                        <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                          <div className="font-bold text-blue-800 mb-2">{paymentVenmoModal.title}</div>
+                          {paymentVenmoModal.regs && (() => {
+                            const byCamper = {};
+                            paymentVenmoModal.regs.forEach(r => {
+                              const name = r.childName || r.camperName || 'Unknown';
+                              if (!byCamper[name]) byCamper[name] = [];
+                              byCamper[name].push(r);
+                            });
+                            return Object.entries(byCamper).map(([name, camperRegs]) => {
+                              const sorted = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                              const sessions = sorted.flatMap(r => r.sessions || []);
+                              const hasAM = sessions.includes('morning');
+                              const hasPM = sessions.includes('afternoon');
+                              const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                              const dates = sorted.map(r => r.date);
+                              const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              const dateRange = dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} - ${fmt(dates[dates.length - 1])}`;
+                              return (
+                                <div key={name} className="text-sm text-blue-700 mt-1">
+                                  <span className="font-medium">{name}</span> — {dateRange} • {dates.length} day{dates.length > 1 ? 's' : ''} • {sessionLabel}
+                                </div>
+                              );
+                            });
+                          })()}
+                          <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between">
+                            <span className="font-bold text-blue-800">Total</span>
+                            <span className="font-bold text-blue-800 text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span>
+                          </div>
+                        </div>
 
                         <div className="space-y-4">
                           {/* Step 1 */}
@@ -5780,6 +5930,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   userName={user?.name}
                   messages={messages}
                   onSendReply={saveMessage}
+                  onDeleteMessage={deleteMessage}
+                  onUpdateMessage={updateMessage}
                   markAsRead={markMessageRead}
                   showToast={showToast}
                   otherParents={getOtherParentsForMyFamily(myChildren, camperParentLinks, parents, user?.email)}
@@ -6334,6 +6486,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             <div>
                               <span className="font-medium">{parent.name}</span>
                               {parent.phone && <span className="text-gray-500"> • {parent.phone}</span>}
+                              {parent.email && !parent.email.startsWith('nologin_') && <span className="text-gray-500"> • {parent.email}</span>}
                             </div>
                           </div>
                         ))}
@@ -6727,7 +6880,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                     <input
                       value={editForm.email}
                       onChange={e => setEditForm({ ...editForm, email: e.target.value })}
@@ -6745,8 +6898,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </button>
                   <button
                     onClick={handleAdd}
-                    disabled={!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim()}
-                    className={`flex-1 py-2 rounded-lg font-medium ${!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                    disabled={!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim()}
+                    className={`flex-1 py-2 rounded-lg font-medium ${!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
                   >
                     Add Contact
                   </button>
