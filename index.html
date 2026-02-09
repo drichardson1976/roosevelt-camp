@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.020";
+    const VERSION = "13.022";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T17:24:00");
+    const BUILD_DATE = new Date("2026-02-08T17:39:00");
 
     const RELEASE_NOTES = [
+      { version: "13.021-13.023", date: "2026-02-08", time: "5:39 PM PST", author: "Claude", changes: [
+        "Removed pickup policy advance notification text from all files",
+        "Add Parent form: converted to popup modal with photo at top center",
+        "Add Parent form: phone placeholder now shows (555) 555-1234",
+        "Add Child form: converted to popup modal (was inline form)",
+        "Add Child form: birthdate uses Year/Month/Day dropdowns (matching onboarding wizard)",
+        "Add Child button always visible (modal overlays instead of replacing button)",
+      ]},
       { version: "13.020", date: "2026-02-08", time: "5:24 PM PST", author: "Claude", changes: [
         "EC Step 3: Create Login prompt only shown when relationship is 'Parent'",
         "EC Step 3: Red X replaced with Edit button (same as Campers step)",
@@ -1349,8 +1357,6 @@
 Only authorized emergency contacts may pick up your child.
 
 Upload a photo for the emergency contact, or remind the emergency contact that they will need to show a valid Photo ID.
-
-If someone not on the authorized list needs to pick up, parents must notify camp staff in advance by messaging through the website.
     `.trim();
 
     const DROPOFF_POLICY = `

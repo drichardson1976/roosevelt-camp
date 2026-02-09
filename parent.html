@@ -45,11 +45,19 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.017";
+    const VERSION = "13.021";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-08T17:08:00");
+    const BUILD_DATE = new Date("2026-02-08T17:39:00");
 
     const RELEASE_NOTES = [
+      { version: "13.021-13.023", date: "2026-02-08", time: "5:39 PM PST", author: "Claude", changes: [
+        "Removed pickup policy advance notification text from all files",
+        "Add Parent form: converted to popup modal with photo at top center",
+        "Add Parent form: phone placeholder now shows (555) 555-1234",
+        "Add Child form: converted to popup modal (was inline form)",
+        "Add Child form: birthdate uses Year/Month/Day dropdowns (matching onboarding wizard)",
+        "Add Child button always visible (modal overlays instead of replacing button)",
+      ]},
       { version: "13.020", date: "2026-02-08", time: "5:24 PM PST", author: "Claude", changes: [
         "EC Step 3: Create Login prompt only shown when relationship is 'Parent'",
         "EC Step 3: Red X replaced with Edit button (same as Campers step)",
@@ -1401,8 +1409,6 @@
 Only authorized emergency contacts may pick up your child.
 
 Upload a photo for the emergency contact, or remind the emergency contact that they will need to show a valid Photo ID.
-
-If someone not on the authorized list needs to pick up, parents must notify camp staff in advance by messaging through the website.
     `.trim();
 
     const DROPOFF_POLICY = `
@@ -5400,105 +5406,121 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       const AddChildForm = ({ onAdd, onCancel }) => {
         const [name, setName] = useState('');
-        const [birthdate, setBirthdate] = useState('');
+        const [birthYear, setBirthYear] = useState('');
+        const [birthMonth, setBirthMonth] = useState('');
+        const [birthDay, setBirthDay] = useState('');
         const [grade, setGrade] = useState('');
         const [phone, setPhone] = useState('');
         const [photo, setPhoto] = useState(null);
         const [showPhotoModal, setShowPhotoModal] = useState(false);
 
+        const birthdate = birthYear && birthMonth && birthDay ? `${birthYear}-${birthMonth}-${birthDay}` : '';
         const age = calculateAge(birthdate);
 
         const handleSubmit = () => {
           if (!name || !birthdate || !grade) return;
           onAdd({ name, birthdate, grade, phone, photo });
-          setName(''); setBirthdate(''); setGrade(''); setPhone(''); setPhoto(null);
+          setName(''); setBirthYear(''); setBirthMonth(''); setBirthDay(''); setGrade(''); setPhone(''); setPhoto(null);
         };
 
         return (
-          <div className="border-t pt-4 space-y-4">
-            <h4 className="font-medium text-lg">Add Child Profile</h4>
-            <p className="text-sm text-gray-500 -mt-2">Create a profile for your child. You'll register them for camp sessions separately.</p>
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+            <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h4 className="font-medium text-lg mb-4 text-center">Add Child Profile</h4>
+              <p className="text-sm text-gray-500 text-center mb-4">Create a profile for your child. You'll register them for camp sessions separately.</p>
 
-            {/* Photo Upload with add photo placeholder */}
-            <div className="flex justify-center">
-              {getDisplayPhoto(photo) ? (
-                <div className="relative">
-                  <img src={getDisplayPhoto(photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-600" />
-                  <button onClick={() => setShowPhotoModal(true)}
-                    className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm">✎</button>
-                </div>
-              ) : (
-                <div
-                  onClick={() => setShowPhotoModal(true)}
-                  className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300"
-                >
-                  <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                  <span className="text-xs text-gray-500 font-medium">add photo</span>
-                </div>
-              )}
-            </div>
-            {showPhotoModal && <PhotoUploadModal currentPhoto={photo} onSave={(img) => { setPhoto(img); setShowPhotoModal(false); }} onCancel={() => setShowPhotoModal(false)} />}
-            <p className="text-xs text-gray-500 text-center">Photo helps us recognize your child at camp</p>
-
-            {/* Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Child's Name *</label>
-              <input value={name} onChange={e => setName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg" placeholder="Full name"
-                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-            </div>
-
-            {/* Birthdate & Calculated Age */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
-                <input type="date" value={birthdate} onChange={e => setBirthdate(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  min={new Date(new Date().getFullYear() - 25, 0, 1).toISOString().split('T')[0]}
-                  max={new Date(new Date().getFullYear() - 14, 11, 31).toISOString().split('T')[0]}
-                  data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+              {/* Photo Upload with add photo placeholder */}
+              <div className="flex justify-center mb-1">
+                {getDisplayPhoto(photo) ? (
+                  <div className="relative cursor-pointer" onClick={() => setShowPhotoModal(true)}>
+                    <img src={getDisplayPhoto(photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-500" />
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm hover:bg-green-700">✎</div>
+                  </div>
+                ) : (
+                  <div onClick={() => setShowPhotoModal(true)} className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-[9px] text-gray-500 font-medium">add photo</span>
+                  </div>
+                )}
+                {showPhotoModal && <PhotoUploadModal currentPhoto={photo} onSave={(img) => { setPhoto(img); setShowPhotoModal(false); }} onCancel={() => setShowPhotoModal(false)} />}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-                <div className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-700">
-                  {age !== null ? `${age} years old` : 'Select birthdate'}
+              <p className="text-xs text-gray-500 text-center mb-4">Photo helps us recognize your child at camp</p>
+
+              <div className="space-y-3">
+                {/* Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Child's Name *</label>
+                  <input value={name} onChange={e => setName(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg" placeholder="Full name"
+                    autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                </div>
+
+                {/* Birthdate Dropdowns & Calculated Age */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birthdate *</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <select value={birthYear} onChange={e => setBirthYear(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">Year</option>
+                      {Array.from({ length: 27 }, (_, i) => 2026 - i).map(y => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                    <select value={birthMonth} onChange={e => setBirthMonth(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">Month</option>
+                      {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                        <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>
+                      ))}
+                    </select>
+                    <select value={birthDay} onChange={e => setBirthDay(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">Day</option>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
+                        <option key={d} value={String(d).padStart(2, '0')}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {age !== null && (
+                    <p className="text-sm text-gray-600 mt-1">{age} years old</p>
+                  )}
+                </div>
+
+                {/* Grade */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Grade (Fall 2026) *</label>
+                  <select value={grade} onChange={e => setGrade(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select grade</option>
+                    <option value="3rd">3rd Grade</option>
+                    <option value="4th">4th Grade</option>
+                    <option value="5th">5th Grade</option>
+                    <option value="6th">6th Grade</option>
+                    <option value="7th">7th Grade</option>
+                    <option value="8th">8th Grade</option>
+                  </select>
+                </div>
+
+                {/* Phone (optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Child's Phone <span className="text-gray-400">(optional)</span>
+                  </label>
+                  <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
+                    className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234"
+                    autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                  <p className="text-xs text-gray-500 mt-1">If your child has a phone for emergencies</p>
                 </div>
               </div>
-            </div>
 
-            {/* Grade */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Grade (Fall 2026) *</label>
-              <select value={grade} onChange={e => setGrade(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg">
-                <option value="">Select grade</option>
-                <option value="3rd">3rd Grade</option>
-                <option value="4th">4th Grade</option>
-                <option value="5th">5th Grade</option>
-                <option value="6th">6th Grade</option>
-                <option value="7th">7th Grade</option>
-                <option value="8th">8th Grade</option>
-              </select>
-            </div>
-
-            {/* Phone (optional) */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Child's Phone <span className="text-gray-400">(optional)</span>
-              </label>
-              <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234"
-                autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
-              <p className="text-xs text-gray-500 mt-1">If your child has a phone for emergencies</p>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-4 pt-4">
-              {onCancel && <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>}
-              <button onClick={handleSubmit} disabled={!name || !birthdate || !grade}
-                className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-green-700 disabled:hover:bg-gray-300">
-                Add Child
-              </button>
+              {/* Buttons */}
+              <div className="flex gap-4 pt-4">
+                <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button onClick={handleSubmit} disabled={!name || !birthdate || !grade}
+                  className="flex-1 py-2 bg-green-600 text-white rounded-lg disabled:bg-gray-300 hover:bg-green-700 disabled:hover:bg-gray-300">
+                  Add Child
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -5816,26 +5838,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       return (
         <div className="space-y-6">
           {/* Green + Add Child button at top */}
-          {showAddForm ? (
-            <div className="border-2 border-dashed border-green-300 rounded-xl p-4 bg-green-50">
-              <AddChildForm
-                onAdd={(child) => {
-                  onAdd(child);
-                  setShowAddForm(false);
-                }}
-                onCancel={() => setShowAddForm(false)}
-              />
-            </div>
-          ) : (
-            <div className="text-center">
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
-              >
-                <span className="text-2xl">➕</span>
-                <span>Add Child</span>
-              </button>
-            </div>
+          <div className="text-center">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+            >
+              <span className="text-2xl">➕</span>
+              <span>Add Child</span>
+            </button>
+          </div>
+          {showAddForm && (
+            <AddChildForm
+              onAdd={(child) => {
+                onAdd(child);
+                setShowAddForm(false);
+              }}
+              onCancel={() => setShowAddForm(false)}
+            />
           )}
 
           <div className="bg-white rounded-xl shadow p-6">
@@ -6461,106 +6480,104 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       return (
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-          <h4 className="font-medium text-lg mb-3">Add Another Parent</h4>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h4 className="font-medium text-lg mb-4 text-center">Add Another Parent</h4>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-              {error}
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="Full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="parent@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-              <input
-                type="tel"
-                value={formData.phone}
-                onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
-                className="w-full px-3 py-2 border rounded-lg"
-                placeholder="123-456-7890"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={e => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg pr-10"
-                  placeholder="Create a password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? '🙈' : '👁️'}
-                </button>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
+                {error}
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Photo (optional)</label>
-              <div className="flex items-center gap-3">
-                {getDisplayPhoto(formData.photo) ? (
-                  <img src={getDisplayPhoto(formData.photo)} className="w-12 h-12 rounded-full object-cover border-2 border-green-500" />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex flex-col items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                    <span className="text-[7px] text-gray-500 font-medium">add photo</span>
-                  </div>
-                )}
-                <button
-                  onClick={() => setShowPhotoUpload(true)}
-                  className="flex-1 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-                >
-                  {getDisplayPhoto(formData.photo) ? 'Change Photo' : '+ Add Photo'}
-                </button>
-              </div>
+            {/* Photo Upload */}
+            <div className="flex justify-center mb-4">
+              {getDisplayPhoto(formData.photo) ? (
+                <div className="relative cursor-pointer" onClick={() => setShowPhotoUpload(true)}>
+                  <img src={getDisplayPhoto(formData.photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-500" />
+                  <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm hover:bg-green-700">✎</div>
+                </div>
+              ) : (
+                <div onClick={() => setShowPhotoUpload(true)} className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                  <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                  <span className="text-[9px] text-gray-500 font-medium">add photo</span>
+                </div>
+              )}
               {showPhotoUpload && <PhotoUploadModal currentPhoto={formData.photo} onSave={(photo) => { setFormData({ ...formData, photo }); setShowPhotoUpload(false); }} onCancel={() => setShowPhotoUpload(false)} />}
             </div>
-          </div>
+            <p className="text-xs text-gray-500 text-center mb-4">Photo helps identify authorized pickup (optional)</p>
 
-          <div className="flex gap-2 mt-4">
-            <button
-              onClick={handleSubmit}
-              className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
-            >
-              Add Parent
-            </button>
-            {onCancel && (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={e => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="Full name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={e => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="parent@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={e => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                  placeholder="(555) 555-1234"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={e => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg pr-10"
+                    placeholder="Create a password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4">
               <button
-                onClick={onCancel}
-                className="px-4 bg-gray-200 rounded-lg hover:bg-gray-300"
+                onClick={handleSubmit}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700"
               >
-                Cancel
+                Add Parent
               </button>
-            )}
+              {onCancel && (
+                <button
+                  onClick={onCancel}
+                  className="px-4 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </div>
       );
@@ -6655,19 +6672,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       return (
         <div className="space-y-6">
           {/* Add Parent Button */}
-          {!showAddForm && (
-            <div className="text-center">
-              <button
-                onClick={() => setShowAddForm(true)}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
-              >
-                <span className="text-2xl">➕</span>
-                <span>Add Parent</span>
-              </button>
-            </div>
-          )}
+          <div className="text-center">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
+            >
+              <span className="text-2xl">➕</span>
+              <span>Add Parent</span>
+            </button>
+          </div>
 
-          {/* Add Parent Form */}
+          {/* Add Parent Modal */}
           {showAddForm && (
             <AddParentForm
               onAdd={handleAddParent}
