@@ -116,8 +116,10 @@ exports.handler = async (event) => {
     });
 
     const smsData = await smsRes.json();
+    console.log(`Twilio response [${smsRes.status}]: SID=${smsData.sid}, status=${smsData.status}, from=${TWILIO_PHONE_NUMBER}, to=${toNumber}, error_code=${smsData.error_code}, error_message=${smsData.error_message}`);
+
     if (!smsRes.ok) {
-      console.error('Twilio error:', JSON.stringify(smsData));
+      console.error('Twilio error details:', JSON.stringify(smsData));
       return { statusCode: 500, body: JSON.stringify({ error: `SMS failed: ${smsData.message || 'Could not send verification code. Please try again.'}` }) };
     }
 
