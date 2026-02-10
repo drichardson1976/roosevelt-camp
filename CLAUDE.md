@@ -310,8 +310,8 @@ const getFoodPhoto = (key) => {
 - **Account:** derek.richardson@gmail.com
 - **Phone number:** +12062034111 (206) 203-4111
 - **Env vars configured in Netlify:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
-- **A2P 10DLC registration:** Required for production US SMS — not yet completed
-- **Trial limitations:** Can only send to verified phone numbers until account is upgraded
+- **Account type:** Paid (no trial limitations)
+- **A2P 10DLC registration:** Required for production US SMS at scale — not yet completed
 
 ### Google Login (Planned)
 - **Status:** Not yet implemented — buttons show "coming soon"
