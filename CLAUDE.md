@@ -259,6 +259,8 @@ const getFoodPhoto = (key) => {
 - **request-password-reset.js** - Generate token, store in Supabase, send reset email
 - **reset-password.js** - Validate token, update password in Supabase
 - **send-sms.js** - Send SMS via Twilio API
+- **send-verification-code.js** - Look up user by phone, generate 6-digit code, store in Supabase, send via Twilio
+- **verify-code.js** - Validate SMS verification code, return user's login info
 
 ### Migration Scripts (/migrations folder)
 - **00_diagnose_structure.sql** - Check table structure
@@ -291,6 +293,8 @@ const getFoodPhoto = (key) => {
 | `request-password-reset.js` | Generate reset token, store in Supabase, send reset email | Supabase + Resend |
 | `reset-password.js` | Validate token, update password in Supabase | Supabase |
 | `send-sms.js` | Send SMS messages | Twilio API |
+| `send-verification-code.js` | Look up user by phone, send 6-digit SMS code | Supabase + Twilio |
+| `verify-code.js` | Validate SMS code, return user login info | Supabase |
 
 ### Resend (Email Service)
 - **Account:** derek.richardson@gmail.com
