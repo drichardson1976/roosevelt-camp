@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.085";
+    const VERSION = "13.086";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T13:16:00");
+    const BUILD_DATE = new Date("2026-02-10T14:55:00");
 
     const RELEASE_NOTES = [
+      { version: "13.086", date: "2026-02-10", time: "2:55 PM", author: "Audrey Richardson", changes: ["Added temporary notice on 'Can't remember your login?' screen — SMS verification is being set up, users directed to email rhsdaycamp@gmail.com for login help", "Added detailed Twilio response logging for SMS delivery diagnostics (SID, status, error codes)", "Switched from local 10DLC number to toll-free number for SMS (pending Twilio verification)"] },
       { version: "13.085", date: "2026-02-10", time: "1:16 PM", author: "Audrey Richardson", changes: ["All emails now include unique X-Entity-Ref-ID header to prevent Gmail from threading/collapsing duplicate content", "Password reset minimum aligned to 4 characters (was 6) to match account creation requirements", "SMS verification now checks Twilio response and shows actual error message if sending fails (was silently ignored)", "Forgot login phone input now auto-formats to (555) 555-1234 as you type, matching all other phone fields"] },
       { version: "13.084", date: "2026-02-10", time: "12:55 PM", author: "Audrey Richardson", changes: ["Fixed Gmail clipping issue — all email templates now use compact HTML to prevent content from being hidden behind 'show trimmed content' dots", "Applies to: password reset, parent welcome, counselor welcome, and admin login reminder emails"] },
       { version: "13.083", date: "2026-02-10", time: "12:48 PM", author: "Audrey Richardson", changes: ["Welcome emails now include the camp hero image at the top for brand consistency", "Parent welcome email tips are now dynamic — skips steps already completed during onboarding (campers, photos, emergency contacts)", "Fixed duplicate variable bug in reset-password function that could cause errors"] },
@@ -5143,7 +5144,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {/* Step 1: Enter phone number */}
                   {forgotLoginStep === 'phone' && (
                     <div>
-                      <p className="text-gray-500 text-center text-sm mb-6">Enter the phone number on your account and we'll text you a verification code.</p>
+                      <p className="text-gray-500 text-center text-sm mb-4">Enter the phone number on your account and we'll text you a verification code.</p>
+                      <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 p-3 rounded-lg text-center text-sm mb-4">
+                        <strong>SMS is being set up.</strong> Text verification is temporarily unavailable. Please email <a href="mailto:rhsdaycamp@gmail.com" className="underline font-medium">rhsdaycamp@gmail.com</a> for login help.
+                      </div>
                       <div className="space-y-4">
                         <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="(555) 555-1234" type="tel" autoFocus />
                         {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center text-sm">{error}</div>}
