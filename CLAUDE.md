@@ -130,7 +130,7 @@ await storage.set('table_name', 'main', dataArray);
 
 ---
 
-## 📋 ACTIVE TABLES (23 tables)
+## 📋 ACTIVE TABLES (24 tables)
 
 These tables are actively used in the application code:
 
@@ -169,6 +169,7 @@ These tables are actively used in the application code:
 22. **camp_messages** - Admin messages to parents/counselors
 23. **camp_onboarding_progress** - User onboarding completion tracking (JSONB object: {email: progress})
 24. **camp_change_history** - Audit log of all changes (JSONB array)
+25. **camp_password_reset_tokens** - Password reset tokens (each row = one token, id=token string)
 
 ---
 

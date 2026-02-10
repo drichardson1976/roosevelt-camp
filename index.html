@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.068";
+    const VERSION = "13.071";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T21:05:00");
+    const BUILD_DATE = new Date("2026-02-10T11:03:00");
 
     const RELEASE_NOTES = [
+      { version: "13.074", date: "2026-02-10", time: "11:03 AM", author: "Audrey Richardson", changes: ["Login page: Added 'Forgot Password?' link — sends automated email with secure reset link (1-hour expiry, single-use)", "Login page: Added 'Can't remember your login?' link — sends help request to camp director with name and phone", "Login page: Password reset form auto-opens when clicking reset link from email", "Admin Parents tab: Added login type badge (Email/Password or No Login) next to each parent name", "Admin Parents tab: Added 'Send Login Reminder' button — emails parent their login method and a link to the login page", "New Netlify functions: request-password-reset, reset-password, send-sms (Twilio)", "New Supabase table: camp_password_reset_tokens for secure token storage"] },
       { version: "13.070", date: "2026-02-10", time: "8:20 AM", author: "Audrey Richardson", changes: ["Parent Campers tab: Added 'Add Emergency Contact' button next to red EC warning — opens EC form directly, returns to Campers tab when done", "Parent Dashboard: Action buttons now open photo modals directly instead of navigating to tabs", "Parent Dashboard: Individual rows per person needing a photo (campers and parents listed separately)"] },
       { version: "13.069", date: "2026-02-10", time: "8:11 AM", author: "Audrey Richardson", changes: ["ScrollableTabs: Added scroll position persistence — tab bar no longer resets when switching tabs (all dashboards)", "Admin Danger Zone: Added 'Delete All Messages' bulk delete button"] },
       { version: "13.068", date: "2026-02-09", time: "9:05 PM", author: "Audrey Richardson", changes: ["Version sync: Bumped all 4 HTML files to unified version 13.068"] },
@@ -3508,6 +3509,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
     function RooseveltCamp() {
       const getInitialPage = () => {
+        // If there's a reset token in URL, go straight to login
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('reset')) return 'login';
         const hash = window.location.hash.replace('#', '');
         const validPages = ['home', 'schedule', 'pricing', 'location', 'counselors', 'login'];
         return validPages.includes(hash) ? hash : 'home';
@@ -4935,7 +4939,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [password, setPassword] = useState('');
         const [showPassword, setShowPassword] = useState(false);
         const [error, setError] = useState('');
-        const [mode, setMode] = useState('login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor'
+        // Check for reset token in URL on mount
+        const urlParams = new URLSearchParams(window.location.search);
+        const resetToken = urlParams.get('reset');
+
+        const [mode, setMode] = useState(resetToken ? 'resetPassword' : 'login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor' | 'forgotLogin' | 'forgotPassword' | 'resetPassword'
+        const [forgotLoginSending, setForgotLoginSending] = useState(false);
+        const [forgotLoginSent, setForgotLoginSent] = useState(false);
+        const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
+        const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+        const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+        const [resetPasswordDone, setResetPasswordDone] = useState(false);
+        const [newPassword, setNewPassword] = useState('');
+        const [confirmPassword, setConfirmPassword] = useState('');
+        const [showNewPassword, setShowNewPassword] = useState(false);
         const [name, setName] = useState('');
         const [phone, setPhone] = useState('');
 
@@ -5029,6 +5046,200 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           );
         }
 
+        // Show forgot login help form
+        if (mode === 'forgotLogin') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+              <div className="max-w-md mx-auto px-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                  <h2 className="font-display text-2xl text-green-800 text-center mb-2">Can't Remember Your Login?</h2>
+                  <p className="text-gray-500 text-center text-sm mb-6">Enter your name and phone number and we'll help you find your account.</p>
+
+                  {forgotLoginSent ? (
+                    <div>
+                      <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-4 text-center">
+                        Your request has been sent! The camp director will reach out to you shortly.
+                      </div>
+                      <button onClick={() => { setMode('login'); setForgotLoginSent(false); setName(''); setPhone(''); }} className="w-full text-green-600 hover:underline font-medium">
+                        ← Back to Login
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <input value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Your Full Name" autoFocus />
+                      <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Phone Number" type="tel" />
+                      {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center text-sm">{error}</div>}
+                      <button
+                        type="button"
+                        disabled={forgotLoginSending}
+                        onClick={async () => {
+                          if (!name.trim() || !phone.trim()) { setError('Please enter both your name and phone number.'); return; }
+                          setError('');
+                          setForgotLoginSending(true);
+                          try {
+                            const res = await fetch('/.netlify/functions/send-email', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                to: 'rhsdaycamp@gmail.com',
+                                subject: 'Login Help Request',
+                                html: `<h2>Login Help Request</h2><p><strong>Name:</strong> ${name.trim()}</p><p><strong>Phone:</strong> ${phone.trim()}</p><p>This parent can't remember their login email. Please look them up and contact them.</p>`
+                              })
+                            });
+                            if (res.ok) {
+                              setForgotLoginSent(true);
+                            } else {
+                              setError('Something went wrong. Please try again or contact the camp directly.');
+                            }
+                          } catch (err) {
+                            setError('Something went wrong. Please try again or contact the camp directly.');
+                          }
+                          setForgotLoginSending(false);
+                        }}
+                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                      >
+                        {forgotLoginSending ? 'Sending...' : 'Send Help Request'}
+                      </button>
+                      <button onClick={() => { setMode('login'); setError(''); setName(''); setPhone(''); }} className="w-full text-green-600 hover:underline font-medium">
+                        ← Back to Login
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Show forgot password form (enter email to request reset link)
+        if (mode === 'forgotPassword') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+              <div className="max-w-md mx-auto px-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                  <h2 className="font-display text-2xl text-green-800 text-center mb-2">Reset Your Password</h2>
+                  <p className="text-gray-500 text-center text-sm mb-6">Enter the email address you use to log in and we'll send you a reset link.</p>
+
+                  {forgotPasswordSent ? (
+                    <div>
+                      <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-4 text-center">
+                        If an account exists with that email, you'll receive a password reset link shortly. Check your inbox (and spam folder).
+                      </div>
+                      <button onClick={() => { setMode('login'); setForgotPasswordSent(false); setEmail(''); }} className="w-full text-green-600 hover:underline font-medium">
+                        ← Back to Login
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Email" autoFocus />
+                      {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center text-sm">{error}</div>}
+                      <button
+                        type="button"
+                        disabled={forgotPasswordSending}
+                        onClick={async () => {
+                          if (!email.trim()) { setError('Please enter your email address.'); return; }
+                          setError('');
+                          setForgotPasswordSending(true);
+                          try {
+                            await fetch('/.netlify/functions/request-password-reset', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: email.trim() })
+                            });
+                            // Always show success (prevents email enumeration)
+                            setForgotPasswordSent(true);
+                          } catch (err) {
+                            setError('Something went wrong. Please try again.');
+                          }
+                          setForgotPasswordSending(false);
+                        }}
+                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                      >
+                        {forgotPasswordSending ? 'Sending...' : 'Send Reset Link'}
+                      </button>
+                      <button onClick={() => { setMode('login'); setError(''); }} className="w-full text-green-600 hover:underline font-medium">
+                        ← Back to Login
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Show password reset form (user clicked link from email)
+        if (mode === 'resetPassword') {
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
+              <div className="max-w-md mx-auto px-4">
+                <div className="bg-white rounded-2xl shadow-xl p-8">
+                  <h2 className="font-display text-2xl text-green-800 text-center mb-2">Set New Password</h2>
+                  <p className="text-gray-500 text-center text-sm mb-6">Enter your new password below.</p>
+
+                  {resetPasswordDone ? (
+                    <div>
+                      <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-4 text-center">
+                        Your password has been updated! You can now log in with your new password.
+                      </div>
+                      <button onClick={() => {
+                        // Clean up the URL
+                        window.history.replaceState(null, '', window.location.pathname + '#login');
+                        setMode('login');
+                        setResetPasswordDone(false);
+                        setNewPassword('');
+                        setConfirmPassword('');
+                      }} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">
+                        Go to Login
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg pr-16" placeholder="New Password" autoFocus />
+                        <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showNewPassword ? 'Hide' : 'Show'}</button>
+                      </div>
+                      <input type={showNewPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Confirm New Password" onKeyDown={e => { if (e.key === 'Enter') document.getElementById('resetPasswordBtn')?.click(); }} />
+                      {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center text-sm">{error}</div>}
+                      <button
+                        id="resetPasswordBtn"
+                        type="button"
+                        disabled={resetPasswordLoading}
+                        onClick={async () => {
+                          if (!newPassword || !confirmPassword) { setError('Please fill in both fields.'); return; }
+                          if (newPassword.length < 6) { setError('Password must be at least 6 characters.'); return; }
+                          if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
+                          setError('');
+                          setResetPasswordLoading(true);
+                          try {
+                            const res = await fetch('/.netlify/functions/reset-password', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ token: resetToken, newPassword })
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                              setResetPasswordDone(true);
+                            } else {
+                              setError(data.error || 'Something went wrong. Please try again.');
+                            }
+                          } catch (err) {
+                            setError('Something went wrong. Please try again.');
+                          }
+                          setResetPasswordLoading(false);
+                        }}
+                        className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg disabled:opacity-50"
+                      >
+                        {resetPasswordLoading ? 'Updating...' : 'Update Password'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="min-h-screen bg-gradient-to-br from-green-50 to-green-100 py-12">
             <div className="max-w-md mx-auto px-4">
@@ -5044,6 +5255,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </div>
                   <button type="button" onClick={handleLogin} className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-3 rounded-lg">Login</button>
                 </form>
+
+                <div className="flex justify-between mt-3">
+                  <button onClick={() => { setMode('forgotPassword'); setError(''); }} className="text-sm text-gray-500 hover:text-green-600 hover:underline">
+                    Forgot Password?
+                  </button>
+                  <button onClick={() => { setMode('forgotLogin'); setError(''); }} className="text-sm text-gray-500 hover:text-green-600 hover:underline">
+                    Can't remember your login?
+                  </button>
+                </div>
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
