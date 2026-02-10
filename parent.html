@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.069";
+    const VERSION = "13.070";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T08:11:00");
+    const BUILD_DATE = new Date("2026-02-10T08:20:00");
 
     const RELEASE_NOTES = [
+      { version: "13.070", date: "2026-02-10", time: "8:20 AM", author: "Audrey Richardson", changes: ["Parent Campers tab: Added 'Add Emergency Contact' button next to red EC warning — opens EC form directly, returns to Campers tab when done", "Parent Dashboard: Action buttons now open photo modals directly instead of navigating to tabs", "Parent Dashboard: Individual rows per person needing a photo (campers and parents listed separately)"] },
       { version: "13.069", date: "2026-02-10", time: "8:11 AM", author: "Audrey Richardson", changes: ["ScrollableTabs: Added scroll position persistence — tab bar no longer resets when switching tabs (all dashboards)", "Admin Danger Zone: Added 'Delete All Messages' bulk delete button"] },
       { version: "13.068", date: "2026-02-09", time: "9:05 PM", author: "Audrey Richardson", changes: ["Version sync: Bumped all 4 HTML files to unified version 13.068"] },
       { version: "13.066", date: "2026-02-09", time: "8:50 PM", author: "Claude", changes: ["Admin tabs: Removed scrollIntoView on tab click — scroll position now preserved when switching tabs", "Parent dashboard: 'Pay for X pending sessions' hint now disappears after payment is sent"] },
@@ -3722,6 +3723,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
       const [deleteRegConfirm, setDeleteRegConfirm] = useState(null); // Registration to delete confirmation
+      const [autoOpenPhotoFor, setAutoOpenPhotoFor] = useState(null); // camper ID — auto-open photo modal from Dashboard
+      const [autoOpenPhotoForParent, setAutoOpenPhotoForParent] = useState(null); // parent email — auto-open photo modal from Dashboard
+      const [autoOpenAddEC, setAutoOpenAddEC] = useState(false); // auto-open Add EC form when switching to Emergency tab
+      const [returnTabAfterEC, setReturnTabAfterEC] = useState(null); // tab to return to after adding EC
 
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -4791,54 +4796,54 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             });
           }
 
-          // Priority 2: Campers missing photos
-          if (childrenWithoutPhotos.length > 0) {
-            const camperNames = childrenWithoutPhotos.map(c => c.name).join(', ');
+          // Priority 2: Campers missing photos — one row per camper
+          childrenWithoutPhotos.forEach(child => {
             hints.push({
               icon: '📸',
-              text: `Add photos to ${camperNames} — camper photos are required before camp sessions start`,
-              action: () => setParentTab('campers'),
-              actionText: 'Add Photos',
+              text: `Add photo for ${child.name} — camper photos are required before camp sessions start`,
+              action: () => setAutoOpenPhotoFor(child.id),
+              actionText: 'Add Photo',
               priority: 2
             });
-          }
+          });
 
-          // Priority 2.5: Parents missing photos
+          // Priority 2.5: Parents missing photos — one row per parent
           const currentParent = parents.find(p => p.email === user?.email);
           const otherFamilyParents = getOtherParentsForMyFamily(myChildren, camperParentLinks, parents, user?.email);
           const allFamilyParents = currentParent ? [currentParent, ...otherFamilyParents] : otherFamilyParents;
           const parentsWithoutPhotos = allFamilyParents.filter(p => !getDisplayPhoto(p.photo));
-          if (parentsWithoutPhotos.length > 0) {
-            const parentNames = parentsWithoutPhotos.map(p => p.email === user?.email ? 'you' : p.name).join(', ');
+          parentsWithoutPhotos.forEach(p => {
+            const displayName = p.email === user?.email ? 'yourself' : p.name;
             hints.push({
               icon: '📸',
-              text: `Add photo${parentsWithoutPhotos.length > 1 ? 's' : ''} for ${parentNames} — parent photos are required before camp sessions start`,
-              action: () => setParentTab('parents'),
-              actionText: 'Add Photos',
+              text: `Add photo for ${displayName} — parent photos are required before camp sessions start`,
+              action: () => setAutoOpenPhotoForParent(p.email),
+              actionText: 'Add Photo',
               priority: 2
             });
-          }
+          });
 
           // Priority 3: Insufficient emergency contacts
           if (myContacts.length < 2) {
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => setParentTab('emergency'),
-              actionText: 'Add Contacts',
+              action: () => { setAutoOpenAddEC(true); setParentTab('emergency'); },
+              actionText: 'Add Contact',
               priority: 3
             });
           }
 
-          // Priority 4: Emergency contacts missing photos
-          if (contactsWithoutPhotos.length > 0 && myContacts.length >= 2) {
-            const contactNames = contactsWithoutPhotos.map(c => c.name).join(', ');
-            hints.push({
-              icon: '📸',
-              text: `Add photos to emergency contacts: ${contactNames}`,
-              action: () => setParentTab('emergency'),
-              actionText: 'Add Photos',
-              priority: 4
+          // Priority 4: Emergency contacts missing photos — one row per contact
+          if (myContacts.length >= 2) {
+            contactsWithoutPhotos.forEach(contact => {
+              hints.push({
+                icon: '📸',
+                text: `Add photo for emergency contact: ${contact.name}`,
+                action: () => setParentTab('emergency'),
+                actionText: 'Add Photo',
+                priority: 4
+              });
             });
           }
 
@@ -5611,6 +5616,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
                       parents={parents}
                       camperParentLinks={camperParentLinks}
+                      onAddEmergencyContact={() => { setAutoOpenAddEC(true); setReturnTabAfterEC('campers'); setParentTab('emergency'); }}
                     />
                   ) : (
                     <div className="bg-white rounded-xl shadow p-6">
@@ -5647,6 +5653,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
                       }
                       showToast('Emergency contacts updated!');
+                      if (returnTabAfterEC) {
+                        setParentTab(returnTabAfterEC);
+                        setReturnTabAfterEC(null);
+                      }
                     }}
                     showToast={showToast}
                     parents={parents}
@@ -5655,6 +5665,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     myChildren={myChildren}
                     currentUser={{ email: user?.email }}
                     addToHistory={addToHistory}
+                    autoOpenAddEC={autoOpenAddEC}
+                    onAutoOpenDone={() => setAutoOpenAddEC(false)}
                   />
                 </div>
               )}
@@ -6180,6 +6192,25 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </div>
               </div>
             )}
+          {/* Top-level photo modals triggered from Dashboard action buttons */}
+          {autoOpenPhotoFor && (() => {
+            const child = campers.find(c => c.id === autoOpenPhotoFor);
+            if (!child) { setAutoOpenPhotoFor(null); return null; }
+            return <PhotoUploadModal currentPhoto={child.photo} onSave={(img) => {
+              saveCampers(campers.map(c => c.id === autoOpenPhotoFor ? { ...c, photo: img } : c), `Added photo for ${child.name}`);
+              setAutoOpenPhotoFor(null);
+              showToast(`Photo added for ${child.name}!`);
+            }} onCancel={() => setAutoOpenPhotoFor(null)} />;
+          })()}
+          {autoOpenPhotoForParent && (() => {
+            const p = parents.find(p => p.email === autoOpenPhotoForParent);
+            if (!p) { setAutoOpenPhotoForParent(null); return null; }
+            return <PhotoUploadModal currentPhoto={p.photo} onSave={(img) => {
+              saveParents(parents.map(par => par.email === autoOpenPhotoForParent ? { ...par, photo: img } : par));
+              setAutoOpenPhotoForParent(null);
+              showToast(`Photo added for ${p.name || p.email}!`);
+            }} onCancel={() => setAutoOpenPhotoForParent(null)} />;
+          })()}
           </div>
         );
       };
@@ -6305,7 +6336,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       // ==================== CHILD CARD ====================
-      const ChildCard = ({ child, onUpdate, onDelete, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, childParents }) => {
+      const ChildCard = ({ child, onUpdate, onDelete, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, childParents, onAddEmergencyContact }) => {
         const [isEditing, setIsEditing] = useState(false);
         const [editForm, setEditForm] = useState({ ...child });
         const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -6596,10 +6627,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         ))
                       ) : null}
                       {!ecComplete && (
-                        <div className="text-xs text-red-600 font-medium bg-red-50 rounded p-2 mt-1">
-                          {childEmergencyContacts.length === 0
+                        <div className="text-xs text-red-600 font-medium bg-red-50 rounded p-2 mt-1 flex items-center justify-between gap-2">
+                          <span>{childEmergencyContacts.length === 0
                             ? `Add at least 2 emergency contacts for ${child.name}`
-                            : `Add ${2 - childEmergencyContacts.length} more emergency contact${2 - childEmergencyContacts.length > 1 ? 's' : ''} for ${child.name}`}
+                            : `Add ${2 - childEmergencyContacts.length} more emergency contact${2 - childEmergencyContacts.length > 1 ? 's' : ''} for ${child.name}`}</span>
+                          {onAddEmergencyContact && (
+                            <button
+                              onClick={onAddEmergencyContact}
+                              className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-xs font-medium whitespace-nowrap flex-shrink-0"
+                            >
+                              Add Emergency Contact
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -6613,7 +6652,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // ==================== COUNSELOR ====================
     // ==================== CHILDREN MANAGER (Parent Dashboard) ====================
-    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, parents, camperParentLinks }) => {
+    const ChildrenManager = ({ children, onUpdate, onDelete, onAdd, registrations, emergencyContacts, getEmergencyContactsForCamper, addEmergencyContactToCamper, removeEmergencyContactFromCamper, parents, camperParentLinks, onAddEmergencyContact }) => {
       const [showAddForm, setShowAddForm] = useState(false);
 
       // Check if child has any registrations (is a camper)
@@ -6658,6 +6697,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     addEmergencyContactToCamper={addEmergencyContactToCamper}
                     removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
                     childParents={childParents}
+                    onAddEmergencyContact={onAddEmergencyContact}
                   />
                 );
               })}
@@ -6668,7 +6708,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
-    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory }) => {
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone }) => {
       const [localContacts, setLocalContacts] = useState([]);
       const [editingId, setEditingId] = useState(null);
       const [showAddForm, setShowAddForm] = useState(false);
@@ -6677,6 +6717,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showAddPhotoModal, setShowAddPhotoModal] = useState(false);
       const [showEditPhotoModal, setShowEditPhotoModal] = useState(false);
       const [editingPhotoContactId, setEditingPhotoContactId] = useState(null);
+
+      // Auto-open add form when triggered from Campers tab
+      useEffect(() => {
+        if (autoOpenAddEC) {
+          setShowAddForm(true);
+          onAutoOpenDone?.();
+        }
+      }, [autoOpenAddEC]);
 
       // Resolve parent-reference emergency contacts (pulls name/phone/photo from camp_parents)
       const resolveEmergencyContact = (contact) => {
