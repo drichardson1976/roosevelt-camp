@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.062";
+    const VERSION = "13.064";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T10:41:00");
+    const BUILD_DATE = new Date("2026-02-09T20:24:00");
 
     const RELEASE_NOTES = [
+      { version: "13.064", date: "2026-02-09", time: "8:24 PM", author: "Claude", changes: ["BUG FIX: EC tab onSave was linking ALL emergency contacts from ALL families to current camper", "Fix: Now only links ECs belonging to the current parent (filtered by userEmail)", "Cleanup: On load, removes any bogus EC-camper links where EC doesn't belong to camper's parent"] },
       { version: "13.063", date: "2026-02-09", time: "1:33 PM", author: "Audrey Richardson", changes: ["Onboarding: Removed auto-save for campers — must click 'Add Camper' button before continuing", "Onboarding: Removed auto-save for emergency contacts — must click 'Add Contact' button before continuing", "Admin: Fixed Mark as Paid glitch — all sessions now update instantly instead of one-by-one"] },
       { version: "13.062", date: "2026-02-09", time: "10:41 AM", author: "Audrey Richardson", changes: ["Onboarding EC: Clarified that parent counts as 1 EC — 'Please add at least 1 more contact'", "Session Registration: Pay Now button now navigates to Payments tab instead of opening modal", "Payments: Fixed confirmation glitch — modal closes immediately, saves in background"] },
       { version: "13.061", date: "2026-02-09", time: "9:02 AM", author: "Claude", changes: ["Admin EC popup: Removed Priority field from display", "Admin EC popup: Added large camper headshot photo at top in green box", "Admin EC popup: Added headshot photos for each emergency contact", "Admin EC popup: Photos clickable to view full-size in overlay", "Admin EC popup: Photos editable via PhotoUploadModal (add/change photo link)", "Admin EC popup: Placeholder shown for missing photos with add-photo prompt"] },
@@ -3772,6 +3773,24 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (gr?.[0]?.data) setGymRentals(typeof gr[0].data === 'object' && !Array.isArray(gr[0].data) ? gr[0].data : {});
             const cecl = await storage.get('camp_camper_emergency_contact_links');
             if (cecl?.[0]?.data) setCamperEmergencyContactLinks(Array.isArray(cecl[0].data) ? cecl[0].data : []);
+
+            // One-time cleanup: remove bogus EC links where the EC doesn't belong to any parent of the camper
+            const loadedLinks = cecl?.[0]?.data && Array.isArray(cecl[0].data) ? cecl[0].data : [];
+            const loadedECs = ec?.[0]?.data && Array.isArray(ec[0].data) ? ec[0].data : [];
+            const loadedCPL = cpl?.[0]?.data && Array.isArray(cpl[0].data) ? cpl[0].data : [];
+            if (loadedLinks.length > 0 && loadedECs.length > 0 && loadedCPL.length > 0) {
+              const cleanLinks = loadedLinks.filter(link => {
+                const ecRecord = loadedECs.find(c => c.id === link.emergencyContactId);
+                if (!ecRecord || !ecRecord.userEmail) return true; // keep if we can't determine ownership
+                const parentEmails = loadedCPL.filter(l => l.camperId === link.camperId).map(l => l.parentEmail);
+                return parentEmails.includes(ecRecord.userEmail);
+              });
+              if (cleanLinks.length < loadedLinks.length) {
+                console.log(`EC link cleanup: removed ${loadedLinks.length - cleanLinks.length} bogus links`);
+                setCamperEmergencyContactLinks(cleanLinks);
+                storage.set('camp_camper_emergency_contact_links', 'main', cleanLinks);
+              }
+            }
           } catch (e) { console.error('Load error:', e); }
           setLoading(false);
         };
@@ -5570,10 +5589,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     emergencyContacts={emergencyContacts}
                     onSave={async (contacts) => {
                       await saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
-                      // Auto-link all contacts to all of this parent's campers
+                      // Auto-link only THIS parent's contacts to their campers
+                      const myContacts = contacts.filter(c => c.userEmail === user?.email);
                       const newLinks = [];
                       for (const camper of myChildren) {
-                        for (const contact of contacts) {
+                        for (const contact of myContacts) {
                           const alreadyLinked = camperEmergencyContactLinks.some(
                             link => link.camperId === camper.id && link.emergencyContactId === contact.id
                           );
