@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.064";
+    const VERSION = "13.065";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T20:24:00");
+    const BUILD_DATE = new Date("2026-02-09T20:44:00");
 
     const RELEASE_NOTES = [
+      { version: "13.065", date: "2026-02-09", time: "8:44 PM", author: "Claude", changes: ["Venmo screenshot: Crop tool now opens in popup modal overlay instead of inline", "Draft messages: Fixed bug where draft closed immediately on first open (setTimeout fix)", "Draft messages: Fixed bug where draft not removed from Drafts after sending (stale closure fix)", "Messages: saveMessage/deleteMessage/updateMessage now use functional setState for correctness"] },
       { version: "13.064", date: "2026-02-09", time: "8:24 PM", author: "Claude", changes: ["BUG FIX: EC tab onSave was linking ALL emergency contacts from ALL families to current camper", "Fix: Now only links ECs belonging to the current parent (filtered by userEmail)", "Cleanup: On load, removes any bogus EC-camper links where EC doesn't belong to camper's parent"] },
       { version: "13.063", date: "2026-02-09", time: "1:33 PM", author: "Audrey Richardson", changes: ["Onboarding: Removed auto-save for campers — must click 'Add Camper' button before continuing", "Onboarding: Removed auto-save for emergency contacts — must click 'Add Contact' button before continuing", "Admin: Fixed Mark as Paid glitch — all sessions now update instantly instead of one-by-one"] },
       { version: "13.062", date: "2026-02-09", time: "10:41 AM", author: "Audrey Richardson", changes: ["Onboarding EC: Clarified that parent counts as 1 EC — 'Please add at least 1 more contact'", "Session Registration: Pay Now button now navigates to Payments tab instead of opening modal", "Payments: Fixed confirmation glitch — modal closes immediately, saves in background"] },
@@ -2384,7 +2385,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           }),
           attachments: draft.attachments || []
         });
-        setShowCompose(true);
+        // Defer opening compose modal to prevent click event from draft card
+        // from propagating to the modal backdrop and immediately closing it
+        setTimeout(() => setShowCompose(true), 0);
       };
 
       const handleDeleteDraft = () => {
@@ -3725,53 +3728,54 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const load = async () => {
           setLoading(true);
           try {
-            const cd = await storage.get('camp_content');
+            // Parallel fetch all tables at once for faster loading
+            const [cd, cs, rg, pr, cu, av, ch, ms, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, campDatesData, gr, cecl] = await Promise.all([
+              storage.get('camp_content'),
+              storage.get('camp_counselors'),
+              storage.get('camp_registrations'),
+              storage.get('camp_parents'),
+              storage.get('camp_counselor_users'),
+              storage.get('camp_counselor_availability'),
+              storage.get('camp_change_history'),
+              storage.get('camp_messages'),
+              storage.get('camp_admins'),
+              storage.get('camp_assignments'),
+              storage.get('camp_campers'),
+              storage.get('camp_camper_parent_links'),
+              storage.get('camp_food_photos'),
+              storage.get('camp_site_photos'),
+              storage.get('camp_emergency_contacts'),
+              storage.get('camp_onboarding_progress'),
+              storage.get('camp_availability_change_requests'),
+              storage.get('camp_profile_change_requests'),
+              storage.get('camp_blocked_sessions'),
+              storage.get('camp_counselor_schedule'),
+              storage.get('camp_dates'),
+              storage.get('camp_gym_rentals'),
+              storage.get('camp_camper_emergency_contact_links'),
+            ]);
             if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
-            const cs = await storage.get('camp_counselors');
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
-            const rg = await storage.get('camp_registrations');
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            const pr = await storage.get('camp_parents');
             if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
-            const cu = await storage.get('camp_counselor_users');
             if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
-            const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
-            const ch = await storage.get('camp_change_history');
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
-            const ms = await storage.get('camp_messages');
             if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
-            const ad = await storage.get('camp_admins');
             if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
-            const as = await storage.get('camp_assignments');
-            if (as?.[0]?.data) setAssignments(as[0].data);
-            const cp = await storage.get('camp_campers');
+            if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
-            const cpl = await storage.get('camp_camper_parent_links');
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
-            const fp = await storage.get('camp_food_photos');
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
-            const sp = await storage.get('camp_site_photos');
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
-
-            // Load new onboarding system data
-            const ec = await storage.get('camp_emergency_contacts');
             if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
-            const op = await storage.get('camp_onboarding_progress');
             if (op?.[0]?.data) setOnboardingProgress(op[0].data || {});
-            const acr = await storage.get('camp_availability_change_requests');
             if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
-            const pcr = await storage.get('camp_profile_change_requests');
             if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
-            const bs = await storage.get('camp_blocked_sessions');
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
-            const csch = await storage.get('camp_counselor_schedule');
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
-            const campDatesData = await storage.get('camp_dates');
             if (campDatesData?.[0]?.data) setCampDates(Array.isArray(campDatesData[0].data) ? campDatesData[0].data : []);
-            const gr = await storage.get('camp_gym_rentals');
             if (gr?.[0]?.data) setGymRentals(typeof gr[0].data === 'object' && !Array.isArray(gr[0].data) ? gr[0].data : {});
-            const cecl = await storage.get('camp_camper_emergency_contact_links');
             if (cecl?.[0]?.data) setCamperEmergencyContactLinks(Array.isArray(cecl[0].data) ? cecl[0].data : []);
 
             // One-time cleanup: remove bogus EC links where the EC doesn't belong to any parent of the camper
@@ -3781,7 +3785,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (loadedLinks.length > 0 && loadedECs.length > 0 && loadedCPL.length > 0) {
               const cleanLinks = loadedLinks.filter(link => {
                 const ecRecord = loadedECs.find(c => c.id === link.emergencyContactId);
-                if (!ecRecord || !ecRecord.userEmail) return true; // keep if we can't determine ownership
+                if (!ecRecord || !ecRecord.userEmail) return true;
                 const parentEmails = loadedCPL.filter(l => l.camperId === link.camperId).map(l => l.parentEmail);
                 return parentEmails.includes(ecRecord.userEmail);
               });
@@ -4031,20 +4035,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveMessage = async (msg) => {
-        const newMsgs = [...messages, msg];
-        setMessages(newMsgs);
+        setMessages(prev => [...prev, msg]);
         await storage.set('camp_messages', msg.id, msg);
       };
 
       const deleteMessage = async (msgId) => {
-        const newMsgs = messages.filter(m => m.id !== msgId);
-        setMessages(newMsgs);
+        setMessages(prev => prev.filter(m => m.id !== msgId));
         await supabase.from('camp_messages').delete().eq('id', msgId);
       };
 
       const updateMessage = async (msgId, updatedMsg) => {
-        const newMsgs = messages.map(m => m.id === msgId ? updatedMsg : m);
-        setMessages(newMsgs);
+        setMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
         await storage.set('camp_messages', updatedMsg.id, updatedMsg);
       };
 
@@ -5159,36 +5160,53 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             return new Date(bDate) - new Date(aDate);
                           });
 
+                          // Shared date range formatter with contiguous detection
+                          const formatDateRange = (dates) => {
+                            const sorted = [...dates].sort();
+                            const fmt = (d) => {
+                              const dt = new Date(d + 'T12:00:00');
+                              const month = dt.toLocaleDateString('en-US', { month: 'short' });
+                              const day = dt.getDate();
+                              const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+                              return `${month} ${day}${suffix}`;
+                            };
+                            if (sorted.length === 1) return fmt(sorted[0]);
+                            const ranges = [];
+                            let rangeStart = sorted[0];
+                            let prev = sorted[0];
+                            for (let i = 1; i <= sorted.length; i++) {
+                              const cur = sorted[i];
+                              const prevDate = new Date(prev + 'T12:00:00');
+                              const curDate = cur ? new Date(cur + 'T12:00:00') : null;
+                              const isConsecutive = curDate && (curDate - prevDate) <= 86400000 * 3;
+                              if (!isConsecutive) {
+                                ranges.push(rangeStart === prev ? fmt(rangeStart) : `${fmt(rangeStart)} - ${fmt(prev)}`);
+                                rangeStart = cur;
+                              }
+                              prev = cur;
+                            }
+                            return ranges.join(', ');
+                          };
+
                           return sortedOrders.map(([orderKey, regs]) => {
                             const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                            const camperNames = [...new Set(sortedRegs.map(r => r.childName))];
-                            const dates = sortedRegs.map(r => r.date);
-                            const totalSessions = sortedRegs.reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
-                            const status = sortedRegs[0].status;
                             const paymentStatus = sortedRegs[0].paymentStatus || 'unpaid';
                             const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
                             const isSent = paymentStatus === 'sent';
                             const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                            const orderVenmoCode = sortedRegs[0]?.venmoCode || generateVenmoCode(user?.name);
 
-                            // Format date range nicely
-                            const formatDateRange = (dates) => {
-                              if (dates.length === 0) return '';
-                              const fmt = (d) => {
-                                const dt = new Date(d + 'T12:00:00');
-                                const month = dt.toLocaleDateString('en-US', { month: 'short' });
-                                const day = dt.getDate();
-                                const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
-                                return `${month} ${day}${suffix}`;
-                              };
-                              if (dates.length === 1) return fmt(dates[0]);
-                              return `${fmt(dates[0])} - ${fmt(dates[dates.length - 1])}`;
-                            };
-
-                            // Get session type label
-                            const sessions = sortedRegs.flatMap(r => r.sessions || []);
-                            const hasAM = sessions.includes('morning');
-                            const hasPM = sessions.includes('afternoon');
-                            const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                            // Group by camper within this order
+                            const byCamper = {};
+                            sortedRegs.forEach(r => {
+                              const name = r.childName || r.camperName || 'Unknown';
+                              if (!byCamper[name]) byCamper[name] = [];
+                              byCamper[name].push(r);
+                            });
+                            const camperNames = Object.keys(byCamper);
+                            const title = camperNames.length === 1
+                              ? `${camperNames[0]}'s Registration`
+                              : `${camperNames.join(' and ')} Registration`;
 
                             return (
                               <div key={orderKey} className={`rounded-lg p-4 ${
@@ -5196,10 +5214,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 isSent ? 'bg-blue-50 border-2 border-blue-300' :
                                 'bg-blue-50 border-2 border-blue-300'
                               }`}>
-                                <div className="flex justify-between items-start mb-2">
-                                  <h4 className="font-bold text-lg text-green-800">
-                                    {camperNames.join(' & ')}
-                                  </h4>
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="font-bold text-lg text-green-800">{title}</div>
                                   <div className="flex items-center gap-2">
                                     {paymentStatus === 'unpaid' && (
                                       <button
@@ -5234,30 +5250,47 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     )}
                                   </div>
                                 </div>
-                                <div className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-blue-100'}`}>
-                                  <div className="flex justify-between items-center">
-                                    <div>
-                                      <div className="font-semibold">{formatDateRange(dates)}</div>
-                                      <div className="text-sm text-gray-600">{dates.length} day{dates.length > 1 ? 's' : ''} • {totalSessions} session{totalSessions > 1 ? 's' : ''} • {sessionLabel}</div>
-                                    </div>
-                                    {totalAmount > 0 && (
-                                      <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                                {/* Per-camper breakdown */}
+                                <div className="space-y-2 mb-3">
+                                  {Object.entries(byCamper).map(([camperName, camperRegs]) => {
+                                    const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                                    const dates = sortedCamperRegs.map(r => r.date);
+                                    const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                                    const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
+                                    const hasAM = sessions.includes('morning');
+                                    const hasPM = sessions.includes('afternoon');
+                                    const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                                    return (
+                                      <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : 'bg-blue-100'}`}>
+                                        <div className="flex justify-between items-center">
+                                          <div>
+                                            <span className="font-medium">{camperName}</span>
+                                            <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
+                                          </div>
+                                          <span className="font-medium">${camperTotal.toFixed(2)}</span>
+                                        </div>
+                                        <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className={`flex justify-between items-center pt-2 ${isPaid ? 'border-t border-green-300' : isSent ? 'border-t border-blue-200' : 'border-t border-blue-200'}`}>
+                                  <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                                  <div className="flex gap-2">
+                                    {isPaid ? (
+                                      <span className="text-green-600 font-medium text-sm">✓ Payment confirmed</span>
+                                    ) : isSent ? (
+                                      <span className="text-blue-600 font-medium text-sm">Payment sent — awaiting confirmation</span>
+                                    ) : (
+                                      <button
+                                        onClick={() => setParentTab('payments')}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                                      >
+                                        Pay Now
+                                      </button>
                                     )}
                                   </div>
                                 </div>
-                                {/* Pay Now button for unpaid registrations - navigates to Payments tab */}
-                                {!isPaid && !isSent && paymentStatus === 'unpaid' && (
-                                  <div className="mt-3">
-                                    <button
-                                      onClick={() => {
-                                        setParentTab('payments');
-                                      }}
-                                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
-                                    >
-                                      Pay Now
-                                    </button>
-                                  </div>
-                                )}
                               </div>
                             );
                           });
@@ -5737,7 +5770,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                           </div>
                                           <span className="font-medium">${camperTotal.toFixed(2)}</span>
                                         </div>
-                                        <div className="text-sm text-gray-600 mt-1">{formatDateRange(dates)}</div>
+                                        <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</div>
                                       </div>
                                     );
                                   })}
@@ -5865,12 +5898,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 5</div>
                             <div>
-                              <p className="font-medium text-gray-800">Take a screenshot and upload it</p>
+                              <p className="font-medium text-gray-800">Take a screenshot of your Venmo payment</p>
                               <div className="mt-2">
                                 {venmoScreenshot ? (
-                                  <div className="relative inline-block">
+                                  <div className="flex items-center gap-3">
                                     <img src={getDisplayPhoto(venmoScreenshot) || venmoScreenshot} alt="Venmo screenshot" className="max-h-48 object-contain rounded-lg border-2 border-green-400" />
-                                    <button onClick={() => setVenmoScreenshot(null)} className="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600">✕</button>
+                                    <button
+                                      onClick={() => {
+                                        // Re-open cropper with original image for editing
+                                        const original = venmoScreenshot?.original || getDisplayPhoto(venmoScreenshot) || venmoScreenshot;
+                                        setVenmoScreenshotRaw(original);
+                                        setVenmoScreenshot(null);
+                                      }}
+                                      className="px-3 py-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-300 rounded-lg hover:bg-blue-50"
+                                    >
+                                      Edit
+                                    </button>
                                   </div>
                                 ) : (
                                   <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-100">
@@ -5891,19 +5934,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           </div>
                         </div>
 
-                        {/* Screenshot Crop Modal */}
+                        {/* Screenshot Crop Modal - Popup Overlay */}
                         {venmoScreenshotRaw && !venmoScreenshot && (
-                          <div className="mt-4">
-                            <ImageCropper
-                              image={venmoScreenshotRaw}
-                              onSave={(croppedImg, transform) => {
-                                setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform });
-                                setVenmoScreenshotRaw(null);
-                              }}
-                              onCancel={() => setVenmoScreenshotRaw(null)}
-                              shape="rectangle"
-                              aspectRatio={9/16}
-                            />
+                          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setVenmoScreenshotRaw(null)}>
+                            <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                              <h3 className="font-bold text-lg text-gray-800 mb-4">Crop Screenshot</h3>
+                              <ImageCropper
+                                image={venmoScreenshotRaw}
+                                onSave={(croppedImg, transform) => {
+                                  setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform });
+                                  setVenmoScreenshotRaw(null);
+                                }}
+                                onCancel={() => setVenmoScreenshotRaw(null)}
+                                shape="rectangle"
+                                aspectRatio={9/16}
+                              />
+                            </div>
                           </div>
                         )}
 
