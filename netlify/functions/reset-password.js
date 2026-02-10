@@ -66,11 +66,11 @@ exports.handler = async (event) => {
 
     // Update password in the JSONB array
     const users = usersData[0].data;
-    let found = false;
+    let found = null;
     const updatedUsers = users.map(u => {
       if (u.email?.toLowerCase() === email.toLowerCase()) {
-        found = true;
-        return { ...u, password: newPassword };
+        found = { ...u, password: newPassword };
+        return found;
       }
       return u;
     });
@@ -78,6 +78,8 @@ exports.handler = async (event) => {
     if (!found) {
       return { statusCode: 400, body: JSON.stringify({ error: 'User account not found' }) };
     }
+
+    const { userType } = tokenData;
 
     // Save updated users back to Supabase
     const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.main`, {
@@ -107,7 +109,11 @@ exports.handler = async (event) => {
       body: JSON.stringify({ data: { ...tokenData, used: true } })
     });
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    // Return user info so client can auto-login
+    return { statusCode: 200, body: JSON.stringify({
+      success: true,
+      user: { email: found.email, name: found.name, role: userType, roles: found.roles || [userType] }
+    }) };
   } catch (error) {
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }

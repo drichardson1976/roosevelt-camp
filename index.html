@@ -5376,6 +5376,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             });
                             const data = await res.json();
                             if (res.ok) {
+                              // Auto-login: store user in session and redirect
+                              if (data.user) {
+                                sessionStorage.setItem('user', JSON.stringify(data.user));
+                                window.history.replaceState(null, '', window.location.pathname);
+                                const dest = data.user.role === 'parent' ? '/parent.html' : data.user.role === 'counselor' ? '/counselor.html' : '/admin.html';
+                                window.location.replace(dest);
+                                return;
+                              }
                               setResetPasswordDone(true);
                             } else {
                               setError(data.error || 'Something went wrong. Please try again.');
