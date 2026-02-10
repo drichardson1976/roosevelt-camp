@@ -5390,7 +5390,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         disabled={resetPasswordLoading}
                         onClick={async () => {
                           if (!newPassword || !confirmPassword) { setError('Please fill in both fields.'); return; }
-                          if (newPassword.length < 6) { setError('Password must be at least 6 characters.'); return; }
+                          if (newPassword.length < 4) { setError('Password must be at least 4 characters.'); return; }
                           if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
                           setError('');
                           setResetPasswordLoading(true);

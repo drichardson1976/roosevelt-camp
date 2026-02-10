@@ -9,8 +9,8 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Token and new password are required' }) };
     }
 
-    if (newPassword.length < 6) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Password must be at least 6 characters' }) };
+    if (newPassword.length < 4) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Password must be at least 4 characters' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
