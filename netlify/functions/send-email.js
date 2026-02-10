@@ -24,6 +24,7 @@ exports.handler = async (event) => {
         subject,
         html,
         reply_to: replyTo || 'rhsdaycamp@gmail.com',
+        headers: { 'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         ...(attachments ? { attachments } : {}),
       }),
     });
