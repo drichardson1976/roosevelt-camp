@@ -50,6 +50,7 @@
     const BUILD_DATE = new Date("2026-02-09T21:05:00");
 
     const RELEASE_NOTES = [
+      { version: "13.069", date: "2026-02-10", time: "8:11 AM", author: "Audrey Richardson", changes: ["ScrollableTabs: Added scroll position persistence — tab bar no longer resets when switching tabs (all dashboards)", "Admin Danger Zone: Added 'Delete All Messages' bulk delete button"] },
       { version: "13.068", date: "2026-02-09", time: "9:05 PM", author: "Audrey Richardson", changes: ["Version sync: Bumped all 4 HTML files to unified version 13.068"] },
       { version: "13.066", date: "2026-02-09", time: "8:50 PM", author: "Claude", changes: ["Admin tabs: Removed scrollIntoView on tab click — scroll position now preserved when switching tabs", "Parent dashboard: 'Pay for X pending sessions' hint now disappears after payment is sent"] },
       { version: "13.065", date: "2026-02-09", time: "8:44 PM", author: "Claude", changes: ["Venmo screenshot: Crop tool now opens in popup modal overlay instead of inline", "Draft messages: Fixed bug where draft closed immediately on first open (setTimeout fix)", "Draft messages: Fixed bug where draft not removed from Drafts after sending (stale closure fix)", "Messages: saveMessage/deleteMessage/updateMessage now use functional setState for correctness"] },

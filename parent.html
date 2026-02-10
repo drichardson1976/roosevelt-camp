@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.068";
+    const VERSION = "13.069";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T21:05:00");
+    const BUILD_DATE = new Date("2026-02-10T08:11:00");
 
     const RELEASE_NOTES = [
+      { version: "13.069", date: "2026-02-10", time: "8:11 AM", author: "Audrey Richardson", changes: ["ScrollableTabs: Added scroll position persistence — tab bar no longer resets when switching tabs (all dashboards)", "Admin Danger Zone: Added 'Delete All Messages' bulk delete button"] },
       { version: "13.068", date: "2026-02-09", time: "9:05 PM", author: "Audrey Richardson", changes: ["Version sync: Bumped all 4 HTML files to unified version 13.068"] },
       { version: "13.066", date: "2026-02-09", time: "8:50 PM", author: "Claude", changes: ["Admin tabs: Removed scrollIntoView on tab click — scroll position now preserved when switching tabs", "Parent dashboard: 'Pay for X pending sessions' hint now disappears after payment is sent"] },
       { version: "13.065", date: "2026-02-09", time: "8:44 PM", author: "Claude", changes: ["Venmo screenshot: Crop tool now opens in popup modal overlay instead of inline", "Draft messages: Fixed bug where draft closed immediately on first open (setTimeout fix)", "Draft messages: Fixed bug where draft not removed from Drafts after sending (stale closure fix)", "Messages: saveMessage/deleteMessage/updateMessage now use functional setState for correctness"] },
@@ -2904,7 +2905,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== SCROLLABLE TABS ====================
-    const ScrollableTabs = ({ children, className = '' }) => {
+    const _tabScrollCache = {};
+    const ScrollableTabs = ({ children, className = '', persistKey = '' }) => {
       const containerRef = useRef(null);
       const [canScrollLeft, setCanScrollLeft] = useState(false);
       const [canScrollRight, setCanScrollRight] = useState(false);
@@ -2917,9 +2919,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (!el) return;
         setCanScrollLeft(el.scrollLeft > 0);
         setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+        if (persistKey) _tabScrollCache[persistKey] = el.scrollLeft;
       };
 
       useEffect(() => {
+        if (persistKey && containerRef.current && _tabScrollCache[persistKey] !== undefined) {
+          containerRef.current.scrollLeft = _tabScrollCache[persistKey];
+        }
         checkScroll();
         window.addEventListener('resize', checkScroll);
         return () => window.removeEventListener('resize', checkScroll);
@@ -5032,7 +5038,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
-                <ScrollableTabs>
+                <ScrollableTabs persistKey="parent-tabs">
                   {['dashboard', 'parents', 'campers', 'emergency', 'register', 'payments', 'messages', 'history'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
                       {t === 'messages' ? '💬 Messages' : t === 'campers' ? '🏀 Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'payments' ? '💰 Payments' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'history' ? '📜 History' : t}
