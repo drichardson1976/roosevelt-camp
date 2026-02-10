@@ -5144,7 +5144,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div>
                       <p className="text-gray-500 text-center text-sm mb-6">Enter the phone number on your account and we'll text you a verification code.</p>
                       <div className="space-y-4">
-                        <input value={phone} onChange={e => setPhone(e.target.value)} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="Phone Number" type="tel" autoFocus />
+                        <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-4 py-3 border-2 rounded-lg" placeholder="(555) 555-1234" type="tel" autoFocus />
                         {error && <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center text-sm">{error}</div>}
                         <button
                           type="button"
