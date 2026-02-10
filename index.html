@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.083";
+    const VERSION = "13.084";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T12:48:00");
+    const BUILD_DATE = new Date("2026-02-10T12:55:00");
 
     const RELEASE_NOTES = [
+      { version: "13.084", date: "2026-02-10", time: "12:55 PM", author: "Audrey Richardson", changes: ["Fixed Gmail clipping issue — all email templates now use compact HTML to prevent content from being hidden behind 'show trimmed content' dots", "Applies to: password reset, parent welcome, counselor welcome, and admin login reminder emails"] },
       { version: "13.083", date: "2026-02-10", time: "12:48 PM", author: "Audrey Richardson", changes: ["Welcome emails now include the camp hero image at the top for brand consistency", "Parent welcome email tips are now dynamic — skips steps already completed during onboarding (campers, photos, emergency contacts)", "Fixed duplicate variable bug in reset-password function that could cause errors"] },
       { version: "13.082", date: "2026-02-10", time: "12:13 PM", author: "Audrey Richardson", changes: ["New parent accounts receive a welcome email with getting started tips (add campers, photos, emergency contacts, register)", "New counselor accounts receive a welcome email explaining next steps (pending approval, availability, photo, schedule)", "Welcome emails are non-blocking — account creation completes even if email fails"] },
       { version: "13.078", date: "2026-02-10", time: "12:01 PM", author: "Audrey Richardson", changes: ["Login: 'Can't remember your login?' now uses SMS verification instead of emailing camp director", "SMS flow: Enter phone → receive 6-digit code via text → verify code → see your login email and account type", "From results screen: can reset password or go straight to login with pre-filled email", "New Netlify functions: send-verification-code, verify-code"] },
@@ -2029,14 +2030,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             body: JSON.stringify({
               to: newUser.email,
               subject: 'Welcome to Roosevelt Basketball Day Camp!',
-              html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                ${heroImageHtml}
-                <h2 style="color: #15803d;">Welcome to Roosevelt Basketball Day Camp, ${newUser.name}!</h2>
-                <p>Thank you for creating your account. We're excited to have your family join us this summer!</p>
-                ${tipsHtml}
-                <p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p>
-                <p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p>
-              </div>`,
+              html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">${heroImageHtml}<h2 style="color: #15803d;">Welcome to Roosevelt Basketball Day Camp, ${newUser.name}!</h2><p>Thank you for creating your account. We're excited to have your family join us this summer!</p>${tipsHtml}<p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p><p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p></div>`,
               ...(emailAttachments ? { attachments: emailAttachments } : {})
             })
           });
@@ -4733,20 +4727,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 body: JSON.stringify({
                   to: newUser.email,
                   subject: 'Welcome to the Roosevelt Basketball Day Camp Team!',
-                  html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                    ${heroImageHtml}
-                    <h2 style="color: #15803d;">Welcome to the Team, ${newUser.name}!</h2>
-                    <p>Thank you for signing up as a counselor at Roosevelt Basketball Day Camp. We're glad to have you on board!</p>
-                    <h3 style="color: #15803d;">What Happens Next</h3>
-                    <ul style="line-height: 1.8;">
-                      <li><strong>Your profile is pending approval</strong> — The camp director will review and approve your profile</li>
-                      <li><strong>Check your availability</strong> — Make sure your available dates are up to date in your dashboard</li>
-                      <li><strong>Upload a photo</strong> — Add a profile photo so campers and parents can recognize you</li>
-                      <li><strong>Review your schedule</strong> — Once approved, you'll be assigned to camp sessions</li>
-                    </ul>
-                    <p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p>
-                    <p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p>
-                  </div>`,
+                  html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">${heroImageHtml}<h2 style="color: #15803d;">Welcome to the Team, ${newUser.name}!</h2><p>Thank you for signing up as a counselor at Roosevelt Basketball Day Camp. We're glad to have you on board!</p><h3 style="color: #15803d;">What Happens Next</h3><ul style="line-height: 1.8;"><li><strong>Your profile is pending approval</strong> — The camp director will review and approve your profile</li><li><strong>Check your availability</strong> — Make sure your available dates are up to date in your dashboard</li><li><strong>Upload a photo</strong> — Add a profile photo so campers and parents can recognize you</li><li><strong>Review your schedule</strong> — Once approved, you'll be assigned to camp sessions</li></ul><p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p><p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p></div>`,
                   ...(emailAttachments ? { attachments: emailAttachments } : {})
                 })
               });
