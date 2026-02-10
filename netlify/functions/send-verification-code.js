@@ -62,8 +62,10 @@ exports.handler = async (event) => {
 
     // Always return success to prevent phone enumeration
     if (!foundUser) {
+      console.log(`Phone lookup: no user found for digits ${inputDigits} in schema ${schema}`);
       return { statusCode: 200, body: JSON.stringify({ success: true }) };
     }
+    console.log(`Phone lookup: found ${foundUser.name} (${foundUser.userType}) in schema ${schema}`);
 
     // Generate 6-digit code
     const code = String(Math.floor(100000 + Math.random() * 900000));
@@ -100,7 +102,7 @@ exports.handler = async (event) => {
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
     const auth = Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
 
-    await fetch(twilioUrl, {
+    const smsRes = await fetch(twilioUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${auth}`,
@@ -112,6 +114,12 @@ exports.handler = async (event) => {
         Body: `Roosevelt Basketball Day Camp: Your verification code is ${code}. This code expires in 10 minutes.`
       }).toString()
     });
+
+    const smsData = await smsRes.json();
+    if (!smsRes.ok) {
+      console.error('Twilio error:', JSON.stringify(smsData));
+      return { statusCode: 500, body: JSON.stringify({ error: `SMS failed: ${smsData.message || 'Could not send verification code. Please try again.'}` }) };
+    }
 
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (error) {
