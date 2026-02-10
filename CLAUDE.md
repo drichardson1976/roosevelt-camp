@@ -254,12 +254,70 @@ const getFoodPhoto = (key) => {
 - **admin.html** - Admin dashboard (all management functions)
 - **index-backup-v12.142.html** - Backup snapshot
 
+### Netlify Functions (/netlify/functions/)
+- **send-email.js** - Send emails via Resend API
+- **request-password-reset.js** - Generate token, store in Supabase, send reset email
+- **reset-password.js** - Validate token, update password in Supabase
+- **send-sms.js** - Send SMS via Twilio API
+
 ### Migration Scripts (/migrations folder)
 - **00_diagnose_structure.sql** - Check table structure
 - **01_create_new_tables_CORRECT.sql** - Create camp_parents and camp_counselor_users
 - **02_migrate_data_CORRECT.sql** - Split registered_users into new tables
 - **03_verify_both_schemas.sql** - Verify migration success
 - **04_list_all_tables.sql** - List all tables in both schemas
+
+---
+
+## 🌐 EXTERNAL SERVICES & INFRASTRUCTURE
+
+### Netlify (Hosting & Serverless Functions)
+- **Site:** Deployed from GitHub, auto-deploys on push to `main`
+- **Domain:** rhsbasketballdaycamp.com (DNS managed in Netlify)
+- **Functions directory:** `netlify/functions/`
+- **Environment Variables (Site configuration → Environment variables):**
+  - `RESEND_API_KEY` — API key for Resend email service
+  - `SUPABASE_URL` — `https://rdrtsebhninqgfbrleft.supabase.co`
+  - `SUPABASE_SERVICE_ROLE_KEY` — Supabase secret key (server-side only, bypasses RLS)
+  - `SITE_URL` — `https://rhsbasketballdaycamp.com`
+  - `TWILIO_ACCOUNT_SID` — Twilio account SID (not yet configured)
+  - `TWILIO_AUTH_TOKEN` — Twilio auth token (not yet configured)
+  - `TWILIO_PHONE_NUMBER` — Twilio phone number (not yet configured)
+
+### Netlify Functions
+| Function | Purpose | Uses |
+|----------|---------|------|
+| `send-email.js` | General email sending | Resend API |
+| `request-password-reset.js` | Generate reset token, store in Supabase, send reset email | Supabase + Resend |
+| `reset-password.js` | Validate token, update password in Supabase | Supabase |
+| `send-sms.js` | Send SMS messages | Twilio API |
+
+### Resend (Email Service)
+- **Account:** derek.richardson@gmail.com
+- **Verified domain:** rhsbasketballdaycamp.com
+- **From address:** `Roosevelt Day Camp <campdirector@rhsbasketballdaycamp.com>`
+- **Reply-To:** `rhsdaycamp@gmail.com` (Gmail inbox for managing responses)
+- **DNS records added to Netlify:** DKIM (3 TXT records), SPF (TXT), MX, DMARC (TXT)
+
+### Supabase (Database)
+- **Project:** Roosevelt Camp
+- **URL:** `https://rdrtsebhninqgfbrleft.supabase.co`
+- **Schemas:** `dev` (localhost/dev) and `public` (production)
+- **Anon key:** Used in client-side code (safe for browsers)
+- **Service role key:** Used in Netlify functions only (never exposed to client)
+
+### Twilio (SMS — Not Yet Configured)
+- **Status:** Netlify function `send-sms.js` is built and ready
+- **Pending:** Create Twilio account, get phone number, add env vars to Netlify
+
+### Google Login (Planned)
+- **Status:** Not yet implemented — buttons show "coming soon"
+- **Requires:** Google Cloud Console project, OAuth 2.0 credentials (free)
+
+### Apple Login (Not Planned Yet)
+- **Status:** Not yet implemented — buttons show "coming soon"
+- **Requires:** Apple Developer Program ($99/year) — use personal account, NOT work account
+- **Note:** User's work Apple developer account (dxr@deako.com) should NOT be used for camp
 
 ---
 
