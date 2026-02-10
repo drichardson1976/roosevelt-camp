@@ -23,7 +23,7 @@ exports.handler = async (event) => {
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        reply_to: replyTo || 'campdirector@rhsbasketballdaycamp.com',
+        reply_to: replyTo || 'rhsdaycamp@gmail.com',
       }),
     });
 
