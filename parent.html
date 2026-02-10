@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.065";
+    const VERSION = "13.067";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-09T20:44:00");
+    const BUILD_DATE = new Date("2026-02-09T20:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.066", date: "2026-02-09", time: "8:50 PM", author: "Claude", changes: ["Admin tabs: Removed scrollIntoView on tab click — scroll position now preserved when switching tabs", "Parent dashboard: 'Pay for X pending sessions' hint now disappears after payment is sent"] },
       { version: "13.065", date: "2026-02-09", time: "8:44 PM", author: "Claude", changes: ["Venmo screenshot: Crop tool now opens in popup modal overlay instead of inline", "Draft messages: Fixed bug where draft closed immediately on first open (setTimeout fix)", "Draft messages: Fixed bug where draft not removed from Drafts after sending (stale closure fix)", "Messages: saveMessage/deleteMessage/updateMessage now use functional setState for correctness"] },
       { version: "13.064", date: "2026-02-09", time: "8:24 PM", author: "Claude", changes: ["BUG FIX: EC tab onSave was linking ALL emergency contacts from ALL families to current camper", "Fix: Now only links ECs belonging to the current parent (filtered by userEmail)", "Cleanup: On load, removes any bogus EC-camper links where EC doesn't belong to camper's parent"] },
       { version: "13.063", date: "2026-02-09", time: "1:33 PM", author: "Audrey Richardson", changes: ["Onboarding: Removed auto-save for campers — must click 'Add Camper' button before continuing", "Onboarding: Removed auto-save for emergency contacts — must click 'Add Contact' button before continuing", "Admin: Fixed Mark as Paid glitch — all sessions now update instantly instead of one-by-one"] },
@@ -4761,7 +4762,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const getContextualHints = () => {
           const hints = [];
           const myContacts = emergencyContacts.filter(c => c.userEmail === user?.email).map(resolveEmergencyContact);
-          const pendingRegs = myRegs.filter(r => r.status === 'pending');
+          const pendingRegs = myRegs.filter(r => r.status === 'pending' && (!r.paymentStatus || r.paymentStatus === 'unpaid'));
           const upcomingSessions = myRegs.filter(r => {
             const regDate = new Date(r.date + 'T12:00:00');
             const now = new Date();
