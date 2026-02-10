@@ -19,11 +19,11 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Roosevelt Day Camp <info@rhsbasketballdaycamp.com>',
+        from: 'Roosevelt Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: Array.isArray(to) ? to : [to],
         subject,
         html,
-        reply_to: replyTo || 'rhsdaycamp@gmail.com',
+        reply_to: replyTo || 'campdirector@rhsbasketballdaycamp.com',
       }),
     });
 
