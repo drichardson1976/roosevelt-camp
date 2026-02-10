@@ -306,9 +306,12 @@ const getFoodPhoto = (key) => {
 - **Anon key:** Used in client-side code (safe for browsers)
 - **Service role key:** Used in Netlify functions only (never exposed to client)
 
-### Twilio (SMS — Not Yet Configured)
-- **Status:** Netlify function `send-sms.js` is built and ready
-- **Pending:** Create Twilio account, get phone number, add env vars to Netlify
+### Twilio (SMS)
+- **Account:** derek.richardson@gmail.com
+- **Phone number:** +12062034111 (206) 203-4111
+- **Env vars configured in Netlify:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+- **A2P 10DLC registration:** Required for production US SMS — not yet completed
+- **Trial limitations:** Can only send to verified phone numbers until account is upgraded
 
 ### Google Login (Planned)
 - **Status:** Not yet implemented — buttons show "coming soon"
