@@ -299,7 +299,7 @@ const getFoodPhoto = (key) => {
 ### Resend (Email Service)
 - **Account:** derek.richardson@gmail.com
 - **Verified domain:** rhsbasketballdaycamp.com
-- **From address:** `Roosevelt Day Camp <campdirector@rhsbasketballdaycamp.com>`
+- **From address:** `Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>`
 - **Reply-To:** `rhsdaycamp@gmail.com` (Gmail inbox for managing responses)
 - **DNS records added to Netlify:** DKIM (3 TXT records), SPF (TXT), MX, DMARC (TXT)
 

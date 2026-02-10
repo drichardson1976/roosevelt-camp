@@ -109,7 +109,7 @@ exports.handler = async (event) => {
       body: new URLSearchParams({
         To: toNumber,
         From: TWILIO_PHONE_NUMBER,
-        Body: `Roosevelt Day Camp: Your verification code is ${code}. This code expires in 10 minutes.`
+        Body: `Roosevelt Basketball Day Camp: Your verification code is ${code}. This code expires in 10 minutes.`
       }).toString()
     });
 

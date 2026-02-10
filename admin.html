@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - Roosevelt Day Camp</title>
+  <title>Admin Dashboard - Roosevelt Basketball Day Camp</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -2623,8 +2623,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                       to: parent.email,
-                                      subject: 'Your Roosevelt Day Camp Login Info',
-                                      html: `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Your Login Information</h2><p>Hi ${parent.name},</p><p>Here's a reminder of how to log in to Roosevelt Day Camp:</p><p><strong>Login method:</strong> Email &amp; Password</p><p><strong>Email:</strong> ${parent.email}</p><p>If you've forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p><p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Login</a></p></div>`
+                                      subject: 'Your Roosevelt Basketball Day Camp Login Info',
+                                      html: `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Your Login Information</h2><p>Hi ${parent.name},</p><p>Here's a reminder of how to log in to Roosevelt Basketball Day Camp:</p><p><strong>Login method:</strong> Email &amp; Password</p><p><strong>Email:</strong> ${parent.email}</p><p>If you've forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p><p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Login</a></p></div>`
                                     })
                                   });
                                   if (res.ok) showToast(`Login reminder sent to ${parent.email}`);

@@ -19,7 +19,7 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Roosevelt Day Camp <campdirector@rhsbasketballdaycamp.com>',
+        from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: Array.isArray(to) ? to : [to],
         subject,
         html,

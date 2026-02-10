@@ -97,14 +97,14 @@ exports.handler = async (event) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Roosevelt Day Camp <campdirector@rhsbasketballdaycamp.com>',
+        from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: [email],
         subject: 'Password Reset Request',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;">
             <h2 style="color: #15803d;">Password Reset</h2>
             <p>Hi ${userName},</p>
-            <p>We received a request to reset your password for Roosevelt Day Camp.</p>
+            <p>We received a request to reset your password for Roosevelt Basketball Day Camp.</p>
             <p><a href="${resetLink}" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset My Password</a></p>
             <p style="color: #666; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p>
           </div>
