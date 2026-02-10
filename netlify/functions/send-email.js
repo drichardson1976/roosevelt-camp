@@ -5,7 +5,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { to, subject, html, replyTo } = JSON.parse(event.body);
+    const { to, subject, html, replyTo, attachments } = JSON.parse(event.body);
 
     // Validate required fields
     if (!to || !subject || !html) {
@@ -24,6 +24,7 @@ exports.handler = async (event) => {
         subject,
         html,
         reply_to: replyTo || 'rhsdaycamp@gmail.com',
+        ...(attachments ? { attachments } : {}),
       }),
     });
 

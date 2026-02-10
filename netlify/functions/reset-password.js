@@ -79,8 +79,6 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'User account not found' }) };
     }
 
-    const { userType } = tokenData;
-
     // Save updated users back to Supabase
     const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.main`, {
       method: 'PATCH',
