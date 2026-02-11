@@ -222,6 +222,16 @@ const campers = await storage.get('camp_campers', 'main'); // Array
 // ... most other tables
 ```
 
+### Input Focus Loss Prevention (CRITICAL)
+**Problem:** When form inputs are rendered inside a large parent component, typing causes the parent to re-render, which can cause inputs to lose focus (the cursor disappears and the user has to tap/click the input again after every keystroke).
+
+**Rules — NEVER violate these:**
+1. **NEVER** put controlled input state (`value` + `onChange` → `setState`) directly in a large parent component (like `RooseveltCamp`) if the inputs are in a modal or form. The parent re-render on every keystroke causes focus loss.
+2. **ALWAYS** extract modals/forms with text inputs into their own standalone component (defined outside the parent) that manages its own internal form state. The component calls back to the parent only on submit (not on every keystroke).
+3. **Pattern to follow:** See `ECAddModal`, `AddChildForm` — they manage their own `useState` for each field and only call `onSave(data)` when the user clicks the submit button.
+4. **Anti-pattern to avoid:** `<input value={parentState.name} onChange={e => setParentState({...parentState, name: e.target.value})} />` inside the main component's return JSX.
+5. For inline editing (not in modals), use the `StableInput` / `StableTextarea` components which use local state + `onBlur` sync.
+
 ### Danger Zone Rendering
 When adding tables to Danger Zone in admin.html:
 - **Arrays:** Use `.map()`, `.length`

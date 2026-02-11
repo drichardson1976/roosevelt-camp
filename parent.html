@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.099";
+    const VERSION = "13.100";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T22:02:00");
+    const BUILD_DATE = new Date("2026-02-10T22:38:00");
 
     const RELEASE_NOTES = [
+      { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
       { version: "13.099", date: "2026-02-10", time: "10:02 PM", author: "Derek Richardson", changes: ["Registration calendar: clicking on a day header (Mon, Jul 13, etc.) toggles both AM and PM sessions", "If neither session selected → selects both; if both selected → deselects both; if one selected → selects both", "Day header shows hover/active states to indicate clickability"] },
       { version: "13.098", date: "2026-02-10", time: "9:56 PM", author: "Derek Richardson", changes: ["All Dashboard Next Steps buttons now open modals directly instead of navigating to tabs", "Add Campers button opens AddChildForm modal at top level from Dashboard", "Add Photo for EC button opens PhotoUploadModal at top level from Dashboard", "Campers tab 'Add Emergency Contact' button also uses top-level EC modal (consistent pattern)"] },
       { version: "13.097", date: "2026-02-10", time: "9:51 PM", author: "Derek Richardson", changes: ["EC Add Modal moved to top level (same pattern as Registration modal) — renders from any tab including Dashboard", "Both Dashboard button and EC tab button open the same top-level modal with full features (photo, all fields)", "EC tab's green 'Add Emergency Contact' button now opens the top-level modal via onRequestAddForm prop", "Campers tab 'Add Emergency Contact' also routes through the same top-level modal"] },
@@ -3748,8 +3749,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [autoOpenAddEC, setAutoOpenAddEC] = useState(false); // auto-open Add EC form when switching to Emergency tab
       const [returnTabAfterEC, setReturnTabAfterEC] = useState(null); // tab to return to after adding EC
       const [showECAddModal, setShowECAddModal] = useState(false); // top-level EC add form modal
-      const [ecAddForm, setEcAddForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null });
-      const [ecAddPhotoModal, setEcAddPhotoModal] = useState(false);
+      // ecAddForm state removed — now managed internally by ECAddModal component to prevent focus loss
       const [showAddCamperModal, setShowAddCamperModal] = useState(false); // top-level Add Camper modal from Dashboard
       const [autoOpenPhotoForEC, setAutoOpenPhotoForEC] = useState(null); // EC contact ID — auto-open photo modal from Dashboard
 
@@ -4870,7 +4870,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); },
+              action: () => setShowECAddModal(true),
               actionText: 'Add Emergency Contact',
               priority: 3
             });
@@ -4905,8 +4905,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '💳',
               text: `Pay for ${pendingRegs.length} pending session${pendingRegs.length > 1 ? 's' : ''}`,
-              action: () => window.scrollTo({ top: 0, behavior: 'smooth' }),
-              actionText: 'View Payment Info',
+              action: () => {
+                // Group pending regs by orderId and open Venmo modal for the first unpaid order
+                const regsByOrder = {};
+                pendingRegs.forEach(r => {
+                  const key = r.orderId || r.id;
+                  if (!regsByOrder[key]) regsByOrder[key] = [];
+                  regsByOrder[key].push(r);
+                });
+                const firstOrderKey = Object.keys(regsByOrder)[0];
+                const regs = regsByOrder[firstOrderKey];
+                const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                const orderVenmoCode = regs[0]?.venmoCode || generateVenmoCode(user?.name);
+                const byCamper = {};
+                regs.forEach(r => { const n = r.childName || r.camperName || 'Unknown'; if (!byCamper[n]) byCamper[n] = []; byCamper[n].push(r); });
+                const camperNames = Object.keys(byCamper);
+                const title = camperNames.length === 1 ? `${camperNames[0]}'s Registration` : `${camperNames.join(' and ')} Registration`;
+                setVenmoScreenshot(null); setVenmoScreenshotRaw(null);
+                setPaymentVenmoModal({ orderKey: firstOrderKey, regs, totalAmount, venmoCode: orderVenmoCode, title });
+              },
+              actionText: 'Pay Now',
               priority: 6
             });
           }
@@ -5408,7 +5426,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
                       parents={parents}
                       camperParentLinks={camperParentLinks}
-                      onAddEmergencyContact={() => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); }}
+                      onAddEmergencyContact={() => setShowECAddModal(true)}
                     />
                   ) : (
                     <div className="bg-white rounded-xl shadow p-6">
@@ -5460,7 +5478,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     autoOpenAddEC={autoOpenAddEC}
                     onAutoOpenDone={() => setAutoOpenAddEC(false)}
                     onCloseAddForm={() => { if (returnTabAfterEC) { setParentTab(returnTabAfterEC); setReturnTabAfterEC(null); } }}
-                    onRequestAddForm={() => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); }}
+                    onRequestAddForm={() => setShowECAddModal(true)}
                   />
                 </div>
               )}
@@ -5633,181 +5651,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     })()}
                   </div>
 
-                  {/* Venmo Payment Modal */}
-                  {paymentVenmoModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}>
-                      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <h3 className="font-bold text-xl text-center mb-4">Pay via Venmo</h3>
-
-                        {/* Registration Details Box */}
-                        <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
-                          <div className="font-bold text-blue-800 mb-2">{paymentVenmoModal.title}</div>
-                          {paymentVenmoModal.regs && (() => {
-                            const byCamper = {};
-                            paymentVenmoModal.regs.forEach(r => {
-                              const name = r.childName || r.camperName || 'Unknown';
-                              if (!byCamper[name]) byCamper[name] = [];
-                              byCamper[name].push(r);
-                            });
-                            return Object.entries(byCamper).map(([name, camperRegs]) => {
-                              const sorted = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                              const sessions = sorted.flatMap(r => r.sessions || []);
-                              const hasAM = sessions.includes('morning');
-                              const hasPM = sessions.includes('afternoon');
-                              const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
-                              const dates = sorted.map(r => r.date);
-                              const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                              const dateRange = dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} - ${fmt(dates[dates.length - 1])}`;
-                              return (
-                                <div key={name} className="text-sm text-blue-700 mt-1">
-                                  <span className="font-medium">{name}</span> — {dateRange} • {dates.length} day{dates.length > 1 ? 's' : ''} • {sessionLabel}
-                                </div>
-                              );
-                            });
-                          })()}
-                          <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between">
-                            <span className="font-bold text-blue-800">Total</span>
-                            <span className="font-bold text-blue-800 text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          {/* Step 1 */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 1</div>
-                            <div>
-                              <p className="font-medium text-gray-800">Open Venmo and tap "Pay or Request"</p>
-                            </div>
-                          </div>
-
-                          {/* Step 2 */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 2</div>
-                            <div>
-                              <p className="font-medium text-gray-800">Search for <span className="text-blue-700 font-bold">{content?.venmoUsername || '@RHSDayCamp'}</span></p>
-                            </div>
-                          </div>
-
-                          {/* Step 3 */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 3</div>
-                            <div>
-                              <p className="font-medium text-gray-800">Enter the amount: <span className="text-green-700 font-bold text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span></p>
-                            </div>
-                          </div>
-
-                          {/* Step 4 */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 4</div>
-                            <div>
-                              <p className="font-medium text-gray-800">In the "What's it for?" section, add this unique registration code</p>
-                              <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300 mt-1">
-                                <p className="font-mono text-2xl font-bold text-blue-700 text-center">{paymentVenmoModal.venmoCode}</p>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-1">This code helps the Camp Director match your Venmo payment to your registration.</p>
-                            </div>
-                          </div>
-
-                          {/* Step 5 */}
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 5</div>
-                            <div>
-                              <p className="font-medium text-gray-800">Take a screenshot of your Venmo payment</p>
-                              <div className="mt-2">
-                                {venmoScreenshot ? (
-                                  <div className="flex items-center gap-3">
-                                    <img src={getDisplayPhoto(venmoScreenshot) || venmoScreenshot} alt="Venmo screenshot" className="max-h-48 object-contain rounded-lg border-2 border-green-400" />
-                                    <button
-                                      onClick={() => {
-                                        // Re-open cropper with original image for editing
-                                        const original = venmoScreenshot?.original || getDisplayPhoto(venmoScreenshot) || venmoScreenshot;
-                                        setVenmoScreenshotRaw(original);
-                                        setVenmoScreenshot(null);
-                                      }}
-                                      className="px-3 py-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-300 rounded-lg hover:bg-blue-50"
-                                    >
-                                      Edit
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-100">
-                                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                                    <span className="text-blue-600 font-medium text-sm">Upload Screenshot</span>
-                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        const reader = new FileReader();
-                                        reader.onload = (ev) => setVenmoScreenshotRaw(ev.target.result);
-                                        reader.readAsDataURL(file);
-                                      }
-                                    }} />
-                                  </label>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Screenshot Crop Modal - Popup Overlay */}
-                        {venmoScreenshotRaw && !venmoScreenshot && (
-                          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setVenmoScreenshotRaw(null)}>
-                            <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                              <h3 className="font-bold text-lg text-gray-800 mb-4">Crop Screenshot</h3>
-                              <ImageCropper
-                                image={venmoScreenshotRaw}
-                                onSave={(croppedImg, transform) => {
-                                  setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform });
-                                  setVenmoScreenshotRaw(null);
-                                }}
-                                onCancel={() => setVenmoScreenshotRaw(null)}
-                                shape="rectangle"
-                                aspectRatio={9/16}
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Confirm / Cancel Buttons */}
-                        <div className="space-y-2 mt-6">
-                          <button
-                            disabled={!venmoScreenshot}
-                            onClick={async () => {
-                              try {
-                                const sentAt = new Date().toISOString();
-                                const modalData = paymentVenmoModal; // Capture modal data before closing
-                                // Close modal immediately to prevent glitch
-                                setPaymentVenmoModal(null);
-                                setVenmoScreenshot(null);
-                                setVenmoScreenshotRaw(null);
-                                // Save registrations in background
-                                for (const reg of modalData.regs) {
-                                  await saveReg({ ...reg, paymentStatus: 'sent', paymentSentAt: sentAt, venmoScreenshot });
-                                }
-                                // Log to history
-                                addToHistory(
-                                  'Venmo Payment Sent',
-                                  `${modalData.title} — $${modalData.totalAmount.toFixed(2)} via Venmo (code: ${modalData.venmoCode})`
-                                );
-                                showToast('Payment marked as sent!', 'success');
-                              } catch (err) {
-                                console.error('Payment confirmation error:', err);
-                                showToast('Payment saved. Please refresh if issues persist.', 'success');
-                              }
-                            }}
-                            className={`w-full font-bold py-3 rounded-lg ${venmoScreenshot ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                          >
-                            Confirm Venmo Payment Has Been Sent
-                          </button>
-                          <button
-                            onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}
-                            className="w-full bg-gray-200 text-gray-700 font-medium py-3 rounded-lg hover:bg-gray-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -5860,75 +5703,134 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
 
 
-                  {/* EC Add Modal — top level so it renders from any tab */}
+                  {/* EC Add Modal — standalone component to prevent focus loss */}
                   {showECAddModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowECAddModal(false)}>
+                    <ECAddModal
+                      onSave={async (formData) => {
+                        if (!isValidPhone(formData.phone)) { showToast('Please enter a valid 10-digit phone number', 'error'); return; }
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) { showToast('Please enter a valid email address', 'error'); return; }
+                        const newContact = { id: `ec_${Date.now()}`, userEmail: user?.email, ...formData };
+                        const allContacts = [...emergencyContacts, newContact];
+                        await saveEmergencyContacts(allContacts, `Added emergency contact ${formData.name} for ${user?.name}`);
+                        const newLinks = [];
+                        for (const camper of myChildren) {
+                          const alreadyLinked = camperEmergencyContactLinks.some(link => link.camperId === camper.id && link.emergencyContactId === newContact.id);
+                          if (!alreadyLinked) newLinks.push({ camperId: camper.id, emergencyContactId: newContact.id });
+                        }
+                        if (newLinks.length > 0) await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
+                        showToast(`Added ${formData.name} as emergency contact`, 'success');
+                        setShowECAddModal(false);
+                      }}
+                      onCancel={() => setShowECAddModal(false)}
+                    />
+                  )}
+
+                  {/* Venmo Payment Modal — top level so it renders from any tab */}
+                  {paymentVenmoModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}>
                       <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
-                        {/* Photo Upload */}
-                        <div className="flex justify-center mb-1">
-                          {getDisplayPhoto(ecAddForm.photo) ? (
-                            <div className="relative cursor-pointer" onClick={() => setEcAddPhotoModal(true)}>
-                              <img src={getDisplayPhoto(ecAddForm.photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-500" />
-                              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm hover:bg-green-700">✎</div>
-                            </div>
-                          ) : (
-                            <div onClick={() => setEcAddPhotoModal(true)}
-                              className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                              <span className="text-[9px] text-gray-500 font-medium">add photo</span>
-                            </div>
-                          )}
-                          {ecAddPhotoModal && <PhotoUploadModal currentPhoto={ecAddForm.photo} onSave={(img) => { setEcAddForm(f => ({ ...f, photo: img })); setEcAddPhotoModal(false); }} onCancel={() => setEcAddPhotoModal(false)} />}
-                        </div>
-                        <p className="text-xs text-gray-500 text-center mb-4">Photo helps identify authorized pickup (optional)</p>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                            <input value={ecAddForm.name} onChange={e => setEcAddForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
-                            <select value={ecAddForm.relationship} onChange={e => setEcAddForm(f => ({ ...f, relationship: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
-                              <option value="">Select relationship</option>
-                              <option value="Parent">Parent</option>
-                              <option value="Legal Guardian">Legal Guardian</option>
-                              <option value="Relative">Relative</option>
-                              <option value="Caretaker">Caretaker</option>
-                              <option value="Family Friend">Family Friend</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
-                            <input value={ecAddForm.phone} onChange={e => setEcAddForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                            <input value={ecAddForm.email} onChange={e => setEcAddForm(f => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
+                        <h3 className="font-bold text-xl text-center mb-4">Pay via Venmo</h3>
+                        <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
+                          <div className="font-bold text-blue-800 mb-2">{paymentVenmoModal.title}</div>
+                          {paymentVenmoModal.regs && (() => {
+                            const byCamper = {};
+                            paymentVenmoModal.regs.forEach(r => {
+                              const name = r.childName || r.camperName || 'Unknown';
+                              if (!byCamper[name]) byCamper[name] = [];
+                              byCamper[name].push(r);
+                            });
+                            return Object.entries(byCamper).map(([name, camperRegs]) => {
+                              const sorted = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                              const sessions = sorted.flatMap(r => r.sessions || []);
+                              const hasAM = sessions.includes('morning');
+                              const hasPM = sessions.includes('afternoon');
+                              const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                              const dates = sorted.map(r => r.date);
+                              const fmt = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              const dateRange = dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} - ${fmt(dates[dates.length - 1])}`;
+                              return (
+                                <div key={name} className="text-sm text-blue-700 mt-1">
+                                  <span className="font-medium">{name}</span> — {dateRange} • {dates.length} day{dates.length > 1 ? 's' : ''} • {sessionLabel}
+                                </div>
+                              );
+                            });
+                          })()}
+                          <div className="mt-2 pt-2 border-t border-blue-200 flex justify-between">
+                            <span className="font-bold text-blue-800">Total</span>
+                            <span className="font-bold text-blue-800 text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span>
                           </div>
                         </div>
-                        <div className="flex gap-4 pt-4">
-                          <button onClick={() => setShowECAddModal(false)} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-                          <button
-                            disabled={!ecAddForm.name.trim() || !ecAddForm.relationship || !ecAddForm.phone.trim() || !ecAddForm.email.trim()}
-                            className={`flex-1 py-2 rounded-lg font-medium ${!ecAddForm.name.trim() || !ecAddForm.relationship || !ecAddForm.phone.trim() || !ecAddForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                            onClick={async () => {
-                              if (!isValidPhone(ecAddForm.phone)) { showToast('Please enter a valid 10-digit phone number', 'error'); return; }
-                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ecAddForm.email)) { showToast('Please enter a valid email address', 'error'); return; }
-                              const newContact = { id: `ec_${Date.now()}`, userEmail: user?.email, ...ecAddForm };
-                              const allContacts = [...emergencyContacts, newContact];
-                              await saveEmergencyContacts(allContacts, `Added emergency contact ${ecAddForm.name} for ${user?.name}`);
-                              const newLinks = [];
-                              for (const camper of myChildren) {
-                                const alreadyLinked = camperEmergencyContactLinks.some(link => link.camperId === camper.id && link.emergencyContactId === newContact.id);
-                                if (!alreadyLinked) newLinks.push({ camperId: camper.id, emergencyContactId: newContact.id });
-                              }
-                              if (newLinks.length > 0) await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
-                              showToast(`Added ${ecAddForm.name} as emergency contact`, 'success');
-                              setShowECAddModal(false);
-                            }}
-                          >Add Contact</button>
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 1</div>
+                            <div><p className="font-medium text-gray-800">Open Venmo and tap "Pay or Request"</p></div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 2</div>
+                            <div><p className="font-medium text-gray-800">Search for <span className="text-blue-700 font-bold">{content?.venmoUsername || '@RHSDayCamp'}</span></p></div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 3</div>
+                            <div><p className="font-medium text-gray-800">Enter the amount: <span className="text-green-700 font-bold text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span></p></div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 4</div>
+                            <div>
+                              <p className="font-medium text-gray-800">In the "What's it for?" section, add this unique registration code</p>
+                              <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300 mt-1">
+                                <p className="font-mono text-2xl font-bold text-blue-700 text-center">{paymentVenmoModal.venmoCode}</p>
+                              </div>
+                              <p className="text-xs text-gray-500 mt-1">This code helps the Camp Director match your Venmo payment to your registration.</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 5</div>
+                            <div>
+                              <p className="font-medium text-gray-800">Take a screenshot of your Venmo payment</p>
+                              <div className="mt-2">
+                                {venmoScreenshot ? (
+                                  <div className="flex items-center gap-3">
+                                    <img src={getDisplayPhoto(venmoScreenshot) || venmoScreenshot} alt="Venmo screenshot" className="max-h-48 object-contain rounded-lg border-2 border-green-400" />
+                                    <button onClick={() => { const original = venmoScreenshot?.original || getDisplayPhoto(venmoScreenshot) || venmoScreenshot; setVenmoScreenshotRaw(original); setVenmoScreenshot(null); }}
+                                      className="px-3 py-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-300 rounded-lg hover:bg-blue-50">Edit</button>
+                                  </div>
+                                ) : (
+                                  <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg cursor-pointer hover:bg-blue-100">
+                                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                    <span className="text-blue-600 font-medium text-sm">Upload Screenshot</span>
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      if (file) { const reader = new FileReader(); reader.onload = (ev) => setVenmoScreenshotRaw(ev.target.result); reader.readAsDataURL(file); }
+                                    }} />
+                                  </label>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        {venmoScreenshotRaw && !venmoScreenshot && (
+                          <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setVenmoScreenshotRaw(null)}>
+                            <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                              <h3 className="font-bold text-lg text-gray-800 mb-4">Crop Screenshot</h3>
+                              <ImageCropper image={venmoScreenshotRaw} onSave={(croppedImg, transform) => { setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform }); setVenmoScreenshotRaw(null); }} onCancel={() => setVenmoScreenshotRaw(null)} shape="rectangle" aspectRatio={9/16} />
+                            </div>
+                          </div>
+                        )}
+                        <div className="space-y-2 mt-6">
+                          <button disabled={!venmoScreenshot} onClick={async () => {
+                            try {
+                              const sentAt = new Date().toISOString();
+                              const modalData = paymentVenmoModal;
+                              setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null);
+                              for (const reg of modalData.regs) { await saveReg({ ...reg, paymentStatus: 'sent', paymentSentAt: sentAt, venmoScreenshot }); }
+                              addToHistory('Venmo Payment Sent', `${modalData.title} — $${modalData.totalAmount.toFixed(2)} via Venmo (code: ${modalData.venmoCode})`);
+                              showToast('Payment marked as sent!', 'success');
+                            } catch (err) { console.error('Payment confirmation error:', err); showToast('Payment saved. Please refresh if issues persist.', 'success'); }
+                          }} className={`w-full font-bold py-3 rounded-lg ${venmoScreenshot ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
+                            Confirm Venmo Payment Has Been Sent
+                          </button>
+                          <button onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}
+                            className="w-full bg-gray-200 text-gray-700 font-medium py-3 rounded-lg hover:bg-gray-300">Cancel</button>
                         </div>
                       </div>
                     </div>
@@ -6353,6 +6255,81 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               onCancel={() => setShowAddCamperModal(false)}
             />
           )}
+          </div>
+        );
+      };
+
+      // EC Add Modal — standalone component to prevent focus loss from parent re-renders
+      const ECAddModal = ({ onSave, onCancel }) => {
+        const [name, setName] = useState('');
+        const [relationship, setRelationship] = useState('');
+        const [phone, setPhone] = useState('');
+        const [email, setEmail] = useState('');
+        const [photo, setPhoto] = useState(null);
+        const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+        const canSubmit = name.trim() && relationship && phone.trim() && email.trim();
+
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+            <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
+              {/* Photo Upload */}
+              <div className="flex justify-center mb-1">
+                {getDisplayPhoto(photo) ? (
+                  <div className="relative cursor-pointer" onClick={() => setShowPhotoModal(true)}>
+                    <img src={getDisplayPhoto(photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-500" />
+                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm hover:bg-green-700">✎</div>
+                  </div>
+                ) : (
+                  <div onClick={() => setShowPhotoModal(true)}
+                    className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    <span className="text-[9px] text-gray-500 font-medium">add photo</span>
+                  </div>
+                )}
+                {showPhotoModal && <PhotoUploadModal currentPhoto={photo} onSave={(img) => { setPhoto(img); setShowPhotoModal(false); }} onCancel={() => setShowPhotoModal(false)} />}
+              </div>
+              <p className="text-xs text-gray-500 text-center mb-4">Photo helps identify authorized pickup (optional)</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                  <input value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                  <select value={relationship} onChange={e => setRelationship(e.target.value)} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select relationship</option>
+                    <option value="Parent">Parent</option>
+                    <option value="Legal Guardian">Legal Guardian</option>
+                    <option value="Relative">Relative</option>
+                    <option value="Caretaker">Caretaker</option>
+                    <option value="Family Friend">Family Friend</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                  <input value={phone} onChange={e => setPhone(formatPhone(e.target.value))} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" autoComplete="off" data-1p-ignore="true" data-lpignore="true" data-form-type="other" />
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button onClick={onCancel} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button
+                  disabled={!canSubmit}
+                  className={`flex-1 py-2 rounded-lg font-medium ${!canSubmit ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                  onClick={() => {
+                    if (!isValidPhone(phone)) return;
+                    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+                    onSave({ name, relationship, phone, email, photo, priority: 'normal' });
+                  }}
+                >Add Contact</button>
+              </div>
+            </div>
           </div>
         );
       };
