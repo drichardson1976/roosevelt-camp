@@ -19,6 +19,7 @@ After completing ANY work:
 1. **`git add`** — Stage all changed files
 2. **`git commit`** — Commit with descriptive message including author attribution
 3. **`git push`** — **MANDATORY** - Push changes to remote so others have access immediately
+4. **Say "Start testing"** — Always end your final message with "Start testing" so the user knows the changes are ready to test
 
 ### Version & Timestamp Updates
 - **ONLY** bump the version in files that actually changed — do NOT touch files that had no modifications
