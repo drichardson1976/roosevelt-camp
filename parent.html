@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.097";
+    const VERSION = "13.098";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:51:00");
+    const BUILD_DATE = new Date("2026-02-10T21:56:00");
 
     const RELEASE_NOTES = [
+      { version: "13.098", date: "2026-02-10", time: "9:56 PM", author: "Derek Richardson", changes: ["All Dashboard Next Steps buttons now open modals directly instead of navigating to tabs", "Add Campers button opens AddChildForm modal at top level from Dashboard", "Add Photo for EC button opens PhotoUploadModal at top level from Dashboard", "Campers tab 'Add Emergency Contact' button also uses top-level EC modal (consistent pattern)"] },
       { version: "13.097", date: "2026-02-10", time: "9:51 PM", author: "Derek Richardson", changes: ["EC Add Modal moved to top level (same pattern as Registration modal) — renders from any tab including Dashboard", "Both Dashboard button and EC tab button open the same top-level modal with full features (photo, all fields)", "EC tab's green 'Add Emergency Contact' button now opens the top-level modal via onRequestAddForm prop", "Campers tab 'Add Emergency Contact' also routes through the same top-level modal"] },
       { version: "13.096", date: "2026-02-10", time: "9:39 PM", author: "Derek Richardson", changes: ["Dashboard 'Add Emergency Contact' now uses the SAME modal as the Emergency Contacts tab — no duplicate code", "Removed inline dashboard EC modal; dashboard button now switches to EC tab with autoOpenAddEC=true so the full-screen modal opens instantly", "On cancel or save, returns to Dashboard automatically via returnTabAfterEC", "Removed unused modalOnly code path and dashboardECForm state"] },
       { version: "13.095", date: "2026-02-10", time: "9:34 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button — replaced ParentEmergencyContactsManager component approach with direct inline modal rendering, eliminating all component lifecycle/timing issues", "EC add form now renders as a simple fixed overlay directly in the parent component, same pattern as the working Registration modal"] },
@@ -3748,6 +3749,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showECAddModal, setShowECAddModal] = useState(false); // top-level EC add form modal
       const [ecAddForm, setEcAddForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null });
       const [ecAddPhotoModal, setEcAddPhotoModal] = useState(false);
+      const [showAddCamperModal, setShowAddCamperModal] = useState(false); // top-level Add Camper modal from Dashboard
+      const [autoOpenPhotoForEC, setAutoOpenPhotoForEC] = useState(null); // EC contact ID — auto-open photo modal from Dashboard
 
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -4828,7 +4831,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '👶',
               text: 'Add campers with photos (we need photos of all campers, parents, and emergency contacts)',
-              action: () => setParentTab('campers'),
+              action: () => setShowAddCamperModal(true),
               actionText: 'Add Campers',
               priority: 1
             });
@@ -4878,7 +4881,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               hints.push({
                 icon: '📸',
                 text: `Add photo for emergency contact: ${contact.name}`,
-                action: () => setParentTab('emergency'),
+                action: () => setAutoOpenPhotoForEC(contact.id),
                 actionText: 'Add Photo',
                 priority: 4
               });
@@ -5404,7 +5407,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       removeEmergencyContactFromCamper={removeEmergencyContactFromCamper}
                       parents={parents}
                       camperParentLinks={camperParentLinks}
-                      onAddEmergencyContact={() => { setAutoOpenAddEC(true); setReturnTabAfterEC('campers'); setParentTab('emergency'); }}
+                      onAddEmergencyContact={() => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); }}
                     />
                   ) : (
                     <div className="bg-white rounded-xl shadow p-6">
@@ -6327,6 +6330,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               showToast(`Photo added for ${p.name || p.email}!`);
             }} onCancel={() => setAutoOpenPhotoForParent(null)} />;
           })()}
+          {/* Top-level EC photo modal triggered from Dashboard */}
+          {autoOpenPhotoForEC && (() => {
+            const ec = emergencyContacts.find(c => c.id === autoOpenPhotoForEC);
+            if (!ec) { setAutoOpenPhotoForEC(null); return null; }
+            return <PhotoUploadModal currentPhoto={ec.photo} onSave={async (img) => {
+              const updated = emergencyContacts.map(c => c.id === autoOpenPhotoForEC ? { ...c, photo: img } : c);
+              await saveEmergencyContacts(updated, `Added photo for emergency contact ${ec.name}`);
+              setAutoOpenPhotoForEC(null);
+              showToast(`Photo added for ${ec.name}!`);
+            }} onCancel={() => setAutoOpenPhotoForEC(null)} />;
+          })()}
+          {/* Top-level Add Camper modal triggered from Dashboard */}
+          {showAddCamperModal && (
+            <AddChildForm
+              onAdd={(child) => {
+                addChild(child);
+                setShowAddCamperModal(false);
+              }}
+              onCancel={() => setShowAddCamperModal(false)}
+            />
+          )}
           </div>
         );
       };
