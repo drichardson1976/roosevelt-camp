@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.094";
+    const VERSION = "13.095";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:30:00");
+    const BUILD_DATE = new Date("2026-02-10T21:34:00");
 
     const RELEASE_NOTES = [
+      { version: "13.095", date: "2026-02-10", time: "9:34 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button — replaced ParentEmergencyContactsManager component approach with direct inline modal rendering, eliminating all component lifecycle/timing issues", "EC add form now renders as a simple fixed overlay directly in the parent component, same pattern as the working Registration modal"] },
       { version: "13.094", date: "2026-02-10", time: "9:30 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' modal not appearing — initialized showAddForm state to true when autoOpenAddEC is true, so modal renders immediately on first render instead of waiting for useEffect"] },
       { version: "13.093", date: "2026-02-10", time: "9:21 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button not opening the modal — replaced hidden wrapper div approach with modalOnly prop on ParentEmergencyContactsManager", "EC component now supports modalOnly mode: renders only the add form modal overlay without the full contact list, eliminating CSS clipping issues"] },
       { version: "13.092", date: "2026-02-10", time: "9:01 PM", author: "Derek Richardson", changes: ["Dashboard Next Steps: 'Add Emergency Contact' and 'Register Now' buttons now open modals directly as overlays without leaving the Dashboard", "Renamed 'Add Contact' button to 'Add Emergency Contact' for clarity", "All Next Steps action buttons now have equal width (200px min) for consistent layout", "Registration modal moved to top-level rendering so it can be opened from any tab", "EC add form modal can now be triggered from Dashboard via a hidden component wrapper"] },
@@ -3742,7 +3743,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [autoOpenPhotoForParent, setAutoOpenPhotoForParent] = useState(null); // parent email — auto-open photo modal from Dashboard
       const [autoOpenAddEC, setAutoOpenAddEC] = useState(false); // auto-open Add EC form when switching to Emergency tab
       const [returnTabAfterEC, setReturnTabAfterEC] = useState(null); // tab to return to after adding EC
-      const [showDashboardECModal, setShowDashboardECModal] = useState(false); // render EC component from dashboard for modal
+      const [showDashboardECModal, setShowDashboardECModal] = useState(false); // show standalone EC add form modal from dashboard
+      const [dashboardECForm, setDashboardECForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null });
 
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -4861,7 +4863,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => { setShowDashboardECModal(true); setAutoOpenAddEC(true); setReturnTabAfterEC(parentTab); },
+              action: () => { setDashboardECForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowDashboardECModal(true); },
               actionText: 'Add Emergency Contact',
               priority: 3
             });
@@ -5848,47 +5850,68 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               })()}
             </div>
 
-                  {/* EC Add Modal — rendered from dashboard in modal-only mode */}
+                  {/* EC Add Modal — rendered directly from dashboard (no component wrapper) */}
                   {showDashboardECModal && (
-                    <ParentEmergencyContactsManager
-                      parentEmail={user?.email}
-                      emergencyContacts={emergencyContacts}
-                      onSave={async (contacts) => {
-                        await saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
-                        const myContacts = contacts.filter(c => c.userEmail === user?.email);
-                        const newLinks = [];
-                        for (const camper of myChildren) {
-                          for (const contact of myContacts) {
-                            const alreadyLinked = camperEmergencyContactLinks.some(
-                              link => link.camperId === camper.id && link.emergencyContactId === contact.id
-                            );
-                            if (!alreadyLinked) {
-                              newLinks.push({ camperId: camper.id, emergencyContactId: contact.id });
-                            }
-                          }
-                        }
-                        if (newLinks.length > 0) {
-                          await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
-                        }
-                        showToast('Emergency contacts updated!');
-                        setShowDashboardECModal(false);
-                        if (returnTabAfterEC) {
-                          setParentTab(returnTabAfterEC);
-                          setReturnTabAfterEC(null);
-                        }
-                      }}
-                      showToast={showToast}
-                      parents={parents}
-                      saveParents={saveParents}
-                      addParentToFamily={addParentToFamily}
-                      myChildren={myChildren}
-                      currentUser={{ email: user?.email }}
-                      addToHistory={addToHistory}
-                      autoOpenAddEC={autoOpenAddEC}
-                      onAutoOpenDone={() => setAutoOpenAddEC(false)}
-                      onCloseAddForm={() => { setShowDashboardECModal(false); }}
-                      modalOnly={true}
-                    />
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDashboardECModal(false)}>
+                      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                            <input value={dashboardECForm.name} onChange={e => setDashboardECForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                            <select value={dashboardECForm.relationship} onChange={e => setDashboardECForm(f => ({ ...f, relationship: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
+                              <option value="">Select relationship...</option>
+                              <option value="Mother">Mother</option>
+                              <option value="Father">Father</option>
+                              <option value="Grandmother">Grandmother</option>
+                              <option value="Grandfather">Grandfather</option>
+                              <option value="Aunt">Aunt</option>
+                              <option value="Uncle">Uncle</option>
+                              <option value="Sibling">Sibling</option>
+                              <option value="Family Friend">Family Friend</option>
+                              <option value="Neighbor">Neighbor</option>
+                              <option value="Babysitter/Nanny">Babysitter/Nanny</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                            <input value={dashboardECForm.phone} onChange={e => setDashboardECForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 123-4567" maxLength="14" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                            <input value={dashboardECForm.email} onChange={e => setDashboardECForm(f => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
+                          </div>
+                        </div>
+                        <div className="flex gap-4 pt-4">
+                          <button onClick={() => setShowDashboardECModal(false)} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                          <button
+                            disabled={!dashboardECForm.name.trim() || !dashboardECForm.relationship || !dashboardECForm.phone.trim() || !dashboardECForm.email.trim()}
+                            className={`flex-1 py-2 rounded-lg font-medium ${!dashboardECForm.name.trim() || !dashboardECForm.relationship || !dashboardECForm.phone.trim() || !dashboardECForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                            onClick={async () => {
+                              if (!isValidPhone(dashboardECForm.phone)) { showToast('Please enter a valid 10-digit phone number', 'error'); return; }
+                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dashboardECForm.email)) { showToast('Please enter a valid email address', 'error'); return; }
+                              const newContact = { id: `ec_${Date.now()}`, userEmail: user?.email, ...dashboardECForm };
+                              const otherContacts = emergencyContacts.filter(c => c.userEmail !== user?.email);
+                              const myContacts = emergencyContacts.filter(c => c.userEmail === user?.email);
+                              const allContacts = [...otherContacts, ...myContacts, newContact];
+                              await saveEmergencyContacts(allContacts, `Added emergency contact ${dashboardECForm.name} for ${user?.name}`);
+                              const newLinks = [];
+                              for (const camper of myChildren) {
+                                const alreadyLinked = camperEmergencyContactLinks.some(link => link.camperId === camper.id && link.emergencyContactId === newContact.id);
+                                if (!alreadyLinked) { newLinks.push({ camperId: camper.id, emergencyContactId: newContact.id }); }
+                              }
+                              if (newLinks.length > 0) { await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]); }
+                              showToast(`Added ${dashboardECForm.name} as emergency contact`, 'success');
+                              setShowDashboardECModal(false);
+                            }}
+                          >Add Contact</button>
+                        </div>
+                      </div>
+                    </div>
                   )}
 
                   {/* Registration Modal */}
