@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.081";
+    const VERSION = "13.090";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T12:13:00");
+    const BUILD_DATE = new Date("2026-02-10T20:34:00");
 
     const RELEASE_NOTES = [
+      { version: "13.090", date: "2026-02-10", time: "8:34 PM", author: "Derek Richardson", changes: ["Dashboard Next Steps: 'Add Contact' button now opens the Add Emergency Contact modal directly and returns to Dashboard after saving", "Dashboard Next Steps: 'Register Now' button now opens the New Registration modal directly and returns to Dashboard after submitting or closing"] },
       { version: "13.089", date: "2026-02-10", time: "8:15 PM", author: "Derek Richardson", changes: ["Google Sign-In now creates new accounts — clicking Google when no account exists starts the onboarding flow with name and email pre-filled from Google", "Password field hidden for Google sign-up (not needed), email field read-only", "Blue 'Signing up with Google' banner shown during onboarding for both parent and counselor flows", "Accounts created via Google are stored with loginType: 'Google' and no password field"] },
       { version: "13.088", date: "2026-02-10", time: "8:08 PM", author: "Derek Richardson", changes: ["Google Sign-In button now styled to match the email/password input fields for a consistent look", "Removed 'Continue with Apple' placeholder button from login page", "Switched Google Sign-In from rendered iframe button to custom-styled button using OAuth2 token client"] },
       { version: "13.087", date: "2026-02-10", time: "8:03 PM", author: "Audrey Richardson", changes: ["Google Sign-In now works on the login page — parents, counselors, and admins can sign in with their Google account if their Google email matches an existing account", "Login type tracking added — sessionStorage now includes loginType ('Google' or 'Email/Password') for all logins", "Replaced placeholder 'Continue with Google' button with real Google Identity Services button"] },
@@ -4445,6 +4446,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [showConfirm, setShowConfirm] = useState(null);
         const [justRegistered, setJustRegistered] = useState(false);
         const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+        const [returnTabAfterRegistration, setReturnTabAfterRegistration] = useState(null);
         const [editingOrderId, setEditingOrderId] = useState(null);
         const [draftRegistration, setDraftRegistration] = useState(() => {
           // Load draft from localStorage if exists
@@ -4749,6 +4751,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setDraftRegistration(draft);
           setShowRegistrationModal(false);
           setEditingOrderId(null);
+          if (returnTabAfterRegistration) {
+            setParentTab(returnTabAfterRegistration);
+            setReturnTabAfterRegistration(null);
+          }
         };
 
         const closeModalAndDiscard = () => {
@@ -4759,6 +4765,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setSelectedDates({});
           setShowRegistrationModal(false);
           setEditingOrderId(null);
+          if (returnTabAfterRegistration) {
+            setParentTab(returnTabAfterRegistration);
+            setReturnTabAfterRegistration(null);
+          }
         };
 
         const submitRegistrationFromModal = async () => {
@@ -4778,6 +4788,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonths: [] });
           setShowRegistrationModal(false);
           setEditingOrderId(null);
+          if (returnTabAfterRegistration) {
+            setParentTab(returnTabAfterRegistration);
+            setReturnTabAfterRegistration(null);
+          }
         };
 
         // Get contextual hints for dashboard
@@ -4838,7 +4852,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => { setAutoOpenAddEC(true); setParentTab('emergency'); },
+              action: () => { setAutoOpenAddEC(true); setReturnTabAfterEC('dashboard'); setParentTab('emergency'); },
               actionText: 'Add Contact',
               priority: 3
             });
@@ -4862,7 +4876,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '📝',
               text: 'Register your camper(s) for sessions',
-              action: () => setParentTab('register'),
+              action: () => { setReturnTabAfterRegistration('dashboard'); setParentTab('register'); setTimeout(openRegistrationModal, 100); },
               actionText: 'Register Now',
               priority: 5
             });
