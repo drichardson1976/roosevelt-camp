@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.098";
+    const VERSION = "13.099";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:56:00");
+    const BUILD_DATE = new Date("2026-02-10T22:02:00");
 
     const RELEASE_NOTES = [
+      { version: "13.099", date: "2026-02-10", time: "10:02 PM", author: "Derek Richardson", changes: ["Registration calendar: clicking on a day header (Mon, Jul 13, etc.) toggles both AM and PM sessions", "If neither session selected → selects both; if both selected → deselects both; if one selected → selects both", "Day header shows hover/active states to indicate clickability"] },
       { version: "13.098", date: "2026-02-10", time: "9:56 PM", author: "Derek Richardson", changes: ["All Dashboard Next Steps buttons now open modals directly instead of navigating to tabs", "Add Campers button opens AddChildForm modal at top level from Dashboard", "Add Photo for EC button opens PhotoUploadModal at top level from Dashboard", "Campers tab 'Add Emergency Contact' button also uses top-level EC modal (consistent pattern)"] },
       { version: "13.097", date: "2026-02-10", time: "9:51 PM", author: "Derek Richardson", changes: ["EC Add Modal moved to top level (same pattern as Registration modal) — renders from any tab including Dashboard", "Both Dashboard button and EC tab button open the same top-level modal with full features (photo, all fields)", "EC tab's green 'Add Emergency Contact' button now opens the top-level modal via onRequestAddForm prop", "Campers tab 'Add Emergency Contact' also routes through the same top-level modal"] },
       { version: "13.096", date: "2026-02-10", time: "9:39 PM", author: "Derek Richardson", changes: ["Dashboard 'Add Emergency Contact' now uses the SAME modal as the Emergency Contacts tab — no duplicate code", "Removed inline dashboard EC modal; dashboard button now switches to EC tab with autoOpenAddEC=true so the full-screen modal opens instantly", "On cancel or save, returns to Dashboard automatically via returnTabAfterEC", "Removed unused modalOnly code path and dashboardECForm state"] },
@@ -6060,7 +6061,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               (amRegistered || pmRegistered) ? 'border-green-300 bg-green-50' :
                               'border-gray-200 bg-white'
                             }`}>
-                              <div className="p-2 text-center bg-gray-100 font-medium">
+                              <div className={`p-2 text-center bg-gray-100 font-medium ${!fullyBlocked ? 'cursor-pointer hover:bg-gray-200 active:bg-gray-300 transition-colors' : ''}`}
+                                onClick={() => { if (!fullyBlocked) toggleBothSessions(date); }}>
                                 <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
                                 <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                               </div>
