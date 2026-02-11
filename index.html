@@ -47,13 +47,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.108";
-    const PROJECT_VERSION = "13.109"; // Unified version shown in ribbon (max across all files)
+    const VERSION = "13.110";
+    const PROJECT_VERSION = "13.110"; // Unified version shown in ribbon (max across all files)
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-11T09:02:00");
+    const BUILD_DATE = new Date("2026-02-11T09:23:00");
 
     const RELEASE_NOTES = [
-      { version: "13.109", date: "2026-02-11", time: "9:13 AM", author: "Audrey Richardson", changes: ["Counselor onboarding: Fixed blank screen after availability step — was calling undefined saveAvail instead of saveAvailability prop"] },
+      { version: "13.110", date: "2026-02-11", time: "9:23 AM", author: "Audrey Richardson", changes: ["Counselor onboarding (index.html): Fixed blank screen after availability step — was calling undefined saveAvail instead of saveAvailability prop"] },
+      { version: "13.109", date: "2026-02-11", time: "9:13 AM", author: "Audrey Richardson", changes: ["Counselor onboarding (counselor.html): Fixed blank screen — same bug as 13.110 but in wrong file"] },
       { version: "13.108", date: "2026-02-11", time: "9:02 AM", author: "Audrey Richardson", changes: ["All pages: Red ribbon now shows unified PROJECT_VERSION across all pages instead of individual file versions"] },
       { version: "13.107", date: "2026-02-10", time: "11:29 PM", author: "Derek Richardson", changes: ["Parent: Messages tab replaced with 'Contact Us' tab (Camp Director email + emergency phone)", "Parent: Next Steps shows completion message when all steps done, Share button moved below", "Parent: Emergency contacts auto-linked to ALL campers when added", "Parent: EC 'Remove' button removed from Edit Child modal — manage on EC tab only"] },
       { version: "13.106", date: "2026-02-10", time: "11:29 PM", author: "Derek Richardson", changes: ["Admin: Removed Session Registrations sub-tab from Family Setup (use Registrations tab instead)", "Admin: Badge colors changed from red to dark green site-wide, added camper count badge", "Admin: Customer Invoices — Revenue Summary dashboard (New/Pending/Paid totals)", "Admin: Invoice numbers are clickable with detail modal + email invoice to parent feature", "Admin: Removed Messages tab (replaced with email communication via Resend)"] },
@@ -4729,7 +4730,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               };
             });
             const newAvail = { ...availability, [newCounselor.email]: combinedAvail };
-            await saveAvail(newAvail);
+            await saveAvailability(newAvail);
 
             // Also save to counselorSchedule so admin dashboard shows availability immediately
             // Save both available (true) and unavailable (false) sessions
