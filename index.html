@@ -47,13 +47,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.112";
-
+    const VERSION = "13.113";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-11T15:50:00");
 
     const RELEASE_NOTES = [
-      { version: "13.112", date: "2026-02-11", time: "3:50 PM", author: "Derek Richardson", changes: ["All pages: Reverted PROJECT_VERSION — ribbon now shows each file's own VERSION again per versioning rules"] },
+      { version: "13.113", date: "2026-02-11", time: "3:50 PM", author: "Derek Richardson", changes: ["All pages: Reverted PROJECT_VERSION — ribbon now shows each file's own VERSION again per versioning rules"] },
+      { version: "13.112", date: "2026-02-11", time: "9:45 AM", author: "Audrey Richardson", changes: ["Admin: Counselors tab now only shows approved counselors — pending applications must be approved in 'Work Availability' tab first before they appear in the main counselor list"] },
       { version: "13.111", date: "2026-02-11", time: "9:35 AM", author: "Audrey Richardson", changes: ["Counselor onboarding: Fixed blank screen after availability step — added missing COUNSELOR_RESPONSIBILITIES and PAY_DISCLOSURE constants that were undefined, causing Step 4 to crash"] },
       { version: "13.110", date: "2026-02-11", time: "9:23 AM", author: "Audrey Richardson", changes: ["Counselor onboarding (index.html): Fixed blank screen after availability step — was calling undefined saveAvail instead of saveAvailability prop"] },
       { version: "13.109", date: "2026-02-11", time: "9:13 AM", author: "Audrey Richardson", changes: ["Counselor onboarding (counselor.html): Fixed blank screen — same bug as 13.110 but in wrong file"] },
