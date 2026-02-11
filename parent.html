@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.096";
+    const VERSION = "13.097";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:39:00");
+    const BUILD_DATE = new Date("2026-02-10T21:51:00");
 
     const RELEASE_NOTES = [
+      { version: "13.097", date: "2026-02-10", time: "9:51 PM", author: "Derek Richardson", changes: ["EC Add Modal moved to top level (same pattern as Registration modal) — renders from any tab including Dashboard", "Both Dashboard button and EC tab button open the same top-level modal with full features (photo, all fields)", "EC tab's green 'Add Emergency Contact' button now opens the top-level modal via onRequestAddForm prop", "Campers tab 'Add Emergency Contact' also routes through the same top-level modal"] },
       { version: "13.096", date: "2026-02-10", time: "9:39 PM", author: "Derek Richardson", changes: ["Dashboard 'Add Emergency Contact' now uses the SAME modal as the Emergency Contacts tab — no duplicate code", "Removed inline dashboard EC modal; dashboard button now switches to EC tab with autoOpenAddEC=true so the full-screen modal opens instantly", "On cancel or save, returns to Dashboard automatically via returnTabAfterEC", "Removed unused modalOnly code path and dashboardECForm state"] },
       { version: "13.095", date: "2026-02-10", time: "9:34 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button — replaced ParentEmergencyContactsManager component approach with direct inline modal rendering, eliminating all component lifecycle/timing issues", "EC add form now renders as a simple fixed overlay directly in the parent component, same pattern as the working Registration modal"] },
       { version: "13.094", date: "2026-02-10", time: "9:30 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' modal not appearing — initialized showAddForm state to true when autoOpenAddEC is true, so modal renders immediately on first render instead of waiting for useEffect"] },
@@ -3744,6 +3745,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [autoOpenPhotoForParent, setAutoOpenPhotoForParent] = useState(null); // parent email — auto-open photo modal from Dashboard
       const [autoOpenAddEC, setAutoOpenAddEC] = useState(false); // auto-open Add EC form when switching to Emergency tab
       const [returnTabAfterEC, setReturnTabAfterEC] = useState(null); // tab to return to after adding EC
+      const [showECAddModal, setShowECAddModal] = useState(false); // top-level EC add form modal
+      const [ecAddForm, setEcAddForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null });
+      const [ecAddPhotoModal, setEcAddPhotoModal] = useState(false);
 
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -4862,7 +4866,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => { setReturnTabAfterEC(parentTab); setAutoOpenAddEC(true); setParentTab('emergency'); },
+              action: () => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); },
               actionText: 'Add Emergency Contact',
               priority: 3
             });
@@ -5452,6 +5456,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     autoOpenAddEC={autoOpenAddEC}
                     onAutoOpenDone={() => setAutoOpenAddEC(false)}
                     onCloseAddForm={() => { if (returnTabAfterEC) { setParentTab(returnTabAfterEC); setReturnTabAfterEC(null); } }}
+                    onRequestAddForm={() => { setEcAddForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowECAddModal(true); }}
                   />
                 </div>
               )}
@@ -5850,6 +5855,80 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               })()}
             </div>
 
+
+                  {/* EC Add Modal — top level so it renders from any tab */}
+                  {showECAddModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowECAddModal(false)}>
+                      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                        <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
+                        {/* Photo Upload */}
+                        <div className="flex justify-center mb-1">
+                          {getDisplayPhoto(ecAddForm.photo) ? (
+                            <div className="relative cursor-pointer" onClick={() => setEcAddPhotoModal(true)}>
+                              <img src={getDisplayPhoto(ecAddForm.photo)} className="w-24 h-24 rounded-full object-cover border-2 border-green-500" />
+                              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-600 rounded-full text-white flex items-center justify-center text-sm hover:bg-green-700">✎</div>
+                            </div>
+                          ) : (
+                            <div onClick={() => setEcAddPhotoModal(true)}
+                              className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                              <svg className="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                              <span className="text-[9px] text-gray-500 font-medium">add photo</span>
+                            </div>
+                          )}
+                          {ecAddPhotoModal && <PhotoUploadModal currentPhoto={ecAddForm.photo} onSave={(img) => { setEcAddForm(f => ({ ...f, photo: img })); setEcAddPhotoModal(false); }} onCancel={() => setEcAddPhotoModal(false)} />}
+                        </div>
+                        <p className="text-xs text-gray-500 text-center mb-4">Photo helps identify authorized pickup (optional)</p>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                            <input value={ecAddForm.name} onChange={e => setEcAddForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                            <select value={ecAddForm.relationship} onChange={e => setEcAddForm(f => ({ ...f, relationship: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
+                              <option value="">Select relationship</option>
+                              <option value="Parent">Parent</option>
+                              <option value="Legal Guardian">Legal Guardian</option>
+                              <option value="Relative">Relative</option>
+                              <option value="Caretaker">Caretaker</option>
+                              <option value="Family Friend">Family Friend</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
+                            <input value={ecAddForm.phone} onChange={e => setEcAddForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 555-1234" />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                            <input value={ecAddForm.email} onChange={e => setEcAddForm(f => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
+                          </div>
+                        </div>
+                        <div className="flex gap-4 pt-4">
+                          <button onClick={() => setShowECAddModal(false)} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                          <button
+                            disabled={!ecAddForm.name.trim() || !ecAddForm.relationship || !ecAddForm.phone.trim() || !ecAddForm.email.trim()}
+                            className={`flex-1 py-2 rounded-lg font-medium ${!ecAddForm.name.trim() || !ecAddForm.relationship || !ecAddForm.phone.trim() || !ecAddForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
+                            onClick={async () => {
+                              if (!isValidPhone(ecAddForm.phone)) { showToast('Please enter a valid 10-digit phone number', 'error'); return; }
+                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ecAddForm.email)) { showToast('Please enter a valid email address', 'error'); return; }
+                              const newContact = { id: `ec_${Date.now()}`, userEmail: user?.email, ...ecAddForm };
+                              const allContacts = [...emergencyContacts, newContact];
+                              await saveEmergencyContacts(allContacts, `Added emergency contact ${ecAddForm.name} for ${user?.name}`);
+                              const newLinks = [];
+                              for (const camper of myChildren) {
+                                const alreadyLinked = camperEmergencyContactLinks.some(link => link.camperId === camper.id && link.emergencyContactId === newContact.id);
+                                if (!alreadyLinked) newLinks.push({ camperId: camper.id, emergencyContactId: newContact.id });
+                              }
+                              if (newLinks.length > 0) await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
+                              showToast(`Added ${ecAddForm.name} as emergency contact`, 'success');
+                              setShowECAddModal(false);
+                            }}
+                          >Add Contact</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Registration Modal */}
                   {showRegistrationModal && (
@@ -6745,7 +6824,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
-    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm }) => {
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm, onRequestAddForm }) => {
       const [localContacts, setLocalContacts] = useState([]);
       const [editingId, setEditingId] = useState(null);
       const [showAddForm, setShowAddForm] = useState(autoOpenAddEC || false);
@@ -6755,10 +6834,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showEditPhotoModal, setShowEditPhotoModal] = useState(false);
       const [editingPhotoContactId, setEditingPhotoContactId] = useState(null);
 
-      // Auto-open add form when triggered from Campers tab
+      // Auto-open add form when triggered from Campers tab or Dashboard
       useEffect(() => {
         if (autoOpenAddEC) {
-          setShowAddForm(true);
+          if (onRequestAddForm) {
+            onRequestAddForm();
+          } else {
+            setShowAddForm(true);
+          }
           onAutoOpenDone?.();
         }
       }, [autoOpenAddEC]);
@@ -6981,7 +7064,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           {/* New Emergency Contact Button - always visible */}
           <div className="text-center">
             <button
-              onClick={() => setShowAddForm(true)}
+              onClick={() => onRequestAddForm ? onRequestAddForm() : setShowAddForm(true)}
               className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg flex items-center gap-3 mx-auto"
             >
               <span className="text-2xl">➕</span>
