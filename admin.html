@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.101";
+    const VERSION = "13.103";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T22:59:00");
+    const BUILD_DATE = new Date("2026-02-10T23:15:00");
 
     const RELEASE_NOTES = [
+      { version: "13.105", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Parent: Venmo modal auto-scrolls to bottom after image upload so 'Confirm Payment Sent' button is visible", "Parent: Button renamed from 'Confirm Venmo Payment Has Been Sent' to 'Confirm Payment Sent'", "Parent: EC modal green button renamed from 'Add Contact' to 'Add Emergency Contact'", "Parent: Session Registrations tab now keeps creation order (first at top, new below)", "Parent: Payments tab split into 'Registrations with Payments Due' and 'Registrations that have been Paid' sections", "Parent: Registration confirmation email sent on submission with camper details and 5-step payment instructions"] },
+      { version: "13.104", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Google login merge: persistent googleLinked flag so parents with email/password + Google show both methods in admin badge"] },
+      { version: "13.103", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Invoice generation on 'Mark as Paid': creates unique invoice ID (INV-xxx) stored on all registrations in the order", "Payment confirmation email sent to parent with invoice table (camper, date, session, amount) and next steps", "New 'Customer Invoices' sub-tab on Registrations: searchable, filterable, sortable table with totals", "Invoice ID displayed on Paid registration cards in both Family Setup and Registrations tabs", "Login badge uses persistent googleLinked flag for accurate Google detection across login sessions"] },
       { version: "13.102", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Login page now tracks login method (Google or Email/Password) in database so admin can see how parents log in"] },
       { version: "13.101", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Fixed login type badge: Google users no longer show 'No Login' — badge now shows Google, Email/Password, or Google + Email/Password", "Send Login Reminder email now customized per login method (Google users get 'Sign in with Google' instructions)", "Admin Campers tab redesigned: table layout replaced with card-based layout matching Parents tab (avatars, stats, expand/collapse)", "Registrations page reorganized into 3 sub-tabs: New, Pending Approval, and Paid for better handling of 50-200+ registrations"] },
       { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
@@ -2571,7 +2574,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-gray-800">{parent.name}</span>
                               {(() => {
-                                const hasGoogle = parent.lastLoginMethod === 'Google';
+                                const hasGoogle = parent.googleLinked || parent.lastLoginMethod === 'Google';
                                 const hasPassword = !!parent.password;
                                 if (hasGoogle && hasPassword) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">🔑 Google + Email/Password</span>;
                                 if (hasGoogle) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">G Google</span>;
@@ -2643,7 +2646,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             <button
                               onClick={async () => {
                                 try {
-                                  const hasGoogle = parent.lastLoginMethod === 'Google';
+                                  const hasGoogle = parent.googleLinked || parent.lastLoginMethod === 'Google';
                                   const hasPassword = !!parent.password;
                                   let methodHtml = '';
                                   if (hasGoogle && hasPassword) {
@@ -7687,7 +7690,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           children: {
             'new': { label: 'New', badge: () => getUnpaid() },
             'pending': { label: 'Pending Approval', badge: () => getPending() },
-            'paid': { label: 'Paid', badge: () => getApproved() }
+            'paid': { label: 'Paid', badge: () => getApproved() },
+            'invoices': { label: 'Customer Invoices', badge: () => registrations.filter(r => r.invoiceId).length }
           },
           defaultChild: 'new'
         },
@@ -8950,7 +8954,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                       if (!confirm(`Are you sure you want to mark payment as received for ${camperNames.join(', ')}?`)) return;
                                       if (!confirm(`This will mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')} (${regs.length} session(s)).\n\nCamper(s) will become eligible for pod assignment. Confirm?`)) return;
                                       const now = new Date().toISOString();
-                                      // Batch update: update all registrations in state at once to avoid visual glitch
+                                      const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`;
                                       const updatedRegs = regs.map(reg => ({
                                         ...reg,
                                         status: 'approved',
@@ -8958,16 +8962,31 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                         approvedAt: now,
                                         approvedBy: user?.name,
                                         paymentConfirmedAt: now,
-                                        paymentConfirmedBy: user?.name
+                                        paymentConfirmedBy: user?.name,
+                                        invoiceId
                                       }));
-                                      // Update state once for all registrations
                                       setRegistrations(prev => prev.map(r => {
                                         const updated = updatedRegs.find(u => u.id === r.id);
                                         return updated || r;
                                       }));
-                                      // Save to storage in parallel
                                       await Promise.all(updatedRegs.map(reg => storage.set('camp_registrations', reg.id, reg)));
-                                      addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — camper(s) now eligible for pod assignment`, [regs[0].parentEmail]);
+                                      addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — Invoice ${invoiceId}`, [regs[0].parentEmail]);
+                                      // Send payment confirmation email to parent
+                                      try {
+                                        const parent = users.find(u => u.email === regs[0].parentEmail);
+                                        const sortedRegs = [...regs].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                        const dateList = sortedRegs.map(r => new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
+                                        const sessionRows = sortedRegs.map(r => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${r.camperName || r.childName}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${(r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(parseFloat(r.totalAmount) || 0).toFixed(2)}</td></tr>`).join('');
+                                        fetch('/.netlify/functions/send-email', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            to: regs[0].parentEmail,
+                                            subject: `Payment Confirmed — ${camperNames.join(', ')} (Invoice ${invoiceId})`,
+                                            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"><h2 style="color:#15803d;">Payment Confirmed!</h2><p>Hi ${parent?.name || regs[0].parentName},</p><p>Your payment has been confirmed. Your camper(s) are now registered!</p><div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:16px;margin:16px 0;"><p style="margin:0 0 4px;font-size:13px;color:#666;">Invoice: <strong>${invoiceId}</strong></p><p style="margin:0 0 12px;font-size:13px;color:#666;">Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p><table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr style="background:#dcfce7;"><th style="padding:6px 8px;text-align:left;">Camper</th><th style="padding:6px 8px;text-align:left;">Date</th><th style="padding:6px 8px;text-align:left;">Session</th><th style="padding:6px 8px;text-align:right;">Amount</th></tr></thead><tbody>${sessionRows}</tbody><tfoot><tr><td colspan="3" style="padding:8px;font-weight:bold;border-top:2px solid #15803d;">Total Paid</td><td style="padding:8px;font-weight:bold;text-align:right;border-top:2px solid #15803d;color:#15803d;font-size:18px;">$${totalAmount.toFixed(2)}</td></tr></tfoot></table></div><h3 style="color:#15803d;">What Happens Next</h3><ul style="line-height:1.8;"><li>Your camper(s) will be assigned to their pod before camp starts</li><li>Check your dashboard for pod assignments and schedule updates</li><li>Make sure emergency contacts and camper photos are up to date</li></ul><p><a href="https://rhsbasketballdaycamp.com/#login" style="display:inline-block;background-color:#15803d;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;">Go to Dashboard</a></p><p style="color:#666;font-size:12px;margin-top:20px;">Keep this email for your records. Invoice ${invoiceId}</p></div>`
+                                          })
+                                        });
+                                      } catch (emailErr) { console.error('Payment email failed:', emailErr); }
                                       showToast(`Payment confirmed for ${camperNames.join(', ')}! Camper(s) now eligible for pod assignment.`);
                                     }}
                                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium whitespace-nowrap"
@@ -8994,10 +9013,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <div className="space-y-4">
                             {paidOrders.map(([orderId, regs]) => {
                               const confirmedDate = regs[0]?.paymentConfirmedAt ? new Date(regs[0].paymentConfirmedAt).toLocaleDateString() : '';
+                              const invId = regs[0]?.invoiceId;
                               return renderOrderCard(orderId, regs, {
                                 borderClass: 'border-green-500 bg-green-50',
                                 actions: (
-                                  <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
+                                  <div className="text-right">
+                                    {invId && <span className="block text-xs font-mono text-purple-600">{invId}</span>}
+                                    <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
+                                  </div>
                                 )
                               });
                             })}
@@ -10223,6 +10246,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     if (!confirm(`Are you sure you want to mark payment as received for ${camperNames.join(', ')}?`)) return;
                                     if (!confirm(`This will mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')} (${regs.length} session(s)).\n\nCamper(s) will become eligible for pod assignment. Confirm?`)) return;
                                     const now = new Date().toISOString();
+                                    const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`;
                                     const updatedRegs = regs.map(reg => ({
                                       ...reg,
                                       status: 'approved',
@@ -10230,14 +10254,30 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                       approvedAt: now,
                                       approvedBy: user?.name,
                                       paymentConfirmedAt: now,
-                                      paymentConfirmedBy: user?.name
+                                      paymentConfirmedBy: user?.name,
+                                      invoiceId
                                     }));
                                     setRegistrations(prev => prev.map(r => {
                                       const updated = updatedRegs.find(u => u.id === r.id);
                                       return updated || r;
                                     }));
                                     await Promise.all(updatedRegs.map(reg => storage.set('camp_registrations', reg.id, reg)));
-                                    addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — camper(s) now eligible for pod assignment`, [regs[0].parentEmail]);
+                                    addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — Invoice ${invoiceId}`, [regs[0].parentEmail]);
+                                    // Send payment confirmation email to parent
+                                    try {
+                                      const parent = users.find(u => u.email === regs[0].parentEmail);
+                                      const sortedRegs = [...regs].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                      const sessionRows = sortedRegs.map(r => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${r.camperName || r.childName}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${(r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(parseFloat(r.totalAmount) || 0).toFixed(2)}</td></tr>`).join('');
+                                      fetch('/.netlify/functions/send-email', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          to: regs[0].parentEmail,
+                                          subject: `Payment Confirmed — ${camperNames.join(', ')} (Invoice ${invoiceId})`,
+                                          html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"><h2 style="color:#15803d;">Payment Confirmed!</h2><p>Hi ${parent?.name || regs[0].parentName},</p><p>Your payment has been confirmed. Your camper(s) are now registered!</p><div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:16px;margin:16px 0;"><p style="margin:0 0 4px;font-size:13px;color:#666;">Invoice: <strong>${invoiceId}</strong></p><p style="margin:0 0 12px;font-size:13px;color:#666;">Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p><table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr style="background:#dcfce7;"><th style="padding:6px 8px;text-align:left;">Camper</th><th style="padding:6px 8px;text-align:left;">Date</th><th style="padding:6px 8px;text-align:left;">Session</th><th style="padding:6px 8px;text-align:right;">Amount</th></tr></thead><tbody>${sessionRows}</tbody><tfoot><tr><td colspan="3" style="padding:8px;font-weight:bold;border-top:2px solid #15803d;">Total Paid</td><td style="padding:8px;font-weight:bold;text-align:right;border-top:2px solid #15803d;color:#15803d;font-size:18px;">$${totalAmount.toFixed(2)}</td></tr></tfoot></table></div><h3 style="color:#15803d;">What Happens Next</h3><ul style="line-height:1.8;"><li>Your camper(s) will be assigned to their pod before camp starts</li><li>Check your dashboard for pod assignments and schedule updates</li><li>Make sure emergency contacts and camper photos are up to date</li></ul><p><a href="https://rhsbasketballdaycamp.com/#login" style="display:inline-block;background-color:#15803d;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;">Go to Dashboard</a></p><p style="color:#666;font-size:12px;margin-top:20px;">Keep this email for your records. Invoice ${invoiceId}</p></div>`
+                                        })
+                                      });
+                                    } catch (emailErr) { console.error('Payment email failed:', emailErr); }
                                     showToast(`Payment confirmed for ${camperNames.join(', ')}! Camper(s) now eligible for pod assignment.`);
                                   }}
                                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium whitespace-nowrap"
@@ -10267,10 +10307,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         <div className="space-y-4">
                           {paidOrders.map(([orderId, regs]) => {
                             const confirmedDate = regs[0]?.paymentConfirmedAt ? new Date(regs[0].paymentConfirmedAt).toLocaleDateString() : '';
+                            const invId = regs[0]?.invoiceId;
                             return renderRegCard(orderId, regs, {
                               borderClass: 'border-green-500 bg-green-50',
                               actions: (
-                                <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
+                                <div className="text-right">
+                                  {invId && <span className="block text-xs font-mono text-purple-600">{invId}</span>}
+                                  <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
+                                </div>
                               )
                             });
                           })}
@@ -10278,6 +10322,144 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       )}
                     </div>
                   )}
+
+                  {/* Customer Invoices Sub-tab */}
+                  {activeRegTab === 'invoices' && (() => {
+                    // Collect all invoiced registrations grouped by invoiceId
+                    const invoicedRegs = registrations.filter(r => r.invoiceId);
+                    const byInvoice = {};
+                    invoicedRegs.forEach(r => {
+                      if (!byInvoice[r.invoiceId]) byInvoice[r.invoiceId] = [];
+                      byInvoice[r.invoiceId].push(r);
+                    });
+
+                    const invoices = Object.entries(byInvoice).map(([invoiceId, regs]) => {
+                      const parent = users.find(u => u.email === regs[0].parentEmail);
+                      const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))].join(', ');
+                      const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                      const paidDate = regs[0]?.paymentConfirmedAt ? new Date(regs[0].paymentConfirmedAt) : null;
+                      return {
+                        invoiceId,
+                        regs,
+                        parentName: parent?.name || regs[0].parentName || '',
+                        parentEmail: regs[0].parentEmail || '',
+                        parentPhone: parent?.phone || '',
+                        camperNames,
+                        totalAmount,
+                        paidDate,
+                        sessionCount: regs.length
+                      };
+                    });
+
+                    // Search + Sort state (use inline state via refs pattern)
+                    const [invoiceSearch, setInvoiceSearch] = React.useState('');
+                    const [invoiceSort, setInvoiceSort] = React.useState('date-desc');
+
+                    const filtered = invoices.filter(inv => {
+                      if (!invoiceSearch) return true;
+                      const q = invoiceSearch.toLowerCase();
+                      return inv.invoiceId.toLowerCase().includes(q)
+                        || inv.parentName.toLowerCase().includes(q)
+                        || inv.parentEmail.toLowerCase().includes(q)
+                        || inv.parentPhone.includes(q)
+                        || inv.camperNames.toLowerCase().includes(q)
+                        || inv.totalAmount.toFixed(2).includes(q);
+                    });
+
+                    const sorted = [...filtered].sort((a, b) => {
+                      switch (invoiceSort) {
+                        case 'date-desc': return (b.paidDate || 0) - (a.paidDate || 0);
+                        case 'date-asc': return (a.paidDate || 0) - (b.paidDate || 0);
+                        case 'amount-desc': return b.totalAmount - a.totalAmount;
+                        case 'amount-asc': return a.totalAmount - b.totalAmount;
+                        case 'parent-asc': return a.parentName.localeCompare(b.parentName);
+                        case 'parent-desc': return b.parentName.localeCompare(a.parentName);
+                        case 'invoice-asc': return a.invoiceId.localeCompare(b.invoiceId);
+                        case 'invoice-desc': return b.invoiceId.localeCompare(a.invoiceId);
+                        default: return 0;
+                      }
+                    });
+
+                    return (
+                    <div className="bg-white rounded-xl shadow p-6">
+                      <h3 className="font-bold text-xl text-purple-700 mb-2">🧾 Customer Invoices ({invoices.length})</h3>
+                      <p className="text-sm text-gray-500 mb-4">All payment invoices generated when registrations are marked as paid.</p>
+
+                      {/* Search and Sort Controls */}
+                      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            placeholder="Search by invoice #, parent, email, phone, camper, amount..."
+                            value={invoiceSearch}
+                            onChange={e => setInvoiceSearch(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 focus:border-purple-400"
+                          />
+                          <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                        </div>
+                        <select
+                          value={invoiceSort}
+                          onChange={e => setInvoiceSort(e.target.value)}
+                          className="px-3 py-2 border rounded-lg bg-white text-sm"
+                        >
+                          <option value="date-desc">Date (Newest First)</option>
+                          <option value="date-asc">Date (Oldest First)</option>
+                          <option value="amount-desc">Amount (High → Low)</option>
+                          <option value="amount-asc">Amount (Low → High)</option>
+                          <option value="parent-asc">Parent (A → Z)</option>
+                          <option value="parent-desc">Parent (Z → A)</option>
+                          <option value="invoice-asc">Invoice # (A → Z)</option>
+                          <option value="invoice-desc">Invoice # (Z → A)</option>
+                        </select>
+                      </div>
+
+                      {sorted.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400">
+                          <p className="text-3xl mb-2">🧾</p>
+                          <p>{invoices.length === 0 ? 'No invoices yet' : 'No invoices match your search'}</p>
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto -mx-4 sm:mx-0">
+                          <table className="w-full min-w-[700px] text-sm">
+                            <thead>
+                              <tr className="text-left text-xs text-gray-500 border-b">
+                                <th className="p-2 font-medium">Invoice #</th>
+                                <th className="p-2 font-medium">Date</th>
+                                <th className="p-2 font-medium">Parent</th>
+                                <th className="p-2 font-medium">Email</th>
+                                <th className="p-2 font-medium">Phone</th>
+                                <th className="p-2 font-medium">Camper(s)</th>
+                                <th className="p-2 font-medium text-center">Sessions</th>
+                                <th className="p-2 font-medium text-right">Amount</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {sorted.map(inv => (
+                                <tr key={inv.invoiceId} className="border-b hover:bg-purple-50 transition-colors">
+                                  <td className="p-2 font-mono font-bold text-purple-700">{inv.invoiceId}</td>
+                                  <td className="p-2 text-gray-600">{inv.paidDate ? inv.paidDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}</td>
+                                  <td className="p-2 font-medium">{inv.parentName}</td>
+                                  <td className="p-2 text-gray-600">{inv.parentEmail}</td>
+                                  <td className="p-2 text-gray-600">{inv.parentPhone || '—'}</td>
+                                  <td className="p-2">{inv.camperNames}</td>
+                                  <td className="p-2 text-center">{inv.sessionCount}</td>
+                                  <td className="p-2 text-right font-bold text-green-700">${inv.totalAmount.toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                            <tfoot>
+                              <tr className="border-t-2 border-gray-300">
+                                <td colSpan="6" className="p-2 font-bold text-right">Total ({sorted.length} invoices)</td>
+                                <td className="p-2 text-center font-bold">{sorted.reduce((sum, inv) => sum + inv.sessionCount, 0)}</td>
+                                <td className="p-2 text-right font-bold text-green-700 text-lg">${sorted.reduce((sum, inv) => sum + inv.totalAmount, 0).toFixed(2)}</td>
+                              </tr>
+                            </tfoot>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                    );
+                  })()}
                 </div>
                 );
               })()}

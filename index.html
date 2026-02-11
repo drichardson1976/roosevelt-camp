@@ -47,11 +47,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.102";
+    const VERSION = "13.104";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T22:59:00");
+    const BUILD_DATE = new Date("2026-02-10T23:15:00");
 
     const RELEASE_NOTES = [
+      { version: "13.105", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Parent: Venmo modal auto-scrolls to bottom after image upload so 'Confirm Payment Sent' button is visible", "Parent: Button renamed from 'Confirm Venmo Payment Has Been Sent' to 'Confirm Payment Sent'", "Parent: EC modal green button renamed from 'Add Contact' to 'Add Emergency Contact'", "Parent: Session Registrations tab now keeps creation order (first at top, new below)", "Parent: Payments tab split into 'Registrations with Payments Due' and 'Registrations that have been Paid' sections", "Parent: Registration confirmation email sent on submission with camper details and 5-step payment instructions"] },
+      { version: "13.104", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Google login merge: persistent googleLinked flag so parents with email/password + Google show both methods in admin badge"] },
+      { version: "13.103", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Invoice generation on 'Mark as Paid': creates unique invoice ID (INV-xxx) stored on all registrations in the order", "Payment confirmation email sent to parent with invoice table (camper, date, session, amount) and next steps", "New 'Customer Invoices' sub-tab on Registrations: searchable, filterable, sortable table with totals", "Invoice ID displayed on Paid registration cards in both Family Setup and Registrations tabs", "Login badge uses persistent googleLinked flag for accurate Google detection across login sessions"] },
       { version: "13.102", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Login page now tracks login method (Google or Email/Password) in database so admin can see how parents log in"] },
       { version: "13.101", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Fixed login type badge: Google users no longer show 'No Login' — badge now shows Google, Email/Password, or Google + Email/Password", "Send Login Reminder email now customized per login method (Google users get 'Sign in with Google' instructions)", "Admin Campers tab redesigned: table layout replaced with card-based layout matching Parents tab (avatars, stats, expand/collapse)", "Registrations page reorganized into 3 sub-tabs: New, Pending Approval, and Paid for better handling of 50-200+ registrations"] },
       { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
@@ -5084,11 +5087,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           try {
             const now = new Date().toISOString();
             const sourceArray = table === 'camp_parents' ? parents : counselorUsers;
-            const updated = sourceArray.map(u =>
-              u.email?.toLowerCase() === userEmail.toLowerCase()
-                ? { ...u, lastLoginMethod: method, lastLoginAt: now }
-                : u
-            );
+            const updated = sourceArray.map(u => {
+              if (u.email?.toLowerCase() !== userEmail.toLowerCase()) return u;
+              const patch = { ...u, lastLoginMethod: method, lastLoginAt: now };
+              if (method === 'Google') patch.googleLinked = true;
+              return patch;
+            });
             storage.set(table, 'main', updated);
           } catch (e) {
             console.error('Failed to track login method:', e);

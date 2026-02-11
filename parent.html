@@ -45,11 +45,14 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.100";
+    const VERSION = "13.105";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T22:38:00");
+    const BUILD_DATE = new Date("2026-02-10T23:15:00");
 
     const RELEASE_NOTES = [
+      { version: "13.105", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Parent: Venmo modal auto-scrolls to bottom after image upload so 'Confirm Payment Sent' button is visible", "Parent: Button renamed from 'Confirm Venmo Payment Has Been Sent' to 'Confirm Payment Sent'", "Parent: EC modal green button renamed from 'Add Contact' to 'Add Emergency Contact'", "Parent: Session Registrations tab now keeps creation order (first at top, new below)", "Parent: Payments tab split into 'Registrations with Payments Due' and 'Registrations that have been Paid' sections", "Parent: Registration confirmation email sent on submission with camper details and 5-step payment instructions"] },
+      { version: "13.104", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Google login merge: persistent googleLinked flag so parents with email/password + Google show both methods in admin badge"] },
+      { version: "13.103", date: "2026-02-10", time: "11:15 PM", author: "Derek Richardson", changes: ["Invoice generation on 'Mark as Paid': creates unique invoice ID (INV-xxx) stored on all registrations in the order", "Payment confirmation email sent to parent with invoice table (camper, date, session, amount) and next steps", "New 'Customer Invoices' sub-tab on Registrations: searchable, filterable, sortable table with totals", "Invoice ID displayed on Paid registration cards in both Family Setup and Registrations tabs", "Login badge uses persistent googleLinked flag for accurate Google detection across login sessions"] },
       { version: "13.102", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Login page now tracks login method (Google or Email/Password) in database so admin can see how parents log in"] },
       { version: "13.101", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Fixed login type badge: Google users no longer show 'No Login' — badge now shows Google, Email/Password, or Google + Email/Password", "Send Login Reminder email now customized per login method (Google users get 'Sign in with Google' instructions)", "Admin Campers tab redesigned: table layout replaced with card-based layout matching Parents tab (avatars, stats, expand/collapse)", "Registrations page reorganized into 3 sub-tabs: New, Pending Approval, and Paid for better handling of 50-200+ registrations"] },
       { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
@@ -5070,6 +5073,51 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           const regSessionCount = Object.entries(selectedDates).filter(([, s]) => s.length).reduce((sum, [, s]) => sum + s.length, 0);
           addToHistory('Registration Submitted', `Submitted registration for ${regCamperNames.join(', ')} — ${regDateCount} day(s), ${regSessionCount} session(s), $${pricing.finalTotal.toFixed(2)}`);
 
+          // Send registration confirmation email
+          try {
+            const regDates = Object.entries(selectedDates).filter(([, s]) => s.length).map(([d]) => d).sort();
+            const regDateList = regDates.map(d => {
+              const dt = new Date(d + 'T12:00:00');
+              return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            }).join(', ');
+            const camperRows = selectedChildren.map(id => {
+              const child = myChildren.find(c => c.id === id);
+              return `<li><strong>${child?.name || 'Camper'}</strong></li>`;
+            }).join('');
+            fetch('/.netlify/functions/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: user?.email,
+                subject: `Registration Confirmed — ${regCamperNames.join(', ')}`,
+                html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                  <h2 style="color: #15803d;">Registration Confirmed!</h2>
+                  <p>Hi ${user?.name},</p>
+                  <p>Your camp registration has been submitted successfully. Here are the details:</p>
+                  <div style="background: #f0fdf4; border: 2px solid #86efac; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 0 0 8px;"><strong>Camper(s):</strong></p>
+                    <ul style="margin: 0 0 12px;">${camperRows}</ul>
+                    <p style="margin: 0 0 4px;"><strong>Dates:</strong> ${regDateList}</p>
+                    <p style="margin: 0 0 4px;"><strong>Days:</strong> ${regDateCount} day(s), ${regSessionCount} session(s)</p>
+                    <p style="margin: 0 0 4px;"><strong>Total Amount Due:</strong> <span style="color: #15803d; font-size: 18px; font-weight: bold;">$${pricing.finalTotal.toFixed(2)}</span></p>
+                    ${pricing.discount > 0 ? `<p style="margin: 0; color: #666; font-size: 13px;">Discount applied: -$${pricing.discount.toFixed(2)} (${pricing.discountPercent}% multi-day discount)</p>` : ''}
+                    <p style="margin: 8px 0 0;"><strong>Venmo Reference Code:</strong> <span style="font-family: monospace; font-size: 16px; color: #1d4ed8; font-weight: bold;">${orderVenmoCode}</span></p>
+                  </div>
+                  <h3 style="color: #15803d;">Next Steps</h3>
+                  <ol style="line-height: 1.8;">
+                    <li><strong>Open Venmo</strong> and search for <strong>@RHSDayCamp</strong></li>
+                    <li>Send <strong>$${pricing.finalTotal.toFixed(2)}</strong></li>
+                    <li>In the "What's it for?" section, enter your code: <strong>${orderVenmoCode}</strong></li>
+                    <li>Take a screenshot of your Venmo payment</li>
+                    <li><strong>Upload the screenshot</strong> in your <a href="https://rhsbasketballdaycamp.com/#login" style="color: #1d4ed8;">parent dashboard</a> under Payments</li>
+                  </ol>
+                  <p style="color: #666; font-size: 14px;">Once we confirm your payment, your registration will be finalized and your camper(s) will be assigned to their pod.</p>
+                  <p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Dashboard</a></p>
+                </div>`
+              })
+            });
+          } catch (emailErr) { console.error('Registration email failed:', emailErr); }
+
           // Show Venmo payment confirmation modal
           const confirmedDates = Object.entries(selectedDates).filter(([, s]) => s.length);
           setShowConfirm({
@@ -5228,11 +5276,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             regsByOrder[orderKey].push(reg);
                           });
 
-                          // Sort orders by most recent first
+                          // Sort orders by creation order (first created at top, newest at bottom)
                           const sortedOrders = Object.entries(regsByOrder).sort((a, b) => {
                             const aDate = a[1][0]?.createdAt || a[1][0]?.date || '';
                             const bDate = b[1][0]?.createdAt || b[1][0]?.date || '';
-                            return new Date(bDate) - new Date(aDate);
+                            return new Date(aDate) - new Date(bDate);
                           });
 
                           // Shared date range formatter with contiguous detection
@@ -5546,11 +5594,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         regsByOrder[orderKey].push(reg);
                       });
 
-                      const allOrders = Object.entries(regsByOrder);
+                      // Sort by creation order (first created at top, newest at bottom)
+                      const allOrders = Object.entries(regsByOrder).sort((a, b) => {
+                        const aDate = a[1][0]?.createdAt || a[1][0]?.date || '';
+                        const bDate = b[1][0]?.createdAt || b[1][0]?.date || '';
+                        return new Date(aDate) - new Date(bDate);
+                      });
+                      const unpaidOrders = allOrders.filter(([, regs]) => !['paid', 'confirmed'].includes(regs[0]?.paymentStatus));
+                      const paidOrders = allOrders.filter(([, regs]) => ['paid', 'confirmed'].includes(regs[0]?.paymentStatus));
 
-                      return (
-                        <div className="space-y-4">
-                          {allOrders.map(([orderKey, regs]) => {
+                      const renderPaymentCard = ([orderKey, regs]) => {
                             const paymentStatus = regs[0]?.paymentStatus || 'unpaid';
                             const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
                             const isSent = paymentStatus === 'sent';
@@ -5569,85 +5622,116 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               ? `${camperNames[0]}'s Registration`
                               : `${camperNames.join(' and ')} Registration`;
 
-                            return (
-                              <div key={orderKey} className={`rounded-lg p-4 ${
-                                isPaid ? 'bg-green-50 border-2 border-green-500' :
-                                isSent ? 'bg-blue-50 border-2 border-blue-300' :
-                                'bg-blue-50 border-2 border-blue-300'
-                              }`}>
-                                <div className="flex justify-between items-start mb-3">
-                                  <div className="font-bold text-lg text-green-800">{title}</div>
-                                  {isPaid ? (
-                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
-                                  ) : isSent ? (
-                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
-                                  ) : (
-                                    <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
-                                  )}
-                                </div>
-                                {/* Per-camper breakdown */}
-                                <div className="space-y-2 mb-3">
-                                  {Object.entries(byCamper).map(([camperName, camperRegs]) => {
-                                    const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                                    const dates = sortedCamperRegs.map(r => r.date);
-                                    const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
-                                    const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
-                                    const hasAM = sessions.includes('morning');
-                                    const hasPM = sessions.includes('afternoon');
-                                    const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
-                                    return (
-                                      <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-blue-100'}`}>
-                                        <div className="flex justify-between items-center">
-                                          <div>
-                                            <span className="font-medium">{camperName}</span>
-                                            <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
-                                          </div>
-                                          <span className="font-medium">${camperTotal.toFixed(2)}</span>
-                                        </div>
-                                        <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</div>
+                        return (
+                          <div key={orderKey} className={`rounded-lg p-4 ${
+                            isPaid ? 'bg-green-50 border-2 border-green-500' :
+                            isSent ? 'bg-blue-50 border-2 border-blue-300' :
+                            'bg-blue-50 border-2 border-blue-300'
+                          }`}>
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="font-bold text-lg text-green-800">{title}</div>
+                              {isPaid ? (
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
+                              ) : isSent ? (
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
+                              ) : (
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
+                              )}
+                            </div>
+                            {/* Per-camper breakdown */}
+                            <div className="space-y-2 mb-3">
+                              {Object.entries(byCamper).map(([camperName, camperRegs]) => {
+                                const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                                const dates = sortedCamperRegs.map(r => r.date);
+                                const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                                const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
+                                const hasAM = sessions.includes('morning');
+                                const hasPM = sessions.includes('afternoon');
+                                const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                                return (
+                                  <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : isSent ? 'bg-blue-100' : 'bg-blue-100'}`}>
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <span className="font-medium">{camperName}</span>
+                                        <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                                {(isPaid || isSent) && orderVenmoCode && (
-                                  <div className={`text-xs mt-2 ${isPaid ? 'text-green-600' : 'text-blue-600'}`}>
-                                    Venmo Reference: <span className="font-mono font-bold">{orderVenmoCode}</span>
-                                    {regs[0]?.paymentSentAt && (
-                                      <span className="ml-2 text-gray-500">
-                                        Sent {new Date(regs[0].paymentSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(regs[0].paymentSentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                                      </span>
-                                    )}
+                                      <span className="font-medium">${camperTotal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</div>
                                   </div>
+                                );
+                              })}
+                            </div>
+                            {(isPaid || isSent) && orderVenmoCode && (
+                              <div className={`text-xs mt-2 ${isPaid ? 'text-green-600' : 'text-blue-600'}`}>
+                                Venmo Reference: <span className="font-mono font-bold">{orderVenmoCode}</span>
+                                {regs[0]?.paymentSentAt && (
+                                  <span className="ml-2 text-gray-500">
+                                    Sent {new Date(regs[0].paymentSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(regs[0].paymentSentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                                  </span>
                                 )}
-                                {(isPaid || isSent) && regs[0]?.venmoScreenshot && (
-                                  <div className="mt-2 mb-1">
-                                    <img
-                                      src={getDisplayPhoto(regs[0].venmoScreenshot) || regs[0].venmoScreenshot}
-                                      alt="Venmo payment screenshot"
-                                      className="max-h-32 object-contain rounded-lg border"
-                                    />
-                                  </div>
-                                )}
-                                <div className={`flex justify-between items-center pt-2 ${isPaid ? 'border-t border-green-300' : isSent ? 'border-t border-blue-200' : 'border-t'}`}>
-                                  <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
-                                  <div className="flex gap-2">
-                                    {isPaid ? (
-                                      <span className="text-green-600 font-medium text-sm">✓ Payment confirmed</span>
-                                    ) : isSent ? (
-                                      <span className="text-blue-600 font-medium text-sm">Payment sent — awaiting confirmation</span>
-                                    ) : (
-                                      <button
-                                        onClick={() => { setVenmoScreenshot(null); setVenmoScreenshotRaw(null); setPaymentVenmoModal({ orderKey, regs, totalAmount, venmoCode: orderVenmoCode, title }); }}
-                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
-                                      >
-                                        Pay Now
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
                               </div>
-                            );
-                          })}
+                            )}
+                            {(isPaid || isSent) && regs[0]?.venmoScreenshot && (
+                              <div className="mt-2 mb-1">
+                                <img
+                                  src={getDisplayPhoto(regs[0].venmoScreenshot) || regs[0].venmoScreenshot}
+                                  alt="Venmo payment screenshot"
+                                  className="max-h-32 object-contain rounded-lg border"
+                                />
+                              </div>
+                            )}
+                            {isPaid && regs[0]?.invoiceId && (
+                              <div className="mt-2">
+                                <span className="text-xs text-green-600">Invoice: <span className="font-mono font-bold">{regs[0].invoiceId}</span></span>
+                              </div>
+                            )}
+                            <div className={`flex justify-between items-center pt-2 ${isPaid ? 'border-t border-green-300' : isSent ? 'border-t border-blue-200' : 'border-t'}`}>
+                              <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                              <div className="flex gap-2">
+                                {isPaid ? (
+                                  <span className="text-green-600 font-medium text-sm">✓ Payment confirmed</span>
+                                ) : isSent ? (
+                                  <span className="text-blue-600 font-medium text-sm">Payment sent — awaiting confirmation</span>
+                                ) : (
+                                  <button
+                                    onClick={() => { setVenmoScreenshot(null); setVenmoScreenshotRaw(null); setPaymentVenmoModal({ orderKey, regs, totalAmount, venmoCode: orderVenmoCode, title }); }}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                                  >
+                                    Pay Now
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      };
+
+                      return (
+                        <div className="space-y-6">
+                          {/* Registrations with Payments Due */}
+                          {unpaidOrders.length > 0 && (
+                            <div>
+                              <h4 className="font-bold text-lg text-gray-800 mb-3">Registrations with Payments Due</h4>
+                              <div className="space-y-4">
+                                {unpaidOrders.map(renderPaymentCard)}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Registrations that have been Paid */}
+                          {paidOrders.length > 0 && (
+                            <div>
+                              <h4 className="font-bold text-lg text-gray-800 mb-3">Registrations that have been Paid</h4>
+                              <div className="space-y-4">
+                                {paidOrders.map(renderPaymentCard)}
+                              </div>
+                            </div>
+                          )}
+
+                          {unpaidOrders.length === 0 && paidOrders.length === 0 && (
+                            <p className="text-gray-500 text-center py-4">No payment records found.</p>
+                          )}
                         </div>
                       );
                     })()}
@@ -5730,7 +5814,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {/* Venmo Payment Modal — top level so it renders from any tab */}
                   {paymentVenmoModal && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}>
-                      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                      <div data-venmo-modal className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <h3 className="font-bold text-xl text-center mb-4">Pay via Venmo</h3>
                         <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 mb-4">
                           <div className="font-bold text-blue-800 mb-2">{paymentVenmoModal.title}</div>
@@ -5814,7 +5898,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setVenmoScreenshotRaw(null)}>
                             <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                               <h3 className="font-bold text-lg text-gray-800 mb-4">Crop Screenshot</h3>
-                              <ImageCropper image={venmoScreenshotRaw} onSave={(croppedImg, transform) => { setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform }); setVenmoScreenshotRaw(null); }} onCancel={() => setVenmoScreenshotRaw(null)} shape="rectangle" aspectRatio={9/16} />
+                              <ImageCropper image={venmoScreenshotRaw} onSave={(croppedImg, transform) => { setVenmoScreenshot({ cropped: croppedImg, original: venmoScreenshotRaw, transform }); setVenmoScreenshotRaw(null); setTimeout(() => { const modal = document.querySelector('[data-venmo-modal]'); if (modal) modal.scrollTop = modal.scrollHeight; }, 100); }} onCancel={() => setVenmoScreenshotRaw(null)} shape="rectangle" aspectRatio={9/16} />
                             </div>
                           </div>
                         )}
@@ -5829,7 +5913,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               showToast('Payment marked as sent!', 'success');
                             } catch (err) { console.error('Payment confirmation error:', err); showToast('Payment saved. Please refresh if issues persist.', 'success'); }
                           }} className={`w-full font-bold py-3 rounded-lg ${venmoScreenshot ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}>
-                            Confirm Venmo Payment Has Been Sent
+                            Confirm Payment Sent
                           </button>
                           <button onClick={() => { setPaymentVenmoModal(null); setVenmoScreenshot(null); setVenmoScreenshotRaw(null); }}
                             className="w-full bg-gray-200 text-gray-700 font-medium py-3 rounded-lg hover:bg-gray-300">Cancel</button>
@@ -6329,7 +6413,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
                     onSave({ name, relationship, phone, email, photo, priority: 'normal' });
                   }}
-                >Add Contact</button>
+                >Add Emergency Contact</button>
               </div>
             </div>
           </div>
