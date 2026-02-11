@@ -45,12 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.108";
-    const PROJECT_VERSION = "13.111"; // Unified version shown in ribbon (max across all files)
+    const VERSION = "13.112";
+    const PROJECT_VERSION = "13.112"; // Unified version shown in ribbon (max across all files)
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-11T09:35:00");
+    const BUILD_DATE = new Date("2026-02-11T09:45:00");
 
     const RELEASE_NOTES = [
+      { version: "13.112", date: "2026-02-11", time: "9:45 AM", author: "Audrey Richardson", changes: ["Admin: Counselors tab now only shows approved counselors — pending applications must be approved in 'Work Availability' tab first before they appear in the main counselor list"] },
       { version: "13.111", date: "2026-02-11", time: "9:35 AM", author: "Audrey Richardson", changes: ["Counselor onboarding: Fixed blank screen after availability step — added missing COUNSELOR_RESPONSIBILITIES and PAY_DISCLOSURE constants that were undefined, causing Step 4 to crash"] },
       { version: "13.110", date: "2026-02-11", time: "9:23 AM", author: "Audrey Richardson", changes: ["Counselor onboarding: Fixed blank screen bug in index.html (registration flow) — same saveAvail→saveAvailability fix applied to correct file"] },
       { version: "13.109", date: "2026-02-11", time: "9:13 AM", author: "Audrey Richardson", changes: ["Counselor onboarding: Fixed blank screen after availability step — was calling undefined saveAvail instead of saveAvailability prop"] },
@@ -9650,9 +9651,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <button onClick={() => { setEditCounselor({ name: '', email: '', phone: '', position: '', year: '', bio: '', photo: null, visible: true }); setShowModal(true); }} className="bg-green-600 text-white px-4 py-2 rounded-lg">+ Add</button>
                   </div>
                   <div className="space-y-3">
-                    {counselors.map((c, idx) => {
+                    {/* Only show approved counselors (or those added manually without approvedByAdmin field) */}
+                    {counselors.filter(c => c.approvedByAdmin !== false).map((c, idx, approvedList) => {
                       const eligibleCount = getCounselorEligibleCount(c.id);
                       const scheduledCount = getCounselorScheduledCount(c.id);
+                      // Find actual index in full counselors array for reordering
+                      const actualIdx = counselors.findIndex(co => co.id === c.id);
                       return (
                       <div key={c.id} className="bg-white rounded-xl shadow p-4">
                         <div className="flex items-center gap-4">
@@ -9660,9 +9664,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <div className="flex flex-col gap-1">
                             <button
                               onClick={() => {
-                                if (idx === 0) return;
+                                if (actualIdx === 0) return;
                                 const newOrder = [...counselors];
-                                [newOrder[idx - 1], newOrder[idx]] = [newOrder[idx], newOrder[idx - 1]];
+                                [newOrder[actualIdx - 1], newOrder[actualIdx]] = [newOrder[actualIdx], newOrder[actualIdx - 1]];
                                 const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
                                 saveCounselors(reordered, `Moved ${c.name} up`);
                               }}
@@ -9672,14 +9676,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             >▲</button>
                             <button
                               onClick={() => {
-                                if (idx === counselors.length - 1) return;
+                                if (actualIdx === counselors.length - 1) return;
                                 const newOrder = [...counselors];
-                                [newOrder[idx], newOrder[idx + 1]] = [newOrder[idx + 1], newOrder[idx]];
+                                [newOrder[actualIdx], newOrder[actualIdx + 1]] = [newOrder[actualIdx + 1], newOrder[actualIdx]];
                                 const reordered = newOrder.map((co, i) => ({ ...co, order: i }));
                                 saveCounselors(reordered, `Moved ${c.name} down`);
                               }}
-                              disabled={idx === counselors.length - 1}
-                              className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === counselors.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
+                              disabled={idx === approvedList.length - 1}
+                              className={'w-7 h-7 rounded flex items-center justify-center text-sm ' + (idx === approvedList.length - 1 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300 text-gray-600')}
                               title="Move down"
                             >▼</button>
                           </div>
@@ -9724,9 +9728,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       </div>
                     )})}
                   </div>
-                  {counselors.length === 0 && (
+                  {counselors.filter(c => c.approvedByAdmin !== false).length === 0 && (
                     <div className="text-center py-12 text-gray-500">
-                      <p>No counselors yet. Click "+ Add" to add your first counselor.</p>
+                      <p>No approved counselors yet. Click "+ Add" to add a counselor, or approve pending applications in the "Work Availability" tab.</p>
                     </div>
                   )}
 
