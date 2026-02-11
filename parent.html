@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.092";
+    const VERSION = "13.093";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:01:00");
+    const BUILD_DATE = new Date("2026-02-10T21:21:00");
 
     const RELEASE_NOTES = [
+      { version: "13.093", date: "2026-02-10", time: "9:21 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button not opening the modal — replaced hidden wrapper div approach with modalOnly prop on ParentEmergencyContactsManager", "EC component now supports modalOnly mode: renders only the add form modal overlay without the full contact list, eliminating CSS clipping issues"] },
       { version: "13.092", date: "2026-02-10", time: "9:01 PM", author: "Derek Richardson", changes: ["Dashboard Next Steps: 'Add Emergency Contact' and 'Register Now' buttons now open modals directly as overlays without leaving the Dashboard", "Renamed 'Add Contact' button to 'Add Emergency Contact' for clarity", "All Next Steps action buttons now have equal width (200px min) for consistent layout", "Registration modal moved to top-level rendering so it can be opened from any tab", "EC add form modal can now be triggered from Dashboard via a hidden component wrapper"] },
       { version: "13.091", date: "2026-02-10", time: "8:41 PM", author: "Derek Richardson", changes: ["Fixed registration modal showing wrong camper count — stale draft camper IDs are now filtered against current campers when opening the modal", "Added safety reset: selectedChildren cleared to empty when no draft and multiple campers, preventing phantom selections"] },
       { version: "13.090", date: "2026-02-10", time: "8:34 PM", author: "Derek Richardson", changes: ["Dashboard Next Steps: 'Add Contact' button now opens the Add Emergency Contact modal directly and returns to Dashboard after saving", "Dashboard Next Steps: 'Register Now' button now opens the New Registration modal directly and returns to Dashboard after submitting or closing"] },
@@ -5846,48 +5847,47 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               })()}
             </div>
 
-                  {/* EC Add Modal — rendered from dashboard so the fixed modal overlay shows */}
+                  {/* EC Add Modal — rendered from dashboard in modal-only mode */}
                   {showDashboardECModal && (
-                    <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}>
-                      <ParentEmergencyContactsManager
-                        parentEmail={user?.email}
-                        emergencyContacts={emergencyContacts}
-                        onSave={async (contacts) => {
-                          await saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
-                          const myContacts = contacts.filter(c => c.userEmail === user?.email);
-                          const newLinks = [];
-                          for (const camper of myChildren) {
-                            for (const contact of myContacts) {
-                              const alreadyLinked = camperEmergencyContactLinks.some(
-                                link => link.camperId === camper.id && link.emergencyContactId === contact.id
-                              );
-                              if (!alreadyLinked) {
-                                newLinks.push({ camperId: camper.id, emergencyContactId: contact.id });
-                              }
+                    <ParentEmergencyContactsManager
+                      parentEmail={user?.email}
+                      emergencyContacts={emergencyContacts}
+                      onSave={async (contacts) => {
+                        await saveEmergencyContacts(contacts, `Updated emergency contacts for ${user?.name}`);
+                        const myContacts = contacts.filter(c => c.userEmail === user?.email);
+                        const newLinks = [];
+                        for (const camper of myChildren) {
+                          for (const contact of myContacts) {
+                            const alreadyLinked = camperEmergencyContactLinks.some(
+                              link => link.camperId === camper.id && link.emergencyContactId === contact.id
+                            );
+                            if (!alreadyLinked) {
+                              newLinks.push({ camperId: camper.id, emergencyContactId: contact.id });
                             }
                           }
-                          if (newLinks.length > 0) {
-                            await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
-                          }
-                          showToast('Emergency contacts updated!');
-                          setShowDashboardECModal(false);
-                          if (returnTabAfterEC) {
-                            setParentTab(returnTabAfterEC);
-                            setReturnTabAfterEC(null);
-                          }
-                        }}
-                        showToast={showToast}
-                        parents={parents}
-                        saveParents={saveParents}
-                        addParentToFamily={addParentToFamily}
-                        myChildren={myChildren}
-                        currentUser={{ email: user?.email }}
-                        addToHistory={addToHistory}
-                        autoOpenAddEC={autoOpenAddEC}
-                        onAutoOpenDone={() => setAutoOpenAddEC(false)}
-                        onCloseAddForm={() => { setShowDashboardECModal(false); }}
-                      />
-                    </div>
+                        }
+                        if (newLinks.length > 0) {
+                          await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]);
+                        }
+                        showToast('Emergency contacts updated!');
+                        setShowDashboardECModal(false);
+                        if (returnTabAfterEC) {
+                          setParentTab(returnTabAfterEC);
+                          setReturnTabAfterEC(null);
+                        }
+                      }}
+                      showToast={showToast}
+                      parents={parents}
+                      saveParents={saveParents}
+                      addParentToFamily={addParentToFamily}
+                      myChildren={myChildren}
+                      currentUser={{ email: user?.email }}
+                      addToHistory={addToHistory}
+                      autoOpenAddEC={autoOpenAddEC}
+                      onAutoOpenDone={() => setAutoOpenAddEC(false)}
+                      onCloseAddForm={() => { setShowDashboardECModal(false); }}
+                      modalOnly={true}
+                    />
                   )}
 
                   {/* Registration Modal */}
@@ -6784,7 +6784,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
-    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm }) => {
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm, modalOnly }) => {
       const [localContacts, setLocalContacts] = useState([]);
       const [editingId, setEditingId] = useState(null);
       const [showAddForm, setShowAddForm] = useState(false);
@@ -6984,6 +6984,67 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const requirementsMet = meetsRequirements();
+
+      // Modal-only mode: only render the add form modal (used when triggered from Dashboard)
+      if (modalOnly) {
+        if (!showAddForm) return null;
+        return (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddForm(false); setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); onCloseAddForm?.(); }}>
+            <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
+              <div className="flex justify-center mb-1">
+                {getDisplayPhoto(editForm.photo) ? (
+                  <div className="relative cursor-pointer" onClick={() => setShowAddPhotoModal(true)}>
+                    <img src={getDisplayPhoto(editForm.photo)} className="w-20 h-20 rounded-full object-cover border-2 border-green-300" />
+                    <div className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">✎</div>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowAddPhotoModal(true)} className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center hover:bg-gray-200">
+                    <span className="text-2xl text-gray-400">📷</span>
+                  </button>
+                )}
+                {showAddPhotoModal && <PhotoUploadModal currentPhoto={editForm.photo} onSave={(img) => { setEditForm({ ...editForm, photo: img }); setShowAddPhotoModal(false); }} onCancel={() => setShowAddPhotoModal(false)} />}
+              </div>
+              <p className="text-xs text-gray-500 text-center mb-4">Tap to add photo (optional)</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
+                  <select value={editForm.relationship} onChange={e => setEditForm({ ...editForm, relationship: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select relationship...</option>
+                    <option value="Mother">Mother</option>
+                    <option value="Father">Father</option>
+                    <option value="Grandmother">Grandmother</option>
+                    <option value="Grandfather">Grandfather</option>
+                    <option value="Aunt">Aunt</option>
+                    <option value="Uncle">Uncle</option>
+                    <option value="Sibling">Sibling</option>
+                    <option value="Family Friend">Family Friend</option>
+                    <option value="Neighbor">Neighbor</option>
+                    <option value="Babysitter/Nanny">Babysitter/Nanny</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 123-4567" maxLength="14" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
+                  <input value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
+                </div>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button onClick={() => { setShowAddForm(false); setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); onCloseAddForm?.(); }} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button onClick={handleAdd} disabled={!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim()} className={`flex-1 py-2 rounded-lg font-medium ${!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>Add Contact</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
 
       // Show delete confirmation
       if (showDeleteConfirm) {
