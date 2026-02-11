@@ -22,9 +22,12 @@ After completing ANY work:
 4. **Say "Start testing"** — Always end your final message with "Start testing" so the user knows the changes are ready to test
 
 ### Version & Timestamp Updates
+- **Each file has its own `VERSION`** — this is the version shown in the red/green ribbon at the top of each page
+- **Do NOT use a unified/shared version** — there is no `PROJECT_VERSION`. Each file's ribbon displays its own `const VERSION` so you can tell when that specific file was last modified
 - **ONLY** bump the version in files that actually changed — do NOT touch files that had no modifications
 - When bumping, use the **next global version number**: `max(VERSION across all files) + 1`
 - This means files may be at different versions — that is expected and correct
+- The version in the ribbon tells you when that specific file was last changed, which is useful for debugging (e.g., "is this page up to date?")
 - **ALWAYS** use external time source for BUILD_DATE in Pacific timezone (only in changed files)
 - **Command:** `TZ='America/Los_Angeles' date '+%m-%d-%Y %I:%M %p'`
 - **Format:** `const BUILD_DATE = new Date("2026-02-08T07:22:00");`
