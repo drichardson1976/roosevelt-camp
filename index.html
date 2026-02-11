@@ -47,11 +47,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.089";
+    const VERSION = "13.102";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T20:15:00");
+    const BUILD_DATE = new Date("2026-02-10T22:59:00");
 
     const RELEASE_NOTES = [
+      { version: "13.102", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Login page now tracks login method (Google or Email/Password) in database so admin can see how parents log in"] },
+      { version: "13.101", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Fixed login type badge: Google users no longer show 'No Login' — badge now shows Google, Email/Password, or Google + Email/Password", "Send Login Reminder email now customized per login method (Google users get 'Sign in with Google' instructions)", "Admin Campers tab redesigned: table layout replaced with card-based layout matching Parents tab (avatars, stats, expand/collapse)", "Registrations page reorganized into 3 sub-tabs: New, Pending Approval, and Paid for better handling of 50-200+ registrations"] },
       { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
       { version: "13.099", date: "2026-02-10", time: "10:02 PM", author: "Derek Richardson", changes: ["Registration calendar: clicking on a day header (Mon, Jul 13, etc.) toggles both AM and PM sessions", "If neither session selected → selects both; if both selected → deselects both; if one selected → selects both", "Day header shows hover/active states to indicate clickability"] },
       { version: "13.098", date: "2026-02-10", time: "9:56 PM", author: "Derek Richardson", changes: ["All Dashboard Next Steps buttons now open modals directly instead of navigating to tabs", "Add Campers button opens AddChildForm modal at top level from Dashboard", "Add Photo for EC button opens PhotoUploadModal at top level from Dashboard", "Campers tab 'Add Emergency Contact' button also uses top-level EC modal (consistent pattern)"] },
@@ -5077,6 +5079,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [phone, setPhone] = useState('');
         const [googleUser, setGoogleUser] = useState(null); // { email, name } from Google Sign-In for new account creation
 
+        // Fire-and-forget: persist login method to database so admin can see how users log in
+        const trackLoginMethod = (table, userEmail, method) => {
+          try {
+            const now = new Date().toISOString();
+            const sourceArray = table === 'camp_parents' ? parents : counselorUsers;
+            const updated = sourceArray.map(u =>
+              u.email?.toLowerCase() === userEmail.toLowerCase()
+                ? { ...u, lastLoginMethod: method, lastLoginAt: now }
+                : u
+            );
+            storage.set(table, 'main', updated);
+          } catch (e) {
+            console.error('Failed to track login method:', e);
+          }
+        };
+
         const handleLogin = () => {
           // Check if logging in as admin
           const admin = admins.find(a => a.username === email && a.password === password);
@@ -5089,6 +5107,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Check if logging in as parent
           const parent = parents.find(p => p.email === email && p.password === password);
           if (parent) {
+            trackLoginMethod('camp_parents', parent.email, 'Email/Password');
             sessionStorage.setItem('user', JSON.stringify({ ...parent, loginType: 'Email/Password' }));
             window.location.href = '/parent.html';
             return;
@@ -5096,6 +5115,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Check if logging in as counselor (with login credentials)
           const counselorUser = counselorUsers.find(cu => cu.email === email && cu.password === password);
           if (counselorUser) {
+            trackLoginMethod('camp_counselor_users', counselorUser.email, 'Email/Password');
             sessionStorage.setItem('user', JSON.stringify({ ...counselorUser, loginType: 'Email/Password' }));
             window.location.href = '/counselor.html';
             return;
@@ -5125,6 +5145,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Check parents
           const parent = parents.find(p => p.email?.toLowerCase() === googleEmail);
           if (parent) {
+            trackLoginMethod('camp_parents', parent.email, 'Google');
             const user = { ...parent, loginType: 'Google' };
             sessionStorage.setItem('user', JSON.stringify(user));
             window.location.href = '/parent.html';
@@ -5134,6 +5155,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Check counselor users
           const counselorUser = counselorUsers.find(cu => cu.email?.toLowerCase() === googleEmail);
           if (counselorUser) {
+            trackLoginMethod('camp_counselor_users', counselorUser.email, 'Google');
             const user = { ...counselorUser, loginType: 'Google' };
             sessionStorage.setItem('user', JSON.stringify(user));
             window.location.href = '/counselor.html';

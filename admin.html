@@ -45,11 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.080";
+    const VERSION = "13.101";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T12:13:00");
+    const BUILD_DATE = new Date("2026-02-10T22:59:00");
 
     const RELEASE_NOTES = [
+      { version: "13.102", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Login page now tracks login method (Google or Email/Password) in database so admin can see how parents log in"] },
+      { version: "13.101", date: "2026-02-10", time: "10:59 PM", author: "Derek Richardson", changes: ["Fixed login type badge: Google users no longer show 'No Login' — badge now shows Google, Email/Password, or Google + Email/Password", "Send Login Reminder email now customized per login method (Google users get 'Sign in with Google' instructions)", "Admin Campers tab redesigned: table layout replaced with card-based layout matching Parents tab (avatars, stats, expand/collapse)", "Registrations page reorganized into 3 sub-tabs: New, Pending Approval, and Paid for better handling of 50-200+ registrations"] },
       { version: "13.100", date: "2026-02-10", time: "10:38 PM", author: "Derek Richardson", changes: ["Fixed input focus loss in Add Emergency Contact modal — extracted into standalone ECAddModal component with internal state", "Dashboard 'Pay Now' button (was 'View Payment Info') now opens Venmo payment modal directly instead of scrolling", "Venmo payment modal moved to top level so it renders from any tab including Dashboard", "Added CLAUDE.md rule: never put controlled input state in large parent components — always extract forms into standalone components"] },
       { version: "13.099", date: "2026-02-10", time: "10:02 PM", author: "Derek Richardson", changes: ["Registration calendar: clicking on a day header (Mon, Jul 13, etc.) toggles both AM and PM sessions", "If neither session selected → selects both; if both selected → deselects both; if one selected → selects both", "Day header shows hover/active states to indicate clickability"] },
       { version: "13.098", date: "2026-02-10", time: "9:56 PM", author: "Derek Richardson", changes: ["All Dashboard Next Steps buttons now open modals directly instead of navigating to tabs", "Add Campers button opens AddChildForm modal at top level from Dashboard", "Add Photo for EC button opens PhotoUploadModal at top level from Dashboard", "Campers tab 'Add Emergency Contact' button also uses top-level EC modal (consistent pattern)"] },
@@ -2568,9 +2570,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-gray-800">{parent.name}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${parent.password ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {parent.password ? '🔑 Email/Password' : '⚠️ No Login'}
-                              </span>
+                              {(() => {
+                                const hasGoogle = parent.lastLoginMethod === 'Google';
+                                const hasPassword = !!parent.password;
+                                if (hasGoogle && hasPassword) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">🔑 Google + Email/Password</span>;
+                                if (hasGoogle) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">G Google</span>;
+                                if (hasPassword) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">🔑 Email/Password</span>;
+                                return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-500">⚠️ No Login</span>;
+                              })()}
                             </div>
                             <div className="text-sm text-gray-500">{parent.email}</div>
                             {parent.phone && <div className="text-sm text-gray-500">{parent.phone}</div>}
@@ -2632,17 +2639,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           >
                             🗑️ Delete Parent
                           </button>
-                          {parent.password && (
+                          {(parent.password || parent.lastLoginMethod) && (
                             <button
                               onClick={async () => {
                                 try {
+                                  const hasGoogle = parent.lastLoginMethod === 'Google';
+                                  const hasPassword = !!parent.password;
+                                  let methodHtml = '';
+                                  if (hasGoogle && hasPassword) {
+                                    methodHtml = '<p><strong>Login methods:</strong></p><ul><li>Sign in with Google (using your Google account)</li><li>Email &amp; Password (using your email and password)</li></ul><p>If you\'ve forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p>';
+                                  } else if (hasGoogle) {
+                                    methodHtml = '<p><strong>Login method:</strong> Sign in with Google</p><p>Click the "Sign in with Google" button on the login page and use your Google account.</p>';
+                                  } else {
+                                    methodHtml = '<p><strong>Login method:</strong> Email &amp; Password</p><p>If you\'ve forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p>';
+                                  }
                                   const res = await fetch('/.netlify/functions/send-email', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                       to: parent.email,
                                       subject: 'Your Roosevelt Basketball Day Camp Login Info',
-                                      html: `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Your Login Information</h2><p>Hi ${parent.name},</p><p>Here's a reminder of how to log in to Roosevelt Basketball Day Camp:</p><p><strong>Login method:</strong> Email &amp; Password</p><p><strong>Email:</strong> ${parent.email}</p><p>If you've forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p><p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Login</a></p></div>`
+                                      html: `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Your Login Information</h2><p>Hi ${parent.name},</p><p>Here's a reminder of how to log in to Roosevelt Basketball Day Camp:</p><p><strong>Email:</strong> ${parent.email}</p>${methodHtml}<p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Go to Login</a></p></div>`
                                     })
                                   });
                                   if (res.ok) showToast(`Login reminder sent to ${parent.email}`);
@@ -4632,6 +4649,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [viewingContacts, setViewingContacts] = useState(null);
       const [ecPhotoModal, setEcPhotoModal] = useState(null); // { type: 'camper' | 'ec', id, currentPhoto }
       const [viewingLargePhoto, setViewingLargePhoto] = useState(null); // url string for full-size view
+      const [expandedCamper, setExpandedCamper] = useState(null); // camper id for expanded card
 
       const [formData, setFormData] = useState({
         name: '', birthdate: '', grade: '', phone: '', photo: null
@@ -4763,6 +4781,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       return (
         <div className="space-y-6">
+          {/* Header with search and actions */}
           <div className="bg-white rounded-xl shadow p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
@@ -4782,140 +4801,220 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               </div>
             </div>
 
-            <div className="mb-4">
-              <input
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search campers or parents..."
-                className="w-full px-4 py-2 border rounded-lg"
-                autoComplete="off"
-                data-1p-ignore="true"
-              />
-            </div>
+            <input
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              placeholder="Search campers or parents..."
+              className="w-full px-4 py-2 border rounded-lg"
+              autoComplete="off"
+              data-1p-ignore="true"
+            />
+          </div>
 
-            {sortedCampers.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <p className="text-4xl mb-4">🏀</p>
-                <p>{allCampers.length === 0 ? 'No campers yet. Campers are added when parents complete onboarding.' : 'No campers match your search'}</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="text-left text-sm text-gray-600 border-b">
-                      <th className="p-3">Photo</th>
-                      <th className="p-3">Name</th>
-                      <th className="p-3">Age</th>
-                      <th className="p-3">Grade</th>
-                      <th className="p-3">Parents</th>
-                      <th className="p-3">Emergency Contacts</th>
-                      <th className="p-3">Registrations</th>
-                      <th className="p-3">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedCampers.map(camper => (
-                      <tr key={camper.id} className="border-b hover:bg-gray-50">
-                        <td className="p-3">
+          {/* Campers List */}
+          {sortedCampers.length === 0 ? (
+            <div className="bg-white rounded-xl shadow p-12 text-center text-gray-500">
+              <p className="text-4xl mb-4">🏀</p>
+              <p>{allCampers.length === 0 ? 'No campers yet. Campers are added when parents complete onboarding.' : 'No campers match your search'}</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedCampers.map(camper => {
+                const isExpanded = expandedCamper === camper.id;
+                const approved = camper.registrations.filter(r => r.status === 'approved').length;
+                const pending = camper.registrations.filter(r => r.status === 'pending').length;
+                const camperParentEmails = (camper.parents || []).map(p => p?.email).filter(Boolean);
+                const camperContacts = emergencyContacts.filter(ec => camperParentEmails.includes(ec.userEmail));
+
+                return (
+                  <div key={camper.id} className="bg-white rounded-xl shadow overflow-hidden">
+                    {/* Camper Header */}
+                    <div className="p-4 flex items-center gap-4">
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => setExpandedCamper(isExpanded ? null : camper.id)}
+                      >
+                        <div className="flex items-center gap-3">
                           {getDisplayPhoto(camper.photo) ? (
-                            <img src={getDisplayPhoto(camper.photo)} alt={camper.name} className="w-10 h-10 rounded-full object-cover" />
+                            <img src={getDisplayPhoto(camper.photo)} alt={camper.name} className="w-12 h-12 rounded-full object-cover" />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-200 flex flex-col items-center justify-center">
-                              <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                              <span className="text-[5px] text-gray-500 font-medium">add photo</span>
+                            <div className="w-12 h-12 rounded-full bg-teal-200 flex items-center justify-center text-xl font-bold text-teal-700">
+                              {camper.name?.[0]?.toUpperCase() || '?'}
                             </div>
                           )}
-                        </td>
-                        <td className="p-3 font-medium">{camper.name}</td>
-                        <td className="p-3">{getAge(camper.birthdate) ? `${getAge(camper.birthdate)} yrs` : '-'}</td>
-                        <td className="p-3">{camper.grade || '-'}</td>
-                        <td className="p-3">
-                          {camper.parents?.length > 0 ? (
-                            <div className="space-y-1">
-                              {camper.parents.map(p => (
-                                <div key={p?.email} className="text-sm font-medium">{p?.name}</div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-gray-800">{camper.name}</span>
+                              {camper.grade && (
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-teal-100 text-teal-700">Grade {camper.grade}</span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {getAge(camper.birthdate) ? `${getAge(camper.birthdate)} years old` : ''}
+                              {getAge(camper.birthdate) && camper.parents?.length > 0 ? ' • ' : ''}
+                              {camper.parents?.length > 0 ? camper.parents.map(p => p?.name).filter(Boolean).join(', ') : 'No parents linked'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="flex gap-3 text-center flex-wrap">
+                        <div title="Approved registrations">
+                          <div className={`text-lg font-bold ${approved > 0 ? 'text-green-600' : 'text-gray-400'}`}>{approved}</div>
+                          <div className="text-xs text-gray-500">Approved</div>
+                        </div>
+                        <div title="Pending registrations">
+                          <div className={`text-lg font-bold ${pending > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{pending}</div>
+                          <div className="text-xs text-gray-500">Pending</div>
+                        </div>
+                        <div title="Emergency contacts">
+                          <div className={`text-lg font-bold ${camperContacts.length > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{camperContacts.length}</div>
+                          <div className="text-xs text-gray-500">EC</div>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); startEdit(camper); }}
+                          className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 text-sm"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => setExpandedCamper(isExpanded ? null : camper.id)}
+                          className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 text-sm"
+                        >
+                          {isExpanded ? '▲ Less' : '▼ More'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded Details */}
+                    {isExpanded && (
+                      <div className="border-t bg-gray-50 p-4">
+                        {/* Admin Actions Bar */}
+                        <div className="flex gap-2 mb-4 pb-4 border-b">
+                          <button
+                            onClick={() => startEdit(camper)}
+                            className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm"
+                          >
+                            ✏️ Edit Camper
+                          </button>
+                          <button
+                            onClick={() => setManagingParents(camper)}
+                            className="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm"
+                          >
+                            👨‍👩‍👧 Manage Parents
+                          </button>
+                          {camperContacts.length > 0 && (
+                            <button
+                              onClick={() => {
+                                const resolvedContacts = camperContacts.map(contact => {
+                                  if (contact.isParent && contact.parentEmail) {
+                                    const p = (parents || []).find(pr => pr.email === contact.parentEmail);
+                                    if (p) return { ...contact, name: p.name };
+                                  }
+                                  if (contact.isAutoCreated && contact.sourceEmail) {
+                                    const p = (parents || []).find(pr => pr.email === contact.sourceEmail);
+                                    if (p) return { ...contact, name: p.name };
+                                  }
+                                  return contact;
+                                });
+                                setViewingContacts({ camper, contacts: resolvedContacts });
+                              }}
+                              className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 text-sm"
+                            >
+                              📞 View Emergency Contacts
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setConfirmDelete(camper)}
+                            className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm"
+                          >
+                            🗑️ Delete Camper
+                          </button>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                          {/* Parents */}
+                          <div>
+                            <div className="flex justify-between items-center mb-3">
+                              <h4 className="font-bold text-gray-700">👨‍👩‍👧 Parents ({camper.parents?.length || 0})</h4>
+                              <button
+                                onClick={() => setManagingParents(camper)}
+                                className="text-xs text-blue-600 hover:underline"
+                              >
+                                Manage Parents
+                              </button>
+                            </div>
+                            {(!camper.parents || camper.parents.length === 0) ? (
+                              <p className="text-gray-500 text-sm">No parents linked yet. Click "Manage Parents" to add.</p>
+                            ) : (
+                              <div className="space-y-2">
+                                {camper.parents.map(p => p && (
+                                  <div key={p.email} className="flex items-center gap-3 p-2 bg-white rounded-lg">
+                                    <div className="w-8 h-8 rounded-full bg-green-200 flex items-center justify-center text-sm font-bold text-green-700">
+                                      {p.name?.[0]?.toUpperCase() || '?'}
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">{p.name}</div>
+                                      <div className="text-xs text-gray-500">{p.email}</div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Registrations */}
+                          <div>
+                            <h4 className="font-bold text-gray-700 mb-3">📋 Registrations ({camper.registrations.length})</h4>
+                            {camper.registrations.length === 0 ? (
+                              <p className="text-gray-500 text-sm">No registrations yet</p>
+                            ) : (
+                              <div className="space-y-2 max-h-48 overflow-y-auto">
+                                {camper.registrations.map(reg => (
+                                  <div key={reg.id} className="flex items-center gap-2 p-2 bg-white rounded-lg text-sm">
+                                    <div className="flex-1">
+                                      <div className="font-medium">{new Date(reg.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
+                                      <div className="text-xs text-gray-500">{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
+                                    </div>
+                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                      reg.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                      reg.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-gray-100 text-gray-600'
+                                    }`}>{reg.status}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Emergency Contacts */}
+                        {camperContacts.length > 0 && (
+                          <div className="mt-4 pt-4 border-t">
+                            <h4 className="font-bold text-gray-700 mb-3">📞 Emergency Contacts ({camperContacts.length})</h4>
+                            <div className="flex gap-2 flex-wrap">
+                              {camperContacts.map((contact, idx) => (
+                                <div key={idx} className="text-sm px-3 py-1.5 bg-white rounded-lg border">
+                                  <span className="font-medium">{contact.name}</span>
+                                  <span className="text-gray-500 ml-1">• {contact.relationship}</span>
+                                  <span className="text-gray-500 ml-1">• {contact.phone}</span>
+                                </div>
                               ))}
                             </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm">No parents linked</span>
-                          )}
-                        </td>
-                        <td className="p-3">
-                          {(() => {
-                            const camperParentEmails = (camper.parents || []).map(p => p?.email).filter(Boolean);
-                            const camperContacts = emergencyContacts.filter(ec =>
-                              camperParentEmails.includes(ec.userEmail)
-                            );
-                            if (camperContacts.length === 0) {
-                              return <span className="text-gray-400 text-sm">None</span>;
-                            }
-                            const resolvedContacts = camperContacts.map(contact => {
-                              if (contact.isParent && contact.parentEmail) {
-                                const p = (parents || []).find(pr => pr.email === contact.parentEmail);
-                                if (p) return { ...contact, name: p.name };
-                              }
-                              if (contact.isAutoCreated && contact.sourceEmail) {
-                                const p = (parents || []).find(pr => pr.email === contact.sourceEmail);
-                                if (p) return { ...contact, name: p.name };
-                              }
-                              return contact;
-                            });
-                            const names = resolvedContacts.map(c => c.name).filter(Boolean);
-                            return (
-                              <span
-                                className="text-sm text-gray-700 cursor-pointer hover:text-blue-600"
-                                onClick={() => setViewingContacts({ camper, contacts: resolvedContacts })}
-                                title={names.join(', ')}
-                              >
-                                {names.join(', ') || `${camperContacts.length} contact${camperContacts.length > 1 ? 's' : ''}`}
-                              </span>
-                            );
-                          })()}
-                        </td>
-                        <td className="p-3">
-                          <div className="space-y-1">
-                            {(() => {
-                              const approved = camper.registrations.filter(r => r.status === 'approved').length;
-                              const pending = camper.registrations.filter(r => r.status === 'pending').length;
-                              return (
-                                <>
-                                  {approved > 0 && (
-                                    <span className="px-2 py-1 rounded text-sm bg-green-100 text-green-700 inline-block">
-                                      {approved} approved
-                                    </span>
-                                  )}
-                                  {pending > 0 && (
-                                    <span className="px-2 py-1 rounded text-sm bg-yellow-100 text-yellow-700 inline-block ml-1">
-                                      {pending} pending
-                                    </span>
-                                  )}
-                                  {approved === 0 && pending === 0 && (
-                                    <span className="px-2 py-1 rounded text-sm bg-gray-100 text-gray-500 inline-block">
-                                      No registrations
-                                    </span>
-                                  )}
-                                </>
-                              );
-                            })()}
                           </div>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex gap-2">
-                            <button onClick={() => startEdit(camper)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm">
-                              Edit
-                            </button>
-                            <button onClick={() => setConfirmDelete(camper)} className="px-3 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-sm">
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Summary Stats */}
           <div className="grid md:grid-cols-4 gap-4">
@@ -7583,8 +7682,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         },
         'registrations': {
           label: '✅ Registrations',
-          hasChildren: false,
-          badge: () => registrations.filter(r => r.status === 'pending' && ['sent', 'submitted'].includes(r.paymentStatus)).length
+          hasChildren: true,
+          badge: () => registrations.filter(r => r.status === 'pending' && ['sent', 'submitted'].includes(r.paymentStatus)).length,
+          children: {
+            'new': { label: 'New', badge: () => getUnpaid() },
+            'pending': { label: 'Pending Approval', badge: () => getPending() },
+            'paid': { label: 'Paid', badge: () => getApproved() }
+          },
+          defaultChild: 'new'
         },
         'messages': {
           label: '💬 Messages',
@@ -10066,108 +10171,113 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   );
                 };
 
+                const activeRegTab = getActiveChildTab('registrations');
+
                 return (
                 <div className="space-y-6">
-                  {/* Section 1: New Registrations awaiting payment */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-xl text-orange-700 mb-2">⏳ New Registrations awaiting payment ({unpaidOrders.length})</h3>
-                    <p className="text-sm text-gray-500 mb-4">Registrations submitted by parents — awaiting Venmo payment from parent.</p>
+                  {/* New Registrations Sub-tab */}
+                  {activeRegTab === 'new' && (
+                    <div className="bg-white rounded-xl shadow p-6">
+                      <h3 className="font-bold text-xl text-orange-700 mb-2">⏳ New Registrations awaiting payment ({unpaidOrders.length})</h3>
+                      <p className="text-sm text-gray-500 mb-4">Registrations submitted by parents — awaiting Venmo payment from parent.</p>
 
-                    {unpaidOrders.length === 0 ? (
-                      <div className="text-center py-6 text-gray-400">
-                        <p className="text-3xl mb-2">💳</p>
-                        <p>No unpaid registrations</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {unpaidOrders.map(([orderId, regs]) => renderRegCard(orderId, regs, {
-                          borderClass: 'border-orange-300 bg-orange-50',
-                          actions: (
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Awaiting Payment</span>
-                          )
-                        }))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Section 2: Registrations awaiting Payment confirmation */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-xl text-blue-700 mb-2">💰 Registrations awaiting Payment confirmation from Camp Director ({paidByParentOrders.length})</h3>
-                    <p className="text-sm text-gray-500 mb-4">Parent has submitted Venmo payment — verify in Venmo and mark as paid.</p>
-
-                    {paidByParentOrders.length === 0 ? (
-                      <div className="text-center py-6 text-gray-400">
-                        <p className="text-3xl mb-2">✓</p>
-                        <p>No payments awaiting confirmation</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {paidByParentOrders.map(([orderId, regs]) => {
-                          const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))];
-                          const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
-                          return renderRegCard(orderId, regs, {
-                            borderClass: 'border-blue-300 bg-blue-50',
+                      {unpaidOrders.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400">
+                          <p className="text-3xl mb-2">💳</p>
+                          <p>No unpaid registrations</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {unpaidOrders.map(([orderId, regs]) => renderRegCard(orderId, regs, {
+                            borderClass: 'border-orange-300 bg-orange-50',
                             actions: (
-                              <button
-                                onClick={async () => {
-                                  if (!confirm(`Are you sure you want to mark payment as received for ${camperNames.join(', ')}?`)) return;
-                                  if (!confirm(`This will mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')} (${regs.length} session(s)).\n\nCamper(s) will become eligible for pod assignment. Confirm?`)) return;
-                                  const now = new Date().toISOString();
-                                  // Batch update: update all registrations in state at once to avoid visual glitch
-                                  const updatedRegs = regs.map(reg => ({
-                                    ...reg,
-                                    status: 'approved',
-                                    paymentStatus: 'confirmed',
-                                    approvedAt: now,
-                                    approvedBy: user?.name,
-                                    paymentConfirmedAt: now,
-                                    paymentConfirmedBy: user?.name
-                                  }));
-                                  // Update state once for all registrations
-                                  setRegistrations(prev => prev.map(r => {
-                                    const updated = updatedRegs.find(u => u.id === r.id);
-                                    return updated || r;
-                                  }));
-                                  // Save to storage in parallel
-                                  await Promise.all(updatedRegs.map(reg => storage.set('camp_registrations', reg.id, reg)));
-                                  addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — camper(s) now eligible for pod assignment`, [regs[0].parentEmail]);
-                                  showToast(`Payment confirmed for ${camperNames.join(', ')}! Camper(s) now eligible for pod assignment.`);
-                                }}
-                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium whitespace-nowrap"
-                              >
-                                ✓ Mark as Paid
-                              </button>
+                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Awaiting Payment</span>
                             )
-                          });
-                        })}
-                      </div>
-                    )}
-                  </div>
+                          }))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
-                  {/* Section 3: Paid Registrations */}
-                  <div className="bg-white rounded-xl shadow p-6">
-                    <h3 className="font-bold text-xl text-green-700 mb-2">✅ Paid Registrations ({paidOrders.length})</h3>
-                    <p className="text-sm text-gray-500 mb-4">Payment confirmed — camper(s) eligible for pod assignment on the Pod Setup tab.</p>
+                  {/* Pending Approval Sub-tab */}
+                  {activeRegTab === 'pending' && (
+                    <div className="bg-white rounded-xl shadow p-6">
+                      <h3 className="font-bold text-xl text-blue-700 mb-2">💰 Pending Approval ({paidByParentOrders.length})</h3>
+                      <p className="text-sm text-gray-500 mb-4">Parent has submitted Venmo payment — verify in Venmo and mark as paid.</p>
 
-                    {paidOrders.length === 0 ? (
-                      <div className="text-center py-6 text-gray-400">
-                        <p className="text-3xl mb-2">📋</p>
-                        <p>No paid registrations yet</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {paidOrders.map(([orderId, regs]) => {
-                          const confirmedDate = regs[0]?.paymentConfirmedAt ? new Date(regs[0].paymentConfirmedAt).toLocaleDateString() : '';
-                          return renderRegCard(orderId, regs, {
-                            borderClass: 'border-green-500 bg-green-50',
-                            actions: (
-                              <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
-                            )
-                          });
-                        })}
-                      </div>
-                    )}
-                  </div>
+                      {paidByParentOrders.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400">
+                          <p className="text-3xl mb-2">✓</p>
+                          <p>No payments awaiting confirmation</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {paidByParentOrders.map(([orderId, regs]) => {
+                            const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))];
+                            const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                            return renderRegCard(orderId, regs, {
+                              borderClass: 'border-blue-300 bg-blue-50',
+                              actions: (
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Are you sure you want to mark payment as received for ${camperNames.join(', ')}?`)) return;
+                                    if (!confirm(`This will mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')} (${regs.length} session(s)).\n\nCamper(s) will become eligible for pod assignment. Confirm?`)) return;
+                                    const now = new Date().toISOString();
+                                    const updatedRegs = regs.map(reg => ({
+                                      ...reg,
+                                      status: 'approved',
+                                      paymentStatus: 'confirmed',
+                                      approvedAt: now,
+                                      approvedBy: user?.name,
+                                      paymentConfirmedAt: now,
+                                      paymentConfirmedBy: user?.name
+                                    }));
+                                    setRegistrations(prev => prev.map(r => {
+                                      const updated = updatedRegs.find(u => u.id === r.id);
+                                      return updated || r;
+                                    }));
+                                    await Promise.all(updatedRegs.map(reg => storage.set('camp_registrations', reg.id, reg)));
+                                    addToHistory('Payment Confirmed', `Confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — camper(s) now eligible for pod assignment`, [regs[0].parentEmail]);
+                                    showToast(`Payment confirmed for ${camperNames.join(', ')}! Camper(s) now eligible for pod assignment.`);
+                                  }}
+                                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium whitespace-nowrap"
+                                >
+                                  ✓ Mark as Paid
+                                </button>
+                              )
+                            });
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Paid Sub-tab */}
+                  {activeRegTab === 'paid' && (
+                    <div className="bg-white rounded-xl shadow p-6">
+                      <h3 className="font-bold text-xl text-green-700 mb-2">✅ Paid Registrations ({paidOrders.length})</h3>
+                      <p className="text-sm text-gray-500 mb-4">Payment confirmed — camper(s) eligible for pod assignment on the Pod Setup tab.</p>
+
+                      {paidOrders.length === 0 ? (
+                        <div className="text-center py-6 text-gray-400">
+                          <p className="text-3xl mb-2">📋</p>
+                          <p>No paid registrations yet</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {paidOrders.map(([orderId, regs]) => {
+                            const confirmedDate = regs[0]?.paymentConfirmedAt ? new Date(regs[0].paymentConfirmedAt).toLocaleDateString() : '';
+                            return renderRegCard(orderId, regs, {
+                              borderClass: 'border-green-500 bg-green-50',
+                              actions: (
+                                <span className="text-xs text-gray-500">{confirmedDate ? `Paid ${confirmedDate}` : 'Paid'}</span>
+                              )
+                            });
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 );
               })()}
