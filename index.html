@@ -47,12 +47,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.088";
+    const VERSION = "13.089";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T20:08:00");
+    const BUILD_DATE = new Date("2026-02-10T20:15:00");
 
     const RELEASE_NOTES = [
-      { version: "13.088", date: "2026-02-10", time: "8:08 PM", author: "Audrey Richardson", changes: ["Google Sign-In button now styled to match the email/password input fields for a consistent look", "Removed 'Continue with Apple' placeholder button from login page", "Switched Google Sign-In from rendered iframe button to custom-styled button using OAuth2 token client"] },
+      { version: "13.089", date: "2026-02-10", time: "8:15 PM", author: "Derek Richardson", changes: ["Google Sign-In now creates new accounts — clicking Google when no account exists starts the onboarding flow with name and email pre-filled from Google", "Password field hidden for Google sign-up (not needed), email field read-only", "Blue 'Signing up with Google' banner shown during onboarding for both parent and counselor flows", "Accounts created via Google are stored with loginType: 'Google' and no password field"] },
+      { version: "13.088", date: "2026-02-10", time: "8:08 PM", author: "Derek Richardson", changes: ["Google Sign-In button now styled to match the email/password input fields for a consistent look", "Removed 'Continue with Apple' placeholder button from login page", "Switched Google Sign-In from rendered iframe button to custom-styled button using OAuth2 token client"] },
       { version: "13.087", date: "2026-02-10", time: "8:03 PM", author: "Audrey Richardson", changes: ["Google Sign-In now works on the login page — parents, counselors, and admins can sign in with their Google account if their Google email matches an existing account", "Login type tracking added — sessionStorage now includes loginType ('Google' or 'Email/Password') for all logins", "Replaced placeholder 'Continue with Google' button with real Google Identity Services button"] },
       { version: "13.086", date: "2026-02-10", time: "2:55 PM", author: "Audrey Richardson", changes: ["Added temporary notice on 'Can't remember your login?' screen — SMS verification is being set up, users directed to email rhsdaycamp@gmail.com for login help", "Added detailed Twilio response logging for SMS delivery diagnostics (SID, status, error codes)", "Switched from local 10DLC number to toll-free number for SMS (pending Twilio verification)"] },
       { version: "13.085", date: "2026-02-10", time: "1:16 PM", author: "Audrey Richardson", changes: ["All emails now include unique X-Entity-Ref-ID header to prevent Gmail from threading/collapsing duplicate content", "Password reset minimum aligned to 4 characters (was 6) to match account creation requirements", "SMS verification now checks Twilio response and shows actual error message if sending fails (was silently ignored)", "Forgot login phone input now auto-formats to (555) 555-1234 as you type, matching all other phone fields"] },
@@ -1601,10 +1602,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT ONBOARDING WIZARD ====================
-    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks, content, addToHistory, sitePhotos }) => {
+    const ParentOnboarding = ({ onComplete, onBack, parents, saveParents, saveEmergencyContacts, emergencyContacts, saveOnboardingProgress, campers, saveCampers, saveCamperParentLinks, camperParentLinks, content, addToHistory, sitePhotos, googleUser }) => {
       const [step, setStep] = useState(1);
       const [editReturnStep, setEditReturnStep] = useState(null);
-      const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '', photo: null });
+      const [userData, setUserData] = useState({ name: googleUser?.name || '', email: googleUser?.email || '', phone: '', password: '', photo: null });
       const [showPassword, setShowPassword] = useState(false);
       const [campersData, setCampersData] = useState([]);
       const [emergencyData, setEmergencyData] = useState([]);
@@ -1807,13 +1808,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             setError('Please enter a valid 10-digit phone number: (555) 555-1234');
             return false;
           }
-          if (!userData.password) {
-            setError('Please create a password');
-            return false;
-          }
-          if (userData.password.length < 4) {
-            setError('Password must be at least 4 characters');
-            return false;
+          if (!googleUser) {
+            if (!userData.password) {
+              setError('Please create a password');
+              return false;
+            }
+            if (userData.password.length < 4) {
+              setError('Password must be at least 4 characters');
+              return false;
+            }
           }
           if ((parents || []).some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase())) {
             setError('An account with this email already exists. Please use a different email or log in instead.');
@@ -1865,11 +1868,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const newUser = {
           email: userData.email,
           name: userData.name,
-          password: userData.password,
           phone: userData.phone,
           photo: userData.photo,
           role: 'parent',
           roles: ['parent'],
+          loginType: googleUser ? 'Google' : 'Email/Password',
           onboardingComplete: true,
           onboardingCompletedAt: new Date().toISOString(),
           policiesAccepted: policiesAccepted.pickup && policiesAccepted.dropoff ? {
@@ -1878,6 +1881,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             acceptedAt: new Date().toISOString()
           } : null
         };
+        if (userData.password) newUser.password = userData.password;
         await saveParents([...(parents || []), newUser]);
 
         // Save campers and create parent links
@@ -2155,7 +2159,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               {/* Step 1: Account Setup */}
               {step === 1 && (
                 <div className="space-y-4">
-                  <p className="text-gray-600 mb-4">Let's start by creating your account.</p>
+                  <p className="text-gray-600 mb-4">{googleUser ? 'Almost there! We just need a few more details.' : "Let's start by creating your account."}</p>
+
+                  {googleUser && (
+                    <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm flex items-center gap-2 mb-2">
+                      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                      <span>Signing up with Google — no password needed!</span>
+                    </div>
+                  )}
 
                   {/* Photo Upload */}
                   <div className="flex justify-center mb-4">
@@ -2189,8 +2200,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <input
                       type="email"
                       value={userData.email}
-                      onChange={e => setUserData({ ...userData, email: e.target.value })}
-                      className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none"
+                      onChange={e => !googleUser && setUserData({ ...userData, email: e.target.value })}
+                      readOnly={!!googleUser}
+                      className={`w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none ${googleUser ? 'bg-gray-100 text-gray-600' : ''}`}
                       placeholder="your@email.com"
                       autoComplete="off" data-1p-ignore="true"
                     />
@@ -2205,6 +2217,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       autoComplete="off" data-1p-ignore="true"
                     />
                   </div>
+                  {!googleUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                     <div className="relative">
@@ -2219,6 +2232,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
                     </div>
                   </div>
+                  )}
                 </div>
               )}
 
@@ -4513,9 +4527,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           </div>
         </div>
       );
-      const CounselorOnboarding = ({ onComplete, onBack, counselorUsers, saveCounselorUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule, sitePhotos }) => {
+      const CounselorOnboarding = ({ onComplete, onBack, counselorUsers, saveCounselorUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule, sitePhotos, googleUser }) => {
         const [step, setStep] = useState(1);
-        const [userData, setUserData] = useState({ name: '', email: '', phone: '', password: '' });
+        const [userData, setUserData] = useState({ name: googleUser?.name || '', email: googleUser?.email || '', phone: '', password: '' });
         const [showPassword, setShowPassword] = useState(false);
         const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
         const [availData, setAvailData] = useState({});
@@ -4607,13 +4621,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               setError('Please enter a valid 10-digit phone number: (555) 555-1234');
               return false;
             }
-            if (!userData.password) {
-              setError('Please create a password');
-              return false;
-            }
-            if (userData.password.length < 4) {
-              setError('Password must be at least 4 characters');
-              return false;
+            if (!googleUser) {
+              if (!userData.password) {
+                setError('Please create a password');
+                return false;
+              }
+              if (userData.password.length < 4) {
+                setError('Password must be at least 4 characters');
+                return false;
+              }
             }
             if ((counselorUsers || []).some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase()) || (counselors || []).some(c => c.email.toLowerCase() === userData.email.trim().toLowerCase())) {
               setError('An account with this email already exists. Please use a different email or log in instead.');
@@ -4652,13 +4668,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             const newUser = {
               email: userData.email,
               name: userData.name,
-              password: userData.password,
               phone: userData.phone,
               role: 'counselor',
               roles: ['counselor'],
+              loginType: googleUser ? 'Google' : 'Email/Password',
               onboardingComplete: true,
               onboardingCompletedAt: new Date().toISOString()
             };
+            if (userData.password) newUser.password = userData.password;
             await saveCounselorUsers([...(counselorUsers || []), newUser]);
 
             // Create counselor profile (pending approval)
@@ -4815,19 +4832,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 {/* Step 1: Account */}
                 {step === 1 && (
                   <div className="space-y-4">
-                    <p className="text-gray-600 mb-4">Create your counselor account to get started.</p>
+                    <p className="text-gray-600 mb-4">{googleUser ? 'Almost there! We just need a few more details.' : 'Create your counselor account to get started.'}</p>
+                    {googleUser && (
+                      <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg text-sm flex items-center gap-2 mb-2">
+                        <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        <span>Signing up with Google — no password needed!</span>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
                       <input value={userData.name} onChange={e => setUserData({ ...userData, name: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="Your full name" autoComplete="off" data-1p-ignore="true" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                      <input type="email" value={userData.email} onChange={e => setUserData({ ...userData, email: e.target.value })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="your@email.com" autoComplete="off" data-1p-ignore="true" />
+                      <input type="email" value={userData.email} onChange={e => !googleUser && setUserData({ ...userData, email: e.target.value })} readOnly={!!googleUser} className={`w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none ${googleUser ? 'bg-gray-100 text-gray-600' : ''}`} placeholder="your@email.com" autoComplete="off" data-1p-ignore="true" />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                       <input value={userData.phone} onChange={e => setUserData({ ...userData, phone: formatPhone(e.target.value) })} className="w-full px-4 py-3 border-2 rounded-lg focus:border-blue-500 focus:outline-none" placeholder="(555) 555-1234" autoComplete="off" data-1p-ignore="true" />
                     </div>
+                    {!googleUser && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
                       <div className="relative">
@@ -4835,6 +4859,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-sm">{showPassword ? 'Hide' : 'Show'}</button>
                       </div>
                     </div>
+                    )}
                   </div>
                 )}
 
@@ -5039,6 +5064,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [showNewPassword, setShowNewPassword] = useState(false);
         const [name, setName] = useState('');
         const [phone, setPhone] = useState('');
+        const [googleUser, setGoogleUser] = useState(null); // { email, name } from Google Sign-In for new account creation
 
         const handleLogin = () => {
           // Check if logging in as admin
@@ -5112,7 +5138,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             return;
           }
 
-          setError(`No account found for ${googleEmail}. Please create an account first, then you can sign in with Google.`);
+          // No existing account — start account creation with Google info pre-filled
+          setGoogleUser({ email: googleEmail, name: googleName });
+          setError('');
+          setMode('selectRole');
         };
 
         // Initialize Google OAuth2 token client for custom button
@@ -5186,6 +5215,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               content={content}
               addToHistory={addToHistory}
               sitePhotos={sitePhotos}
+              googleUser={googleUser}
             />
           );
         }
@@ -5208,6 +5238,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               counselorSchedule={counselorSchedule}
               saveCounselorSchedule={saveCounselorSchedule}
               sitePhotos={sitePhotos}
+              googleUser={googleUser}
             />
           );
         }
