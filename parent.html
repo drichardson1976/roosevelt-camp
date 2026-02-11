@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.095";
+    const VERSION = "13.096";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-10T21:34:00");
+    const BUILD_DATE = new Date("2026-02-10T21:39:00");
 
     const RELEASE_NOTES = [
+      { version: "13.096", date: "2026-02-10", time: "9:39 PM", author: "Derek Richardson", changes: ["Dashboard 'Add Emergency Contact' now uses the SAME modal as the Emergency Contacts tab — no duplicate code", "Removed inline dashboard EC modal; dashboard button now switches to EC tab with autoOpenAddEC=true so the full-screen modal opens instantly", "On cancel or save, returns to Dashboard automatically via returnTabAfterEC", "Removed unused modalOnly code path and dashboardECForm state"] },
       { version: "13.095", date: "2026-02-10", time: "9:34 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button — replaced ParentEmergencyContactsManager component approach with direct inline modal rendering, eliminating all component lifecycle/timing issues", "EC add form now renders as a simple fixed overlay directly in the parent component, same pattern as the working Registration modal"] },
       { version: "13.094", date: "2026-02-10", time: "9:30 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' modal not appearing — initialized showAddForm state to true when autoOpenAddEC is true, so modal renders immediately on first render instead of waiting for useEffect"] },
       { version: "13.093", date: "2026-02-10", time: "9:21 PM", author: "Derek Richardson", changes: ["Fixed Dashboard 'Add Emergency Contact' button not opening the modal — replaced hidden wrapper div approach with modalOnly prop on ParentEmergencyContactsManager", "EC component now supports modalOnly mode: renders only the add form modal overlay without the full contact list, eliminating CSS clipping issues"] },
@@ -3743,8 +3744,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [autoOpenPhotoForParent, setAutoOpenPhotoForParent] = useState(null); // parent email — auto-open photo modal from Dashboard
       const [autoOpenAddEC, setAutoOpenAddEC] = useState(false); // auto-open Add EC form when switching to Emergency tab
       const [returnTabAfterEC, setReturnTabAfterEC] = useState(null); // tab to return to after adding EC
-      const [showDashboardECModal, setShowDashboardECModal] = useState(false); // show standalone EC add form modal from dashboard
-      const [dashboardECForm, setDashboardECForm] = useState({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null });
 
       const isDevEnv = isDev();
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
@@ -4863,7 +4862,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             hints.push({
               icon: '🚨',
               text: `Add emergency contacts (minimum of 2 required, you have ${myContacts.length})`,
-              action: () => { setDashboardECForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); setShowDashboardECModal(true); },
+              action: () => { setReturnTabAfterEC(parentTab); setAutoOpenAddEC(true); setParentTab('emergency'); },
               actionText: 'Add Emergency Contact',
               priority: 3
             });
@@ -5452,6 +5451,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     addToHistory={addToHistory}
                     autoOpenAddEC={autoOpenAddEC}
                     onAutoOpenDone={() => setAutoOpenAddEC(false)}
+                    onCloseAddForm={() => { if (returnTabAfterEC) { setParentTab(returnTabAfterEC); setReturnTabAfterEC(null); } }}
                   />
                 </div>
               )}
@@ -5850,69 +5850,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               })()}
             </div>
 
-                  {/* EC Add Modal — rendered directly from dashboard (no component wrapper) */}
-                  {showDashboardECModal && (
-                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowDashboardECModal(false)}>
-                      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
-                        <div className="space-y-3">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                            <input value={dashboardECForm.name} onChange={e => setDashboardECForm(f => ({ ...f, name: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
-                            <select value={dashboardECForm.relationship} onChange={e => setDashboardECForm(f => ({ ...f, relationship: e.target.value }))} className="w-full px-3 py-2 border rounded-lg">
-                              <option value="">Select relationship...</option>
-                              <option value="Mother">Mother</option>
-                              <option value="Father">Father</option>
-                              <option value="Grandmother">Grandmother</option>
-                              <option value="Grandfather">Grandfather</option>
-                              <option value="Aunt">Aunt</option>
-                              <option value="Uncle">Uncle</option>
-                              <option value="Sibling">Sibling</option>
-                              <option value="Family Friend">Family Friend</option>
-                              <option value="Neighbor">Neighbor</option>
-                              <option value="Babysitter/Nanny">Babysitter/Nanny</option>
-                              <option value="Other">Other</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                            <input value={dashboardECForm.phone} onChange={e => setDashboardECForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 123-4567" maxLength="14" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                            <input value={dashboardECForm.email} onChange={e => setDashboardECForm(f => ({ ...f, email: e.target.value }))} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
-                          </div>
-                        </div>
-                        <div className="flex gap-4 pt-4">
-                          <button onClick={() => setShowDashboardECModal(false)} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-                          <button
-                            disabled={!dashboardECForm.name.trim() || !dashboardECForm.relationship || !dashboardECForm.phone.trim() || !dashboardECForm.email.trim()}
-                            className={`flex-1 py-2 rounded-lg font-medium ${!dashboardECForm.name.trim() || !dashboardECForm.relationship || !dashboardECForm.phone.trim() || !dashboardECForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                            onClick={async () => {
-                              if (!isValidPhone(dashboardECForm.phone)) { showToast('Please enter a valid 10-digit phone number', 'error'); return; }
-                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dashboardECForm.email)) { showToast('Please enter a valid email address', 'error'); return; }
-                              const newContact = { id: `ec_${Date.now()}`, userEmail: user?.email, ...dashboardECForm };
-                              const otherContacts = emergencyContacts.filter(c => c.userEmail !== user?.email);
-                              const myContacts = emergencyContacts.filter(c => c.userEmail === user?.email);
-                              const allContacts = [...otherContacts, ...myContacts, newContact];
-                              await saveEmergencyContacts(allContacts, `Added emergency contact ${dashboardECForm.name} for ${user?.name}`);
-                              const newLinks = [];
-                              for (const camper of myChildren) {
-                                const alreadyLinked = camperEmergencyContactLinks.some(link => link.camperId === camper.id && link.emergencyContactId === newContact.id);
-                                if (!alreadyLinked) { newLinks.push({ camperId: camper.id, emergencyContactId: newContact.id }); }
-                              }
-                              if (newLinks.length > 0) { await saveCamperEmergencyContactLinks([...camperEmergencyContactLinks, ...newLinks]); }
-                              showToast(`Added ${dashboardECForm.name} as emergency contact`, 'success');
-                              setShowDashboardECModal(false);
-                            }}
-                          >Add Contact</button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Registration Modal */}
                   {showRegistrationModal && (
@@ -6808,7 +6745,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== PARENT EMERGENCY CONTACTS MANAGER ====================
-    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm, modalOnly }) => {
+    const ParentEmergencyContactsManager = ({ parentEmail, emergencyContacts, onSave, showToast, parents, saveParents, addParentToFamily, myChildren, currentUser, addToHistory, autoOpenAddEC, onAutoOpenDone, onCloseAddForm }) => {
       const [localContacts, setLocalContacts] = useState([]);
       const [editingId, setEditingId] = useState(null);
       const [showAddForm, setShowAddForm] = useState(autoOpenAddEC || false);
@@ -7008,67 +6945,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const requirementsMet = meetsRequirements();
-
-      // Modal-only mode: only render the add form modal (used when triggered from Dashboard)
-      if (modalOnly) {
-        if (!showAddForm) return null;
-        return (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddForm(false); setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); onCloseAddForm?.(); }}>
-            <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <h4 className="font-medium text-lg mb-4 text-center">Add Emergency Contact</h4>
-              <div className="flex justify-center mb-1">
-                {getDisplayPhoto(editForm.photo) ? (
-                  <div className="relative cursor-pointer" onClick={() => setShowAddPhotoModal(true)}>
-                    <img src={getDisplayPhoto(editForm.photo)} className="w-20 h-20 rounded-full object-cover border-2 border-green-300" />
-                    <div className="absolute bottom-0 right-0 bg-green-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">✎</div>
-                  </div>
-                ) : (
-                  <button onClick={() => setShowAddPhotoModal(true)} className="w-20 h-20 rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center hover:bg-gray-200">
-                    <span className="text-2xl text-gray-400">📷</span>
-                  </button>
-                )}
-                {showAddPhotoModal && <PhotoUploadModal currentPhoto={editForm.photo} onSave={(img) => { setEditForm({ ...editForm, photo: img }); setShowAddPhotoModal(false); }} onCancel={() => setShowAddPhotoModal(false)} />}
-              </div>
-              <p className="text-xs text-gray-500 text-center mb-4">Tap to add photo (optional)</p>
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                  <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="Full name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Relationship *</label>
-                  <select value={editForm.relationship} onChange={e => setEditForm({ ...editForm, relationship: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select relationship...</option>
-                    <option value="Mother">Mother</option>
-                    <option value="Father">Father</option>
-                    <option value="Grandmother">Grandmother</option>
-                    <option value="Grandfather">Grandfather</option>
-                    <option value="Aunt">Aunt</option>
-                    <option value="Uncle">Uncle</option>
-                    <option value="Sibling">Sibling</option>
-                    <option value="Family Friend">Family Friend</option>
-                    <option value="Neighbor">Neighbor</option>
-                    <option value="Babysitter/Nanny">Babysitter/Nanny</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
-                  <input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: formatPhone(e.target.value) })} className="w-full px-3 py-2 border rounded-lg" placeholder="(555) 123-4567" maxLength="14" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address *</label>
-                  <input value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} className="w-full px-3 py-2 border rounded-lg" placeholder="email@example.com" />
-                </div>
-              </div>
-              <div className="flex gap-4 pt-4">
-                <button onClick={() => { setShowAddForm(false); setEditForm({ name: '', relationship: '', phone: '', email: '', priority: 'normal', photo: null }); onCloseAddForm?.(); }} className="flex-1 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">Cancel</button>
-                <button onClick={handleAdd} disabled={!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim()} className={`flex-1 py-2 rounded-lg font-medium ${!editForm.name.trim() || !editForm.relationship || !editForm.phone.trim() || !editForm.email.trim() ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}>Add Contact</button>
-              </div>
-            </div>
-          </div>
-        );
-      }
 
       // Show delete confirmation
       if (showDeleteConfirm) {
