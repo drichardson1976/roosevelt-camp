@@ -7,8 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -43,14 +43,20 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.116";
-    const BUILD_DATE = new Date("2026-02-12T22:03:00");
+    const VERSION = "13.117";
+    const BUILD_DATE = new Date("2026-02-12T22:15:00");
 
-    // Second client for public schema (read-only, for schema comparison tests)
-    const supabasePublic = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      db: { schema: 'public' },
-      global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
-    });
+    // Lazy-create public schema client (only when schema comparison tests need it)
+    let _pubClient = null;
+    const getSupabasePublic = () => {
+      if (!_pubClient) {
+        _pubClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          db: { schema: 'public' },
+          global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
+        });
+      }
+      return _pubClient;
+    };
 
     // The tables our code expects to exist (from CLAUDE.md "ACTIVE TABLES" section)
     const EXPECTED_TABLES = [
@@ -299,7 +305,7 @@
           {
             name: "Can connect to PUBLIC schema",
             fn: async () => {
-              const { data, error } = await supabasePublic.from('camp_admins').select('id').limit(1);
+              const { data, error } = await getSupabasePublic().from('camp_admins').select('id').limit(1);
               assert.ok(!error, `Public schema connection failed: ${error?.message}`);
             }
           },
@@ -315,7 +321,7 @@
           ...EXPECTED_TABLES.map(table => ({
             name: `PUBLIC has "${table}"`,
             fn: async () => {
-              const exists = await tableExists(supabasePublic, table);
+              const exists = await tableExists(getSupabasePublic(), table);
               assert.ok(exists, `Table "${table}" missing from PUBLIC schema`);
             }
           })),
@@ -328,7 +334,7 @@
 
               for (const table of EXPECTED_TABLES) {
                 const inDev = await tableExists(supabase, table);
-                const inPub = await tableExists(supabasePublic, table);
+                const inPub = await tableExists(getSupabasePublic(), table);
                 if (inDev && !inPub) devOnly.push(table);
                 if (!inDev && inPub) publicOnly.push(table);
               }

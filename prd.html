@@ -22,8 +22,8 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const VERSION = "13.114";
-    const BUILD_DATE = new Date("2026-02-12T20:29:00");
+    const VERSION = "13.117";
+    const BUILD_DATE = new Date("2026-02-12T22:15:00");
     const getEnvironment = () => {
       const h = window.location.hostname;
       return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
@@ -281,12 +281,12 @@
           {/* Quick nav */}
           <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
             <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-3 flex-wrap text-sm justify-center">
-              <a href="#roles" className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100">\ud83d\udc65 Who Uses It</a>
-              <a href="#lifecycle" className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100">\ud83d\udd04 How It Works</a>
-              <a href="#features" className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100">\u2705 Feature Checklist</a>
-              <a href="#data" className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100">\ud83d\uddc4\ufe0f What It Stores</a>
-              <a href="#tech" className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200">\ud83d\udd27 How It's Built</a>
-              <a href="/tests.html" className="px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 ml-auto">Run Tests \u2192</a>
+              <a href="#roles" className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100">Who Uses It</a>
+              <a href="#lifecycle" className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100">How It Works</a>
+              <a href="#features" className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100">Feature Checklist</a>
+              <a href="#data" className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100">What It Stores</a>
+              <a href="#tech" className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200">How It's Built</a>
+              <a href="/tests.html" className="px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 ml-auto">{"Run Tests \u2192"}</a>
             </div>
           </div>
 
@@ -362,7 +362,7 @@
                       <ul className="space-y-1">
                         {phase.steps.map((step, j) => (
                           <li key={j} className="text-gray-600 text-sm flex items-start gap-2">
-                            <span className="text-gray-400 mt-0.5">\u2022</span>
+                            <span className="text-gray-400 mt-0.5">{"\u2022"}</span>
                             {step}
                           </li>
                         ))}
