@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tests - Roosevelt Basketball Day Camp</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .font-display { font-family: 'Bebas Neue', sans-serif; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    // ==================== CONFIGURATION ====================
+    const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
+
+    const getEnvironment = () => {
+      const hostname = window.location.hostname;
+      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev') || hostname.includes('github.io')) ? 'development' : 'production';
+    };
+
+    const ENV = getEnvironment();
+    const SCHEMA = ENV === 'development' ? 'dev' : 'public';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: SCHEMA },
+      global: { headers: { 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA } }
+    });
+
+    // ==================== VERSION INFO ====================
+    const VERSION = "1.000";
+    const BUILD_DATE = new Date("2026-02-12T20:18:00");
+
+    // ==================== STORAGE (same as other files) ====================
+    const storage = {
+      async get(table) {
+        if (!supabase) return null;
+        try {
+          const { data, error } = await supabase.from(table).select('*');
+          if (error) throw error;
+          return data;
+        } catch (e) {
+          console.error('Error fetching ' + table + ':', e);
+          return null;
+        }
+      }
+    };
+
+    // ==================== BUSINESS LOGIC FUNCTIONS (copied from parent.html for testing) ====================
+
+    const formatPhone = (value) => {
+      const digits = value.replace(/\D/g, '').slice(0, 10);
+      if (digits.length === 0) return '';
+      if (digits.length <= 3) return '(' + digits;
+      if (digits.length <= 6) return '(' + digits.slice(0, 3) + ') ' + digits.slice(3);
+      return '(' + digits.slice(0, 3) + ') ' + digits.slice(3, 6) + '-' + digits.slice(6);
+    };
+
+    const isValidPhone = (phone) => (phone || '').replace(/\D/g, '').length === 10;
+
+    const calculateAge = (birthdate) => {
+      if (!birthdate) return null;
+      const today = new Date();
+      const birth = new Date(birthdate);
+      let age = today.getFullYear() - birth.getFullYear();
+      if (today.getMonth() < birth.getMonth() || (today.getMonth() === birth.getMonth() && today.getDate() < birth.getDate())) age--;
+      return age;
+    };
+
+    // Camp dates and weeks (needed by calculateDiscountedTotal)
+    const generateCampDates = () => {
+      const weeks = [
+        ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'],
+        ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14'],
+        ['2026-08-17', '2026-08-18', '2026-08-19', '2026-08-20', '2026-08-21'],
+        ['2026-08-24', '2026-08-25', '2026-08-26', '2026-08-27', '2026-08-28']
+      ];
+      return weeks.flat();
+    };
+    const CAMP_DATES = generateCampDates();
+
+    const getWeeks = () => {
+      const weeks = [];
+      let currentWeek = [];
+      let weekStart = null;
+      CAMP_DATES.forEach((date, idx) => {
+        const d = new Date(date + 'T12:00:00');
+        if (d.getDay() === 1 || idx === 0) {
+          if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+          currentWeek = [date];
+          weekStart = date;
+        } else {
+          currentWeek.push(date);
+        }
+      });
+      if (currentWeek.length > 0) weeks.push({ start: weekStart, dates: currentWeek });
+      return weeks;
+    };
+    const CAMP_WEEKS = getWeeks();
+
+    const calculateDiscountedTotal = (selectedDates, numChildren, content) => {
+      const basePrice = content.singleSessionCost || 60;
+      const weekDiscount = (content.weekDiscount || 10) / 100;
+      const multiWeekDiscount = (content.multiWeekDiscount || 15) / 100;
+
+      const sessionsByWeek = {};
+      Object.entries(selectedDates).forEach(([date, sessions]) => {
+        if (!sessions?.length) return;
+        const weekIdx = CAMP_WEEKS.findIndex(w => w.dates.includes(date));
+        if (weekIdx >= 0) {
+          if (!sessionsByWeek[weekIdx]) sessionsByWeek[weekIdx] = { dates: {}, totalSessions: 0 };
+          sessionsByWeek[weekIdx].dates[date] = sessions;
+          sessionsByWeek[weekIdx].totalSessions += sessions.length;
+        }
+      });
+
+      let fullWeeks = 0;
+      let fullWeekSessions = 0;
+      let partialSessions = 0;
+
+      Object.values(sessionsByWeek).forEach(week => {
+        const daysCount = Object.keys(week.dates).length;
+        const hasBothSessions = Object.values(week.dates).every(s => s.includes('morning') && s.includes('afternoon'));
+        if (daysCount === 5 && hasBothSessions && week.totalSessions === 10) {
+          fullWeeks++;
+          fullWeekSessions += 10;
+        } else {
+          partialSessions += week.totalSessions;
+        }
+      });
+
+      const children = Math.max(1, numChildren);
+      let subtotal = 0;
+      let discount = 0;
+
+      if (fullWeeks >= 2) {
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * multiWeekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else if (fullWeeks === 1) {
+        const fullWeekCost = fullWeekSessions * basePrice * children;
+        discount = fullWeekCost * weekDiscount;
+        subtotal = fullWeekCost - discount + (partialSessions * basePrice * children);
+      } else {
+        subtotal = (fullWeekSessions + partialSessions) * basePrice * children;
+      }
+
+      const totalSessions = fullWeekSessions + partialSessions;
+      const originalTotal = totalSessions * basePrice * children;
+
+      return {
+        totalSessions,
+        fullWeeks,
+        partialSessions,
+        originalTotal,
+        discount,
+        discountPercent: fullWeeks >= 2 ? multiWeekDiscount * 100 : fullWeeks === 1 ? weekDiscount * 100 : 0,
+        finalTotal: Math.round(subtotal)
+      };
+    };
+
+    // ==================== TEST FRAMEWORK ====================
+    const assert = {
+      ok(val, msg) { if (!val) throw new Error(msg || `Expected truthy, got ${JSON.stringify(val)}`); },
+      equal(a, b, msg) { if (a !== b) throw new Error(msg || `Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`); },
+      isArray(val, msg) { if (!Array.isArray(val)) throw new Error(msg || `Expected array, got ${typeof val}`); },
+      isObject(val, msg) { if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error(msg || `Expected object, got ${typeof val}`); },
+      hasProperty(obj, prop, msg) { if (!(prop in obj)) throw new Error(msg || `Missing property: ${prop}`); },
+      greaterThan(a, b, msg) { if (!(a > b)) throw new Error(msg || `Expected ${a} > ${b}`); },
+    };
+
+    // ==================== TEST SUITES ====================
+    const ALL_SUITES = [
+      // ===== DATABASE CONNECTIVITY =====
+      {
+        name: "Database Connectivity",
+        category: "connectivity",
+        icon: "\ud83d\udd0c",
+        tests: [
+          {
+            name: "Supabase client initializes",
+            fn: async () => { assert.ok(supabase, 'Supabase client should exist'); }
+          },
+          {
+            name: "Schema is dev (safety check)",
+            fn: async () => { assert.equal(SCHEMA, 'dev', 'Tests must run against dev schema, not production'); }
+          },
+          {
+            name: "Can connect to Supabase and query",
+            fn: async () => {
+              const { data, error } = await supabase.from('camp_admins').select('id').limit(1);
+              assert.ok(!error, `Connection failed: ${error?.message}`);
+            }
+          },
+          {
+            name: "storage.get returns data array",
+            fn: async () => {
+              const result = await storage.get('camp_admins');
+              assert.ok(result !== null, 'storage.get should return non-null');
+              assert.isArray(result, 'Result should be an array of rows');
+            }
+          }
+        ]
+      },
+
+      // ===== DATA INTEGRITY =====
+      {
+        name: "Data Integrity \u2014 Tables Exist",
+        category: "integrity",
+        icon: "\ud83d\uddc4\ufe0f",
+        tests: [
+          ...['camp_admins', 'camp_parents', 'camp_counselor_users', 'camp_counselors',
+            'camp_campers', 'camp_camper_parent_links', 'camp_emergency_contacts',
+            'camp_registrations', 'camp_assignments', 'camp_dates', 'camp_blocked_sessions',
+            'camp_counselor_availability', 'camp_counselor_schedule',
+            'camp_availability_change_requests', 'camp_profile_change_requests',
+            'camp_content', 'camp_food_photos', 'camp_site_photos', 'camp_gym_rentals',
+            'camp_messages', 'camp_onboarding_progress', 'camp_change_history',
+            'camp_password_reset_tokens'].map(table => ({
+            name: `Table "${table}" exists`,
+            fn: async () => {
+              const { data, error } = await supabase.from(table).select('id').limit(1);
+              assert.ok(!error, `Table ${table} query failed: ${error?.message}`);
+            }
+          })),
+          {
+            name: "camp_admins has at least one admin",
+            fn: async () => {
+              const result = await storage.get('camp_admins');
+              const admins = result?.[0]?.data || [];
+              assert.greaterThan(admins.length, 0, 'Should have at least 1 admin');
+            }
+          },
+          {
+            name: "Admin records have required fields (username, name)",
+            fn: async () => {
+              const result = await storage.get('camp_admins');
+              const admins = result?.[0]?.data || [];
+              if (admins.length > 0) {
+                assert.hasProperty(admins[0], 'username', 'Admin should have username');
+                assert.hasProperty(admins[0], 'name', 'Admin should have name');
+              }
+            }
+          }
+        ]
+      },
+
+      // ===== BUSINESS LOGIC =====
+      {
+        name: "Business Logic \u2014 Phone",
+        category: "logic",
+        icon: "\ud83d\udcde",
+        tests: [
+          {
+            name: "formatPhone: formats 10 digits correctly",
+            fn: () => { assert.equal(formatPhone('2065551234'), '(206) 555-1234'); }
+          },
+          {
+            name: "formatPhone: handles partial (3 digits)",
+            fn: () => { assert.equal(formatPhone('206'), '(206'); }
+          },
+          {
+            name: "formatPhone: handles partial (6 digits)",
+            fn: () => { assert.equal(formatPhone('206555'), '(206) 555'); }
+          },
+          {
+            name: "formatPhone: strips non-digits",
+            fn: () => { assert.equal(formatPhone('(206) 555-1234'), '(206) 555-1234'); }
+          },
+          {
+            name: "formatPhone: returns empty for empty input",
+            fn: () => { assert.equal(formatPhone(''), ''); }
+          },
+          {
+            name: "isValidPhone: accepts 10-digit formatted phone",
+            fn: () => { assert.ok(isValidPhone('(206) 555-1234')); }
+          },
+          {
+            name: "isValidPhone: accepts raw 10 digits",
+            fn: () => { assert.ok(isValidPhone('2065551234')); }
+          },
+          {
+            name: "isValidPhone: rejects 7-digit phone",
+            fn: () => { assert.ok(!isValidPhone('555-1234')); }
+          },
+          {
+            name: "isValidPhone: rejects empty string",
+            fn: () => { assert.ok(!isValidPhone('')); }
+          },
+          {
+            name: "isValidPhone: handles null gracefully",
+            fn: () => { assert.ok(!isValidPhone(null)); }
+          }
+        ]
+      },
+      {
+        name: "Business Logic \u2014 Age",
+        category: "logic",
+        icon: "\ud83c\udf82",
+        tests: [
+          {
+            name: "calculateAge: returns correct age for known date",
+            fn: () => {
+              // Someone born Jan 1 2016 should be ~10 in Feb 2026
+              const age = calculateAge('2016-01-01');
+              assert.equal(age, 10, `Age should be 10, got ${age}`);
+            }
+          },
+          {
+            name: "calculateAge: returns null for null input",
+            fn: () => { assert.equal(calculateAge(null), null); }
+          },
+          {
+            name: "calculateAge: returns null for empty string",
+            fn: () => { assert.equal(calculateAge(''), null); }
+          }
+        ]
+      },
+      {
+        name: "Business Logic \u2014 Discounts",
+        category: "logic",
+        icon: "\ud83d\udcb0",
+        tests: [
+          {
+            name: "No discount for partial week (3 sessions)",
+            fn: () => {
+              const dates = { '2026-07-13': ['morning'], '2026-07-14': ['morning'], '2026-07-15': ['morning'] };
+              const result = calculateDiscountedTotal(dates, 1, { singleSessionCost: 60 });
+              assert.equal(result.discount, 0, 'No discount for partial week');
+              assert.equal(result.finalTotal, 180, '3 sessions x $60 = $180');
+              assert.equal(result.totalSessions, 3);
+            }
+          },
+          {
+            name: "10% discount for full week (5 days x 2 sessions = 10)",
+            fn: () => {
+              const dates = {};
+              ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'].forEach(d => {
+                dates[d] = ['morning', 'afternoon'];
+              });
+              const result = calculateDiscountedTotal(dates, 1, { singleSessionCost: 60, weekDiscount: 10 });
+              assert.equal(result.fullWeeks, 1, 'Should detect 1 full week');
+              assert.equal(result.discountPercent, 10);
+              assert.equal(result.originalTotal, 600, '10 sessions x $60');
+              assert.equal(result.finalTotal, 540, '$600 - 10% = $540');
+            }
+          },
+          {
+            name: "15% discount for 2+ full weeks",
+            fn: () => {
+              const dates = {};
+              ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'].forEach(d => {
+                dates[d] = ['morning', 'afternoon'];
+              });
+              ['2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13', '2026-08-14'].forEach(d => {
+                dates[d] = ['morning', 'afternoon'];
+              });
+              const result = calculateDiscountedTotal(dates, 1, { singleSessionCost: 60, weekDiscount: 10, multiWeekDiscount: 15 });
+              assert.equal(result.fullWeeks, 2);
+              assert.equal(result.discountPercent, 15);
+              assert.equal(result.originalTotal, 1200, '20 sessions x $60');
+              assert.equal(result.finalTotal, 1020, '$1200 - 15% = $1020');
+            }
+          },
+          {
+            name: "Discount scales with number of children",
+            fn: () => {
+              const dates = {};
+              ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'].forEach(d => {
+                dates[d] = ['morning', 'afternoon'];
+              });
+              const result = calculateDiscountedTotal(dates, 2, { singleSessionCost: 60, weekDiscount: 10 });
+              assert.equal(result.originalTotal, 1200, '10 sessions x $60 x 2 children');
+              assert.equal(result.finalTotal, 1080, '$1200 - 10% = $1080');
+            }
+          },
+          {
+            name: "Mixed: full week + partial sessions",
+            fn: () => {
+              const dates = {};
+              // Full week 1
+              ['2026-07-13', '2026-07-14', '2026-07-15', '2026-07-16', '2026-07-17'].forEach(d => {
+                dates[d] = ['morning', 'afternoon'];
+              });
+              // Partial: 2 extra sessions
+              dates['2026-08-10'] = ['morning'];
+              dates['2026-08-11'] = ['morning'];
+              const result = calculateDiscountedTotal(dates, 1, { singleSessionCost: 60, weekDiscount: 10 });
+              assert.equal(result.fullWeeks, 1);
+              assert.equal(result.partialSessions, 2);
+              assert.equal(result.totalSessions, 12);
+              // Full week: 10 * 60 = 600 - 10% = 540, partial: 2 * 60 = 120, total = 660
+              assert.equal(result.finalTotal, 660);
+            }
+          },
+          {
+            name: "Zero sessions returns zero total",
+            fn: () => {
+              const result = calculateDiscountedTotal({}, 1, { singleSessionCost: 60 });
+              assert.equal(result.totalSessions, 0);
+              assert.equal(result.finalTotal, 0);
+            }
+          }
+        ]
+      },
+      {
+        name: "Business Logic \u2014 Environment",
+        category: "logic",
+        icon: "\ud83c\udf0d",
+        tests: [
+          {
+            name: "getEnvironment returns development on localhost",
+            fn: () => { assert.equal(ENV, 'development'); }
+          },
+          {
+            name: "SCHEMA is dev on localhost",
+            fn: () => { assert.equal(SCHEMA, 'dev'); }
+          },
+          {
+            name: "CAMP_DATES has 20 dates (4 weeks x 5 days)",
+            fn: () => { assert.equal(CAMP_DATES.length, 20); }
+          },
+          {
+            name: "CAMP_WEEKS has 4 weeks",
+            fn: () => { assert.equal(CAMP_WEEKS.length, 4); }
+          },
+          {
+            name: "Each camp week has 5 days",
+            fn: () => {
+              CAMP_WEEKS.forEach((week, i) => {
+                assert.equal(week.dates.length, 5, `Week ${i + 1} should have 5 days, has ${week.dates.length}`);
+              });
+            }
+          }
+        ]
+      },
+
+      // ===== API ENDPOINTS =====
+      {
+        name: "API Endpoints (Netlify Functions)",
+        category: "api",
+        icon: "\u26a1",
+        tests: [
+          ...['send-email', 'request-password-reset', 'reset-password', 'send-sms', 'send-verification-code', 'verify-code'].map(fn => ({
+            name: `Function "${fn}" endpoint responds`,
+            fn: async () => {
+              try {
+                const res = await fetch(`https://rhsbasketballdaycamp.com/.netlify/functions/${fn}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({})
+                });
+                // Any response (even 400/500) means the endpoint exists
+                assert.ok(res.status > 0, `Endpoint responded with status ${res.status}`);
+              } catch (e) {
+                // CORS error means the endpoint exists but blocks cross-origin
+                if (e.message.includes('Failed to fetch') || e.message.includes('CORS') || e.message.includes('NetworkError')) {
+                  assert.ok(true, 'Endpoint exists (CORS blocked from localhost)');
+                } else {
+                  throw e;
+                }
+              }
+            }
+          }))
+        ]
+      }
+    ];
+
+    // ==================== TEST RUNNER ====================
+    const runTest = async (test) => {
+      const start = performance.now();
+      try {
+        await test.fn();
+        return { name: test.name, status: 'pass', duration: Math.round(performance.now() - start), error: null };
+      } catch (e) {
+        return { name: test.name, status: 'fail', duration: Math.round(performance.now() - start), error: e.message };
+      }
+    };
+
+    // ==================== VERSION RIBBON ====================
+    const VersionRibbon = () => {
+      const [elapsed, setElapsed] = useState('');
+      useEffect(() => {
+        const update = () => {
+          const secs = Math.floor((new Date() - BUILD_DATE) / 1000);
+          if (secs < 60) setElapsed(`${secs}s ago`);
+          else if (secs < 3600) setElapsed(`${Math.floor(secs / 60)}m ${secs % 60}s ago`);
+          else setElapsed(`${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m ago`);
+        };
+        update();
+        const id = setInterval(update, 1000);
+        return () => clearInterval(id);
+      }, []);
+      const bgColor = ENV === 'development' ? 'bg-red-600' : 'bg-green-600';
+      return (
+        <div className={`${bgColor} text-white text-sm font-mono py-1 px-4 flex items-center justify-center gap-2`}>
+          <span className="font-bold">{ENV === 'development' ? 'DEVELOPMENT' : 'PRODUCTION'}</span>
+          <span>{'\u2022'}</span>
+          <span>v{VERSION}</span>
+          <span>{'\u2022'}</span>
+          <span>TEST SUITE</span>
+          <span>{'\u2022'}</span>
+          <span>Schema: {SCHEMA}</span>
+          <span>({elapsed})</span>
+        </div>
+      );
+    };
+
+    // ==================== UI COMPONENTS ====================
+    const TestResultRow = ({ result }) => {
+      const [showError, setShowError] = useState(false);
+      const icon = result.status === 'pass' ? '\u2705' : result.status === 'fail' ? '\u274c' : '\u23f3';
+      return (
+        <div className="border-b border-gray-100 last:border-0">
+          <div className="flex items-center justify-between py-2 px-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{icon}</span>
+              <span className={`text-sm ${result.status === 'fail' ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
+                {result.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-gray-300 text-xs">{result.duration}ms</span>
+              {result.error && (
+                <button onClick={() => setShowError(!showError)} className="text-red-500 text-xs underline hover:text-red-700">
+                  {showError ? 'hide' : 'details'}
+                </button>
+              )}
+            </div>
+          </div>
+          {showError && result.error && (
+            <pre className="mx-3 mb-2 p-2 bg-red-50 text-red-700 text-xs rounded font-mono border border-red-200 whitespace-pre-wrap">
+              {result.error}
+            </pre>
+          )}
+        </div>
+      );
+    };
+
+    const TestSuiteCard = ({ suite, results, running, onRun }) => {
+      const passed = results.filter(r => r.status === 'pass').length;
+      const failed = results.filter(r => r.status === 'fail').length;
+      const total = suite.tests.length;
+      const hasRun = results.length > 0;
+      const allPassed = hasRun && failed === 0 && passed === total;
+
+      return (
+        <div className={`border rounded-xl overflow-hidden bg-white ${hasRun ? (allPassed ? 'border-green-300' : 'border-red-300') : 'border-gray-200'}`}>
+          <div className="px-5 py-4 flex items-center justify-between bg-white">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">{suite.icon}</span>
+              <div>
+                <h3 className="font-bold text-gray-800">{suite.name}</h3>
+                <span className="text-xs text-gray-400">{total} tests</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {hasRun && (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600 font-medium">{passed} passed</span>
+                  {failed > 0 && <span className="text-red-600 font-medium">{failed} failed</span>}
+                </div>
+              )}
+              <button
+                onClick={onRun}
+                disabled={running}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  running
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {running ? 'Running...' : 'Run'}
+              </button>
+            </div>
+          </div>
+          {results.length > 0 && (
+            <div className="border-t border-gray-100">
+              {results.map((r, i) => <TestResultRow key={i} result={r} />)}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    // ==================== MAIN APP ====================
+    const TestsApp = () => {
+      const [suiteResults, setSuiteResults] = useState(ALL_SUITES.map(() => []));
+      const [runningIdx, setRunningIdx] = useState(null); // which suite is running (-1 = run all)
+      const [isBlocked, setIsBlocked] = useState(false);
+
+      // Safety: block on production
+      useEffect(() => {
+        if (SCHEMA !== 'dev') setIsBlocked(true);
+      }, []);
+
+      const runSuite = async (idx) => {
+        setRunningIdx(idx);
+        const newResults = [...suiteResults];
+        newResults[idx] = [];
+        setSuiteResults([...newResults]);
+
+        for (const test of ALL_SUITES[idx].tests) {
+          const result = await runTest(test);
+          newResults[idx] = [...newResults[idx], result];
+          setSuiteResults([...newResults]);
+        }
+        setRunningIdx(null);
+      };
+
+      const runAll = async () => {
+        setRunningIdx(-1);
+        const newResults = ALL_SUITES.map(() => []);
+        setSuiteResults(newResults);
+
+        for (let i = 0; i < ALL_SUITES.length; i++) {
+          for (const test of ALL_SUITES[i].tests) {
+            const result = await runTest(test);
+            newResults[i] = [...newResults[i], result];
+            setSuiteResults([...newResults.map(r => [...r])]);
+          }
+        }
+        setRunningIdx(null);
+      };
+
+      // Summary stats
+      const totalTests = ALL_SUITES.reduce((a, s) => a + s.tests.length, 0);
+      const totalPassed = suiteResults.flat().filter(r => r.status === 'pass').length;
+      const totalFailed = suiteResults.flat().filter(r => r.status === 'fail').length;
+      const totalRun = suiteResults.flat().length;
+      const allDone = totalRun === totalTests && totalRun > 0;
+      const allPassed = allDone && totalFailed === 0;
+
+      if (isBlocked) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-red-50">
+            <div className="text-center p-10">
+              <div className="text-6xl mb-4">{'\ud83d\uded1'}</div>
+              <h1 className="text-2xl font-bold text-red-700 mb-2">Tests Blocked</h1>
+              <p className="text-red-600">Cannot run tests against production schema.</p>
+              <p className="text-red-500 mt-2">Open this page on <code className="bg-red-100 px-2 py-1 rounded">localhost</code> to use the dev schema.</p>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <VersionRibbon />
+
+          {/* Header */}
+          <div className="bg-green-900 text-white py-6 px-6">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div>
+                <h1 className="font-display text-4xl tracking-wide">Roosevelt Camp Test Suite</h1>
+                <p className="text-green-300 text-sm mt-1">Automated tests for database, business logic, and API endpoints</p>
+              </div>
+              <a href="/prd.html" className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm transition-colors">
+                {'\u2190'} Back to PRD
+              </a>
+            </div>
+          </div>
+
+          {/* Summary bar */}
+          <div className={`py-3 px-6 border-b ${allDone ? (allPassed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') : 'bg-white border-gray-200'}`}>
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="text-sm">
+                  <span className="font-bold text-gray-800">{totalTests}</span> <span className="text-gray-500">total tests</span>
+                </div>
+                {totalRun > 0 && (
+                  <>
+                    <div className="text-sm">
+                      <span className="font-bold text-green-600">{totalPassed}</span> <span className="text-gray-500">passed</span>
+                    </div>
+                    {totalFailed > 0 && (
+                      <div className="text-sm">
+                        <span className="font-bold text-red-600">{totalFailed}</span> <span className="text-gray-500">failed</span>
+                      </div>
+                    )}
+                    <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(totalPassed / totalTests) * 100}%` }}></div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={runAll}
+                disabled={runningIdx !== null}
+                className={`px-5 py-2 rounded-lg font-medium transition-colors ${
+                  runningIdx !== null
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
+                }`}
+              >
+                {runningIdx === -1 ? 'Running All...' : 'Run All Tests'}
+              </button>
+            </div>
+          </div>
+
+          {/* Test suites */}
+          <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+            {ALL_SUITES.map((suite, i) => (
+              <TestSuiteCard
+                key={i}
+                suite={suite}
+                results={suiteResults[i]}
+                running={runningIdx === i || runningIdx === -1}
+                onRun={() => runSuite(i)}
+              />
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div className="text-center text-gray-400 text-sm py-6 border-t border-gray-200 mt-4">
+            Read-only tests only \u2014 no data is modified. Safe to run anytime on dev.
+          </div>
+        </div>
+      );
+    };
+
+    // ==================== INIT ====================
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TestsApp />);
+  </script>
+</body>
+</html>

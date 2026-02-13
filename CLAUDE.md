@@ -21,6 +21,22 @@ After completing ANY work:
 3. **`git push`** — **MANDATORY** - Push changes to remote so others have access immediately
 4. **Say "Start testing"** — Always end your final message with "Start testing" so the user knows the changes are ready to test
 
+### PRD & Tests Maintenance
+- **prd.html** — When adding new features, database tables, user flows, or changing the file structure:
+  - Update the relevant data structure at the top of `prd.html` (e.g., `DATABASE_TABLES`, `FEATURE_MAP`, `USER_FLOWS`, `FILE_STRUCTURE`)
+  - If adding a new table, add its entry to `DATABASE_TABLES` with fields, example data, data type (array vs object), and access pattern
+  - If changing a feature's status (planned → complete), update the `status` field in `FEATURE_MAP`
+  - If adding a new Netlify function, add it to `SYSTEM_ARCHITECTURE.layers[2].components`
+- **tests.html** — When building new features:
+  - Add tests for any new business logic functions (discount calculations, validation, etc.)
+  - Add data integrity tests for any new database tables
+  - Add API endpoint tests for any new Netlify functions
+  - Run `tests.html` on localhost before committing to verify nothing is broken
+- **Sync rule** — The following data in `prd.html` must stay in sync with actual code:
+  - `DATABASE_TABLES` must match the "ACTIVE TABLES" section of CLAUDE.md
+  - `FILE_STRUCTURE` must match the actual project directory
+  - `FEATURE_MAP` feature statuses must reflect the current implementation state
+
 ### Version & Timestamp Updates
 - **Each file has its own `VERSION`** — this is the version shown in the red/green ribbon at the top of each page
 - **Do NOT use a unified/shared version** — there is no `PROJECT_VERSION`. Each file's ribbon displays its own `const VERSION` so you can tell when that specific file was last modified
@@ -85,6 +101,8 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 | `parent.html` | v12.190 | No changes |
 | `counselor.html` | v12.190 | No changes |
 | `CLAUDE.md` | — | Added new instruction for change summaries |
+| `prd.html` | v1.000 | No changes |
+| `tests.html` | v1.000 | No changes |
 | `index-backup-v12.142.html` | — | No changes |
 | `migrations/*` | — | No changes |
 
@@ -458,6 +476,8 @@ python3 -m http.server
 13. ✅ Provide a change summary table with version numbers after every completed request
 14. ✅ **`git push` LAST** — Always push changes at the END of every task
 15. ✅ **Author attribution** — Note that Audrey Richardson made the changes in release notes/commits
+16. ✅ Update `prd.html` data structures when architecture/features/tables change
+17. ✅ Add tests to `tests.html` when building new features or business logic
 
 ---
 
