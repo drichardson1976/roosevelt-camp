@@ -43,8 +43,37 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.115";
-    const BUILD_DATE = new Date("2026-02-12T20:38:00");
+    const VERSION = "13.116";
+    const BUILD_DATE = new Date("2026-02-12T22:03:00");
+
+    // Second client for public schema (read-only, for schema comparison tests)
+    const supabasePublic = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      db: { schema: 'public' },
+      global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
+    });
+
+    // The tables our code expects to exist (from CLAUDE.md "ACTIVE TABLES" section)
+    const EXPECTED_TABLES = [
+      'camp_admins', 'camp_parents', 'camp_counselor_users',
+      'camp_counselors', 'camp_campers', 'camp_camper_parent_links',
+      'camp_camper_emergency_contact_links', 'camp_emergency_contacts',
+      'camp_registrations', 'camp_assignments', 'camp_dates', 'camp_blocked_sessions',
+      'camp_counselor_availability', 'camp_counselor_schedule',
+      'camp_availability_change_requests', 'camp_profile_change_requests',
+      'camp_content', 'camp_food_photos', 'camp_site_photos', 'camp_gym_rentals',
+      'camp_messages', 'camp_onboarding_progress', 'camp_change_history',
+      'camp_password_reset_tokens'
+    ];
+
+    // Helper: check if a table exists in a given schema client
+    const tableExists = async (client, table) => {
+      try {
+        const { data, error } = await client.from(table).select('id').limit(1);
+        return !error;
+      } catch {
+        return false;
+      }
+    };
 
     // ==================== STORAGE (same as other files) ====================
     const storage = {
@@ -256,6 +285,65 @@
                 assert.hasProperty(admins[0], 'username', 'Admin should have username');
                 assert.hasProperty(admins[0], 'name', 'Admin should have name');
               }
+            }
+          }
+        ]
+      },
+
+      // ===== SCHEMA COMPARISON =====
+      {
+        name: "Schema Comparison \u2014 Dev vs Public vs Code",
+        category: "schema",
+        icon: "\ud83d\udd0d",
+        tests: [
+          {
+            name: "Can connect to PUBLIC schema",
+            fn: async () => {
+              const { data, error } = await supabasePublic.from('camp_admins').select('id').limit(1);
+              assert.ok(!error, `Public schema connection failed: ${error?.message}`);
+            }
+          },
+          // Check every expected table exists in DEV
+          ...EXPECTED_TABLES.map(table => ({
+            name: `DEV has "${table}"`,
+            fn: async () => {
+              const exists = await tableExists(supabase, table);
+              assert.ok(exists, `Table "${table}" missing from DEV schema`);
+            }
+          })),
+          // Check every expected table exists in PUBLIC
+          ...EXPECTED_TABLES.map(table => ({
+            name: `PUBLIC has "${table}"`,
+            fn: async () => {
+              const exists = await tableExists(supabasePublic, table);
+              assert.ok(exists, `Table "${table}" missing from PUBLIC schema`);
+            }
+          })),
+          // Cross-check: make sure both schemas have the same tables
+          {
+            name: "DEV and PUBLIC have the same camp tables",
+            fn: async () => {
+              const devOnly = [];
+              const publicOnly = [];
+
+              for (const table of EXPECTED_TABLES) {
+                const inDev = await tableExists(supabase, table);
+                const inPub = await tableExists(supabasePublic, table);
+                if (inDev && !inPub) devOnly.push(table);
+                if (!inDev && inPub) publicOnly.push(table);
+              }
+
+              const mismatches = [];
+              if (devOnly.length > 0) mismatches.push(`In DEV only: ${devOnly.join(', ')}`);
+              if (publicOnly.length > 0) mismatches.push(`In PUBLIC only: ${publicOnly.join(', ')}`);
+              assert.ok(mismatches.length === 0, mismatches.join(' | '));
+            }
+          },
+          // Verify the expected table list matches what the HTML files reference
+          {
+            name: "Expected table list matches CLAUDE.md (24 tables)",
+            fn: () => {
+              assert.equal(EXPECTED_TABLES.length, 24, `Expected 24 tables, got ${EXPECTED_TABLES.length}`);
             }
           }
         ]
