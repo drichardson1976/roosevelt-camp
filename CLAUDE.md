@@ -92,6 +92,7 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 ### Change Summary Table
 - **ALWAYS** provide a change summary table after every completed request
 - **ALWAYS** list ALL project files in the table, even if they were NOT changed
+- **ALWAYS** make file names clickable hyperlinks using markdown link syntax: `[filename](filename)` — this lets the user click to open the file directly
 - **ALWAYS** show version numbers: `vX.XXX → vY.YYY` for changed files, or `vX.XXX` (current) for unchanged
 - Mark unchanged files with "No changes" so it's clear they were reviewed
 - Format as a markdown table with File, Version, and Changes columns
@@ -100,15 +101,15 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 
 | File | Version | Changes |
 |------|---------|---------|
-| `admin.html` | v12.190 → v12.195 | Added new Dashboard feature, release notes |
-| `index.html` | v12.193 → v12.195 | Fixed registration bug |
-| `parent.html` | v12.190 | No changes |
-| `counselor.html` | v12.190 | No changes |
-| `CLAUDE.md` | — | Added new instruction for change summaries |
-| `prd.html` | v1.000 | No changes |
-| `tests.html` | v1.000 | No changes |
-| `index-backup-v12.142.html` | — | No changes |
-| `migrations/*` | — | No changes |
+| [admin.html](admin.html) | v12.190 → v12.195 | Added new Dashboard feature, release notes |
+| [index.html](index.html) | v12.193 → v12.195 | Fixed registration bug |
+| [parent.html](parent.html) | v12.190 | No changes |
+| [counselor.html](counselor.html) | v12.190 | No changes |
+| [CLAUDE.md](CLAUDE.md) | — | Added new instruction for change summaries |
+| [prd.html](prd.html) | v1.000 | No changes |
+| [tests.html](tests.html) | v1.000 | No changes |
+| [index-backup-v12.142.html](index-backup-v12.142.html) | — | No changes |
+| [migrations/*](migrations/) | — | No changes |
 
 ---
 
