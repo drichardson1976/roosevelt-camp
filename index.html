@@ -52,6 +52,7 @@
     const BUILD_DATE = new Date("2026-02-11T15:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.119", date: "2026-02-12", time: "10:27 PM", author: "Derek Richardson", changes: ["Tests: Fixed schema comparison failures — Babel's var hoisting was overwriting window.supabase library with the client instance, saved library reference before client creation"] },
       { version: "13.118", date: "2026-02-12", time: "10:22 PM", author: "Derek Richardson", changes: ["Tests: Added 'Copy Results' button and plain text results panel for sharing test output with Claude for debugging", "CLAUDE.md: Made PRD and tests updates MANDATORY for every project change"] },
       { version: "13.117", date: "2026-02-12", time: "10:15 PM", author: "Derek Richardson", changes: ["Tests: Fixed Supabase CDN race condition — moved Supabase script before Babel to prevent createClient error", "Tests: Public schema client now lazy-created to avoid double initialization", "PRD: Removed code-like emoji escape sequences from nav links for cleaner display"] },
       { version: "13.113", date: "2026-02-11", time: "3:50 PM", author: "Derek Richardson", changes: ["All pages: Reverted PROJECT_VERSION — ribbon now shows each file's own VERSION again per versioning rules"] },

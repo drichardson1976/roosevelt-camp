@@ -37,20 +37,24 @@
     const ENV = getEnvironment();
     const SCHEMA = ENV === 'development' ? 'dev' : 'public';
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    // Save reference to library BEFORE creating clients — Babel transforms
+    // "const supabase = ..." to "var supabase = ..." which overwrites window.supabase
+    const _supabaseLib = window.supabase;
+
+    const supabase = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       db: { schema: SCHEMA },
       global: { headers: { 'Accept-Profile': SCHEMA, 'Content-Profile': SCHEMA } }
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.118";
-    const BUILD_DATE = new Date("2026-02-12T22:23:00");
+    const VERSION = "13.119";
+    const BUILD_DATE = new Date("2026-02-12T22:27:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
     const getSupabasePublic = () => {
       if (!_pubClient) {
-        _pubClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        _pubClient = _supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
           db: { schema: 'public' },
           global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
         });
