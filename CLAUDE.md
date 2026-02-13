@@ -21,21 +21,25 @@ After completing ANY work:
 3. **`git push`** — **MANDATORY** - Push changes to remote so others have access immediately
 4. **Say "Start testing"** — Always end your final message with "Start testing" so the user knows the changes are ready to test
 
-### PRD & Tests Maintenance
+### PRD & Tests Maintenance (MANDATORY — update EVERY time changes are made)
+- **RULE: Any change to the project MUST include corresponding updates to `prd.html` and `tests.html`** — these files are how Derek and Audrey understand and verify the system. Skipping updates makes the documentation and tests stale.
 - **prd.html** — When adding new features, database tables, user flows, or changing the file structure:
-  - Update the relevant data structure at the top of `prd.html` (e.g., `DATABASE_TABLES`, `FEATURE_MAP`, `USER_FLOWS`, `FILE_STRUCTURE`)
-  - If adding a new table, add its entry to `DATABASE_TABLES` with fields, example data, data type (array vs object), and access pattern
-  - If changing a feature's status (planned → complete), update the `status` field in `FEATURE_MAP`
-  - If adding a new Netlify function, add it to `SYSTEM_ARCHITECTURE.layers[2].components`
+  - Update the relevant data structure at the top of `prd.html` (e.g., `ROLES`, `LIFECYCLE`, `DATA_STORED`, `FEATURES`, `TECH_SIMPLE`)
+  - If adding a new feature, add it to the `FEATURES` array with `done: true` or `done: false`
+  - If completing a planned feature, change `done: false` to `done: true`
+  - If adding a new database table, add it to `DATA_STORED` with a plain-English description
+  - If adding a new tool/service, add it to `TECH_SIMPLE`
+  - Keep descriptions simple — a 16-year-old should understand them
 - **tests.html** — When building new features:
   - Add tests for any new business logic functions (discount calculations, validation, etc.)
   - Add data integrity tests for any new database tables
   - Add API endpoint tests for any new Netlify functions
   - Run `tests.html` on localhost before committing to verify nothing is broken
+  - The "Copy Results" button lets users share test output with Claude for debugging
 - **Sync rule** — The following data in `prd.html` must stay in sync with actual code:
-  - `DATABASE_TABLES` must match the "ACTIVE TABLES" section of CLAUDE.md
-  - `FILE_STRUCTURE` must match the actual project directory
-  - `FEATURE_MAP` feature statuses must reflect the current implementation state
+  - `FEATURES` statuses must reflect the current implementation state
+  - `DATA_STORED` must cover all active database tables
+  - `TECH_SIMPLE` must list all external services used
 
 ### Version & Timestamp Updates
 - **Each file has its own `VERSION`** — this is the version shown in the red/green ribbon at the top of each page
@@ -476,8 +480,9 @@ python3 -m http.server
 13. ✅ Provide a change summary table with version numbers after every completed request
 14. ✅ **`git push` LAST** — Always push changes at the END of every task
 15. ✅ **Author attribution** — Note that Audrey Richardson made the changes in release notes/commits
-16. ✅ Update `prd.html` data structures when architecture/features/tables change
-17. ✅ Add tests to `tests.html` when building new features or business logic
+16. ✅ **ALWAYS update `prd.html`** when ANY project changes are made (features, tables, services, statuses)
+17. ✅ **ALWAYS update `tests.html`** when building new features or business logic — add corresponding tests
+18. ✅ Skipping PRD/tests updates is NOT allowed — these are how the team understands and verifies the system
 
 ---
 

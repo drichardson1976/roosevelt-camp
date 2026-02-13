@@ -43,8 +43,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.117";
-    const BUILD_DATE = new Date("2026-02-12T22:15:00");
+    const VERSION = "13.118";
+    const BUILD_DATE = new Date("2026-02-12T22:23:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -587,6 +587,44 @@
       }
     };
 
+    // ==================== COPY RESULTS ====================
+    const generateResultsText = (suiteResults) => {
+      const allResults = suiteResults.flat();
+      if (allResults.length === 0) return 'No tests have been run yet.';
+
+      const totalPassed = allResults.filter(r => r.status === 'pass').length;
+      const totalFailed = allResults.filter(r => r.status === 'fail').length;
+      const total = allResults.length;
+
+      let text = `Roosevelt Camp Test Results - v${VERSION}\n`;
+      text += `Date: ${new Date().toLocaleString()}\n`;
+      text += `Schema: ${SCHEMA} | Environment: ${ENV}\n`;
+      text += `Results: ${totalPassed} passed, ${totalFailed} failed, ${total} total\n`;
+      text += '─'.repeat(50) + '\n\n';
+
+      ALL_SUITES.forEach((suite, i) => {
+        const results = suiteResults[i];
+        if (!results || results.length === 0) return;
+
+        const passed = results.filter(r => r.status === 'pass').length;
+        const failed = results.filter(r => r.status === 'fail').length;
+
+        text += `${suite.name} (${passed}/${results.length} passed)\n`;
+
+        results.forEach(r => {
+          const icon = r.status === 'pass' ? 'PASS' : 'FAIL';
+          text += `  [${icon}] ${r.name}`;
+          if (r.duration) text += ` (${r.duration}ms)`;
+          text += '\n';
+          if (r.error) text += `         Error: ${r.error}\n`;
+        });
+
+        text += '\n';
+      });
+
+      return text;
+    };
+
     // ==================== VERSION RIBBON ====================
     const VersionRibbon = () => {
       const [elapsed, setElapsed] = useState('');
@@ -698,6 +736,8 @@
       const [suiteResults, setSuiteResults] = useState(ALL_SUITES.map(() => []));
       const [runningIdx, setRunningIdx] = useState(null); // which suite is running (-1 = run all)
       const [isBlocked, setIsBlocked] = useState(false);
+      const [copied, setCopied] = useState(false);
+      const [showResultsText, setShowResultsText] = useState(false);
 
       // Safety: block on production
       useEffect(() => {
@@ -794,17 +834,33 @@
                   </>
                 )}
               </div>
-              <button
-                onClick={runAll}
-                disabled={runningIdx !== null}
-                className={`px-5 py-2 rounded-lg font-medium transition-colors ${
-                  runningIdx !== null
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
-                }`}
-              >
-                {runningIdx === -1 ? 'Running All...' : 'Run All Tests'}
-              </button>
+              <div className="flex items-center gap-2">
+                {totalRun > 0 && (
+                  <button
+                    onClick={() => {
+                      const text = generateResultsText(suiteResults);
+                      navigator.clipboard.writeText(text).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      });
+                    }}
+                    className="px-4 py-2 rounded-lg font-medium transition-colors bg-gray-700 text-white hover:bg-gray-800 shadow-sm text-sm"
+                  >
+                    {copied ? 'Copied!' : 'Copy Results'}
+                  </button>
+                )}
+                <button
+                  onClick={runAll}
+                  disabled={runningIdx !== null}
+                  className={`px-5 py-2 rounded-lg font-medium transition-colors ${
+                    runningIdx !== null
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-green-600 text-white hover:bg-green-700 shadow-sm'
+                  }`}
+                >
+                  {runningIdx === -1 ? 'Running All...' : 'Run All Tests'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -821,9 +877,40 @@
             ))}
           </div>
 
+          {/* Copy Results Section */}
+          {totalRun > 0 && (
+            <div className="max-w-4xl mx-auto px-6 pb-6">
+              <button
+                onClick={() => setShowResultsText(!showResultsText)}
+                className="text-sm text-gray-500 hover:text-gray-700 underline"
+              >
+                {showResultsText ? 'Hide' : 'Show'} plain text results (for sharing with Claude)
+              </button>
+              {showResultsText && (
+                <div className="mt-3 relative">
+                  <button
+                    onClick={() => {
+                      const text = generateResultsText(suiteResults);
+                      navigator.clipboard.writeText(text).then(() => {
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                      });
+                    }}
+                    className="absolute top-2 right-2 px-3 py-1 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 transition-colors"
+                  >
+                    {copied ? 'Copied!' : 'Copy'}
+                  </button>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-xl text-xs font-mono overflow-x-auto whitespace-pre-wrap border border-gray-700">
+                    {generateResultsText(suiteResults)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Footer */}
           <div className="text-center text-gray-400 text-sm py-6 border-t border-gray-200 mt-4">
-            Read-only tests only \u2014 no data is modified. Safe to run anytime on dev.
+            {"Read-only tests only \u2014 no data is modified. Safe to run anytime on dev."}
           </div>
         </div>
       );
