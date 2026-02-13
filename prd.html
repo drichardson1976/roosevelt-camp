@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRD - Roosevelt Basketball Day Camp</title>
+  <title>How Our Camp Website Works</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,1277 +20,469 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
+    const { useState, useEffect } = React;
 
-    // ==================== CONFIGURATION ====================
+    const VERSION = "13.114";
+    const BUILD_DATE = new Date("2026-02-12T20:29:00");
     const getEnvironment = () => {
-      const hostname = window.location.hostname;
-      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev') || hostname.includes('github.io')) ? 'development' : 'production';
+      const h = window.location.hostname;
+      return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
     };
     const ENV = getEnvironment();
 
-    // ==================== VERSION INFO ====================
-    const VERSION = "1.000";
-    const BUILD_DATE = new Date("2026-02-12T20:18:00");
+    // ==================== ALL PAGE DATA ====================
+    // Update these when the project changes!
 
-    // ==================== PRD DATA ====================
-    // All content is stored here as JS objects for easy maintenance.
-    // Update these data structures when the project changes.
-
-    const PRD_META = {
+    // ---------- THE BIG PICTURE ----------
+    const OVERVIEW = {
       title: "Roosevelt Girls Basketball Day Camp",
-      subtitle: "Product Requirements Document",
-      version: VERSION,
-      lastUpdated: "2026-02-12",
-      authors: ["Derek Richardson", "Audrey Richardson"],
-      projectUrl: "https://rhsbasketballdaycamp.com",
-      repoUrl: "https://github.com/drichardson1976/roosevelt-camp"
+      tagline: "How Our Camp Website Works",
+      summary: "Our website lets parents sign up their kids for basketball camp, lets high school counselors apply to work at camp, and lets the camp director (admin) manage everything. Here's how it all fits together.",
+      campDates: "July 13-17 & August 10-28, 2026",
+      location: "Roosevelt High School, Seattle WA",
+      sessions: "Morning (9 AM - 12 PM) and Afternoon (12 - 3 PM)",
+      cost: "$60 per session",
+      discounts: "10% off for a full week, 15% off for 2+ weeks"
     };
 
-    // ==================== SYSTEM ARCHITECTURE ====================
-    const SYSTEM_ARCHITECTURE = {
-      description: "A static HTML single-page application architecture with Supabase backend. No build step \u2014 React, Tailwind, and Babel run directly in the browser via CDN.",
-      layers: [
-        {
-          name: "Client (Browser)",
-          icon: "\ud83d\udcbb",
-          color: "green",
-          components: [
-            { name: "index.html", desc: "Public website + Login + Onboarding", size: "347 KB" },
-            { name: "admin.html", desc: "Admin dashboard (all management)", size: "777 KB" },
-            { name: "parent.html", desc: "Parent dashboard", size: "487 KB" },
-            { name: "counselor.html", desc: "Counselor dashboard", size: "217 KB" },
-            { name: "prd.html", desc: "This PRD document", size: "~50 KB" },
-            { name: "tests.html", desc: "Automated test suite", size: "~25 KB" }
-          ],
-          tech: ["React 18 (CDN)", "Tailwind CSS (CDN)", "Babel (in-browser transpile)", "Supabase JS v2 (CDN)"]
-        },
-        {
-          name: "Hosting & Deploy",
-          icon: "\ud83c\udf10",
-          color: "blue",
-          components: [
-            { name: "Netlify CDN", desc: "Static file hosting, auto-deploy on git push" },
-            { name: "DNS", desc: "rhsbasketballdaycamp.com managed in Netlify" },
-            { name: "GitHub", desc: "Source code repository (drichardson1976/roosevelt-camp)" }
-          ],
-          tech: ["Netlify", "GitHub", "Auto-deploy on push to main"]
-        },
-        {
-          name: "Serverless Functions",
-          icon: "\u26a1",
-          color: "purple",
-          components: [
-            { name: "send-email.js", desc: "General email via Resend API" },
-            { name: "request-password-reset.js", desc: "Generate token, store in DB, send email" },
-            { name: "reset-password.js", desc: "Validate token, update password" },
-            { name: "send-sms.js", desc: "Send SMS via Twilio" },
-            { name: "send-verification-code.js", desc: "Lookup user by phone, send 6-digit code" },
-            { name: "verify-code.js", desc: "Validate code, return login info" }
-          ],
-          tech: ["Netlify Functions (Node.js)", "Located in /netlify/functions/"]
-        },
-        {
-          name: "Database",
-          icon: "\ud83d\uddc4\ufe0f",
-          color: "amber",
-          components: [
-            { name: "Dev Schema", desc: "Used on localhost / GitHub Pages" },
-            { name: "Public Schema", desc: "Used on production (Netlify)" },
-            { name: "JSONB Storage", desc: "Single-row tables with id='main', data stored as JSONB" }
-          ],
-          tech: ["Supabase (PostgreSQL)", "Dual schemas: dev + public", "24 active tables"]
-        },
-        {
-          name: "External Services",
-          icon: "\ud83d\udd17",
-          color: "red",
-          components: [
-            { name: "Resend", desc: "Transactional email (campdirector@rhsbasketballdaycamp.com)" },
-            { name: "Twilio", desc: "SMS verification (phone: (206) 203-4111)" },
-            { name: "Google Identity", desc: "OAuth 2.0 sign-in (implemented)" },
-            { name: "Apple Sign-In", desc: "Planned \u2014 not yet implemented" }
-          ],
-          tech: ["Resend API", "Twilio API", "Google OAuth 2.0"]
-        }
-      ],
-      mermaidDiagram: `graph TD
-    Browser["<b>Browser</b><br/>React 18 + Tailwind + Babel"] -->|"Static files"| Netlify["<b>Netlify CDN</b><br/>rhsbasketballdaycamp.com"]
-    Browser -->|"API calls"| Functions["<b>Netlify Functions</b><br/>6 serverless endpoints"]
-    Browser -->|"Direct queries"| Supabase["<b>Supabase</b><br/>PostgreSQL + JSONB"]
-    Functions -->|"Send emails"| Resend["<b>Resend</b><br/>Email API"]
-    Functions -->|"Send SMS"| Twilio["<b>Twilio</b><br/>SMS API"]
-    Functions -->|"Read/write"| Supabase
-    Browser -->|"OAuth"| Google["<b>Google</b><br/>Sign-In"]
-    GitHub["<b>GitHub</b><br/>Source repo"] -->|"Auto-deploy"| Netlify
-
-    style Browser fill:#10b981,color:#fff
-    style Netlify fill:#3b82f6,color:#fff
-    style Functions fill:#8b5cf6,color:#fff
-    style Supabase fill:#f59e0b,color:#fff
-    style Resend fill:#ef4444,color:#fff
-    style Twilio fill:#ef4444,color:#fff
-    style Google fill:#ef4444,color:#fff
-    style GitHub fill:#6366f1,color:#fff`
-    };
-
-    // ==================== USER ROLES ====================
-    const USER_ROLES = [
+    // ---------- THREE TYPES OF USERS ----------
+    const ROLES = [
       {
-        role: "Parent",
-        icon: "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67",
+        name: "Parent",
+        emoji: "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67",
         color: "green",
-        file: "parent.html",
-        description: "Parent or guardian of campers. Creates account, registers children for camp sessions, manages emergency contacts, and submits payment.",
-        capabilities: [
-          "Create account (email/password or Google sign-in)",
-          "Add and manage camper profiles with photos",
-          "Add emergency contacts (minimum 2 required)",
-          "Register campers for AM/PM sessions on specific dates",
-          "Submit Venmo payment with screenshot proof",
-          "View pod assignments after admin approval",
-          "Accept drop-off and pickup policies",
-          "Contact camp director"
-        ],
-        tabs: [
-          { name: "Dashboard", desc: "Next Steps checklist, completion tracking" },
-          { name: "Parents", desc: "Family access management, add additional parents" },
-          { name: "Campers", desc: "Add/edit camper profiles, photos, emergency contacts" },
-          { name: "Emergency Contacts", desc: "Manage contacts (auto-linked to all campers)" },
-          { name: "Session Registration", desc: "Calendar view, select dates/sessions, discount calculator" },
-          { name: "Payments", desc: "Venmo payment flow, screenshot upload, reference codes" },
-          { name: "Contact Us", desc: "Camp Director email and phone" },
-          { name: "History", desc: "Activity timeline" }
-        ],
-        onboarding: [
-          "Step 1: Account Info (name, email, phone, password)",
-          "Step 2: Add Campers (name, birthdate, grade, photo)",
-          "Step 3: Emergency Contacts (min 2, at least 1 non-parent)",
-          "Step 4: Payment info (Venmo details)",
-          "Step 5: Accept Policies (drop-off, pickup) \u2014 REQUIRED",
-          "Step 6: Review & Complete"
+        borderColor: "border-green-500",
+        bgColor: "bg-green-50",
+        headerBg: "bg-green-600",
+        tagline: "Signs up their kids for camp",
+        description: "A mom, dad, or guardian who wants to register their child for basketball camp. They create an account, add their kid's info, pick which days they want, and pay through Venmo.",
+        whatTheyDo: [
+          { step: "Create Account", detail: "Sign up with email/password or Google", icon: "\ud83d\udcdd" },
+          { step: "Add Their Kids", detail: "Enter each child's name, birthday, grade, and photo", icon: "\ud83d\udc67" },
+          { step: "Add Emergency Contacts", detail: "At least 2 people who can be called in an emergency", icon: "\ud83d\udcde" },
+          { step: "Pick Camp Days", detail: "Choose which dates and morning/afternoon sessions", icon: "\ud83d\udcc5" },
+          { step: "Pay via Venmo", detail: "Send payment and upload a screenshot as proof", icon: "\ud83d\udcb0" },
+          { step: "See Their Pod", detail: "After approval, see which counselor and kids are in their group", icon: "\ud83d\udc65" }
         ]
       },
       {
-        role: "Counselor",
-        icon: "\ud83c\udfc0",
+        name: "Counselor",
+        emoji: "\ud83c\udfc0",
         color: "blue",
-        file: "counselor.html",
-        description: "High school basketball player who works as a camp counselor. Applies through the site, sets availability, and gets assigned to camper pods.",
-        capabilities: [
-          "Create account and submit application with profile/photo",
-          "Set day-by-day availability (Available / Unavailable / Unset)",
-          "View assigned work schedule after admin setup",
-          "View assigned campers in pods",
-          "Request availability changes",
-          "Request profile updates"
-        ],
-        tabs: [
-          { name: "Dashboard", desc: "Update availability, view status" },
-          { name: "My Schedule", desc: "View pod assignments and assigned campers" }
-        ],
-        onboarding: [
-          "Step 1: Account Info (name, email, phone, password)",
-          "Step 2: Profile (photo, position, year, bio)",
-          "Step 3: Set Availability (mark available sessions)",
-          "Step 4: Responsibilities & Pay (accept terms)",
-          "Step 5: Review & Submit application"
+        borderColor: "border-blue-500",
+        bgColor: "bg-blue-50",
+        headerBg: "bg-blue-600",
+        tagline: "A high schooler who works at camp",
+        description: "A Roosevelt basketball player who wants to be a camp counselor. They apply through the website, set which days they can work, and get assigned a group of campers (called a \"pod\").",
+        whatTheyDo: [
+          { step: "Apply", detail: "Create account with profile, photo, and basketball position", icon: "\ud83d\udcdd" },
+          { step: "Set Availability", detail: "Mark which days they can or can't work", icon: "\ud83d\udcc5" },
+          { step: "Wait for Approval", detail: "The admin reviews and approves (or rejects) their application", icon: "\u23f3" },
+          { step: "Get Their Schedule", detail: "Admin assigns which sessions they'll actually work", icon: "\ud83d\udccb" },
+          { step: "See Their Pod", detail: "See which campers (up to 5) they're responsible for", icon: "\ud83d\udc65" }
         ]
       },
       {
-        role: "Admin",
-        icon: "\ud83d\udee1\ufe0f",
+        name: "Admin",
+        emoji: "\ud83d\udee1\ufe0f",
         color: "purple",
-        file: "admin.html",
-        description: "Camp Director with full system access. Manages all aspects of camp operations: approvals, assignments, content, and data.",
-        capabilities: [
-          "Approve/reject counselor applications",
-          "View and manage all parents, campers, emergency contacts",
-          "Confirm Venmo payments and mark registrations as paid",
-          "Build pod assignments (1 counselor + up to 5 campers)",
-          "Set counselor eligible sessions (work schedule)",
-          "Edit public website content (pricing, location, policies)",
-          "Manage gym rental dates",
-          "Block registration dates",
-          "Send emails to parents via Resend",
-          "Generate and email invoices",
-          "View full audit history",
-          "Danger Zone: bulk data deletion"
-        ],
-        tabs: [
-          { name: "Dashboard", desc: "Quick stats, urgent/important/setup task lists" },
-          { name: "Counselors", desc: "Approved counselor profiles and management" },
-          { name: "Parents", desc: "All parent accounts, login type badges, send reminders" },
-          { name: "Campers", desc: "All campers, EC counts, manage parent links" },
-          { name: "Registrations", desc: "Payment tracking, revenue summary, invoices" },
-          { name: "Assignments", desc: "Pod builder \u2014 assign counselors + campers per session" },
-          { name: "Sessions", desc: "Gym rental dates, camp calendar" },
-          { name: "Approval", desc: "Pending counselors and registrations" },
-          { name: "Content", desc: "Website content editor (location, pricing, policies, photos)" },
-          { name: "History", desc: "Full audit log of all changes" },
-          { name: "Danger Zone", desc: "Database viewer, bulk delete, record deletion" }
-        ],
-        onboarding: null
-      }
-    ];
-
-    // ==================== USER FLOWS ====================
-    const USER_FLOWS = [
-      {
-        id: "parent-journey",
-        title: "Parent User Journey",
-        description: "Complete flow from first visit through registration and payment",
-        mermaid: `graph TD
-    Start(["Visit Site"]) --> Login["Login Page"]
-    Login --> NewUser{"New User?"}
-    NewUser -->|Yes| CreateAccount["Click 'Create Account'"]
-    NewUser -->|No| SignIn["Sign In"]
-    CreateAccount --> SelectRole["Select Role: Parent"]
-    SelectRole --> Onboarding["6-Step Onboarding"]
-    Onboarding --> Step1["Step 1: Account Info"]
-    Step1 --> Step2["Step 2: Add Campers"]
-    Step2 --> Step3["Step 3: Emergency Contacts"]
-    Step3 --> Step4["Step 4: Payment Info"]
-    Step4 --> Step5["Step 5: Policies REQUIRED"]
-    Step5 --> Step6["Step 6: Review & Complete"]
-    Step6 --> Dashboard["Parent Dashboard"]
-    SignIn --> Dashboard
-    Dashboard --> Register["Register for Sessions"]
-    Register --> SelectDates["Select Dates & Sessions"]
-    SelectDates --> Submit["Submit Registration"]
-    Submit --> Pending["Status: Pending"]
-    Pending --> AdminApprove{"Admin Approves?"}
-    AdminApprove -->|Yes| Approved["Status: Approved"]
-    AdminApprove -->|No| Rejected["Status: Rejected"]
-    Approved --> ViewPod["View Pod Assignment"]
-    style Step5 fill:#f59e0b
-    style Approved fill:#10b981,color:#fff
-    style Rejected fill:#ef4444,color:#fff`
-      },
-      {
-        id: "counselor-journey",
-        title: "Counselor User Journey",
-        description: "Application, approval, and schedule assignment flow",
-        mermaid: `graph TD
-    Start(["Visit Site"]) --> Login["Login Page"]
-    Login --> CreateAccount["Create Account"]
-    CreateAccount --> SelectRole["Select Role: Counselor"]
-    SelectRole --> C1["Step 1: Account Info"]
-    C1 --> C2["Step 2: Profile & Photo"]
-    C2 --> C3["Step 3: Set Availability"]
-    C3 --> C4["Step 4: Responsibilities & Pay"]
-    C4 --> C5["Step 5: Review & Submit"]
-    C5 --> Pending["Status: Pending Approval"]
-    Pending --> AdminReview{"Admin Reviews"}
-    AdminReview -->|Approve| Approved["Approved - Visible on Website"]
-    AdminReview -->|Reject| Deleted["Account Deleted"]
-    Approved --> Schedule["Admin Sets Eligible Sessions"]
-    Schedule --> Pods["Admin Assigns to Pods"]
-    Pods --> CounselorDash["Counselor Dashboard"]
-    style Pending fill:#f59e0b
-    style Approved fill:#10b981,color:#fff
-    style Deleted fill:#ef4444,color:#fff`
-      },
-      {
-        id: "admin-phases",
-        title: "Admin Workflow \u2014 5 Phases",
-        description: "The admin operates in 5 sequential phases to set up and run camp",
-        mermaid: `graph TD
-    Start(["Admin Login"]) --> AdminDash["Admin Dashboard"]
-    AdminDash --> Phase1["PHASE 1: Setup"]
-    Phase1 --> Content["Content: Set camp info, pricing, Venmo"]
-    Content --> GymRentals["Gym Rentals: Mark booked days"]
-    GymRentals --> Sessions["Sessions: Block unavailable dates"]
-    Sessions --> Phase2["PHASE 2: Approve People"]
-    Phase2 --> ApproveCounselors["Review Counselor Applications"]
-    ApproveCounselors --> ApproveRegs["Review Registrations & Payments"]
-    ApproveRegs --> Phase3["PHASE 3: Set Counselor Schedules"]
-    Phase3 --> MarkEligible["Mark Sessions Where Counselor Works"]
-    MarkEligible --> Phase4["PHASE 4: Build Pods"]
-    Phase4 --> DragDrop["Assign 1 Counselor + up to 5 Campers"]
-    DragDrop --> Phase5["PHASE 5: Ongoing Management"]
-    Phase5 --> Monitor["Monitor Registrations, Manage Data"]
-    style Phase1 fill:#10b981,color:#fff
-    style Phase2 fill:#3b82f6,color:#fff
-    style Phase3 fill:#f59e0b
-    style Phase4 fill:#ec4899,color:#fff
-    style Phase5 fill:#8b5cf6,color:#fff`
-      },
-      {
-        id: "registration-lifecycle",
-        title: "Registration Lifecycle",
-        description: "State diagram showing how a registration moves through the system",
-        mermaid: `stateDiagram-v2
-    [*] --> Pending: Parent Submits Registration
-    Pending --> Approved: Admin Approves & Marks Paid
-    Pending --> Rejected: Admin Rejects
-    Approved --> PodAssigned: Admin Assigns to Pod
-    Approved --> Cancelled: Parent/Admin Cancels
-    PodAssigned --> Cancelled: Parent/Admin Cancels
-    Rejected --> [*]
-    Cancelled --> [*]`
-      },
-      {
-        id: "payment-flow",
-        title: "Payment Flow (Venmo)",
-        description: "How parents pay and admins confirm payment",
-        mermaid: `graph TD
-    Start(["Registration Submitted"]) --> ParentDash["Parent Dashboard Shows Amount Due & Unique Venmo Code"]
-    ParentDash --> ParentPays["Parent Pays via Venmo with Code"]
-    ParentPays --> AdminCheck["Admin Checks Venmo for Payment"]
-    AdminCheck --> TogglePaid["Admin Toggles Payment to 'Paid'"]
-    TogglePaid --> Invoice["Invoice Generated (INV-xxx)"]
-    Invoice --> Email["Confirmation Email Sent to Parent"]
-    Email --> Done["Parent Dashboard Shows 'Paid' Badge"]
-    style ParentPays fill:#f59e0b
-    style Done fill:#10b981,color:#fff`
-      },
-      {
-        id: "system-integration",
-        title: "How All Three Roles Connect",
-        description: "Sequence showing cross-role interactions through the full camp lifecycle",
-        mermaid: `sequenceDiagram
-    participant P as Parent
-    participant A as Admin
-    participant C as Counselor
-    participant S as System
-    Note over P,C: PHASE 1: Account Creation
-    P->>S: Create account & add campers
-    C->>S: Create account & set availability
-    Note over P,C: PHASE 2: Admin Approval
-    C->>A: Application pending approval
-    A->>S: Approve counselor
-    S->>C: Profile appears on website
-    Note over P,C: PHASE 3: Counselor Schedule
-    A->>S: Mark counselor eligible sessions
-    Note over P,C: PHASE 4: Registration
-    P->>S: Register camper for dates
-    P->>A: Registration submitted
-    A->>S: Approve & mark paid
-    S->>P: Spot confirmed
-    Note over P,C: PHASE 5: Pod Creation
-    A->>S: Build pods (counselor + campers)
-    S->>P: Pod assignment visible
-    S->>C: Pod assignment visible`
-      }
-    ];
-
-    // ==================== DATABASE TABLES ====================
-    const TABLE_CATEGORIES = [
-      { name: "Core User Tables", icon: "\ud83d\udc64", tables: ["camp_admins", "camp_parents", "camp_counselor_users"] },
-      { name: "People & Relationships", icon: "\ud83d\udc65", tables: ["camp_counselors", "camp_campers", "camp_camper_parent_links", "camp_camper_emergency_contact_links", "camp_emergency_contacts"] },
-      { name: "Camp Operations", icon: "\ud83c\udfd5\ufe0f", tables: ["camp_registrations", "camp_assignments", "camp_dates", "camp_blocked_sessions"] },
-      { name: "Counselor Management", icon: "\ud83d\udccb", tables: ["camp_counselor_availability", "camp_counselor_schedule", "camp_availability_change_requests", "camp_profile_change_requests"] },
-      { name: "Content & Media", icon: "\ud83d\uddbc\ufe0f", tables: ["camp_content", "camp_food_photos", "camp_site_photos", "camp_gym_rentals"] },
-      { name: "System Tables", icon: "\u2699\ufe0f", tables: ["camp_messages", "camp_onboarding_progress", "camp_change_history", "camp_password_reset_tokens"] }
-    ];
-
-    const DATABASE_TABLES = {
-      camp_admins: {
-        description: "Admin user accounts (camp director login)",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique admin ID", example: '"admin_1"' },
-          { name: "username", type: "string", desc: "Login username", example: '"admin"' },
-          { name: "password", type: "string", desc: "Hashed password", example: '"****"' },
-          { name: "name", type: "string", desc: "Display name", example: '"Camp Director"' },
-          { name: "email", type: "string", desc: "Email address", example: '"director@camp.com"' },
-          { name: "createdAt", type: "ISO string", desc: "Account creation date", example: '"2026-02-08T07:22:00Z"' }
-        ],
-        exampleData: { id: "admin_1", username: "admin", name: "Camp Director", email: "director@camp.com" },
-        accessPattern: 'const admins = await storage.get("camp_admins");\n// admins[0].data = [{id, username, password, name, email}]',
-        usedIn: ["admin.html", "index.html"]
-      },
-      camp_parents: {
-        description: "Parent login accounts (split from deleted camp_registered_users)",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique parent ID", example: '"p_abc123"' },
-          { name: "name", type: "string", desc: "Full name", example: '"Jane Smith"' },
-          { name: "email", type: "string", desc: "Email (used for login)", example: '"jane@example.com"' },
-          { name: "phone", type: "string", desc: "Phone number", example: '"(206) 555-1234"' },
-          { name: "password", type: "string", desc: "Password", example: '"****"' },
-          { name: "photo", type: "object|string|null", desc: "Profile photo", example: '{cropped: "data:image/..."}' },
-          { name: "loginType", type: "string", desc: "How they log in", example: '"Email/Password"' },
-          { name: "googleLinked", type: "boolean", desc: "Has Google OAuth", example: "true" }
-        ],
-        exampleData: { id: "p_abc123", name: "Jane Smith", email: "jane@example.com", phone: "(206) 555-1234", loginType: "Email/Password" },
-        accessPattern: 'const parents = await storage.get("camp_parents");\n// parents[0].data = [{id, name, email, phone, ...}]',
-        usedIn: ["admin.html", "parent.html", "index.html"]
-      },
-      camp_counselor_users: {
-        description: "Counselor login accounts (split from deleted camp_registered_users)",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique ID", example: '"cu_xyz789"' },
-          { name: "name", type: "string", desc: "Full name", example: '"Sarah Mitchell"' },
-          { name: "email", type: "string", desc: "Email (login)", example: '"sarah@roosevelt.edu"' },
-          { name: "phone", type: "string", desc: "Phone number", example: '"(206) 555-0101"' },
-          { name: "password", type: "string", desc: "Password", example: '"****"' },
-          { name: "counselorId", type: "string", desc: "Links to camp_counselors", example: '"c1"' }
-        ],
-        exampleData: { id: "cu_xyz789", name: "Sarah Mitchell", email: "sarah@roosevelt.edu", counselorId: "c1" },
-        accessPattern: 'const users = await storage.get("camp_counselor_users");\n// users[0].data = [{id, name, email, counselorId, ...}]',
-        usedIn: ["admin.html", "counselor.html", "index.html"]
-      },
-      camp_counselors: {
-        description: "Counselor profiles (separate from login accounts)",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique counselor ID", example: '"c1"' },
-          { name: "name", type: "string", desc: "Full name", example: '"Sarah Mitchell"' },
-          { name: "email", type: "string", desc: "Email", example: '"sarah@roosevelt.edu"' },
-          { name: "position", type: "string", desc: "Basketball position", example: '"Point Guard"' },
-          { name: "year", type: "string", desc: "School year", example: '"Senior"' },
-          { name: "bio", type: "string", desc: "Bio/description", example: '"Team captain with 3 years..."' },
-          { name: "photo", type: "object|null", desc: "Profile photo", example: '{cropped: "data:image/..."}' },
-          { name: "visible", type: "boolean", desc: "Show on public site", example: "true" },
-          { name: "approved", type: "boolean", desc: "Admin approved", example: "true" }
-        ],
-        exampleData: { id: "c1", name: "Sarah Mitchell", position: "Point Guard", year: "Senior", visible: true, approved: true },
-        accessPattern: 'const counselors = await storage.get("camp_counselors");\n// counselors[0].data = [{id, name, position, year, bio, photo, visible}]',
-        usedIn: ["admin.html", "counselor.html", "index.html"]
-      },
-      camp_campers: {
-        description: "Camper profiles (children registered for camp)",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique camper ID", example: '"child_001"' },
-          { name: "name", type: "string", desc: "Full name", example: '"Lily Smith"' },
-          { name: "birthdate", type: "string", desc: "Date of birth", example: '"2016-03-15"' },
-          { name: "grade", type: "string", desc: "Fall grade level", example: '"5th"' },
-          { name: "phone", type: "string", desc: "Phone (optional)", example: '"(206) 555-9999"' },
-          { name: "photo", type: "object|null", desc: "Profile photo", example: '{cropped: "data:image/..."}' },
-          { name: "parentEmail", type: "string", desc: "Primary parent email", example: '"jane@example.com"' }
-        ],
-        exampleData: { id: "child_001", name: "Lily Smith", birthdate: "2016-03-15", grade: "5th", parentEmail: "jane@example.com" },
-        accessPattern: 'const campers = await storage.get("camp_campers");\n// campers[0].data = [{id, name, birthdate, grade, photo, parentEmail}]',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_camper_parent_links: {
-        description: "Junction table linking campers to parents (supports multi-parent)",
-        dataType: "array",
-        fields: [
-          { name: "camperId", type: "string", desc: "References camp_campers.id", example: '"child_001"' },
-          { name: "parentEmail", type: "string", desc: "References camp_parents.email", example: '"jane@example.com"' }
-        ],
-        exampleData: { camperId: "child_001", parentEmail: "jane@example.com" },
-        accessPattern: 'const links = await storage.get("camp_camper_parent_links");\n// links[0].data = [{camperId, parentEmail}]',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_camper_emergency_contact_links: {
-        description: "Junction table linking campers to emergency contacts",
-        dataType: "array",
-        fields: [
-          { name: "camperId", type: "string", desc: "References camp_campers.id", example: '"child_001"' },
-          { name: "contactId", type: "string", desc: "References camp_emergency_contacts.id", example: '"ec_001"' }
-        ],
-        exampleData: { camperId: "child_001", contactId: "ec_001" },
-        accessPattern: 'const links = await storage.get("camp_camper_emergency_contact_links");\n// links[0].data = [{camperId, contactId}]',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_emergency_contacts: {
-        description: "Emergency contact records for campers",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique EC ID", example: '"ec_001"' },
-          { name: "name", type: "string", desc: "Full name", example: '"Grandma Betty"' },
-          { name: "relationship", type: "string", desc: "Relationship to camper", example: '"Grandmother"' },
-          { name: "phone", type: "string", desc: "Phone number", example: '"(206) 555-7777"' },
-          { name: "email", type: "string", desc: "Email", example: '"betty@example.com"' },
-          { name: "photo", type: "object|null", desc: "Photo for ID", example: "null" },
-          { name: "parentEmail", type: "string", desc: "Which parent added this", example: '"jane@example.com"' }
-        ],
-        exampleData: { id: "ec_001", name: "Grandma Betty", relationship: "Grandmother", phone: "(206) 555-7777", parentEmail: "jane@example.com" },
-        accessPattern: 'const contacts = await storage.get("camp_emergency_contacts");\n// contacts[0].data = [{id, name, relationship, phone, email, photo}]',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_registrations: {
-        description: "Session registration requests from parents",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Unique registration ID", example: '"reg_001"' },
-          { name: "orderId", type: "string", desc: "Groups multi-session orders", example: '"order_abc"' },
-          { name: "childId", type: "string", desc: "Which camper", example: '"child_001"' },
-          { name: "parentEmail", type: "string", desc: "Which parent", example: '"jane@example.com"' },
-          { name: "date", type: "string", desc: "Session date", example: '"2026-07-14"' },
-          { name: "session", type: "string", desc: "AM or PM", example: '"morning"' },
-          { name: "status", type: "string", desc: "pending/approved/rejected", example: '"pending"' },
-          { name: "paid", type: "boolean", desc: "Payment received", example: "false" },
-          { name: "venmoCode", type: "string", desc: "Unique payment reference", example: '"JANESMI042"' },
-          { name: "invoiceId", type: "string", desc: "Generated on payment", example: '"INV-001"' }
-        ],
-        exampleData: { id: "reg_001", orderId: "order_abc", childId: "child_001", date: "2026-07-14", session: "morning", status: "pending", paid: false },
-        accessPattern: 'const regs = await storage.get("camp_registrations");\n// regs[0].data = [{id, orderId, childId, date, session, status, paid}]',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_assignments: {
-        description: "Pod/counselor assignments per session",
-        dataType: "object",
-        fields: [
-          { name: "[sessionKey]", type: "string (key)", desc: "Format: date_session", example: '"2026-07-14_morning"' },
-          { name: "pods", type: "array", desc: "Array of pod objects", example: '[{counselorId, camperIds}]' },
-          { name: "pods[].counselorId", type: "string", desc: "Assigned counselor", example: '"c1"' },
-          { name: "pods[].camperIds", type: "array", desc: "Up to 5 campers", example: '["child_001", "child_002"]' }
-        ],
-        exampleData: { "2026-07-14_morning": { pods: [{ counselorId: "c1", camperIds: ["child_001", "child_002"] }] } },
-        accessPattern: 'const assignments = await storage.get("camp_assignments");\n// assignments[0].data = {"2026-07-14_morning": {pods: [{counselorId, camperIds}]}}',
-        usedIn: ["admin.html", "parent.html", "counselor.html"]
-      },
-      camp_dates: {
-        description: "Camp calendar and session dates",
-        dataType: "array",
-        fields: [
-          { name: "date", type: "string", desc: "Camp date", example: '"2026-07-14"' },
-          { name: "morning", type: "boolean", desc: "AM session available", example: "true" },
-          { name: "afternoon", type: "boolean", desc: "PM session available", example: "true" }
-        ],
-        exampleData: { date: "2026-07-14", morning: true, afternoon: true },
-        accessPattern: 'const dates = await storage.get("camp_dates");\n// dates[0].data = [{date, morning, afternoon}]',
-        usedIn: ["admin.html", "parent.html", "index.html"]
-      },
-      camp_blocked_sessions: {
-        description: "Dates when registration is blocked by admin",
-        dataType: "object",
-        fields: [
-          { name: "[date]", type: "string (key)", desc: "Blocked date", example: '"2026-07-18"' },
-          { name: "reason", type: "string", desc: "Why blocked", example: '"Holiday - No camp"' }
-        ],
-        exampleData: { "2026-07-18": "Holiday - No camp" },
-        accessPattern: 'const blocked = await storage.get("camp_blocked_sessions");\n// blocked[0].data = {"2026-07-18": "Holiday - No camp"}',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_counselor_availability: {
-        description: "Counselor day-by-day availability (set by counselor)",
-        dataType: "object",
-        fields: [
-          { name: "[counselorId]", type: "string (key)", desc: "Counselor ID", example: '"c1"' },
-          { name: "[counselorId][date]", type: "string", desc: "Status per date", example: '"available" | "unavailable" | "unset"' }
-        ],
-        exampleData: { c1: { "2026-07-14": "available", "2026-07-15": "unavailable" } },
-        accessPattern: 'const avail = await storage.get("camp_counselor_availability");\n// avail[0].data = {c1: {"2026-07-14": "available"}}',
-        usedIn: ["admin.html", "counselor.html"]
-      },
-      camp_counselor_schedule: {
-        description: "Admin-assigned working schedule per counselor",
-        dataType: "object",
-        fields: [
-          { name: "[counselorId]", type: "string (key)", desc: "Counselor ID", example: '"c1"' },
-          { name: "[counselorId][date]", type: "object", desc: "Sessions assigned", example: '{morning: true, afternoon: false}' }
-        ],
-        exampleData: { c1: { "2026-07-14": { morning: true, afternoon: false } } },
-        accessPattern: 'const schedule = await storage.get("camp_counselor_schedule");\n// schedule[0].data = {c1: {"2026-07-14": {morning: true}}}',
-        usedIn: ["admin.html", "counselor.html"]
-      },
-      camp_availability_change_requests: {
-        description: "Pending availability modification requests from counselors",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Request ID", example: '"acr_001"' },
-          { name: "counselorId", type: "string", desc: "Who requested", example: '"c1"' },
-          { name: "date", type: "string", desc: "Which date", example: '"2026-07-14"' },
-          { name: "requestedStatus", type: "string", desc: "New status", example: '"unavailable"' },
-          { name: "reason", type: "string", desc: "Why", example: '"Family event"' }
-        ],
-        exampleData: { id: "acr_001", counselorId: "c1", date: "2026-07-14", requestedStatus: "unavailable", reason: "Family event" },
-        accessPattern: 'const requests = await storage.get("camp_availability_change_requests");\n// requests[0].data = [{id, counselorId, date, requestedStatus, reason}]',
-        usedIn: ["admin.html", "counselor.html"]
-      },
-      camp_profile_change_requests: {
-        description: "Pending profile update requests from counselors",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Request ID", example: '"pcr_001"' },
-          { name: "counselorId", type: "string", desc: "Who requested", example: '"c1"' },
-          { name: "field", type: "string", desc: "Which field", example: '"bio"' },
-          { name: "oldValue", type: "string", desc: "Current value", example: '"Old bio text..."' },
-          { name: "newValue", type: "string", desc: "Requested value", example: '"Updated bio text..."' }
-        ],
-        exampleData: { id: "pcr_001", counselorId: "c1", field: "bio", newValue: "Updated bio..." },
-        accessPattern: 'const requests = await storage.get("camp_profile_change_requests");\n// requests[0].data = [{id, counselorId, field, oldValue, newValue}]',
-        usedIn: ["admin.html", "counselor.html"]
-      },
-      camp_content: {
-        description: "Public website content (pricing, location, policies, etc.)",
-        dataType: "object",
-        fields: [
-          { name: "heroTitle", type: "string", desc: "Homepage title", example: '"Roosevelt Girls Basketball"' },
-          { name: "singleSessionCost", type: "number", desc: "Price per session", example: "60" },
-          { name: "weekDiscount", type: "number", desc: "Full week discount %", example: "10" },
-          { name: "multiWeekDiscount", type: "number", desc: "2+ weeks discount %", example: "15" },
-          { name: "locationName", type: "string", desc: "Venue name", example: '"Roosevelt High School"' },
-          { name: "venmoUsername", type: "string", desc: "Venmo handle", example: '"@RHSDayCamp"' },
-          { name: "contactEmail", type: "string", desc: "Director email", example: '"rhsdaycamp@gmail.com"' }
-        ],
-        exampleData: { heroTitle: "Roosevelt Girls Basketball", singleSessionCost: 60, weekDiscount: 10, locationName: "Roosevelt High School" },
-        accessPattern: 'const content = await storage.get("camp_content");\n// content[0].data = {heroTitle, singleSessionCost, ...}  (single object, NOT array)',
-        usedIn: ["admin.html", "parent.html", "index.html"]
-      },
-      camp_food_photos: {
-        description: "Food gallery images",
-        dataType: "object",
-        fields: [
-          { name: "[key]", type: "string (key)", desc: "Photo identifier", example: '"lunch_day1"' },
-          { name: "cropped", type: "string", desc: "Base64 cropped image", example: '"data:image/jpeg;base64,..."' },
-          { name: "original", type: "string", desc: "Base64 original", example: '"data:image/jpeg;base64,..."' }
-        ],
-        exampleData: { lunch_day1: { cropped: "data:image/jpeg;base64,..." } },
-        accessPattern: 'const photos = await storage.get("camp_food_photos");\n// photos[0].data = {key: {cropped, original}}',
-        usedIn: ["admin.html"]
-      },
-      camp_site_photos: {
-        description: "Site/facility gallery images",
-        dataType: "object",
-        fields: [
-          { name: "[key]", type: "string (key)", desc: "Photo identifier", example: '"gym_main"' },
-          { name: "cropped", type: "string", desc: "Cropped image", example: '"data:image/jpeg;base64,..."' }
-        ],
-        exampleData: { gym_main: { cropped: "data:image/jpeg;base64,..." } },
-        accessPattern: 'const photos = await storage.get("camp_site_photos");\n// photos[0].data = {key: {cropped, original}}',
-        usedIn: ["admin.html"]
-      },
-      camp_gym_rentals: {
-        description: "Gym rental dates (which sessions the gym is booked for)",
-        dataType: "object",
-        fields: [
-          { name: "[date]", type: "string (key)", desc: "Date", example: '"2026-07-14"' },
-          { name: "morning", type: "boolean", desc: "AM booked", example: "true" },
-          { name: "afternoon", type: "boolean", desc: "PM booked", example: "true" }
-        ],
-        exampleData: { "2026-07-14": { morning: true, afternoon: true }, "2026-07-15": { morning: true, afternoon: false } },
-        accessPattern: 'const rentals = await storage.get("camp_gym_rentals");\n// rentals[0].data = {"2026-07-14": {morning: true, afternoon: true}}',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_messages: {
-        description: "Admin messages sent to parents/counselors",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Message ID", example: '"msg_001"' },
-          { name: "to", type: "string", desc: "Recipient email", example: '"jane@example.com"' },
-          { name: "subject", type: "string", desc: "Subject line", example: '"Camp Update"' },
-          { name: "body", type: "string", desc: "Message content", example: '"Important info about..."' },
-          { name: "sentAt", type: "ISO string", desc: "When sent", example: '"2026-02-10T15:00:00Z"' }
-        ],
-        exampleData: { id: "msg_001", to: "jane@example.com", subject: "Camp Update", sentAt: "2026-02-10T15:00:00Z" },
-        accessPattern: 'const messages = await storage.get("camp_messages");\n// messages[0].data = [{id, to, subject, body, sentAt}]',
-        usedIn: ["admin.html"]
-      },
-      camp_onboarding_progress: {
-        description: "User onboarding completion tracking",
-        dataType: "object",
-        fields: [
-          { name: "[email]", type: "string (key)", desc: "User email", example: '"jane@example.com"' },
-          { name: "step", type: "number", desc: "Current step number", example: "4" },
-          { name: "completed", type: "boolean", desc: "Fully completed", example: "false" }
-        ],
-        exampleData: { "jane@example.com": { step: 4, completed: false } },
-        accessPattern: 'const progress = await storage.get("camp_onboarding_progress");\n// progress[0].data = {"jane@example.com": {step, completed}}',
-        usedIn: ["index.html", "parent.html"]
-      },
-      camp_change_history: {
-        description: "Audit log of all changes across the system",
-        dataType: "array",
-        fields: [
-          { name: "id", type: "string", desc: "Entry ID", example: '"ch_001"' },
-          { name: "action", type: "string", desc: "What happened", example: '"Registration Submitted"' },
-          { name: "user", type: "string", desc: "Who did it", example: '"jane@example.com"' },
-          { name: "details", type: "string", desc: "Description", example: '"Registered Lily for July 14 AM"' },
-          { name: "timestamp", type: "ISO string", desc: "When", example: '"2026-02-10T15:30:00Z"' }
-        ],
-        exampleData: { id: "ch_001", action: "Registration Submitted", user: "jane@example.com", details: "Registered Lily for July 14 AM" },
-        accessPattern: 'const history = await storage.get("camp_change_history");\n// history[0].data = [{id, action, user, details, timestamp}]\n// ALWAYS use (changeHistory || []) for null safety',
-        usedIn: ["admin.html", "parent.html"]
-      },
-      camp_password_reset_tokens: {
-        description: "Password reset tokens (each row = one token, id = token string)",
-        dataType: "special",
-        fields: [
-          { name: "id", type: "string (PK)", desc: "The token itself", example: '"abc123def456..."' },
-          { name: "data.email", type: "string", desc: "User email", example: '"jane@example.com"' },
-          { name: "data.userType", type: "string", desc: "parent or counselor", example: '"parent"' },
-          { name: "data.expiresAt", type: "ISO string", desc: "1-hour expiry", example: '"2026-02-10T16:00:00Z"' }
-        ],
-        exampleData: { id: "abc123...", data: { email: "jane@example.com", userType: "parent", expiresAt: "2026-02-10T16:00:00Z" } },
-        accessPattern: '// Unlike other tables, each row is its own token (id != "main")\nconst { data } = await supabase.from("camp_password_reset_tokens").select("*").eq("id", token);',
-        usedIn: ["netlify/functions/request-password-reset.js", "netlify/functions/reset-password.js"]
-      }
-    };
-
-    // ==================== FEATURE MAP ====================
-    const FEATURE_MAP = [
-      {
-        page: "index.html",
-        role: "Public / Login",
-        icon: "\ud83c\udf10",
-        features: [
-          { name: "Public Home Page", status: "complete", desc: "Hero section, about, camp info" },
-          { name: "Schedule Page", status: "complete", desc: "Camp dates and session times" },
-          { name: "Pricing Page", status: "complete", desc: "Pricing tiers and discount info" },
-          { name: "Location Page", status: "complete", desc: "Map and address" },
-          { name: "Counselors Page", status: "complete", desc: "Approved counselor profiles and photos" },
-          { name: "Email/Password Login", status: "complete", desc: "Standard login with role detection" },
-          { name: "Google Sign-In", status: "complete", desc: "OAuth 2.0 login" },
-          { name: "Apple Sign-In", status: "planned", desc: "Requires Apple Developer Program ($99/yr)" },
-          { name: "Parent Onboarding", status: "complete", desc: "6-step wizard" },
-          { name: "Counselor Onboarding", status: "complete", desc: "5-step wizard" },
-          { name: "Forgot Password", status: "complete", desc: "Email-based reset link (1-hour expiry)" },
-          { name: "SMS Login Recovery", status: "complete", desc: "Phone-based \u2018forgot login\u2019 flow via Twilio" }
-        ]
-      },
-      {
-        page: "parent.html",
-        role: "Parent Dashboard",
-        icon: "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67",
-        features: [
-          { name: "Next Steps Dashboard", status: "complete", desc: "Contextual checklist of what to do next" },
-          { name: "Camper Management", status: "complete", desc: "Add/edit/delete camper profiles with photos" },
-          { name: "Emergency Contacts", status: "complete", desc: "Add/manage contacts, auto-link to all campers" },
-          { name: "Session Registration", status: "complete", desc: "Calendar picker, AM/PM, discount calculator" },
-          { name: "Venmo Payment Flow", status: "complete", desc: "5-step payment wizard with screenshot upload" },
-          { name: "Multi-Parent Access", status: "complete", desc: "Add 2nd+ parents to family" },
-          { name: "Pod Assignment Viewing", status: "complete", desc: "See counselor and pod mates after approval" },
-          { name: "Contact Us", status: "complete", desc: "Director email + phone" },
-          { name: "Activity History", status: "complete", desc: "Timeline of actions filtered by parent" }
-        ]
-      },
-      {
-        page: "counselor.html",
-        role: "Counselor Dashboard",
-        icon: "\ud83c\udfc0",
-        features: [
-          { name: "Profile Management", status: "complete", desc: "Edit name, photo, position, year, bio" },
-          { name: "Availability Setting", status: "complete", desc: "3-state per day: Available/Unavailable/Unset" },
-          { name: "Schedule Viewing", status: "complete", desc: "See assigned sessions and pod members" },
-          { name: "Change Requests", status: "complete", desc: "Request availability or profile changes" }
-        ]
-      },
-      {
-        page: "admin.html",
-        role: "Admin Dashboard",
-        icon: "\ud83d\udee1\ufe0f",
-        features: [
-          { name: "Task Dashboard", status: "complete", desc: "Urgent/important/setup task categorization" },
-          { name: "Parent Management", status: "complete", desc: "View all parents, login type badges, send reminders" },
-          { name: "Camper Management", status: "complete", desc: "View all campers, EC counts, parent links" },
-          { name: "Counselor Approval", status: "complete", desc: "Approve/reject applications in Work Availability tab" },
-          { name: "Registration Approval", status: "complete", desc: "Review registrations, confirm payments" },
-          { name: "Revenue Summary", status: "complete", desc: "New/Pending/Paid totals dashboard" },
-          { name: "Invoice Generation", status: "complete", desc: "Auto INV-xxx IDs, email invoices to parents" },
-          { name: "Pod Assignment Builder", status: "complete", desc: "Assign 1 counselor + up to 5 campers per pod" },
-          { name: "Counselor Schedule Editor", status: "complete", desc: "Mark eligible sessions per counselor" },
-          { name: "Gym Rental Management", status: "complete", desc: "Set which dates gym is booked" },
-          { name: "Content Editor", status: "complete", desc: "Edit all public website content" },
-          { name: "Full Audit History", status: "complete", desc: "Searchable change log" },
-          { name: "Danger Zone", status: "complete", desc: "Database viewer, bulk/record deletion" },
-          { name: "Hierarchical Tab Navigation", status: "planned", desc: "Replace flat tabs with parent/child structure" }
+        borderColor: "border-purple-500",
+        bgColor: "bg-purple-50",
+        headerBg: "bg-purple-600",
+        tagline: "The camp director who runs everything",
+        description: "That's you, Derek! The admin can see and manage everything: approve counselors, confirm payments, assign kids to pods, edit the public website, and more.",
+        whatTheyDo: [
+          { step: "Set Up Camp Info", detail: "Edit the website content: pricing, location, policies, photos", icon: "\u2699\ufe0f" },
+          { step: "Book the Gym", detail: "Mark which dates the gym is rented for camp", icon: "\ud83c\udfd0" },
+          { step: "Approve Counselors", detail: "Review applications and approve who gets to work", icon: "\u2705" },
+          { step: "Approve Registrations", detail: "Check that parents paid, then confirm their spot", icon: "\ud83d\udcb3" },
+          { step: "Build Pods", detail: "Assign 1 counselor + up to 5 campers to each pod per session", icon: "\ud83e\udde9" },
+          { step: "Manage Everything", detail: "View all data, send emails, generate invoices, track history", icon: "\ud83d\udcca" }
         ]
       }
     ];
 
-    // ==================== FILE STRUCTURE ====================
-    const FILE_STRUCTURE = [
-      { name: "index.html", type: "file", desc: "Public site + Login + Onboarding", size: "347 KB" },
-      { name: "admin.html", type: "file", desc: "Admin dashboard", size: "777 KB" },
-      { name: "parent.html", type: "file", desc: "Parent dashboard", size: "487 KB" },
-      { name: "counselor.html", type: "file", desc: "Counselor dashboard", size: "217 KB" },
-      { name: "prd.html", type: "file", desc: "Product Requirements Document (this page)" },
-      { name: "tests.html", type: "file", desc: "Automated test suite" },
-      { name: "CLAUDE.md", type: "file", desc: "Claude Code reference document" },
-      { name: "DEVELOPER_GUIDE.md", type: "file", desc: "Developer onboarding guide" },
-      { name: "WORKFLOWS.md", type: "file", desc: "Detailed workflow documentation" },
-      { name: "WORKFLOWS-MERMAID.md", type: "file", desc: "Mermaid diagram source" },
-      { name: "SPLIT_IMPLEMENTATION.md", type: "file", desc: "User table split architecture" },
-      { name: "DATABASE_CLEANUP_ANALYSIS.md", type: "file", desc: "Database cleanup notes" },
-      { name: "netlify/", type: "dir", desc: "Netlify configuration", children: [
-        { name: "functions/", type: "dir", desc: "Serverless functions", children: [
-          { name: "send-email.js", type: "file", desc: "Resend email API" },
-          { name: "request-password-reset.js", type: "file", desc: "Token generation + email" },
-          { name: "reset-password.js", type: "file", desc: "Token validation + password update" },
-          { name: "send-sms.js", type: "file", desc: "Twilio SMS sending" },
-          { name: "send-verification-code.js", type: "file", desc: "6-digit code via SMS" },
-          { name: "verify-code.js", type: "file", desc: "Code validation + user lookup" }
-        ]}
+    // ---------- THE FULL CAMP LIFECYCLE ----------
+    const LIFECYCLE = [
+      { phase: "1", title: "Setup", icon: "\u2699\ufe0f", color: "bg-green-500", who: "Admin", steps: ["Edit website content (pricing, location, Venmo info)", "Mark which dates the gym is booked", "Block any dates camp can't run"] },
+      { phase: "2", title: "People Sign Up", icon: "\ud83d\udc4b", color: "bg-blue-500", who: "Parents + Counselors", steps: ["Counselors create accounts and apply", "Parents create accounts and add their kids", "Parents add emergency contacts and photos"] },
+      { phase: "3", title: "Approve People", icon: "\u2705", color: "bg-purple-500", who: "Admin", steps: ["Review and approve counselor applications", "Approved counselors appear on the public website"] },
+      { phase: "4", title: "Registration & Payment", icon: "\ud83d\udcb0", color: "bg-amber-500", who: "Parents + Admin", steps: ["Parents pick camp dates and sessions for their kids", "Parents pay via Venmo and upload screenshot", "Admin checks Venmo and confirms payment", "System generates an invoice and emails the parent"] },
+      { phase: "5", title: "Assign Schedules", icon: "\ud83d\udcc5", color: "bg-pink-500", who: "Admin", steps: ["Set which sessions each counselor will work", "Based on counselor availability"] },
+      { phase: "6", title: "Build Pods", icon: "\ud83e\udde9", color: "bg-indigo-500", who: "Admin", steps: ["For each session, create pods", "Each pod = 1 counselor + up to 5 campers", "Parents and counselors can now see their assignments"] },
+      { phase: "7", title: "Camp Day!", icon: "\ud83c\udfc0", color: "bg-green-600", who: "Everyone", steps: ["Campers show up and join their pod", "Counselors lead their group", "Admin oversees everything"] }
+    ];
+
+    // ---------- WHAT THE WEBSITE REMEMBERS (simplified database) ----------
+    const DATA_STORED = [
+      {
+        category: "People",
+        icon: "\ud83d\udc65",
+        color: "green",
+        items: [
+          { name: "Parents", what: "Name, email, phone, password, photo", example: "Jane Smith, jane@email.com, (206) 555-1234" },
+          { name: "Campers (Kids)", what: "Name, birthday, grade, photo, which parent they belong to", example: "Lily Smith, March 15 2016, 5th grade, belongs to Jane" },
+          { name: "Counselors", what: "Name, email, photo, basketball position, year, bio, approved status", example: "Sarah Mitchell, Point Guard, Senior, approved" },
+          { name: "Emergency Contacts", what: "Name, relationship, phone, email, photo", example: "Grandma Betty, Grandmother, (206) 555-7777" }
+        ]
+      },
+      {
+        category: "Camp Stuff",
+        icon: "\ud83c\udfd5\ufe0f",
+        color: "blue",
+        items: [
+          { name: "Registrations", what: "Which kid, which date, morning or afternoon, paid or not, status", example: "Lily Smith, July 14, Morning, Pending, Not paid yet" },
+          { name: "Pod Assignments", what: "For each session: which counselor is with which campers", example: "July 14 Morning: Sarah Mitchell with Lily, Emma, Maya" },
+          { name: "Gym Rental Days", what: "Which dates the gym is booked, morning and/or afternoon", example: "July 14: morning=booked, afternoon=booked" },
+          { name: "Camp Dates", what: "All the dates camp is running", example: "July 13-17, August 10-28 (weekdays)" }
+        ]
+      },
+      {
+        category: "Website Content",
+        icon: "\ud83d\uddbc\ufe0f",
+        color: "purple",
+        items: [
+          { name: "Site Content", what: "All the text and images on the public website", example: "Hero title, pricing ($60/session), location, Venmo handle" },
+          { name: "Food & Site Photos", what: "Gallery photos uploaded by admin", example: "Lunch photos, gym photos" },
+          { name: "Messages", what: "Emails sent from admin to parents", example: "Camp Update email to jane@email.com" }
+        ]
+      },
+      {
+        category: "Behind the Scenes",
+        icon: "\u2699\ufe0f",
+        color: "gray",
+        items: [
+          { name: "Change History", what: "A log of every action anyone takes", example: "Feb 10: Jane registered Lily for July 14 AM" },
+          { name: "Login Accounts", what: "Separate login info for parents, counselors, and admins", example: "Admin: username=admin, Counselor: email=sarah@..." },
+          { name: "Password Reset Tokens", what: "Temporary codes for resetting forgotten passwords", example: "Expires after 1 hour" },
+          { name: "Onboarding Progress", what: "Tracks how far each user got in the signup wizard", example: "jane@email.com: completed step 4 of 6" }
+        ]
+      }
+    ];
+
+    // ---------- FEATURE CHECKLIST ----------
+    const FEATURES = [
+      { area: "Public Website", items: [
+        { name: "Home page with camp info", done: true },
+        { name: "Schedule and pricing pages", done: true },
+        { name: "Location page", done: true },
+        { name: "Counselor profiles page", done: true },
+        { name: "Email/password login", done: true },
+        { name: "Google sign-in", done: true },
+        { name: "Apple sign-in", done: false },
+        { name: "Forgot password (email reset)", done: true },
+        { name: "Forgot login (SMS code to phone)", done: true },
       ]},
-      { name: "migrations/", type: "dir", desc: "SQL migration scripts for Supabase" },
-      { name: "shared/", type: "dir", desc: "Shared images (counselor photos, food photos)" }
+      { area: "Parent Experience", items: [
+        { name: "6-step onboarding wizard", done: true },
+        { name: "Add/edit kids with photos", done: true },
+        { name: "Add emergency contacts (auto-linked to all kids)", done: true },
+        { name: "Pick camp dates on a calendar", done: true },
+        { name: "Discount calculator (full week = 10% off)", done: true },
+        { name: "Venmo payment with screenshot upload", done: true },
+        { name: "See pod assignments after approval", done: true },
+        { name: "Add additional parents to family", done: true },
+        { name: "Contact camp director", done: true },
+      ]},
+      { area: "Counselor Experience", items: [
+        { name: "5-step application wizard", done: true },
+        { name: "Set availability by day", done: true },
+        { name: "View assigned schedule", done: true },
+        { name: "Request schedule or profile changes", done: true },
+      ]},
+      { area: "Admin Dashboard", items: [
+        { name: "Task dashboard (urgent/important items)", done: true },
+        { name: "Manage all parents and campers", done: true },
+        { name: "Approve/reject counselor applications", done: true },
+        { name: "Confirm payments and approve registrations", done: true },
+        { name: "Revenue summary and invoice generation", done: true },
+        { name: "Build pod assignments", done: true },
+        { name: "Set counselor work schedules", done: true },
+        { name: "Manage gym rental dates", done: true },
+        { name: "Edit website content", done: true },
+        { name: "Full history/audit log", done: true },
+        { name: "Reorganize tabs into groups", done: false },
+      ]},
+      { area: "Emails & Texts", items: [
+        { name: "Welcome email on signup", done: true },
+        { name: "Registration confirmation email", done: true },
+        { name: "Payment confirmation email", done: true },
+        { name: "Password reset email", done: true },
+        { name: "SMS verification for login recovery", done: true },
+      ]}
+    ];
+
+    // ---------- HOW THE WEBSITE IS BUILT (simplified) ----------
+    const TECH_SIMPLE = [
+      { name: "The Website", icon: "\ud83c\udf10", desc: "4 HTML pages that run in your browser. No app to download." },
+      { name: "The Database", icon: "\ud83d\uddc4\ufe0f", desc: "Supabase stores all the data (parents, kids, registrations, etc.) in the cloud." },
+      { name: "The Hosting", icon: "\ud83d\ude80", desc: "Netlify serves the website. When we push code to GitHub, it auto-updates." },
+      { name: "Email", icon: "\ud83d\udce7", desc: "Resend sends emails (confirmations, password resets, invoices)." },
+      { name: "Texting", icon: "\ud83d\udcf1", desc: "Twilio sends SMS codes when someone forgets their login." },
+      { name: "Google Login", icon: "\ud83d\udd11", desc: "Parents can sign in with their Google account instead of a password." },
     ];
 
     // ==================== COMPONENTS ====================
 
-    // Mermaid diagram renderer
-    const MermaidDiagram = ({ chart, id }) => {
-      const ref = useRef(null);
-      const [svg, setSvg] = useState('');
-      const [error, setError] = useState(null);
-
-      useEffect(() => {
-        if (!chart) return;
-        const renderChart = async () => {
-          try {
-            const uniqueId = id || 'mermaid-' + Math.random().toString(36).substr(2, 9);
-            const { svg } = await mermaid.render(uniqueId, chart);
-            setSvg(svg);
-            setError(null);
-          } catch (e) {
-            setError(e.message);
-            console.error('Mermaid render error:', e);
-          }
-        };
-        renderChart();
-      }, [chart, id]);
-
-      if (error) return <div className="text-red-500 text-sm p-2 bg-red-50 rounded">Diagram error: {error}</div>;
-      if (!svg) return <div className="text-gray-400 text-sm p-4">Loading diagram...</div>;
-      return <div className="overflow-x-auto py-4" dangerouslySetInnerHTML={{ __html: svg }} />;
-    };
-
-    // Collapsible section
-    const Section = ({ title, icon, defaultOpen, children, badge }) => {
-      const [isOpen, setIsOpen] = useState(defaultOpen || false);
-      return (
-        <div className="border border-gray-200 rounded-xl mb-4 overflow-hidden shadow-sm">
-          <button onClick={() => setIsOpen(!isOpen)}
-            className="w-full px-6 py-4 flex items-center justify-between bg-white hover:bg-gray-50 transition-colors">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{icon}</span>
-              <span className="font-bold text-lg text-gray-800">{title}</span>
-              {badge && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">{badge}</span>}
-            </div>
-            <span className="text-xl text-gray-400">{isOpen ? '\u25B2' : '\u25BC'}</span>
-          </button>
-          {isOpen && <div className="px-6 pb-6 border-t border-gray-100 bg-gray-50">{children}</div>}
-        </div>
-      );
-    };
-
-    // Database table viewer
-    const TableViewer = ({ tableName, table }) => {
-      const [expanded, setExpanded] = useState(false);
-      const typeBadge = table.dataType === 'array'
-        ? { bg: 'bg-blue-100', text: 'text-blue-700', label: 'ARRAY' }
-        : table.dataType === 'object'
-        ? { bg: 'bg-amber-100', text: 'text-amber-700', label: 'OBJECT' }
-        : { bg: 'bg-gray-100', text: 'text-gray-700', label: 'SPECIAL' };
-
-      return (
-        <div className="border border-gray-200 rounded-lg mb-2 bg-white overflow-hidden">
-          <button onClick={() => setExpanded(!expanded)}
-            className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors text-left">
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className={`px-2 py-0.5 text-xs rounded font-mono font-bold ${typeBadge.bg} ${typeBadge.text}`}>{typeBadge.label}</span>
-              <span className="font-mono font-bold text-gray-900">{tableName}</span>
-              <span className="text-gray-500 text-sm">{table.description}</span>
-            </div>
-            <span className="text-gray-400 ml-2">{expanded ? '\u25BC' : '\u25B6'}</span>
-          </button>
-          {expanded && (
-            <div className="px-4 pb-4 border-t border-gray-100 space-y-4">
-              {/* Fields table */}
-              <div className="mt-3">
-                <h5 className="text-sm font-semibold text-gray-600 mb-2">Fields</h5>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm border border-gray-200 rounded">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Field</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Type</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Description</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">Example</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {table.fields.map((f, i) => (
-                        <tr key={i} className="border-t border-gray-100">
-                          <td className="px-3 py-2 font-mono text-green-700 text-xs">{f.name}</td>
-                          <td className="px-3 py-2 text-gray-500 text-xs">{f.type}</td>
-                          <td className="px-3 py-2 text-gray-600 text-xs">{f.desc}</td>
-                          <td className="px-3 py-2 font-mono text-gray-400 text-xs">{f.example}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Example data */}
-              <div>
-                <h5 className="text-sm font-semibold text-gray-600 mb-2">Example Data</h5>
-                <pre className="bg-gray-900 text-green-400 p-3 rounded-lg text-xs overflow-x-auto font-mono">
-                  {JSON.stringify(table.exampleData, null, 2)}
-                </pre>
-              </div>
-
-              {/* Access pattern */}
-              <div>
-                <h5 className="text-sm font-semibold text-gray-600 mb-2">Access Pattern</h5>
-                <pre className="bg-gray-800 text-blue-300 p-3 rounded-lg text-xs overflow-x-auto font-mono">
-                  {table.accessPattern}
-                </pre>
-              </div>
-
-              {/* Used in */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-gray-500">Used in:</span>
-                {table.usedIn.map((f, i) => (
-                  <span key={i} className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-mono">{f}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // Feature status badge
-    const StatusBadge = ({ status }) => {
-      const styles = {
-        complete: 'bg-green-100 text-green-700',
-        planned: 'bg-amber-100 text-amber-700',
-        'in-progress': 'bg-blue-100 text-blue-700'
-      };
-      return (
-        <span className={`px-2 py-0.5 text-xs rounded font-medium ${styles[status] || 'bg-gray-100 text-gray-600'}`}>
-          {status}
-        </span>
-      );
-    };
-
-    // File tree renderer
-    const FileTree = ({ items, depth = 0 }) => {
-      return (
-        <div style={{ marginLeft: depth * 20 }}>
-          {items.map((item, i) => (
-            <div key={i}>
-              <div className="flex items-center gap-2 py-1">
-                <span className="text-sm">{item.type === 'dir' ? '\ud83d\udcc1' : '\ud83d\udcc4'}</span>
-                <span className={`font-mono text-sm ${item.type === 'dir' ? 'font-bold text-gray-800' : 'text-gray-600'}`}>{item.name}</span>
-                <span className="text-xs text-gray-400">{item.desc}</span>
-                {item.size && <span className="text-xs text-gray-300 ml-auto">{item.size}</span>}
-              </div>
-              {item.children && <FileTree items={item.children} depth={depth + 1} />}
-            </div>
-          ))}
-        </div>
-      );
-    };
-
-    // ==================== VERSION RIBBON ====================
     const VersionRibbon = () => {
-      const [elapsed, setElapsed] = useState('');
-      useEffect(() => {
-        const update = () => {
-          const secs = Math.floor((new Date() - BUILD_DATE) / 1000);
-          if (secs < 60) setElapsed(`${secs}s ago`);
-          else if (secs < 3600) setElapsed(`${Math.floor(secs / 60)}m ${secs % 60}s ago`);
-          else setElapsed(`${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m ago`);
-        };
-        update();
-        const id = setInterval(update, 1000);
-        return () => clearInterval(id);
-      }, []);
       const bgColor = ENV === 'development' ? 'bg-red-600' : 'bg-green-600';
       return (
-        <div className={`${bgColor} text-white text-sm font-mono py-1 px-4 flex items-center justify-center gap-2`}>
-          <span className="font-bold">{ENV === 'development' ? 'DEVELOPMENT' : 'PRODUCTION'}</span>
-          <span>\u2022</span>
-          <span>v{VERSION}</span>
-          <span>\u2022</span>
-          <span>PRD</span>
-          <span>\u2022</span>
-          <span>Built: {BUILD_DATE.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} {BUILD_DATE.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}</span>
-          <span>({elapsed})</span>
+        <div className={`${bgColor} text-white text-sm font-mono py-1 px-4 text-center`}>
+          {ENV === 'development' ? 'DEVELOPMENT' : 'PRODUCTION'} {'\u2022'} v{VERSION}
         </div>
       );
     };
 
+    // Step card for "what they do"
+    const StepCard = ({ step, index, color }) => (
+      <div className="flex items-start gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-md transition-shadow">
+        <div className={`w-10 h-10 rounded-full ${color} text-white flex items-center justify-center font-bold text-lg flex-shrink-0`}>
+          {index + 1}
+        </div>
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{step.icon}</span>
+            <span className="font-bold text-gray-800">{step.step}</span>
+          </div>
+          <p className="text-gray-500 text-sm mt-1">{step.detail}</p>
+        </div>
+      </div>
+    );
+
     // ==================== MAIN APP ====================
-    const PRDApp = () => {
+    const App = () => {
+      const [activeRole, setActiveRole] = useState(null);
+      const [showData, setShowData] = useState(false);
+      const [showTech, setShowTech] = useState(false);
+
       return (
         <div className="min-h-screen bg-gray-50">
           <VersionRibbon />
 
-          {/* Header */}
-          <div className="bg-green-900 text-white py-8 px-6">
-            <div className="max-w-5xl mx-auto">
-              <h1 className="font-display text-5xl tracking-wide">{PRD_META.title}</h1>
-              <h2 className="font-display text-3xl text-green-300 mt-1">{PRD_META.subtitle}</h2>
-              <div className="flex items-center gap-4 mt-4 text-green-200 text-sm">
-                <span>Last updated: {PRD_META.lastUpdated}</span>
-                <span>\u2022</span>
-                <span>By: {PRD_META.authors.join(' & ')}</span>
-                <span>\u2022</span>
-                <a href={PRD_META.projectUrl} className="underline hover:text-white" target="_blank">{PRD_META.projectUrl}</a>
+          {/* Hero */}
+          <div className="bg-green-900 text-white py-12 px-6">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="font-display text-6xl tracking-wide">{OVERVIEW.tagline}</h1>
+              <p className="text-green-200 text-lg mt-4 max-w-2xl mx-auto">{OVERVIEW.summary}</p>
+              <div className="flex flex-wrap justify-center gap-4 mt-6">
+                <div className="bg-green-800/50 rounded-lg px-4 py-2 text-sm">
+                  <span className="text-green-300">When:</span> <span className="font-medium">{OVERVIEW.campDates}</span>
+                </div>
+                <div className="bg-green-800/50 rounded-lg px-4 py-2 text-sm">
+                  <span className="text-green-300">Where:</span> <span className="font-medium">{OVERVIEW.location}</span>
+                </div>
+                <div className="bg-green-800/50 rounded-lg px-4 py-2 text-sm">
+                  <span className="text-green-300">Cost:</span> <span className="font-medium">{OVERVIEW.cost} ({OVERVIEW.discounts})</span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Quick nav */}
-          <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-            <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4 flex-wrap text-sm">
-              <span className="font-medium text-gray-500">Jump to:</span>
-              {[
-                ['#arch', 'Architecture'],
-                ['#roles', 'User Roles'],
-                ['#flows', 'User Flows'],
-                ['#db', 'Database'],
-                ['#features', 'Features'],
-                ['#files', 'File Structure']
-              ].map(([href, label]) => (
-                <a key={href} href={href} className="px-3 py-1 bg-green-50 text-green-700 rounded-full hover:bg-green-100 transition-colors">{label}</a>
-              ))}
-              <a href="/tests.html" className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 ml-auto">Run Tests \u2192</a>
+          <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
+            <div className="max-w-4xl mx-auto px-6 py-3 flex items-center gap-3 flex-wrap text-sm justify-center">
+              <a href="#roles" className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full hover:bg-green-100">\ud83d\udc65 Who Uses It</a>
+              <a href="#lifecycle" className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100">\ud83d\udd04 How It Works</a>
+              <a href="#features" className="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full hover:bg-purple-100">\u2705 Feature Checklist</a>
+              <a href="#data" className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-full hover:bg-amber-100">\ud83d\uddc4\ufe0f What It Stores</a>
+              <a href="#tech" className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-full hover:bg-gray-200">\ud83d\udd27 How It's Built</a>
+              <a href="/tests.html" className="px-3 py-1.5 bg-blue-600 text-white rounded-full hover:bg-blue-700 ml-auto">Run Tests \u2192</a>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="max-w-5xl mx-auto px-6 py-8">
+          <div className="max-w-4xl mx-auto px-6 py-10">
 
-            {/* Architecture */}
-            <div id="arch">
-              <Section title="System Architecture" icon="\ud83c\udfd7\ufe0f" defaultOpen={true} badge="5 layers">
-                <p className="text-gray-600 mt-4 mb-6">{SYSTEM_ARCHITECTURE.description}</p>
+            {/* ==================== WHO USES IT ==================== */}
+            <div id="roles" className="mb-16">
+              <h2 className="font-display text-4xl text-gray-800 mb-2">Who Uses the Website?</h2>
+              <p className="text-gray-500 mb-8">Three types of people use our camp website. Click each one to see what they do.</p>
 
-                <MermaidDiagram chart={SYSTEM_ARCHITECTURE.mermaidDiagram} id="arch-diagram" />
+              <div className="grid md:grid-cols-3 gap-4 mb-6">
+                {ROLES.map((role, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveRole(activeRole === i ? null : i)}
+                    className={`rounded-2xl p-6 text-left transition-all border-2 ${
+                      activeRole === i
+                        ? `${role.borderColor} ${role.bgColor} shadow-lg scale-[1.02]`
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow'
+                    }`}
+                  >
+                    <div className="text-4xl mb-3">{role.emoji}</div>
+                    <h3 className="text-xl font-bold text-gray-800">{role.name}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{role.tagline}</p>
+                  </button>
+                ))}
+              </div>
 
-                <div className="grid md:grid-cols-2 gap-4 mt-6">
-                  {SYSTEM_ARCHITECTURE.layers.map((layer, i) => {
-                    const colors = { green: 'border-green-500 bg-green-50', blue: 'border-blue-500 bg-blue-50', purple: 'border-purple-500 bg-purple-50', amber: 'border-amber-500 bg-amber-50', red: 'border-red-500 bg-red-50' };
-                    return (
-                      <div key={i} className={`border-2 rounded-xl p-4 ${colors[layer.color] || 'border-gray-300 bg-gray-50'}`}>
-                        <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                          <span className="text-xl">{layer.icon}</span> {layer.name}
-                        </h4>
-                        <div className="mt-2 space-y-1">
-                          {layer.components.map((c, j) => (
-                            <div key={j} className="text-sm">
-                              <span className="font-mono font-medium text-gray-700">{c.name}</span>
-                              <span className="text-gray-500"> \u2014 {c.desc}</span>
-                              {c.size && <span className="text-gray-400 text-xs ml-1">({c.size})</span>}
-                            </div>
-                          ))}
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-3">
-                          {layer.tech.map((t, j) => (
-                            <span key={j} className="px-2 py-0.5 bg-white/70 text-gray-600 rounded text-xs border border-gray-200">{t}</span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            </div>
-
-            {/* User Roles */}
-            <div id="roles">
-              <Section title="User Roles" icon="\ud83d\udc65" badge={`${USER_ROLES.length} roles`}>
-                <div className="space-y-6 mt-4">
-                  {USER_ROLES.map((role, i) => {
-                    const colors = { green: 'border-green-500', blue: 'border-blue-500', purple: 'border-purple-500' };
-                    return (
-                      <div key={i} className={`border-2 rounded-xl p-6 bg-white ${colors[role.color] || 'border-gray-300'}`}>
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-3xl">{role.icon}</span>
-                          <div>
-                            <h4 className="text-xl font-bold text-gray-800">{role.role}</h4>
-                            <span className="text-sm text-gray-500 font-mono">{role.file}</span>
-                          </div>
-                        </div>
-                        <p className="text-gray-600 mb-4">{role.description}</p>
-
-                        <h5 className="font-semibold text-gray-700 text-sm mb-2">Capabilities</h5>
-                        <ul className="grid md:grid-cols-2 gap-1 mb-4">
-                          {role.capabilities.map((c, j) => (
-                            <li key={j} className="text-sm text-gray-600 flex items-start gap-1">
-                              <span className="text-green-500 mt-0.5">\u2713</span> {c}
-                            </li>
-                          ))}
-                        </ul>
-
-                        <h5 className="font-semibold text-gray-700 text-sm mb-2">Dashboard Tabs</h5>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {role.tabs.map((t, j) => (
-                            <div key={j} className="px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 text-sm" title={t.desc}>
-                              <span className="font-medium text-gray-700">{t.name}</span>
-                              <span className="text-gray-400 text-xs block">{t.desc}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {role.onboarding && (
-                          <>
-                            <h5 className="font-semibold text-gray-700 text-sm mb-2">Onboarding Steps</h5>
-                            <div className="flex flex-wrap gap-2">
-                              {role.onboarding.map((step, j) => (
-                                <div key={j} className="flex items-center gap-2 text-sm">
-                                  <span className="w-6 h-6 rounded-full bg-green-600 text-white text-xs flex items-center justify-center font-bold">{j + 1}</span>
-                                  <span className="text-gray-600">{step.replace(/^Step \d+: /, '')}</span>
-                                  {j < role.onboarding.length - 1 && <span className="text-gray-300">\u2192</span>}
-                                </div>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            </div>
-
-            {/* User Flows */}
-            <div id="flows">
-              <Section title="User Flows" icon="\ud83d\udd04" badge={`${USER_FLOWS.length} flows`}>
-                <div className="space-y-6 mt-4">
-                  {USER_FLOWS.map((flow, i) => (
-                    <div key={flow.id} className="border border-gray-200 rounded-xl bg-white overflow-hidden">
-                      <div className="px-5 py-4 border-b border-gray-100">
-                        <h4 className="font-bold text-gray-800">{flow.title}</h4>
-                        <p className="text-sm text-gray-500">{flow.description}</p>
-                      </div>
-                      <div className="p-4 bg-white flex justify-center">
-                        <MermaidDiagram chart={flow.mermaid} id={`flow-${flow.id}`} />
-                      </div>
+              {/* Expanded role detail */}
+              {activeRole !== null && (
+                <div className={`rounded-2xl border-2 ${ROLES[activeRole].borderColor} ${ROLES[activeRole].bgColor} p-6 transition-all`}>
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="text-4xl">{ROLES[activeRole].emoji}</span>
+                    <div>
+                      <h3 className="text-2xl font-bold text-gray-800">The {ROLES[activeRole].name}</h3>
+                      <p className="text-gray-600">{ROLES[activeRole].description}</p>
                     </div>
-                  ))}
-                </div>
-              </Section>
-            </div>
+                  </div>
 
-            {/* Database Schema */}
-            <div id="db">
-              <Section title="Database Schema" icon="\ud83d\uddc4\ufe0f" badge={`${Object.keys(DATABASE_TABLES).length} tables`}>
-                <div className="mt-4 mb-4 flex items-center gap-4 text-sm">
-                  <span className="text-gray-500">Data types:</span>
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-mono text-xs font-bold">ARRAY</span>
-                  <span className="text-gray-400">.map(), .filter(), .find()</span>
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded font-mono text-xs font-bold">OBJECT</span>
-                  <span className="text-gray-400">Object.entries(), Object.keys()</span>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">
-                  All tables use single-row JSONB storage: <code className="bg-gray-200 px-1 rounded text-xs">id='main'</code>, <code className="bg-gray-200 px-1 rounded text-xs">data</code> column holds the JSONB payload.
-                  Click any table to see fields, example data, and access patterns.
-                </p>
-
-                {TABLE_CATEGORIES.map((cat, i) => (
-                  <div key={i} className="mb-6">
-                    <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                      <span>{cat.icon}</span> {cat.name}
-                      <span className="text-xs text-gray-400 font-normal">({cat.tables.length} tables)</span>
-                    </h4>
-                    {cat.tables.map(name => (
-                      DATABASE_TABLES[name] && <TableViewer key={name} tableName={name} table={DATABASE_TABLES[name]} />
+                  <h4 className="font-bold text-gray-700 mb-3 text-lg">What they do, step by step:</h4>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {ROLES[activeRole].whatTheyDo.map((step, j) => (
+                      <StepCard key={j} step={step} index={j} color={ROLES[activeRole].headerBg} />
                     ))}
                   </div>
-                ))}
-              </Section>
+                </div>
+              )}
             </div>
 
-            {/* Feature Map */}
-            <div id="features">
-              <Section title="Feature Map" icon="\ud83c\udfaf" badge={`${FEATURE_MAP.reduce((a, p) => a + p.features.length, 0)} features`}>
-                <div className="space-y-6 mt-4">
-                  {FEATURE_MAP.map((page, i) => {
-                    const complete = page.features.filter(f => f.status === 'complete').length;
-                    const total = page.features.length;
-                    return (
-                      <div key={i} className="border border-gray-200 rounded-xl bg-white p-5">
-                        <div className="flex items-center gap-3 mb-3">
-                          <span className="text-2xl">{page.icon}</span>
-                          <div>
-                            <h4 className="font-bold text-gray-800">{page.role}</h4>
-                            <span className="font-mono text-sm text-gray-400">{page.page}</span>
-                          </div>
-                          <span className="ml-auto text-sm text-gray-500">{complete}/{total} complete</span>
-                          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${(complete / total) * 100}%` }}></div>
+            {/* ==================== THE FULL LIFECYCLE ==================== */}
+            <div id="lifecycle" className="mb-16">
+              <h2 className="font-display text-4xl text-gray-800 mb-2">How Camp Registration Works</h2>
+              <p className="text-gray-500 mb-8">From setup to camp day, here are the 7 phases that happen in order.</p>
+
+              <div className="space-y-4">
+                {LIFECYCLE.map((phase, i) => (
+                  <div key={i} className="flex gap-4 items-start">
+                    {/* Timeline dot and line */}
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className={`w-12 h-12 rounded-full ${phase.color} text-white flex items-center justify-center text-xl font-bold shadow-lg`}>
+                        {phase.icon}
+                      </div>
+                      {i < LIFECYCLE.length - 1 && <div className="w-0.5 h-full min-h-[40px] bg-gray-300 mt-2"></div>}
+                    </div>
+
+                    {/* Content */}
+                    <div className="bg-white rounded-xl border border-gray-200 p-5 flex-1 hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className={`px-2 py-0.5 ${phase.color} text-white text-xs rounded font-bold`}>Phase {phase.phase}</span>
+                        <h3 className="font-bold text-lg text-gray-800">{phase.title}</h3>
+                        <span className="text-sm text-gray-400 ml-auto">{phase.who}</span>
+                      </div>
+                      <ul className="space-y-1">
+                        {phase.steps.map((step, j) => (
+                          <li key={j} className="text-gray-600 text-sm flex items-start gap-2">
+                            <span className="text-gray-400 mt-0.5">\u2022</span>
+                            {step}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ==================== FEATURE CHECKLIST ==================== */}
+            <div id="features" className="mb-16">
+              <h2 className="font-display text-4xl text-gray-800 mb-2">Feature Checklist</h2>
+              <p className="text-gray-500 mb-8">Everything the website can do. Green = built and working. Yellow = not built yet.</p>
+
+              <div className="space-y-6">
+                {FEATURES.map((section, i) => {
+                  const done = section.items.filter(f => f.done).length;
+                  const total = section.items.length;
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+                        <h3 className="font-bold text-gray-800">{section.area}</h3>
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-500">{done}/{total}</span>
+                          <div className="w-24 h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${(done / total) * 100}%` }}></div>
                           </div>
                         </div>
-                        <div className="grid md:grid-cols-2 gap-2">
-                          {page.features.map((f, j) => (
-                            <div key={j} className="flex items-start gap-2 text-sm p-2 rounded hover:bg-gray-50">
-                              <StatusBadge status={f.status} />
-                              <div>
-                                <span className="font-medium text-gray-700">{f.name}</span>
-                                <span className="text-gray-400 block text-xs">{f.desc}</span>
-                              </div>
+                      </div>
+                      <div className="p-5 grid md:grid-cols-2 gap-2">
+                        {section.items.map((item, j) => (
+                          <div key={j} className="flex items-center gap-2 text-sm">
+                            <span className={`text-lg ${item.done ? '' : 'grayscale opacity-50'}`}>
+                              {item.done ? '\u2705' : '\ud83d\udfe1'}
+                            </span>
+                            <span className={item.done ? 'text-gray-700' : 'text-gray-400'}>{item.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ==================== WHAT THE WEBSITE STORES ==================== */}
+            <div id="data" className="mb-16">
+              <h2 className="font-display text-4xl text-gray-800 mb-2">What the Website Remembers</h2>
+              <p className="text-gray-500 mb-8">All of this information is saved in our database so it's there when people come back. Click a category to see details.</p>
+
+              <div className="space-y-4">
+                {DATA_STORED.map((cat, i) => {
+                  const [open, setOpen] = useState(false);
+                  const colors = { green: 'border-green-300 bg-green-50', blue: 'border-blue-300 bg-blue-50', purple: 'border-purple-300 bg-purple-50', gray: 'border-gray-300 bg-gray-50' };
+                  return (
+                    <div key={i} className={`rounded-xl border-2 overflow-hidden ${open ? colors[cat.color] : 'border-gray-200 bg-white'}`}>
+                      <button
+                        onClick={() => setOpen(!open)}
+                        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{cat.icon}</span>
+                          <span className="font-bold text-gray-800 text-lg">{cat.category}</span>
+                          <span className="text-sm text-gray-400">{cat.items.length} types of data</span>
+                        </div>
+                        <span className="text-gray-400 text-lg">{open ? '\u25B2' : '\u25BC'}</span>
+                      </button>
+                      {open && (
+                        <div className="px-5 pb-5 space-y-3">
+                          {cat.items.map((item, j) => (
+                            <div key={j} className="bg-white rounded-lg border border-gray-200 p-4">
+                              <h4 className="font-bold text-gray-800">{item.name}</h4>
+                              <p className="text-sm text-gray-500 mt-1"><span className="font-medium text-gray-600">What's saved:</span> {item.what}</p>
+                              <p className="text-sm text-gray-400 mt-1"><span className="font-medium text-gray-500">Example:</span> {item.example}</p>
                             </div>
                           ))}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Section>
-            </div>
-
-            {/* File Structure */}
-            <div id="files">
-              <Section title="File Structure" icon="\ud83d\udcc2" badge={`${FILE_STRUCTURE.length} top-level items`}>
-                <div className="mt-4 bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="font-mono text-sm text-gray-700 font-bold mb-2">\ud83d\udcc1 roosevelt-camp/</div>
-                  <FileTree items={FILE_STRUCTURE} depth={1} />
-                </div>
-              </Section>
-            </div>
-
-            {/* Netlify Functions */}
-            <Section title="Netlify Functions (API)" icon="\u26a1" badge="6 endpoints">
-              <div className="mt-4 overflow-x-auto">
-                <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Function</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Purpose</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">External Service</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-600">Method</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SYSTEM_ARCHITECTURE.layers[2].components.map((fn, i) => (
-                      <tr key={i} className="border-t border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono text-green-700">{fn.name}</td>
-                        <td className="px-4 py-3 text-gray-600">{fn.desc}</td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded text-xs ${fn.desc.includes('Resend') || fn.desc.includes('email') ? 'bg-blue-100 text-blue-700' : fn.desc.includes('Twilio') || fn.desc.includes('SMS') ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {fn.desc.includes('Resend') || fn.desc.includes('email') ? 'Resend' : fn.desc.includes('Twilio') || fn.desc.includes('SMS') || fn.desc.includes('code') ? 'Twilio' : 'Supabase'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3"><span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-mono">POST</span></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            </Section>
+            </div>
+
+            {/* ==================== HOW IT'S BUILT (simple) ==================== */}
+            <div id="tech" className="mb-16">
+              <h2 className="font-display text-4xl text-gray-800 mb-2">How It's Built</h2>
+              <p className="text-gray-500 mb-8">A simple look at the tools and services that make the website work.</p>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                {TECH_SIMPLE.map((item, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-2xl">{item.icon}</span>
+                      <h3 className="font-bold text-gray-800">{item.name}</h3>
+                    </div>
+                    <p className="text-gray-500 text-sm">{item.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 bg-gray-100 rounded-xl p-5 text-sm text-gray-500">
+                <p className="font-medium text-gray-600 mb-2">For the curious:</p>
+                <p>The website is built with <strong>React</strong> (makes interactive UIs), styled with <strong>Tailwind CSS</strong> (makes things look nice), and the data lives in <strong>Supabase</strong> (a database in the cloud). It's hosted on <strong>Netlify</strong> which automatically updates the live site whenever we push new code to <strong>GitHub</strong>. There are 4 main HTML files: one for the public site/login, one for parents, one for counselors, and one for the admin.</p>
+              </div>
+            </div>
 
             {/* Footer */}
-            <div className="text-center text-gray-400 text-sm py-8 border-t border-gray-200 mt-8">
-              <p>Roosevelt Girls Basketball Day Camp \u2014 Product Requirements Document v{VERSION}</p>
-              <p className="mt-1">Built by {PRD_META.authors.join(' & ')} with Claude Code</p>
+            <div className="text-center text-gray-400 text-sm py-8 border-t border-gray-200">
+              <p className="font-display text-2xl text-gray-300 mb-2">Roosevelt Girls Basketball Day Camp</p>
+              <p>Built by Derek & Audrey Richardson with Claude Code</p>
             </div>
           </div>
         </div>
       );
     };
 
-    // ==================== INIT ====================
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: 'base',
-      themeVariables: {
-        primaryColor: '#10b981',
-        primaryTextColor: '#fff',
-        primaryBorderColor: '#059669',
-        lineColor: '#6366f1',
-        secondaryColor: '#3b82f6',
-        tertiaryColor: '#f59e0b'
-      },
-      securityLevel: 'loose'
-    });
-
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<PRDApp />);
+    root.render(<App />);
   </script>
 </body>
 </html>
