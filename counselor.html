@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.121";
+    const VERSION = "13.123";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },
       { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },
       { version: "13.121", date: "2026-02-14", time: "3:00 PM", author: "Audrey Richardson", changes: ["Counselor: Added Edit Profile popup (photo, bio, position, year) with button on Dashboard Next Steps", "Counselor: Removed stats boxes from Dashboard tab — kept on Availability tab only"] },
       { version: "13.120", date: "2026-02-14", time: "2:30 PM", author: "Audrey Richardson", changes: ["Counselor: Added new Dashboard tab with Next Steps (application status, photo, bio, availability, schedule hints)", "Counselor: Renamed old Dashboard to 'Availability' — clarified this is NOT signing up for sessions", "Counselor: Removed 'Quick Actions by Week' section from availability page", "Counselor: Calendar now shows day names (Mon-Fri) and clickable day headers to toggle both AM/PM", "Counselor: Calendar cards have colored borders matching availability state (green/red/gray)"] },
@@ -3407,57 +3408,69 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           const hints = [];
           const myCounselor = counselors.find(c => c.email === user?.email);
 
-          // Priority 1: Application pending approval
-          if (myCounselor && !myCounselor.approvedByAdmin) {
-            hints.push({
-              icon: '⏳',
-              text: 'Your application is pending admin approval. You\'ll be notified when approved.',
-              priority: 1
-            });
-          }
+          // Step 1: Application approval
+          const isApproved = myCounselor?.approvedByAdmin;
+          hints.push({
+            icon: isApproved ? '✅' : '⏳',
+            text: isApproved ? 'Your application has been approved!' : 'Your application is pending admin approval. You\'ll be notified when approved.',
+            priority: 1,
+            completed: !!isApproved
+          });
 
-          // Priority 2: Profile photo missing
-          if (myCounselor && !getDisplayPhoto(myCounselor.photo)) {
-            hints.push({
-              icon: '📸',
-              text: 'Add a profile photo — photos are displayed on the camp website',
-              action: () => setShowProfileEditModal(true),
-              actionText: 'Edit Profile',
-              priority: 2
-            });
-          }
+          // Step 2: Profile photo
+          const hasPhoto = myCounselor && getDisplayPhoto(myCounselor.photo);
+          hints.push({
+            icon: hasPhoto ? '📸' : '📸',
+            text: hasPhoto ? 'Profile photo added' : 'Add a profile photo — photos are displayed on the camp website',
+            action: () => setShowProfileEditModal(true),
+            actionText: 'Edit Profile',
+            priority: 2,
+            completed: !!hasPhoto
+          });
 
-          // Priority 3: Bio incomplete
-          if (myCounselor && (!myCounselor.bio || myCounselor.bio.trim().length === 0)) {
-            hints.push({
-              icon: '✏️',
-              text: 'Complete your bio — this is shown on the camp website counselor section',
-              action: () => setShowProfileEditModal(true),
-              actionText: 'Edit Profile',
-              priority: 3
-            });
-          }
+          // Step 3: Bio
+          const hasBio = myCounselor && myCounselor.bio && myCounselor.bio.trim().length > 0;
+          hints.push({
+            icon: hasBio ? '✏️' : '✏️',
+            text: hasBio ? 'Bio completed' : 'Complete your bio — this is shown on the camp website counselor section',
+            action: () => setShowProfileEditModal(true),
+            actionText: 'Edit Profile',
+            priority: 3,
+            completed: !!hasBio
+          });
 
-          // Priority 4: Availability not yet set
-          if (stats.notSet === stats.total) {
+          // Step 4: Availability
+          const availDone = stats.notSet === 0;
+          if (availDone) {
+            hints.push({
+              icon: '📅',
+              text: 'Availability fully set',
+              action: () => setCounselorTab('availability'),
+              actionText: 'View Availability',
+              priority: 4,
+              completed: true
+            });
+          } else if (stats.notSet === stats.total) {
             hints.push({
               icon: '📅',
               text: 'Set your availability — let the admin know which days you can work',
               action: () => setCounselorTab('availability'),
               actionText: 'Set Availability',
-              priority: 4
+              priority: 4,
+              completed: false
             });
-          } else if (stats.notSet > 0) {
+          } else {
             hints.push({
               icon: '📅',
               text: stats.notSet + ' session' + (stats.notSet > 1 ? 's' : '') + ' still not set — finish marking your availability',
               action: () => setCounselorTab('availability'),
               actionText: 'Update Availability',
-              priority: 4
+              priority: 4,
+              completed: false
             });
           }
 
-          // Priority 5: Schedule assignments info
+          // Step 5: Schedule assignments info
           if (myCounselor) {
             let assignmentCount = 0;
             Object.entries(assignments || {}).forEach(([dateSession, counselorAssignments]) => {
@@ -3470,7 +3483,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 text: 'You have ' + assignmentCount + ' session assignment' + (assignmentCount > 1 ? 's' : '') + ' — view your camper pod details',
                 action: () => setCounselorTab('schedule'),
                 actionText: 'View Schedule',
-                priority: 5
+                priority: 5,
+                completed: true
               });
             }
           }
@@ -3527,38 +3541,77 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                     ) : null}
 
                     {/* Next Steps Card */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border-2 border-green-200">
-                      <h3 className="font-bold text-xl mb-4 text-green-900 flex items-center gap-2">
-                        <span>💡</span>
-                        <span>Next Steps</span>
-                      </h3>
-                      {hints.length === 0 ? (
-                        <div className="bg-white rounded-lg p-6 text-center shadow-sm">
-                          <div className="text-4xl mb-3">🎉</div>
-                          <h4 className="font-bold text-lg text-green-700 mb-2">You're all set!</h4>
-                          <p className="text-gray-600">All steps are complete. Check the Availability tab to update your schedule or the My Schedule tab to see your assignments.</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {hints.map((hint, idx) => (
-                            <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                              <div className="text-2xl">{hint.icon}</div>
-                              <div className="flex-1">
-                                <p className="text-gray-800">{hint.text}</p>
+                    {(() => {
+                      const incomplete = hints.filter(h => !h.completed);
+                      const completed = hints.filter(h => h.completed);
+                      return (
+                        <>
+                          {/* Incomplete — Next Steps (blue) */}
+                          {incomplete.length === 0 ? (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border-2 border-green-200">
+                              <div className="bg-white rounded-lg p-6 text-center shadow-sm">
+                                <div className="text-4xl mb-3">🎉</div>
+                                <h4 className="font-bold text-lg text-green-700 mb-2">You're all set!</h4>
+                                <p className="text-gray-600">All steps are complete. Check the Availability tab to update your schedule or the My Schedule tab to see your assignments.</p>
                               </div>
-                              {hint.action && hint.actionText && (
-                                <button
-                                  onClick={hint.action}
-                                  className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 whitespace-nowrap text-sm min-w-[200px] text-center"
-                                >
-                                  {hint.actionText}
-                                </button>
-                              )}
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                          ) : (
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-6 border-2 border-blue-200">
+                              <h3 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2">
+                                <span>💡</span>
+                                <span>Next Steps</span>
+                              </h3>
+                              <div className="space-y-3">
+                                {incomplete.map((hint, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="text-2xl">{hint.icon}</div>
+                                    <div className="flex-1">
+                                      <p className="text-gray-800">{hint.text}</p>
+                                    </div>
+                                    {hint.action && hint.actionText && (
+                                      <button
+                                        onClick={hint.action}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 whitespace-nowrap text-sm min-w-[200px] text-center"
+                                      >
+                                        {hint.actionText}
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Completed section */}
+                          {completed.length > 0 && (
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-md p-6 border-2 border-green-200">
+                              <h3 className="font-bold text-xl mb-4 text-green-900 flex items-center gap-2">
+                                <span>✅</span>
+                                <span>Completed</span>
+                              </h3>
+                              <div className="space-y-3">
+                                {completed.map((hint, idx) => (
+                                  <div key={idx} className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm opacity-90">
+                                    <div className="text-2xl">{hint.icon}</div>
+                                    <div className="flex-1">
+                                      <p className="text-green-700">{hint.text}</p>
+                                    </div>
+                                    {hint.action && hint.actionText && (
+                                      <button
+                                        onClick={hint.action}
+                                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 whitespace-nowrap text-sm min-w-[200px] text-center"
+                                      >
+                                        {hint.actionText}
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                   </div>
                 );
@@ -3803,13 +3856,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               <CounselorProfileEditModal
                 counselor={myCounselor}
                 onSave={async (profileData) => {
+                  setShowProfileEditModal(false);
                   const updated = counselors.map(c =>
                     c.id === myCounselor.id
                       ? { ...c, position: profileData.position, year: profileData.year, bio: profileData.bio, photo: profileData.photo }
                       : c
                   );
                   await saveCounselors(updated, 'Counselor ' + myCounselor.name + ' updated their profile');
-                  setShowProfileEditModal(false);
                 }}
                 onCancel={() => setShowProfileEditModal(false)}
               />
