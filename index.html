@@ -52,6 +52,7 @@
     const BUILD_DATE = new Date("2026-02-11T15:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.125", date: "2026-02-15", time: "12:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — lifted date/session/pod state to parent so assignments persist across re-renders", "Admin: Fixed availability sync — admin edits now properly write to counselor availability table with correct data format, preserving counselor-set sessions"] },
       { version: "13.124", date: "2026-02-15", time: "12:00 PM", author: "Audrey Richardson", changes: ["Admin: Pod page — click selected date again to deselect, plus Deselect button in session header", "Admin: Counselor availability edits now sync to counselor portal (both tables updated together)", "Admin: Updated pod instructions to mention tap-to-assign"] },
       { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },
       { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },

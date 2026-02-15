@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.124";
+    const VERSION = "13.125";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.125", date: "2026-02-15", time: "12:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — lifted date/session/pod state to parent so assignments persist across re-renders", "Admin: Fixed availability sync — admin edits now properly write to counselor availability table with correct data format, preserving counselor-set sessions"] },
       { version: "13.124", date: "2026-02-15", time: "12:00 PM", author: "Audrey Richardson", changes: ["Admin: Pod page — click selected date again to deselect, plus Deselect button in session header", "Admin: Counselor availability edits now sync to counselor portal (both tables updated together)", "Admin: Updated pod instructions to mention tap-to-assign"] },
       { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },
       { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },
@@ -5380,12 +5381,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== ASSIGNMENTS TAB ====================
-    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers }) => {
-      const [selectedDate, setSelectedDate] = useState(null);
-      const [selectedSession, setSelectedSession] = useState('morning');
+    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers, selectedDate, setSelectedDate, selectedSession, setSelectedSession, sessionPods, setSessionPods }) => {
       const [draggedItem, setDraggedItem] = useState(null); // { type: 'camper' | 'counselor', data: ... }
       const [dragOverTarget, setDragOverTarget] = useState(null); // { podId, type: 'camper' | 'counselor' }
-      const [sessionPods, setSessionPods] = useState({}); // { 'date_session': [{ id, counselorId, camperIds }] }
 
       // Get months that have camp dates
       const getMonths = () => {
@@ -7354,6 +7352,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       });
       const [sessionsTabMonth, setSessionsTabMonth] = useState(null); // Persist selected month in Sessions tab
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
+      const [podSelectedDate, setPodSelectedDate] = useState(null); // Persist selected date in Pod Setup
+      const [podSelectedSession, setPodSelectedSession] = useState('morning'); // Persist selected session in Pod Setup
+      const [podSessionPods, setPodSessionPods] = useState({}); // Persist pod data in Pod Setup
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
       const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
@@ -8400,16 +8401,25 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const syncScheduleToAvailability = (counselorId, dates, newSchedule) => {
           const counselor = counselors.find(c => c.id === counselorId);
           if (!counselor?.email) return;
-          const newAvail = { ...availability };
+          const newAvail = JSON.parse(JSON.stringify(availability));
           if (!newAvail[counselor.email]) newAvail[counselor.email] = {};
           (Array.isArray(dates) ? dates : [dates]).forEach(date => {
             const sched = newSchedule[counselorId]?.[date] || {};
+            // Preserve existing counselor-set availability for sessions the admin didn't touch
+            const existing = newAvail[counselor.email][date] || {};
+            const existingAvail = Array.isArray(existing) ? existing : (existing.available || []);
+            const existingUnavail = Array.isArray(existing) ? [] : (existing.unavailable || []);
             const available = [];
             const unavailable = [];
-            if (sched.morning === true) available.push('morning');
-            else if (sched.morning === false) unavailable.push('morning');
-            if (sched.afternoon === true) available.push('afternoon');
-            else if (sched.afternoon === false) unavailable.push('afternoon');
+            ['morning', 'afternoon'].forEach(session => {
+              if (sched[session] === true) available.push(session);
+              else if (sched[session] === false) unavailable.push(session);
+              else {
+                // Admin didn't set this session — preserve counselor's own setting
+                if (existingAvail.includes(session)) available.push(session);
+                else if (existingUnavail.includes(session)) unavailable.push(session);
+              }
+            });
             if (available.length === 0 && unavailable.length === 0) {
               delete newAvail[counselor.email][date];
             } else {
@@ -11267,6 +11277,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   selectedMonth={assignmentsTabMonth}
                   setSelectedMonth={setAssignmentsTabMonth}
                   campers={campers}
+                  selectedDate={podSelectedDate}
+                  setSelectedDate={setPodSelectedDate}
+                  selectedSession={podSelectedSession}
+                  setSelectedSession={setPodSelectedSession}
+                  sessionPods={podSessionPods}
+                  setSessionPods={setPodSessionPods}
                 />
               )}
 
