@@ -50,6 +50,8 @@
     const BUILD_DATE = new Date("2026-02-11T15:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.127", date: "2026-02-15", time: "1:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod click-to-assign — pods now initialize with stable IDs so first click works reliably", "Admin: Counselor schedule cycling now includes 'not set' option (available → unavailable → not set)", "Admin: Day toggle also cycles through three states"] },
+      { version: "13.126", date: "2026-02-15", time: "1:15 PM", author: "Audrey Richardson", changes: ["Login: Added prominent error popup when incorrect email or password is entered"] },
       { version: "13.125", date: "2026-02-15", time: "12:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — lifted date/session/pod state to parent so assignments persist across re-renders", "Admin: Fixed availability sync — admin edits now properly write to counselor availability table with correct data format, preserving counselor-set sessions"] },
       { version: "13.124", date: "2026-02-15", time: "12:00 PM", author: "Audrey Richardson", changes: ["Admin: Pod page — click selected date again to deselect, plus Deselect button in session header", "Admin: Counselor availability edits now sync to counselor portal (both tables updated together)", "Admin: Updated pod instructions to mention tap-to-assign"] },
       { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },

@@ -45,11 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.125";
+    const VERSION = "13.127";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.127", date: "2026-02-15", time: "1:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod click-to-assign — pods now initialize with stable IDs so first click works reliably", "Admin: Counselor schedule cycling now includes 'not set' option (available → unavailable → not set)", "Admin: Day toggle also cycles through three states"] },
+      { version: "13.126", date: "2026-02-15", time: "1:15 PM", author: "Audrey Richardson", changes: ["Login: Added prominent error popup when incorrect email or password is entered"] },
       { version: "13.125", date: "2026-02-15", time: "12:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — lifted date/session/pod state to parent so assignments persist across re-renders", "Admin: Fixed availability sync — admin edits now properly write to counselor availability table with correct data format, preserving counselor-set sessions"] },
       { version: "13.124", date: "2026-02-15", time: "12:00 PM", author: "Audrey Richardson", changes: ["Admin: Pod page — click selected date again to deselect, plus Deselect button in session header", "Admin: Counselor availability edits now sync to counselor portal (both tables updated together)", "Admin: Updated pod instructions to mention tap-to-assign"] },
       { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },
@@ -5447,9 +5449,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
         // If no existing assignments, start with one empty pod
         if (pods.length === 0) {
-          pods.push({ id: 'pod_empty_' + Date.now(), counselorId: null, camperIds: [] });
+          pods.push({ id: 'pod_empty_1', counselorId: null, camperIds: [] });
         }
 
+        // Store initialized pods so subsequent calls return the same data
+        setSessionPods(prev => ({ ...prev, [key]: pods }));
         return pods;
       };
 
@@ -8429,41 +8433,69 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           saveAvail(newAvail);
         };
 
-        // Toggle counselor eligibility for a specific session
+        // Toggle counselor eligibility for a specific session (cycles: not set → available → unavailable → not set)
         const toggleCounselorEligibility = (counselorId, date, session) => {
-          const current = counselorSchedule[counselorId]?.[date]?.[session] === true;
-          const newSchedule = {
-            ...counselorSchedule,
-            [counselorId]: {
-              ...counselorSchedule[counselorId],
-              [date]: {
-                ...counselorSchedule[counselorId]?.[date],
-                [session]: !current
-              }
-            }
-          };
+          const currentVal = counselorSchedule[counselorId]?.[date]?.[session];
+          // Cycle: undefined/null → true (available) → false (unavailable) → delete (not set)
+          let newVal;
+          let label;
+          if (currentVal === true) {
+            newVal = false;
+            label = 'Unavailable';
+          } else if (currentVal === false) {
+            newVal = undefined; // not set
+            label = 'Not Set';
+          } else {
+            newVal = true;
+            label = 'Available';
+          }
+          const newDateSched = { ...counselorSchedule[counselorId]?.[date] };
+          if (newVal === undefined) {
+            delete newDateSched[session];
+          } else {
+            newDateSched[session] = newVal;
+          }
+          // Clean up empty date entries
+          const hasValues = Object.keys(newDateSched).length > 0;
+          const newCounselorSched = { ...counselorSchedule[counselorId] };
+          if (hasValues) {
+            newCounselorSched[date] = newDateSched;
+          } else {
+            delete newCounselorSched[date];
+          }
+          const newSchedule = { ...counselorSchedule, [counselorId]: newCounselorSched };
           const counselor = counselors.find(c => c.id === counselorId);
-          saveCounselorSchedule(newSchedule, `${!current ? 'Added' : 'Removed'} ${counselor?.name} ${!current ? 'to' : 'from'} ${date} ${session}`);
+          saveCounselorSchedule(newSchedule, `Set ${counselor?.name} ${date} ${session} to ${label}`);
           syncScheduleToAvailability(counselorId, date, newSchedule);
         };
 
-        // Toggle entire day for counselor
+        // Toggle entire day for counselor (cycles: not set → available → unavailable → not set)
         const toggleCounselorDay = (counselorId, date) => {
-          const currentMorning = counselorSchedule[counselorId]?.[date]?.morning === true;
-          const currentAfternoon = counselorSchedule[counselorId]?.[date]?.afternoon === true;
-          const allSet = currentMorning && currentAfternoon;
-          const newSchedule = {
-            ...counselorSchedule,
-            [counselorId]: {
-              ...counselorSchedule[counselorId],
-              [date]: {
-                morning: !allSet,
-                afternoon: !allSet
-              }
-            }
-          };
+          const currentMorning = counselorSchedule[counselorId]?.[date]?.morning;
+          const currentAfternoon = counselorSchedule[counselorId]?.[date]?.afternoon;
+          const allAvailable = currentMorning === true && currentAfternoon === true;
+          const allUnavailable = currentMorning === false && currentAfternoon === false;
+          let newDateSched;
+          let label;
+          if (allAvailable) {
+            newDateSched = { morning: false, afternoon: false };
+            label = 'Unavailable';
+          } else if (allUnavailable) {
+            newDateSched = undefined; // not set — remove entry
+            label = 'Not Set';
+          } else {
+            newDateSched = { morning: true, afternoon: true };
+            label = 'Available';
+          }
+          const newCounselorSched = { ...counselorSchedule[counselorId] };
+          if (newDateSched) {
+            newCounselorSched[date] = newDateSched;
+          } else {
+            delete newCounselorSched[date];
+          }
+          const newSchedule = { ...counselorSchedule, [counselorId]: newCounselorSched };
           const counselor = counselors.find(c => c.id === counselorId);
-          saveCounselorSchedule(newSchedule, `${!allSet ? 'Added' : 'Removed'} ${counselor?.name} ${!allSet ? 'to' : 'from'} ${date} (full day)`);
+          saveCounselorSchedule(newSchedule, `Set ${counselor?.name} ${date} (full day) to ${label}`);
           syncScheduleToAvailability(counselorId, date, newSchedule);
         };
 
