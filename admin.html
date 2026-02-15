@@ -45,11 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.113";
+    const VERSION = "13.122";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-11T15:50:00");
+    const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },
+      { version: "13.121", date: "2026-02-14", time: "3:00 PM", author: "Audrey Richardson", changes: ["Counselor: Added Edit Profile popup (photo, bio, position, year) with button on Dashboard Next Steps", "Counselor: Removed stats boxes from Dashboard tab — kept on Availability tab only"] },
       { version: "13.120", date: "2026-02-14", time: "2:30 PM", author: "Audrey Richardson", changes: ["Counselor: Added new Dashboard tab with Next Steps (application status, photo, bio, availability, schedule hints)", "Counselor: Renamed old Dashboard to 'Availability' — clarified this is NOT signing up for sessions", "Counselor: Removed 'Quick Actions by Week' section from availability page", "Counselor: Calendar now shows day names (Mon-Fri) and clickable day headers to toggle both AM/PM", "Counselor: Calendar cards have colored borders matching availability state (green/red/gray)"] },
       { version: "13.119", date: "2026-02-12", time: "10:27 PM", author: "Derek Richardson", changes: ["Tests: Fixed schema comparison failures — Babel's var hoisting was overwriting window.supabase library with the client instance, saved library reference before client creation"] },
       { version: "13.118", date: "2026-02-12", time: "10:22 PM", author: "Derek Richardson", changes: ["Tests: Added 'Copy Results' button and plain text results panel for sharing test output with Claude for debugging", "CLAUDE.md: Made PRD and tests updates MANDATORY for every project change"] },
@@ -5604,6 +5606,55 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         setDragOverTarget(null);
       };
 
+      // Click-to-select (works on touch devices where drag doesn't work)
+      const handleItemClick = (type, data) => {
+        if (draggedItem && draggedItem.type === type && draggedItem.data.id === data.id) {
+          // Clicking same item again deselects it
+          setDraggedItem(null);
+        } else {
+          setDraggedItem({ type, data });
+        }
+      };
+
+      // Click on pod slot to place selected item
+      const handlePodCounselorClick = (podId) => {
+        if (!draggedItem || draggedItem.type !== 'counselor') return;
+        const pods = getCurrentPods();
+        const counselor = draggedItem.data;
+        const existingPod = pods.find(p => p.counselorId === counselor.id);
+        if (existingPod && existingPod.id !== podId) {
+          existingPod.counselorId = null;
+        }
+        const targetPod = pods.find(p => p.id === podId);
+        if (targetPod) {
+          targetPod.counselorId = counselor.id;
+        }
+        savePods([...pods]);
+        setDraggedItem(null);
+        showToast(counselor.name + ' assigned to pod');
+      };
+
+      const handlePodCamperClick = (podId) => {
+        if (!draggedItem || draggedItem.type !== 'camper') return;
+        const pods = getCurrentPods();
+        const camper = draggedItem.data;
+        const camperId = camper.childId || camper.camperId;
+        const targetPod = pods.find(p => p.id === podId);
+        if (!targetPod) return;
+        if (targetPod.camperIds.length >= KIDS_PER_COUNSELOR && !targetPod.camperIds.includes(camperId)) {
+          showToast('Pod is at capacity (' + KIDS_PER_COUNSELOR + ' campers max)', 'error');
+          setDraggedItem(null);
+          return;
+        }
+        pods.forEach(p => { p.camperIds = p.camperIds.filter(id => id !== camperId); });
+        if (!targetPod.camperIds.includes(camperId)) {
+          targetPod.camperIds.push(camperId);
+        }
+        savePods([...pods]);
+        setDraggedItem(null);
+        showToast('Camper assigned to pod');
+      };
+
       // Handle drop on pod's counselor slot
       const handleDropCounselor = (e, podId) => {
         e.preventDefault();
@@ -5886,6 +5937,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           </div>
           )}
 
+          {/* Selection hint for touch devices */}
+          {draggedItem && (
+            <div className="bg-blue-100 border border-blue-300 rounded-lg p-3 mb-4 flex items-center justify-between">
+              <span className="text-blue-800 text-sm font-medium">
+                {draggedItem.type === 'counselor' ? '👆 ' + draggedItem.data.name + ' selected — tap an empty counselor slot in a pod to assign' : '👆 Camper selected — tap a pod to assign'}
+              </span>
+              <button onClick={() => setDraggedItem(null)} className="text-blue-600 hover:text-blue-800 text-sm font-bold px-2">✕ Cancel</button>
+            </div>
+          )}
+
           {/* Main Assignment Area */}
           {selectedDate && (
           <div className="grid lg:grid-cols-4 gap-6">
@@ -5914,7 +5975,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         draggable
                         onDragStart={e => handleCounselorDragStart(e, counselor)}
                         onDragEnd={handleDragEnd}
-                        className="p-2 bg-green-50 border border-green-200 rounded-lg cursor-move hover:bg-green-100 transition-colors flex items-center gap-2"
+                        onClick={() => handleItemClick('counselor', counselor)}
+                        className={'p-2 rounded-lg cursor-pointer hover:bg-green-100 transition-colors flex items-center gap-2 ' + (draggedItem?.type === 'counselor' && draggedItem?.data?.id === counselor.id ? 'bg-purple-100 border-2 border-purple-400 ring-2 ring-purple-300' : 'bg-green-50 border border-green-200')}
                       >
                         {getDisplayPhoto(counselor.photo) ? (
                           <img src={getDisplayPhoto(counselor.photo)} alt={counselor.name} className="w-8 h-8 rounded-full object-cover" />
@@ -5993,7 +6055,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         draggable
                         onDragStart={e => handleCamperDragStart(e, reg)}
                         onDragEnd={handleDragEnd}
-                        className="p-2 bg-yellow-50 border border-yellow-200 rounded-lg cursor-move hover:bg-yellow-100 transition-colors flex items-center gap-2"
+                        onClick={() => handleItemClick('camper', { ...reg, id: reg.childId || reg.camperId })}
+                        className={'p-2 rounded-lg cursor-pointer hover:bg-yellow-100 transition-colors flex items-center gap-2 ' + (draggedItem?.type === 'camper' && (draggedItem?.data?.childId || draggedItem?.data?.camperId) === (reg.childId || reg.camperId) ? 'bg-green-100 border-2 border-green-400 ring-2 ring-green-300' : 'bg-yellow-50 border border-yellow-200')}
                       >
                         {getDisplayPhoto(profile?.photo) ? (
                           <img src={getDisplayPhoto(profile?.photo)} className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
@@ -6057,9 +6120,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <div
                         className={`p-3 border-b-2 border-dashed transition-all ${
                           counselor ? 'bg-purple-50 border-purple-200' :
+                          draggedItem?.type === 'counselor' ? 'bg-purple-50 border-purple-300 cursor-pointer' :
                           dragOverTarget?.podId === pod.id && dragOverTarget?.type === 'counselor' ? 'bg-purple-100 border-purple-400 border-solid' :
                           'bg-gray-50 border-gray-300'
                         }`}
+                        onClick={() => !counselor && handlePodCounselorClick(pod.id)}
                         onDragOver={e => {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
@@ -6108,7 +6173,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                       {/* Camper Slots (5 slots below) */}
                       <div
-                        className={`p-3 transition-all ${dragOverTarget?.podId === pod.id && dragOverTarget?.type === 'camper' ? 'bg-green-50' : ''}`}
+                        className={`p-3 transition-all ${draggedItem?.type === 'camper' ? 'cursor-pointer' : ''} ${dragOverTarget?.podId === pod.id && dragOverTarget?.type === 'camper' ? 'bg-green-50' : ''}`}
+                        onClick={() => handlePodCamperClick(pod.id)}
                         onDragOver={e => {
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
@@ -6203,71 +6269,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           </div>
           )}
 
-          {/* Quick Actions */}
-          {selectedDate && (
-          <div className="bg-white rounded-xl shadow p-4">
-            <h4 className="font-bold text-gray-700 mb-3">Quick Actions</h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => {
-                  const unassignedCampers = getUnassignedCampers();
-                  const unassignedCounselors = getUnassignedCounselors();
-
-                  if (unassignedCampers.length === 0) {
-                    showToast('No unassigned campers');
-                    return;
-                  }
-
-                  let pods = getCurrentPods();
-                  let camperIdx = 0;
-
-                  // First, assign unassigned counselors to empty pods
-                  for (const counselor of unassignedCounselors) {
-                    const emptyPod = pods.find(p => !p.counselorId);
-                    if (emptyPod) {
-                      emptyPod.counselorId = counselor.id;
-                    } else {
-                      // Create new pod with this counselor
-                      pods.push({ id: 'pod_' + Date.now() + '_' + counselor.id, counselorId: counselor.id, camperIds: [] });
-                    }
-                  }
-
-                  // Then assign campers to pods with counselors
-                  for (const camper of unassignedCampers) {
-                    const camperId = camper.childId || camper.camperId;
-
-                    // Find pod with counselor and space
-                    const availablePod = pods.find(p => p.counselorId && p.camperIds.length < KIDS_PER_COUNSELOR);
-                    if (!availablePod) break;
-
-                    availablePod.camperIds.push(camperId);
-                    camperIdx++;
-                  }
-
-                  savePods([...pods]);
-                  showToast(`Auto-assigned ${camperIdx} campers!`);
-                }}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                ✨ Auto-Assign All
-              </button>
-              <button
-                onClick={() => {
-                  const pods = getCurrentPods().map(p => ({ ...p, camperIds: [], counselorId: null }));
-                  // Keep at least one empty pod
-                  if (pods.length === 0) {
-                    pods.push({ id: 'pod_' + Date.now(), counselorId: null, camperIds: [] });
-                  }
-                  savePods(pods);
-                  showToast('All assignments cleared');
-                }}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-              >
-                🗑️ Clear All
-              </button>
-            </div>
-          </div>
-          )}
         </div>
       );
     };

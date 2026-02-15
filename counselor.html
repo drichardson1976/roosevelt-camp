@@ -45,11 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.120";
+    const VERSION = "13.121";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-14T14:30:00");
+    const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },
+      { version: "13.121", date: "2026-02-14", time: "3:00 PM", author: "Audrey Richardson", changes: ["Counselor: Added Edit Profile popup (photo, bio, position, year) with button on Dashboard Next Steps", "Counselor: Removed stats boxes from Dashboard tab — kept on Availability tab only"] },
       { version: "13.120", date: "2026-02-14", time: "2:30 PM", author: "Audrey Richardson", changes: ["Counselor: Added new Dashboard tab with Next Steps (application status, photo, bio, availability, schedule hints)", "Counselor: Renamed old Dashboard to 'Availability' — clarified this is NOT signing up for sessions", "Counselor: Removed 'Quick Actions by Week' section from availability page", "Counselor: Calendar now shows day names (Mon-Fri) and clickable day headers to toggle both AM/PM", "Counselor: Calendar cards have colored borders matching availability state (green/red/gray)"] },
       { version: "13.119", date: "2026-02-12", time: "10:27 PM", author: "Derek Richardson", changes: ["Tests: Fixed schema comparison failures — Babel's var hoisting was overwriting window.supabase library with the client instance, saved library reference before client creation"] },
       { version: "13.118", date: "2026-02-12", time: "10:22 PM", author: "Derek Richardson", changes: ["Tests: Added 'Copy Results' button and plain text results panel for sharing test output with Claude for debugging", "CLAUDE.md: Made PRD and tests updates MANDATORY for every project change"] },
@@ -2314,6 +2316,102 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       );
     };
 
+    // ==================== COUNSELOR PROFILE EDIT MODAL ====================
+    const CounselorProfileEditModal = ({ counselor, onSave, onCancel }) => {
+      const [position, setPosition] = useState(counselor?.position || 'Point Guard');
+      const [year, setYear] = useState(counselor?.year || 'Freshman');
+      const [bio, setBio] = useState(counselor?.bio || '');
+      const [photo, setPhoto] = useState(counselor?.photo || null);
+      const [showPhotoModal, setShowPhotoModal] = useState(false);
+
+      const getDisplayPhoto = (p) => {
+        if (!p) return null;
+        return typeof p === 'string' ? p : (p.cropped || null);
+      };
+
+      const handleSave = () => {
+        onSave({ position, year, bio, photo });
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={onCancel}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-green-800 mb-4">Edit Profile</h3>
+
+              {/* Photo */}
+              <div className="flex flex-col items-center mb-6">
+                <div
+                  className="w-24 h-24 rounded-full overflow-hidden bg-gray-200 cursor-pointer hover:opacity-80 transition-opacity border-4 border-green-300"
+                  onClick={() => setShowPhotoModal(true)}
+                >
+                  {getDisplayPhoto(photo) ? (
+                    <img src={getDisplayPhoto(photo)} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                    </div>
+                  )}
+                </div>
+                <button onClick={() => setShowPhotoModal(true)} className="mt-2 text-sm text-green-600 hover:text-green-800 font-medium">
+                  {getDisplayPhoto(photo) ? 'Change Photo' : 'Add Photo'}
+                </button>
+              </div>
+
+              {/* Position */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                <select value={position} onChange={e => setPosition(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  {['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'].map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                <select value={year} onChange={e => setYear(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  {['Freshman', 'Sophomore', 'Junior', 'Senior', 'Alumni'].map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Bio */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Bio ({bio.length}/200)</label>
+                <textarea
+                  value={bio}
+                  onChange={e => setBio(e.target.value.slice(0, 200))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm h-24 resize-none"
+                  placeholder="Tell us about your basketball experience and why you want to be a counselor..."
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                <button onClick={onCancel} className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
+                  Cancel
+                </button>
+                <button onClick={handleSave} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                  Save Changes
+                </button>
+              </div>
+            </div>
+
+            {showPhotoModal && (
+              <PhotoUploadModal
+                currentPhoto={photo}
+                onSave={(newPhoto) => { setPhoto(newPhoto); setShowPhotoModal(false); }}
+                onCancel={() => setShowPhotoModal(false)}
+              />
+            )}
+          </div>
+        </div>
+      );
+    };
+
     // ==================== PHOTO UPLOAD MODAL ====================
     const PhotoUploadModal = ({ currentPhoto, onSave, onCancel, shape = 'circle' }) => {
       const fileInputRef = useRef(null);
@@ -2845,6 +2943,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
       const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [showProfileEditModal, setShowProfileEditModal] = useState(false); // Counselor profile edit modal
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
@@ -3322,6 +3421,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             hints.push({
               icon: '📸',
               text: 'Add a profile photo — photos are displayed on the camp website',
+              action: () => setShowProfileEditModal(true),
+              actionText: 'Edit Profile',
               priority: 2
             });
           }
@@ -3331,6 +3432,8 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             hints.push({
               icon: '✏️',
               text: 'Complete your bio — this is shown on the camp website counselor section',
+              action: () => setShowProfileEditModal(true),
+              actionText: 'Edit Profile',
               priority: 3
             });
           }
@@ -3457,25 +3560,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                       )}
                     </div>
 
-                    {/* Quick Stats Overview */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                      <div className="bg-white rounded-xl shadow p-4 text-center">
-                        <div className="text-2xl font-bold text-green-600">{stats.available}</div>
-                        <div className="text-sm text-gray-600">Available Sessions</div>
-                      </div>
-                      <div className="bg-white rounded-xl shadow p-4 text-center">
-                        <div className="text-2xl font-bold text-red-600">{stats.unavailable}</div>
-                        <div className="text-sm text-gray-600">Unavailable</div>
-                      </div>
-                      <div className="bg-white rounded-xl shadow p-4 text-center">
-                        <div className="text-2xl font-bold text-gray-600">{stats.notSet}</div>
-                        <div className="text-sm text-gray-600">Not Set</div>
-                      </div>
-                      <div className="bg-white rounded-xl shadow p-4 text-center">
-                        <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-                        <div className="text-sm text-gray-600">Total Sessions</div>
-                      </div>
-                    </div>
                   </div>
                 );
               })()}
@@ -3710,6 +3794,27 @@ Please sign in your child with the counselor on duty at the main gym entrance.
           </div>
           {toast && <Toast message={toast.msg} type={toast.type} onDone={() => setToast(null)} />}
           <CounselorDash />
+
+          {/* Profile Edit Modal */}
+          {showProfileEditModal && (() => {
+            const myCounselor = counselors.find(c => c.email === user?.email);
+            if (!myCounselor) return null;
+            return (
+              <CounselorProfileEditModal
+                counselor={myCounselor}
+                onSave={async (profileData) => {
+                  const updated = counselors.map(c =>
+                    c.id === myCounselor.id
+                      ? { ...c, position: profileData.position, year: profileData.year, bio: profileData.bio, photo: profileData.photo }
+                      : c
+                  );
+                  await saveCounselors(updated, 'Counselor ' + myCounselor.name + ' updated their profile');
+                  setShowProfileEditModal(false);
+                }}
+                onCancel={() => setShowProfileEditModal(false)}
+              />
+            );
+          })()}
         </div>
       );
     }
