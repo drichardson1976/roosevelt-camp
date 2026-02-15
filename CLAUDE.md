@@ -1,11 +1,20 @@
 # CLAUDE CODE REFERENCE DOCUMENT
-**Version:** 13.037
-**Last Updated:** 2026-02-08
+**Version:** 13.038
+**Last Updated:** 2026-02-15
 **Purpose:** Critical information that must NEVER be lost during conversation compaction
 
 ---
 
+## 📌 PROJECT OVERVIEW
+
+This is primarily an HTML/Markdown project with multiple standalone HTML app pages. When checking tables, files, or content, always check ALL instances — not a subset. If asked to verify something across the codebase, be exhaustive.
+
+---
+
 ## 🚨 CRITICAL INSTRUCTIONS - READ FIRST
+
+### General Principles
+- When asked to do something (e.g., 'push all files'), just do it with sensible defaults. Don't pause to ask clarifying questions about minor details like .DS_Store files — use a .gitignore or make a reasonable choice and move on.
 
 ### Pre-Work Checklist (EVERY task)
 Before starting ANY work, complete this checklist:
@@ -69,6 +78,16 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - Include version, date, time (PST), author, and detailed changes array
 - Be specific about what was fixed/added/changed
 
+### Multi-File Consistency
+- When updating release notes, process documentation, or any repeated content, ALWAYS apply changes to ALL HTML files (index.html, admin.html, parent.html, counselor.html), not just one.
+- Verify by grepping for the section across all files before committing.
+- This applies to version bumps, release notes, shared constants, and any content that must stay synchronized.
+
+### Bug Fixes
+- When making code fixes, verify the fix actually works before committing.
+- If a fix involves visual/UI behavior (zoom, crop, positioning), describe what you changed and why it should work.
+- If a first fix doesn't fully resolve the issue, dig deeper into root cause rather than applying surface patches.
+
 ### SQL for Supabase
 - When providing SQL to run in the Supabase SQL Editor, **ALWAYS** present it in a single fenced code block (```sql ... ```) so the user can click the copy icon directly from the chat
 - Do NOT split SQL across multiple code blocks — keep it all in one copyable block
@@ -83,6 +102,7 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - **NEVER** skip hooks (--no-verify) unless user explicitly requests
 - **ALWAYS** use heredoc for commit messages to preserve formatting
 - **ALWAYS** include `Co-Authored-By:` with your actual model name (e.g. `Claude Opus 4.6`, `Claude Sonnet 4.5`) followed by `<noreply@anthropic.com>`
+- **ALWAYS** after pushing to GitHub or deploying, follow the full post-push protocol: verify the push succeeded, check deployment status, and report back. Do not skip these steps unless explicitly told to.
 
 ### Author Attribution
 - When **Audrey Richardson** makes changes (current user), note in release notes: `Author: Audrey Richardson`
@@ -114,6 +134,9 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 ---
 
 ## 📊 DATABASE SCHEMA
+
+### Database Verification Rule
+When working with Supabase or any database, always verify that ALL referenced columns and tables actually exist in the live database before writing code that depends on them. Run a schema check first.
 
 ### Environment & Schema
 ```javascript
