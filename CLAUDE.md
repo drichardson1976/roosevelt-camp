@@ -10,7 +10,7 @@
 ### Pre-Work Checklist (EVERY task)
 Before starting ANY work, complete this checklist:
 1. **Read CLAUDE.md** — Re-read this file to ensure you follow all rules (especially after conversation compaction)
-2. **`git pull`** — **MANDATORY** - Pull latest changes FIRST to avoid conflicts (do this EVERY time)
+2. **`git pull` (both branches)** — **MANDATORY** - Pull latest changes on BOTH `main` and `dev` branches FIRST to avoid conflicts. Run: `git fetch --all && git pull origin main && git pull origin dev` (or switch to each branch and pull). Do this EVERY time
 3. **Check current versions** — Run: `grep 'const VERSION' *.html` to know the starting state
 4. **Plan your changes** — Identify which files will be modified so you know where to bump versions and add release notes
 
@@ -75,7 +75,7 @@ Each changed file jumps to `max + 1`. Unchanged files stay where they are.
 - Include comments in the SQL explaining what each section does
 
 ### Git Commit Protocol
-- **ALWAYS** run `git pull` FIRST before starting ANY work to get the latest changes
+- **ALWAYS** run `git pull` on BOTH `main` and `dev` branches FIRST before starting ANY work to get the latest changes
 - **ALWAYS** commit and push all file changes after every completed request — multiple people work on this project simultaneously (Derek Richardson, Audrey Richardson), so changes must be pushed promptly to avoid conflicts
 - **ALWAYS** run `git push` at the END of every task to ensure changes are shared
 - **NEVER** update git config
@@ -466,7 +466,7 @@ python3 -m http.server
 
 ## ⚠️ NEVER FORGET
 
-1. ✅ **`git pull` FIRST** — Always pull latest changes before starting ANY work
+1. ✅ **`git pull` BOTH branches FIRST** — Always pull latest changes on BOTH `main` and `dev` before starting ANY work
 2. ✅ Run the Pre-Work Checklist before every task (read CLAUDE.md, git pull, check versions)
 3. ✅ Only bump version in files that changed (use max version + 1)
 4. ✅ Use external time source for timestamps
