@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.122";
+    const VERSION = "13.124";
     // BUILD_DATE - update this timestamp when committing changes
     const BUILD_DATE = new Date("2026-02-14T15:00:00");
 
     const RELEASE_NOTES = [
+      { version: "13.124", date: "2026-02-15", time: "12:00 PM", author: "Audrey Richardson", changes: ["Admin: Pod page — click selected date again to deselect, plus Deselect button in session header", "Admin: Counselor availability edits now sync to counselor portal (both tables updated together)", "Admin: Updated pod instructions to mention tap-to-assign"] },
       { version: "13.123", date: "2026-02-14", time: "3:45 PM", author: "Audrey Richardson", changes: ["Counselor: Dashboard Next Steps now shows completed items in green 'Completed' section instead of hiding them", "Counselor: Incomplete next steps styled blue to match parent portal", "Counselor: Edit Profile popup now closes immediately on save"] },
       { version: "13.122", date: "2026-02-14", time: "3:15 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — added click-to-select for touch devices (tap counselor/camper, then tap pod slot)", "Admin: Removed Quick Actions (Auto-Assign All / Clear All) from pod assignments page"] },
       { version: "13.121", date: "2026-02-14", time: "3:00 PM", author: "Audrey Richardson", changes: ["Counselor: Added Edit Profile popup (photo, bio, position, year) with button on Dashboard Next Steps", "Counselor: Removed stats boxes from Dashboard tab — kept on Availability tab only"] },
@@ -5855,7 +5856,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     <div className="p-2 space-y-2">
                       {/* Morning Session */}
                       <button
-                        onClick={() => { setSelectedDate(date); setSelectedSession('morning'); }}
+                        onClick={() => { if (isAmSelected) { setSelectedDate(null); } else { setSelectedDate(date); setSelectedSession('morning'); } }}
                         className={`w-full p-2 rounded text-left text-xs transition-colors border-2 ${
                           isAmSelected ? 'bg-yellow-100 border-yellow-500' : 'bg-white border-transparent hover:bg-gray-50'
                         }`}
@@ -5873,7 +5874,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                       {/* Afternoon Session */}
                       <button
-                        onClick={() => { setSelectedDate(date); setSelectedSession('afternoon'); }}
+                        onClick={() => { if (isPmSelected) { setSelectedDate(null); } else { setSelectedDate(date); setSelectedSession('afternoon'); } }}
                         className={`w-full p-2 rounded text-left text-xs transition-colors border-2 ${
                           isPmSelected ? 'bg-blue-100 border-blue-500' : 'bg-white border-transparent hover:bg-gray-50'
                         }`}
@@ -5907,11 +5908,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           {/* Selected Session Header */}
           {selectedDate && (
             <div className={`rounded-xl shadow p-4 ${selectedSession === 'morning' ? 'bg-yellow-50 border-2 border-yellow-400' : 'bg-blue-50 border-2 border-blue-400'}`}>
-              <h3 className="font-bold text-xl text-center">
-                {selectedSession === 'morning' ? '☀️' : '🌙'} {formatDate(selectedDate)} - {selectedSession === 'morning' ? 'Morning' : 'Afternoon'} Session
-              </h3>
+              <div className="flex items-center justify-between">
+                <div className="flex-1" />
+                <h3 className="font-bold text-xl text-center flex-1">
+                  {selectedSession === 'morning' ? '☀️' : '🌙'} {formatDate(selectedDate)} - {selectedSession === 'morning' ? 'Morning' : 'Afternoon'} Session
+                </h3>
+                <div className="flex-1 flex justify-end">
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="px-3 py-1 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-100 text-gray-600"
+                  >
+                    ✕ Deselect
+                  </button>
+                </div>
+              </div>
               <p className="text-center text-sm text-gray-600 mt-1">
-                Drag counselors and campers to build pods. Each pod has 1 counselor and up to {KIDS_PER_COUNSELOR} campers.
+                Drag counselors and campers to build pods, or tap to select then tap a slot to assign.
               </p>
             </div>
           )}
@@ -8384,6 +8396,29 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           return count;
         };
 
+        // Sync admin schedule changes to counselor availability table
+        const syncScheduleToAvailability = (counselorId, dates, newSchedule) => {
+          const counselor = counselors.find(c => c.id === counselorId);
+          if (!counselor?.email) return;
+          const newAvail = { ...availability };
+          if (!newAvail[counselor.email]) newAvail[counselor.email] = {};
+          (Array.isArray(dates) ? dates : [dates]).forEach(date => {
+            const sched = newSchedule[counselorId]?.[date] || {};
+            const available = [];
+            const unavailable = [];
+            if (sched.morning === true) available.push('morning');
+            else if (sched.morning === false) unavailable.push('morning');
+            if (sched.afternoon === true) available.push('afternoon');
+            else if (sched.afternoon === false) unavailable.push('afternoon');
+            if (available.length === 0 && unavailable.length === 0) {
+              delete newAvail[counselor.email][date];
+            } else {
+              newAvail[counselor.email][date] = { available, unavailable };
+            }
+          });
+          saveAvail(newAvail);
+        };
+
         // Toggle counselor eligibility for a specific session
         const toggleCounselorEligibility = (counselorId, date, session) => {
           const current = counselorSchedule[counselorId]?.[date]?.[session] === true;
@@ -8399,6 +8434,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           };
           const counselor = counselors.find(c => c.id === counselorId);
           saveCounselorSchedule(newSchedule, `${!current ? 'Added' : 'Removed'} ${counselor?.name} ${!current ? 'to' : 'from'} ${date} ${session}`);
+          syncScheduleToAvailability(counselorId, date, newSchedule);
         };
 
         // Toggle entire day for counselor
@@ -8418,6 +8454,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           };
           const counselor = counselors.find(c => c.id === counselorId);
           saveCounselorSchedule(newSchedule, `${!allSet ? 'Added' : 'Removed'} ${counselor?.name} ${!allSet ? 'to' : 'from'} ${date} (full day)`);
+          syncScheduleToAvailability(counselorId, date, newSchedule);
         };
 
         // Toggle entire week for counselor
@@ -8437,6 +8474,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           });
           const counselor = counselors.find(c => c.id === counselorId);
           saveCounselorSchedule(newSchedule, `${!allSet ? 'Added' : 'Removed'} ${counselor?.name} ${!allSet ? 'to' : 'from'} week`);
+          syncScheduleToAvailability(counselorId, weekDates, newSchedule);
         };
 
         const updateContent = (field, value) => {
