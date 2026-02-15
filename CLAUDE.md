@@ -5,6 +5,57 @@
 
 ---
 
+## 🔔 AUDREY — LOCAL SETUP (One-Time)
+**Your dad Derek said to do this first!** These are local-only settings that don't transfer through git. Run these steps once on your machine to get the full project tooling:
+
+### 1. Set up permissions (stops Claude from asking to approve every little step)
+Create the file `.claude/settings.local.json` in the project folder with this content:
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Bash(grep *)",
+      "Bash(TZ=*)",
+      "Bash(gh *)",
+      "Bash(python3 *)",
+      "Bash(curl *)",
+      "Bash(lsof *)",
+      "Bash(xargs *)",
+      "Bash(ls *)",
+      "Bash(wc *)",
+      "Bash(kill *)",
+      "Bash(chmod *)",
+      "Bash(brew *)",
+      "Bash(npx *)",
+      "Bash(done)",
+      "Edit(**)",
+      "Write(**)",
+      "Read(**)",
+      "WebFetch(domain:worldtimeapi.org)",
+      "WebFetch(domain:timeapi.io)"
+    ]
+  }
+}
+```
+Or just ask Claude: "Set up my project permissions so you don't have to ask me to approve routine operations."
+
+### 2. Set up MCP servers (lets Claude talk to GitHub and Supabase directly)
+Run these in a terminal (NOT inside Claude Code):
+```bash
+claude mcp add github -- npx -y @anthropic/github-mcp-server --repo drichardson1976/roosevelt-camp
+claude mcp add supabase -- npx -y @supabase/mcp-server --supabase-url https://rdrtsebhninqgfbrleft.supabase.co --supabase-key PASTE_KEY_HERE
+```
+Get the key from **Netlify → Site configuration → Environment variables → SUPABASE_SERVICE_ROLE_KEY**. Ask Dad if you need help finding it.
+```
+
+### 3. Set up pre-commit hook (warns about version mismatches)
+Ask Claude: "Set up the git pre-commit hook for version checking" and it will create it for you.
+
+**Once you've completed these steps, delete this section from CLAUDE.md so it doesn't clutter things up.**
+
+---
+
 ## 📌 PROJECT OVERVIEW
 
 This is primarily an HTML/Markdown project with multiple standalone HTML app pages. When checking tables, files, or content, always check ALL instances — not a subset. If asked to verify something across the codebase, be exhaustive.
