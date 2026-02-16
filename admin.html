@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.135";
+    const VERSION = "13.139";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T18:22:00");
+    const BUILD_DATE = new Date("2026-02-15T19:06:00");
 
     const RELEASE_NOTES = [
+      { version: "13.139", date: "2026-02-15", time: "7:06 PM", author: "Derek Richardson", changes: ["Admin: Removed Messages section from Danger Zone"] },
       { version: "13.138", date: "2026-02-15", time: "6:45 PM", author: "Derek Richardson", changes: ["Parent: Added Edit button to Payments tab registration cards for unpaid registrations", "Tests: Fixed Audrey Richardson seed data — removed from campers list (she is a counselor, not a camper), replaced with Dylan Richardson", "Tests: Seed users table rows are now expandable — click to see auto-setup details (campers, emergency contacts, registration for parents; position, bio, availability for counselors)"] },
       { version: "13.136", date: "2026-02-15", time: "6:30 PM", author: "Derek Richardson", changes: ["Parent: Registration edit button now shows 'Edit' text instead of pencil icon for UX consistency"] },
       { version: "13.135", date: "2026-02-15", time: "6:22 PM", author: "Derek Richardson", changes: ["Admin: Registration subtab badges now show order count instead of individual session count (1 registration with 2 kids x 3 sessions = 1, not 6)"] },
@@ -12270,59 +12271,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 </div>
                               ))}
                             </div>
-                          )}
-                        </div>
-                      </details>
-
-                      {/* Messages */}
-                      <details className="border border-green-200 rounded-lg">
-                        <summary className="cursor-pointer p-4 hover:bg-green-50 font-medium flex items-center justify-between">
-                          <span>💬 Messages ({messages.length} messages)</span>
-                          <span className="text-gray-400">▼</span>
-                        </summary>
-                        <div className="p-4 bg-gray-50 max-h-96 overflow-auto">
-                          {messages.length === 0 ? (
-                            <p className="text-gray-500 text-sm">No messages</p>
-                          ) : (
-                            <>
-                            <button
-                              onClick={async () => {
-                                if (!confirm(`Delete ALL ${messages.length} messages? This cannot be undone.`)) return;
-                                for (const msg of messages) {
-                                  await storage.deleteRow('camp_messages', msg.id);
-                                }
-                                setMessages([]);
-                                addToHistory('All Messages Deleted', `Deleted ${messages.length} messages`);
-                                showToast('All messages deleted');
-                              }}
-                              className="w-full mb-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-medium"
-                            >
-                              Delete All Messages ({messages.length})
-                            </button>
-                            <div className="space-y-2">
-                              {messages.map(msg => (
-                                <div key={msg.id} className="flex items-center justify-between p-3 bg-white rounded border">
-                                  <div className="flex-1">
-                                    <div className="font-medium">{msg.subject || 'No subject'}</div>
-                                    <div className="text-sm text-gray-500">From: {msg.from || 'Unknown'} • {msg.timestamp}</div>
-                                  </div>
-                                  <button
-                                    onClick={async () => {
-                                      if (!confirm(`Delete message "${msg.subject}"?`)) return;
-                                      await storage.deleteRow('camp_messages', msg.id);
-                                      const newMessages = messages.filter(m => m.id !== msg.id);
-                                      setMessages(newMessages);
-                                      addToHistory('Message Deleted', `Deleted message: ${msg.subject}`);
-                                      showToast('Message deleted');
-                                    }}
-                                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                            </>
                           )}
                         </div>
                       </details>
