@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.128";
-    const BUILD_DATE = new Date("2026-02-15T16:46:00");
+    const VERSION = "13.131";
+    const BUILD_DATE = new Date("2026-02-15T17:20:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -371,17 +371,67 @@
     ];
 
     // ==================== SEED ADD/REMOVE FUNCTIONS ====================
+    // These replicate the EXACT signup flow from index.html (ParentOnboarding / CounselorOnboarding)
+    // including welcome emails, change history, and the same data shapes.
+    const SEND_EMAIL_URL = 'https://rhsbasketballdaycamp.com/.netlify/functions/send-email';
+
+    const seedSendParentWelcome = async (profile) => {
+      try {
+        const tips = [
+          '<li><strong>Upload photos</strong> — Add a photo for yourself and each camper (required before camp starts)</li>',
+          '<li><strong>Register for sessions</strong> — Check the schedule and register your campers for their sessions</li>',
+        ];
+        const tipsHtml = `<h3 style="color: #15803d;">Next Steps</h3><ul style="line-height: 1.8;">${tips.join('')}</ul>`;
+        await fetch(SEND_EMAIL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: profile.email,
+            subject: 'Welcome to Roosevelt Basketball Day Camp!',
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #15803d;">Welcome to Roosevelt Basketball Day Camp, ${profile.name}!</h2><p>Thank you for creating your account. We're excited to have your family join us this summer!</p>${tipsHtml}<p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p><p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p></div>`
+          })
+        });
+      } catch (e) { console.warn('Welcome email failed (non-critical):', e.message); }
+    };
+
+    const seedSendCounselorWelcome = async (profile) => {
+      try {
+        await fetch(SEND_EMAIL_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: profile.email,
+            subject: 'Welcome to the Roosevelt Basketball Day Camp Team!',
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #15803d;">Welcome to the Team, ${profile.name}!</h2><p>Thank you for signing up as a counselor at Roosevelt Basketball Day Camp. We're glad to have you on board!</p><h3 style="color: #15803d;">What Happens Next</h3><ul style="line-height: 1.8;"><li><strong>Your profile is pending approval</strong> — The camp director will review and approve your profile</li><li><strong>Check your availability</strong> — Make sure your available dates are up to date in your dashboard</li><li><strong>Upload a photo</strong> — Add a profile photo so campers and parents can recognize you</li><li><strong>Review your schedule</strong> — Once approved, you'll be assigned to camp sessions</li></ul><p><a href="https://rhsbasketballdaycamp.com/#login" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Log In to Your Dashboard</a></p><p style="color: #666; font-size: 14px; margin-top: 20px;">If you have any questions, just reply to this email and we'll get back to you!</p></div>`
+          })
+        });
+      } catch (e) { console.warn('Welcome email failed (non-critical):', e.message); }
+    };
+
+    const seedLogHistory = async (action, details, emails) => {
+      try {
+        const history = await getMainData('camp_change_history') || [];
+        history.push({ action, details, relatedEmails: emails, timestamp: new Date().toISOString(), source: 'seed-users' });
+        await storage.set('camp_change_history', 'main', history);
+      } catch (e) { console.warn('History log failed:', e.message); }
+    };
+
     const seedAddParent = async (profile) => {
       const now = new Date().toISOString();
       const ts = Date.now();
+
+      // 1. Create parent account (matches index.html ParentOnboarding handleComplete)
       const parents = await getMainData('camp_parents') || [];
       if (parents.some(p => p.email === profile.email)) throw new Error('Already exists');
-      await storage.set('camp_parents', 'main', [...parents, {
+      const newUser = {
         email: profile.email, name: profile.name, phone: profile.phone, password: profile.password,
         photo: null, role: 'parent', roles: ['parent'], loginType: 'Email/Password',
         onboardingComplete: true, onboardingCompletedAt: now,
         policiesAccepted: { pickup: true, dropoff: true, acceptedAt: now },
-      }]);
+      };
+      await storage.set('camp_parents', 'main', [...parents, newUser]);
+
+      // 2. Add campers + parent links
       const campers = await getMainData('camp_campers') || [];
       const links = await getMainData('camp_camper_parent_links') || [];
       const newCampers = []; const newLinks = [];
@@ -392,12 +442,16 @@
       });
       await storage.set('camp_campers', 'main', [...campers, ...newCampers]);
       await storage.set('camp_camper_parent_links', 'main', [...links, ...newLinks]);
+
+      // 3. Emergency contacts — parent as EC #1 (reference-only) + additional contacts
       const contacts = await getMainData('camp_emergency_contacts') || [];
       const newContacts = [{ id: `ec_seed_${ts}_parent`, parentEmail: profile.email, isParent: true, relationship: 'Parent', priority: 1, userEmail: profile.email }];
       profile.emergencyContacts.forEach((ec, i) => {
         newContacts.push({ id: `ec_seed_${ts}_${i}`, name: ec.name, phone: ec.phone, relationship: ec.relationship, otherRelationship: ec.otherRelationship || '', photo: null, userEmail: profile.email, isParent: false, priority: i + 2 });
       });
       await storage.set('camp_emergency_contacts', 'main', [...contacts, ...newContacts]);
+
+      // 4. Register campers for sessions (if specified)
       if (profile.registration) {
         let rc = 0; const oid = `order_seed_${ts}`;
         for (const camper of newCampers) for (const date of profile.registration.weeks.flat()) {
@@ -405,6 +459,16 @@
           await storage.set('camp_registrations', rid, { id: rid, orderId: oid, childId: camper.id, childName: camper.name, parentEmail: profile.email, parentName: profile.name, date, sessions: profile.registration.sessions, status: 'pending', paymentStatus: 'unpaid', venmoCode: 'SEED000', baseAmount: profile.registration.sessions.length * 60, discountAmount: 0, discountPercent: 0, totalAmount: profile.registration.sessions.length * 60, registeredAt: now });
         }
       }
+
+      // 5. Log to change history (matches onboarding flow)
+      const camperNames = profile.campers.map(c => c.name).join(', ');
+      const ecNames = profile.emergencyContacts.map(c => c.name).join(', ');
+      await seedLogHistory('Parent Onboarding Complete',
+        `Parent account created: ${profile.name} (${profile.email}) | Campers added: ${camperNames} | Emergency contacts added: ${ecNames} | Pickup & dropoff policies accepted`,
+        [profile.email]);
+
+      // 6. Send welcome email (same as index.html — fire and forget)
+      await seedSendParentWelcome(profile);
     };
 
     const seedRemoveParent = async (profile) => {
@@ -424,16 +488,53 @@
     const seedAddCounselor = async (profile) => {
       const now = new Date().toISOString();
       const photo = COUNSELOR_PHOTOS[profile.id] || null;
+
+      // 1. Create counselor user account (matches index.html CounselorOnboarding handleNext)
       const users = await getMainData('camp_counselor_users') || [];
       if (users.some(u => u.email === profile.email)) throw new Error('Already exists');
-      await storage.set('camp_counselor_users', 'main', [...users, { email: profile.email, name: profile.name, phone: profile.phone, password: profile.password, role: 'counselor', roles: ['counselor'], loginType: 'Email/Password', onboardingComplete: true, onboardingCompletedAt: now }]);
-      await storage.set('camp_counselors', profile.id, { id: profile.id, name: profile.name, email: profile.email, phone: profile.phone, position: profile.position, year: profile.year, bio: profile.bio, photo, order: profile.order || 0, visible: true, approvedByAdmin: true, responsibilitiesAcknowledged: true, payDisclosureAcknowledged: true, createdAt: now });
+      const newUser = {
+        email: profile.email, name: profile.name, phone: profile.phone, password: profile.password,
+        role: 'counselor', roles: ['counselor'], loginType: 'Email/Password',
+        onboardingComplete: true, onboardingCompletedAt: now,
+      };
+      await storage.set('camp_counselor_users', 'main', [...users, newUser]);
+
+      // 2. Create counselor profile (visible:false, approvedByAdmin:false — pending admin approval, same as real flow)
+      const newCounselor = {
+        id: profile.id, name: profile.name, email: profile.email, phone: profile.phone,
+        position: profile.position, year: profile.year, bio: profile.bio, photo,
+        visible: false, approvedByAdmin: false,
+        responsibilitiesAcknowledged: true, payDisclosureAcknowledged: true,
+        createdAt: now, order: profile.order || 0,
+      };
+      await storage.set('camp_counselors', profile.id, newCounselor);
+
+      // 3. Save availability (matches combined format: { email: { date: { available: [], unavailable: [] } } })
       const avail = await getMainData('camp_counselor_availability') || {};
-      const ca = {}; for (const [date, [am, pm]] of Object.entries(profile.availability)) ca[date] = { available: [...(am ? ['morning'] : []), ...(pm ? ['afternoon'] : [])], unavailable: [...(!am ? ['morning'] : []), ...(!pm ? ['afternoon'] : [])] };
-      avail[profile.email] = ca; await storage.set('camp_counselor_availability', 'main', avail);
+      const ca = {};
+      for (const [date, [am, pm]] of Object.entries(profile.availability)) {
+        ca[date] = { available: [...(am ? ['morning'] : []), ...(pm ? ['afternoon'] : [])], unavailable: [...(!am ? ['morning'] : []), ...(!pm ? ['afternoon'] : [])] };
+      }
+      avail[profile.email] = ca;
+      await storage.set('camp_counselor_availability', 'main', avail);
+
+      // 4. Save schedule (matches format: { counselorId: { date: { morning: bool, afternoon: bool } } })
       const schedule = await getMainData('camp_counselor_schedule') || {};
-      const cs = {}; for (const [date, [am, pm]] of Object.entries(profile.availability)) cs[date] = { morning: am, afternoon: pm };
-      schedule[profile.id] = cs; await storage.set('camp_counselor_schedule', 'main', schedule);
+      const cs = {};
+      for (const [date, [am, pm]] of Object.entries(profile.availability)) {
+        cs[date] = { morning: am, afternoon: pm };
+      }
+      schedule[profile.id] = cs;
+      await storage.set('camp_counselor_schedule', 'main', schedule);
+
+      // 5. Log to change history (matches onboarding flow)
+      const availDates = Object.keys(profile.availability).length;
+      await seedLogHistory('Counselor Onboarding Complete',
+        `Counselor account created: ${profile.name} (${profile.email}) | Position: ${profile.position} | Year: ${profile.year} | Availability set for ${availDates} dates | Profile pending admin approval`,
+        [profile.email]);
+
+      // 6. Send welcome email (same as index.html — fire and forget)
+      await seedSendCounselorWelcome(profile);
     };
 
     const seedRemoveCounselor = async (profile) => {

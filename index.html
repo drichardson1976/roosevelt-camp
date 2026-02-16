@@ -52,6 +52,7 @@
     const BUILD_DATE = new Date("2026-02-11T15:50:00");
 
     const RELEASE_NOTES = [
+      { version: "13.131", date: "2026-02-15", time: "5:20 PM", author: "Derek Richardson", changes: ["Tests: Seed functions now use actual signup flow — counselor add sends welcome email, logs change history, and creates profile with pending approval (visible:false) matching real onboarding", "Tests: Parent seed add already updated in prior commit with same improvements"] },
       { version: "13.130", date: "2026-02-15", time: "5:10 PM", author: "Derek Richardson", changes: ["Parent: Session Registration cards now show Venmo reference, payment screenshot, and invoice ID for paid/sent registrations — matching the Payments tab"] },
       { version: "13.129", date: "2026-02-15", time: "4:59 PM", author: "Derek Richardson", changes: ["Parent: Contact Us — changed email to rhsdaycamp@gmail.com, removed phone number"] },
       { version: "13.127", date: "2026-02-15", time: "1:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod click-to-assign — pods now initialize with stable IDs so first click works reliably", "Admin: Counselor schedule cycling now includes 'not set' option (available → unavailable → not set)", "Admin: Day toggle also cycles through three states"] },
