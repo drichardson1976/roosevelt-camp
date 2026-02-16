@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.119";
-    const BUILD_DATE = new Date("2026-02-12T22:27:00");
+    const VERSION = "13.128";
+    const BUILD_DATE = new Date("2026-02-15T16:46:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -97,7 +97,36 @@
           console.error('Error fetching ' + table + ':', e);
           return null;
         }
+      },
+      async set(table, id, data) {
+        if (!supabase) return false;
+        try {
+          const { error } = await supabase.from(table).upsert({ id, data, updated_at: new Date().toISOString() });
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.error('Error saving to ' + table + ':', e);
+          return false;
+        }
+      },
+      async deleteRow(table, id) {
+        if (!supabase) return false;
+        try {
+          const { error } = await supabase.from(table).delete().eq('id', id);
+          if (error) throw error;
+          return true;
+        } catch (e) {
+          console.error('Error deleting from ' + table + ':', e);
+          return false;
+        }
       }
+    };
+
+    // Read JSONB data from a single-row table (id='main')
+    const getMainData = async (table) => {
+      const rows = await storage.get(table);
+      if (!rows || rows.length === 0) return null;
+      return rows[0]?.data || null;
     };
 
     // ==================== BUSINESS LOGIC FUNCTIONS (copied from parent.html for testing) ====================
@@ -221,13 +250,204 @@
       isObject(val, msg) { if (typeof val !== 'object' || val === null || Array.isArray(val)) throw new Error(msg || `Expected object, got ${typeof val}`); },
       hasProperty(obj, prop, msg) { if (!(prop in obj)) throw new Error(msg || `Missing property: ${prop}`); },
       greaterThan(a, b, msg) { if (!(a > b)) throw new Error(msg || `Expected ${a} > ${b}`); },
+      includes(arr, predicate, msg) { if (!arr || !arr.some(predicate)) throw new Error(msg || 'Expected array to include matching item'); },
+      notIncludes(arr, predicate, msg) { if (arr && arr.some(predicate)) throw new Error(msg || 'Expected array NOT to include matching item'); },
+    };
+
+    // ==================== FLOW TEST DATA ====================
+    const TEST_PREFIX = '__test__';
+    let TEST_RUN_ID = Date.now();
+
+    const makeTestData = () => {
+      const runId = TEST_RUN_ID;
+      return {
+        parentEmail: `${TEST_PREFIX}parent_${runId}@testflow.com`,
+        parentName: `Test Parent ${runId}`,
+        parentPhone: '(555) 000-0001',
+        parentPassword: 'testpass123',
+        counselorEmail: `${TEST_PREFIX}counselor_${runId}@testflow.com`,
+        counselorName: `Test Counselor ${runId}`,
+        counselorPhone: '(555) 000-0002',
+        counselorPassword: 'testpass456',
+        counselorId: `counselor_${TEST_PREFIX}${runId}`,
+        camperId: `camper_${TEST_PREFIX}${runId}`,
+        camperName: `Test Camper ${runId}`,
+        ecId: `contact_${TEST_PREFIX}${runId}`,
+        ecName: `Test Emergency ${runId}`,
+        regId: `reg_${TEST_PREFIX}${runId}`,
+        campDate: '2026-07-13',
+      };
+    };
+    let TD = makeTestData();
+    const isTestData = (str) => str && typeof str === 'string' && str.includes(TEST_PREFIX);
+
+    // ==================== SEED USER DATA ====================
+    const WEEK1 = CAMP_DATES.slice(0, 5);
+    const WEEK2 = CAMP_DATES.slice(5, 10);
+    const WEEK3 = CAMP_DATES.slice(10, 15);
+    const WEEK4 = CAMP_DATES.slice(15, 20);
+
+    let COUNSELOR_PHOTOS = {};
+
+    const PARENT_PROFILES = [
+      {
+        email: 'sarah.johnson@gmail.com', name: 'Sarah Johnson', phone: '(206) 555-1001', password: 'camp2026',
+        campers: [
+          { name: 'Tyler Johnson', birthdate: '2016-04-12', grade: '5', phone: '' },
+          { name: 'Maya Johnson', birthdate: '2018-09-03', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Karen Johnson', phone: '(206) 555-1002', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'mike.chen@gmail.com', name: 'Mike Chen', phone: '(206) 555-2001', password: 'camp2026',
+        campers: [{ name: 'Ethan Chen', birthdate: '2015-01-22', grade: '6', phone: '(206) 555-2003' }],
+        emergencyContacts: [{ name: 'David Chen', phone: '(206) 555-2002', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK2], sessions: ['morning'] },
+      },
+      {
+        email: 'lisa.williams@gmail.com', name: 'Lisa Williams', phone: '(206) 555-3001', password: 'camp2026',
+        campers: [
+          { name: 'Noah Williams', birthdate: '2014-06-15', grade: '7', phone: '' },
+          { name: 'Jordan Williams', birthdate: '2017-03-28', grade: '4', phone: '' },
+          { name: 'Ava Williams', birthdate: '2019-11-10', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Amy Martinez', phone: '(206) 555-3002', relationship: 'Other', otherRelationship: 'Neighbor' },
+          { name: 'Robert Williams', phone: '(206) 555-3003', relationship: 'Grandparent' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'maria.garcia@gmail.com', name: 'Maria Garcia', phone: '(206) 555-4001', password: 'camp2026',
+        campers: [
+          { name: 'Sofia Garcia', birthdate: '2016-08-05', grade: '5', phone: '' },
+          { name: 'Lucas Garcia', birthdate: '2018-02-14', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Rosa Garcia', phone: '(206) 555-4002', relationship: 'Other', otherRelationship: 'Aunt' }],
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'jennifer.park@gmail.com', name: 'Jennifer Park', phone: '(206) 555-5001', password: 'camp2026',
+        campers: [{ name: 'Ryan Park', birthdate: '2015-12-01', grade: '6', phone: '(206) 555-5003' }],
+        emergencyContacts: [{ name: 'James Park', phone: '(206) 555-5002', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1], sessions: ['afternoon'] },
+      },
+    ];
+
+    const COUNSELOR_PROFILES = [
+      {
+        id: 'c1', email: 'audrey.k.richardson@gmail.com', name: 'Audrey Richardson',
+        phone: '(555) 555-2234', password: 'camp2026', position: 'Point Guard', year: 'Senior',
+        bio: 'Team captain with 3 years varsity experience.', order: 0,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[false,false],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[false,false],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c4', email: 'emma@gmail.com', name: 'Emma Curtis',
+        phone: '(555) 555-5555', password: 'camp2026', position: 'Shooting Guard / Small Forward', year: 'Senior',
+        bio: '3 year starter entering her senior year at Roosevelt.  ', order: 1,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[false,false],'2026-08-25':[false,false],'2026-08-26':[false,false],'2026-08-27':[false,false],'2026-08-28':[false,false] },
+      },
+      {
+        id: 'c2', email: 'julia.gilbertson@gmail.com', name: 'Julia Gilbertson',
+        phone: '(555) 123-1232', password: 'camp2026', position: 'Shooting Guard', year: 'Junior',
+        bio: 'Power forward with 2 years varsity experience.', order: 2,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,false],'2026-07-15':[true,false],'2026-07-16':[true,false],'2026-07-17':[true,false],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c3', email: 'molly@gmail.com', name: 'Molly Kirkland',
+        phone: '(555) 123-4243', password: 'camp2026', position: 'Center', year: 'Sophomore',
+        bio: 'Versatile player known for rebounding and blocking opponents shots.  ', order: 3,
+        availability: { '2026-07-13':[false,true],'2026-07-14':[false,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[false,false],'2026-08-19':[false,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+    ];
+
+    // ==================== SEED ADD/REMOVE FUNCTIONS ====================
+    const seedAddParent = async (profile) => {
+      const now = new Date().toISOString();
+      const ts = Date.now();
+      const parents = await getMainData('camp_parents') || [];
+      if (parents.some(p => p.email === profile.email)) throw new Error('Already exists');
+      await storage.set('camp_parents', 'main', [...parents, {
+        email: profile.email, name: profile.name, phone: profile.phone, password: profile.password,
+        photo: null, role: 'parent', roles: ['parent'], loginType: 'Email/Password',
+        onboardingComplete: true, onboardingCompletedAt: now,
+        policiesAccepted: { pickup: true, dropoff: true, acceptedAt: now },
+      }]);
+      const campers = await getMainData('camp_campers') || [];
+      const links = await getMainData('camp_camper_parent_links') || [];
+      const newCampers = []; const newLinks = [];
+      profile.campers.forEach((c, i) => {
+        const cid = `camper_seed_${ts}_${i}`;
+        newCampers.push({ id: cid, name: c.name, birthdate: c.birthdate, grade: c.grade, phone: c.phone || '', photo: null, createdAt: now });
+        newLinks.push({ camperId: cid, parentEmail: profile.email });
+      });
+      await storage.set('camp_campers', 'main', [...campers, ...newCampers]);
+      await storage.set('camp_camper_parent_links', 'main', [...links, ...newLinks]);
+      const contacts = await getMainData('camp_emergency_contacts') || [];
+      const newContacts = [{ id: `ec_seed_${ts}_parent`, parentEmail: profile.email, isParent: true, relationship: 'Parent', priority: 1, userEmail: profile.email }];
+      profile.emergencyContacts.forEach((ec, i) => {
+        newContacts.push({ id: `ec_seed_${ts}_${i}`, name: ec.name, phone: ec.phone, relationship: ec.relationship, otherRelationship: ec.otherRelationship || '', photo: null, userEmail: profile.email, isParent: false, priority: i + 2 });
+      });
+      await storage.set('camp_emergency_contacts', 'main', [...contacts, ...newContacts]);
+      if (profile.registration) {
+        let rc = 0; const oid = `order_seed_${ts}`;
+        for (const camper of newCampers) for (const date of profile.registration.weeks.flat()) {
+          const rid = `reg_seed_${ts}_${rc++}`;
+          await storage.set('camp_registrations', rid, { id: rid, orderId: oid, childId: camper.id, childName: camper.name, parentEmail: profile.email, parentName: profile.name, date, sessions: profile.registration.sessions, status: 'pending', paymentStatus: 'unpaid', venmoCode: 'SEED000', baseAmount: profile.registration.sessions.length * 60, discountAmount: 0, discountPercent: 0, totalAmount: profile.registration.sessions.length * 60, registeredAt: now });
+        }
+      }
+    };
+
+    const seedRemoveParent = async (profile) => {
+      const parents = await getMainData('camp_parents') || [];
+      await storage.set('camp_parents', 'main', parents.filter(p => p.email !== profile.email));
+      const links = await getMainData('camp_camper_parent_links') || [];
+      const camperIds = links.filter(l => l.parentEmail === profile.email).map(l => l.camperId);
+      await storage.set('camp_camper_parent_links', 'main', links.filter(l => l.parentEmail !== profile.email));
+      const campers = await getMainData('camp_campers') || [];
+      await storage.set('camp_campers', 'main', campers.filter(c => !camperIds.includes(c.id)));
+      const contacts = await getMainData('camp_emergency_contacts') || [];
+      await storage.set('camp_emergency_contacts', 'main', contacts.filter(c => c.userEmail !== profile.email));
+      const regs = await storage.get('camp_registrations');
+      for (const row of (regs || []).filter(r => r.data?.parentEmail === profile.email)) await storage.deleteRow('camp_registrations', row.id);
+    };
+
+    const seedAddCounselor = async (profile) => {
+      const now = new Date().toISOString();
+      const photo = COUNSELOR_PHOTOS[profile.id] || null;
+      const users = await getMainData('camp_counselor_users') || [];
+      if (users.some(u => u.email === profile.email)) throw new Error('Already exists');
+      await storage.set('camp_counselor_users', 'main', [...users, { email: profile.email, name: profile.name, phone: profile.phone, password: profile.password, role: 'counselor', roles: ['counselor'], loginType: 'Email/Password', onboardingComplete: true, onboardingCompletedAt: now }]);
+      await storage.set('camp_counselors', profile.id, { id: profile.id, name: profile.name, email: profile.email, phone: profile.phone, position: profile.position, year: profile.year, bio: profile.bio, photo, order: profile.order || 0, visible: true, approvedByAdmin: true, responsibilitiesAcknowledged: true, payDisclosureAcknowledged: true, createdAt: now });
+      const avail = await getMainData('camp_counselor_availability') || {};
+      const ca = {}; for (const [date, [am, pm]] of Object.entries(profile.availability)) ca[date] = { available: [...(am ? ['morning'] : []), ...(pm ? ['afternoon'] : [])], unavailable: [...(!am ? ['morning'] : []), ...(!pm ? ['afternoon'] : [])] };
+      avail[profile.email] = ca; await storage.set('camp_counselor_availability', 'main', avail);
+      const schedule = await getMainData('camp_counselor_schedule') || {};
+      const cs = {}; for (const [date, [am, pm]] of Object.entries(profile.availability)) cs[date] = { morning: am, afternoon: pm };
+      schedule[profile.id] = cs; await storage.set('camp_counselor_schedule', 'main', schedule);
+    };
+
+    const seedRemoveCounselor = async (profile) => {
+      const users = await getMainData('camp_counselor_users') || [];
+      await storage.set('camp_counselor_users', 'main', users.filter(u => u.email !== profile.email));
+      const avail = await getMainData('camp_counselor_availability') || {}; delete avail[profile.email]; await storage.set('camp_counselor_availability', 'main', avail);
+      const schedule = await getMainData('camp_counselor_schedule') || {}; delete schedule[profile.id]; await storage.set('camp_counselor_schedule', 'main', schedule);
+      await storage.deleteRow('camp_counselors', profile.id);
     };
 
     // ==================== TEST SUITES ====================
+    // Section labels for visual grouping in the UI
+    const SECTIONS = {
+      readonly: { title: "Database & Logic Tests", subtitle: "Read-only — safe to run anytime, no data is modified" },
+      flows: { title: "Flow Tests", subtitle: "Creates test accounts, walks through setup flows, then cleans up" },
+    };
+
     const ALL_SUITES = [
       // ===== DATABASE CONNECTIVITY =====
       {
         name: "Database Connectivity",
+        section: "readonly",
         category: "connectivity",
         icon: "\ud83d\udd0c",
         tests: [
@@ -260,6 +480,7 @@
       // ===== DATA INTEGRITY =====
       {
         name: "Data Integrity \u2014 Tables Exist",
+        section: "readonly",
         category: "integrity",
         icon: "\ud83d\uddc4\ufe0f",
         tests: [
@@ -303,6 +524,7 @@
       // ===== SCHEMA COMPARISON =====
       {
         name: "Schema Comparison \u2014 Dev vs Public vs Code",
+        section: "readonly",
         category: "schema",
         icon: "\ud83d\udd0d",
         tests: [
@@ -362,6 +584,7 @@
       // ===== BUSINESS LOGIC =====
       {
         name: "Business Logic \u2014 Phone",
+        section: "readonly",
         category: "logic",
         icon: "\ud83d\udcde",
         tests: [
@@ -409,6 +632,7 @@
       },
       {
         name: "Business Logic \u2014 Age",
+        section: "readonly",
         category: "logic",
         icon: "\ud83c\udf82",
         tests: [
@@ -432,6 +656,7 @@
       },
       {
         name: "Business Logic \u2014 Discounts",
+        section: "readonly",
         category: "logic",
         icon: "\ud83d\udcb0",
         tests: [
@@ -519,6 +744,7 @@
       },
       {
         name: "Business Logic \u2014 Environment",
+        section: "readonly",
         category: "logic",
         icon: "\ud83c\udf0d",
         tests: [
@@ -552,6 +778,7 @@
       // ===== API ENDPOINTS =====
       {
         name: "API Endpoints (Netlify Functions)",
+        section: "readonly",
         category: "api",
         icon: "\u26a1",
         tests: [
@@ -577,7 +804,360 @@
             }
           }))
         ]
-      }
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // FLOW TESTS — Parent Setup
+      // ═══════════════════════════════════════════════════════════════
+      {
+        name: "Parent Flow \u2014 Account & Login",
+        section: "flows",
+        category: "flow-parent",
+        icon: "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67",
+        tests: [
+          {
+            name: "Create parent account",
+            fn: async () => {
+              const current = await getMainData('camp_parents') || [];
+              const cleaned = current.filter(p => !isTestData(p.email));
+              const newParent = {
+                email: TD.parentEmail, name: TD.parentName, phone: TD.parentPhone,
+                password: TD.parentPassword, photo: null, role: 'parent', roles: ['parent'],
+                loginType: 'Email/Password', onboardingComplete: true,
+                onboardingCompletedAt: new Date().toISOString(),
+                policiesAccepted: { pickup: true, dropoff: true, acceptedAt: new Date().toISOString() }
+              };
+              const saved = await storage.set('camp_parents', 'main', [...cleaned, newParent]);
+              assert.ok(saved, 'Failed to save parent to Supabase');
+            }
+          },
+          {
+            name: "Verify parent exists in database",
+            fn: async () => {
+              const parents = await getMainData('camp_parents') || [];
+              assert.isArray(parents);
+              const found = parents.find(p => p.email === TD.parentEmail);
+              assert.ok(found, `Parent ${TD.parentEmail} not found in camp_parents`);
+              assert.equal(found.name, TD.parentName);
+              assert.equal(found.role, 'parent');
+            }
+          },
+          {
+            name: "Verify parent login credentials match",
+            fn: async () => {
+              const parents = await getMainData('camp_parents') || [];
+              const match = parents.find(p => p.email === TD.parentEmail && p.password === TD.parentPassword);
+              assert.ok(match, 'Login credentials do not match \u2014 email+password lookup failed');
+              assert.equal(match.loginType, 'Email/Password');
+            }
+          },
+        ]
+      },
+      {
+        name: "Parent Flow \u2014 Camper & Emergency Contact",
+        section: "flows",
+        category: "flow-parent",
+        icon: "\ud83e\uddd2",
+        tests: [
+          {
+            name: "Add camper linked to parent",
+            fn: async () => {
+              const campers = await getMainData('camp_campers') || [];
+              const cleaned = campers.filter(c => !isTestData(c.id));
+              const newCamper = {
+                id: TD.camperId, name: TD.camperName, birthdate: '2015-03-20',
+                grade: '5', phone: '', photo: null, createdAt: new Date().toISOString()
+              };
+              assert.ok(await storage.set('camp_campers', 'main', [...cleaned, newCamper]), 'Failed to save camper');
+              const links = await getMainData('camp_camper_parent_links') || [];
+              const cleanedLinks = links.filter(l => !isTestData(l.camperId));
+              assert.ok(await storage.set('camp_camper_parent_links', 'main', [...cleanedLinks, { camperId: TD.camperId, parentEmail: TD.parentEmail }]), 'Failed to save link');
+            }
+          },
+          {
+            name: "Verify camper and parent link in database",
+            fn: async () => {
+              const campers = await getMainData('camp_campers') || [];
+              assert.ok(campers.find(c => c.id === TD.camperId), `Camper ${TD.camperId} not found`);
+              const links = await getMainData('camp_camper_parent_links') || [];
+              assert.ok(links.find(l => l.camperId === TD.camperId && l.parentEmail === TD.parentEmail), 'Camper-parent link not found');
+            }
+          },
+          {
+            name: "Add emergency contact for parent",
+            fn: async () => {
+              const contacts = await getMainData('camp_emergency_contacts') || [];
+              const cleaned = contacts.filter(c => !isTestData(c.id));
+              const newEC = {
+                id: TD.ecId, name: TD.ecName, phone: '(555) 000-0099',
+                relationship: 'Grandparent', otherRelationship: '', photo: null,
+                userEmail: TD.parentEmail, isParent: false, priority: 2
+              };
+              assert.ok(await storage.set('camp_emergency_contacts', 'main', [...cleaned, newEC]), 'Failed to save EC');
+            }
+          },
+          {
+            name: "Verify emergency contact in database",
+            fn: async () => {
+              const contacts = await getMainData('camp_emergency_contacts') || [];
+              const found = contacts.find(c => c.id === TD.ecId);
+              assert.ok(found, `Emergency contact ${TD.ecId} not found`);
+              assert.equal(found.userEmail, TD.parentEmail);
+            }
+          },
+        ]
+      },
+      {
+        name: "Parent Flow \u2014 Session Registration",
+        section: "flows",
+        category: "flow-parent",
+        icon: "\ud83d\udcc5",
+        tests: [
+          {
+            name: "Register camper for camp session",
+            fn: async () => {
+              const reg = {
+                id: TD.regId, orderId: `order_${TEST_PREFIX}${TEST_RUN_ID}`,
+                childId: TD.camperId, childName: TD.camperName,
+                parentEmail: TD.parentEmail, parentName: TD.parentName,
+                date: TD.campDate, sessions: ['morning', 'afternoon'],
+                status: 'pending', paymentStatus: 'unpaid', venmoCode: 'TESTES000',
+                baseAmount: 120, discountAmount: 0, discountPercent: 0,
+                totalAmount: 120, registeredAt: new Date().toISOString()
+              };
+              assert.ok(await storage.set('camp_registrations', reg.id, reg), 'Failed to save registration');
+            }
+          },
+          {
+            name: "Verify registration in database",
+            fn: async () => {
+              const rows = await storage.get('camp_registrations');
+              const found = (rows || []).find(r => r.id === TD.regId);
+              assert.ok(found, `Registration ${TD.regId} not found`);
+              assert.equal(found.data.childId, TD.camperId);
+              assert.equal(found.data.parentEmail, TD.parentEmail);
+              assert.equal(found.data.date, TD.campDate);
+            }
+          },
+        ]
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // FLOW TESTS — Counselor Setup
+      // ═══════════════════════════════════════════════════════════════
+      {
+        name: "Counselor Flow \u2014 Account & Profile",
+        section: "flows",
+        category: "flow-counselor",
+        icon: "\ud83c\udfc0",
+        tests: [
+          {
+            name: "Create counselor user account",
+            fn: async () => {
+              const current = await getMainData('camp_counselor_users') || [];
+              const cleaned = current.filter(u => !isTestData(u.email));
+              const newUser = {
+                email: TD.counselorEmail, name: TD.counselorName, phone: TD.counselorPhone,
+                password: TD.counselorPassword, role: 'counselor', roles: ['counselor'],
+                loginType: 'Email/Password', onboardingComplete: true,
+                onboardingCompletedAt: new Date().toISOString()
+              };
+              assert.ok(await storage.set('camp_counselor_users', 'main', [...cleaned, newUser]), 'Failed to save counselor user');
+            }
+          },
+          {
+            name: "Create counselor profile (pending approval)",
+            fn: async () => {
+              const newCounselor = {
+                id: TD.counselorId, name: TD.counselorName, email: TD.counselorEmail,
+                phone: TD.counselorPhone, position: 'Point Guard', year: 'Junior',
+                bio: 'This is a test counselor bio that is at least twenty characters long for validation.',
+                photo: null, visible: false, approvedByAdmin: false,
+                responsibilitiesAcknowledged: true, payDisclosureAcknowledged: true,
+                createdAt: new Date().toISOString(), order: 999
+              };
+              assert.ok(await storage.set('camp_counselors', newCounselor.id, newCounselor), 'Failed to save counselor profile');
+            }
+          },
+          {
+            name: "Verify counselor user in database",
+            fn: async () => {
+              const users = await getMainData('camp_counselor_users') || [];
+              const found = users.find(u => u.email === TD.counselorEmail);
+              assert.ok(found, `Counselor user ${TD.counselorEmail} not found`);
+              assert.equal(found.role, 'counselor');
+            }
+          },
+          {
+            name: "Verify counselor profile is pending approval",
+            fn: async () => {
+              const rows = await storage.get('camp_counselors');
+              const found = (rows || []).find(r => r.id === TD.counselorId);
+              assert.ok(found, `Counselor profile ${TD.counselorId} not found`);
+              assert.equal(found.data.approvedByAdmin, false, 'New counselor should not be approved yet');
+              assert.equal(found.data.visible, false, 'New counselor should not be visible yet');
+            }
+          },
+          {
+            name: "Verify counselor login credentials match",
+            fn: async () => {
+              const users = await getMainData('camp_counselor_users') || [];
+              const match = users.find(u => u.email === TD.counselorEmail && u.password === TD.counselorPassword);
+              assert.ok(match, 'Counselor login credentials do not match');
+            }
+          },
+        ]
+      },
+      {
+        name: "Counselor Flow \u2014 Availability & Schedule",
+        section: "flows",
+        category: "flow-counselor",
+        icon: "\ud83d\uddd3\ufe0f",
+        tests: [
+          {
+            name: "Set counselor availability",
+            fn: async () => {
+              const avail = await getMainData('camp_counselor_availability') || {};
+              avail[TD.counselorEmail] = {
+                '2026-07-13': { available: ['morning', 'afternoon'], unavailable: [] },
+                '2026-07-14': { available: ['morning'], unavailable: ['afternoon'] },
+                '2026-07-15': { available: [], unavailable: ['morning', 'afternoon'] },
+              };
+              assert.ok(await storage.set('camp_counselor_availability', 'main', avail), 'Failed to save availability');
+            }
+          },
+          {
+            name: "Set counselor schedule",
+            fn: async () => {
+              const schedule = await getMainData('camp_counselor_schedule') || {};
+              schedule[TD.counselorId] = {
+                '2026-07-13': { morning: true, afternoon: true },
+                '2026-07-14': { morning: true, afternoon: false },
+                '2026-07-15': { morning: false, afternoon: false },
+              };
+              assert.ok(await storage.set('camp_counselor_schedule', 'main', schedule), 'Failed to save schedule');
+            }
+          },
+          {
+            name: "Verify availability in database",
+            fn: async () => {
+              const avail = await getMainData('camp_counselor_availability') || {};
+              const ca = avail[TD.counselorEmail];
+              assert.ok(ca, 'Counselor availability not found');
+              assert.ok(ca['2026-07-13'].available.includes('morning'), 'Expected morning available on 7/13');
+              assert.ok(ca['2026-07-14'].unavailable.includes('afternoon'), 'Expected afternoon unavailable on 7/14');
+            }
+          },
+          {
+            name: "Verify schedule in database",
+            fn: async () => {
+              const schedule = await getMainData('camp_counselor_schedule') || {};
+              const cs = schedule[TD.counselorId];
+              assert.ok(cs, 'Counselor schedule not found');
+              assert.equal(cs['2026-07-13'].morning, true);
+              assert.equal(cs['2026-07-14'].afternoon, false);
+            }
+          },
+        ]
+      },
+
+      // ═══════════════════════════════════════════════════════════════
+      // CLEANUP — Removes all test data
+      // ═══════════════════════════════════════════════════════════════
+      {
+        name: "Cleanup \u2014 Remove All Test Data",
+        section: "flows",
+        category: "cleanup",
+        icon: "\ud83e\uddf9",
+        tests: [
+          {
+            name: "Remove test parent",
+            fn: async () => {
+              const parents = await getMainData('camp_parents') || [];
+              await storage.set('camp_parents', 'main', parents.filter(p => !isTestData(p.email)));
+              const after = await getMainData('camp_parents') || [];
+              assert.notIncludes(after, p => isTestData(p.email), 'Test parent still exists');
+            }
+          },
+          {
+            name: "Remove test camper",
+            fn: async () => {
+              const campers = await getMainData('camp_campers') || [];
+              await storage.set('camp_campers', 'main', campers.filter(c => !isTestData(c.id)));
+              const after = await getMainData('camp_campers') || [];
+              assert.notIncludes(after, c => isTestData(c.id), 'Test camper still exists');
+            }
+          },
+          {
+            name: "Remove test camper-parent links",
+            fn: async () => {
+              const links = await getMainData('camp_camper_parent_links') || [];
+              await storage.set('camp_camper_parent_links', 'main', links.filter(l => !isTestData(l.camperId) && !isTestData(l.parentEmail)));
+              const after = await getMainData('camp_camper_parent_links') || [];
+              assert.notIncludes(after, l => isTestData(l.camperId), 'Test link still exists');
+            }
+          },
+          {
+            name: "Remove test emergency contacts",
+            fn: async () => {
+              const contacts = await getMainData('camp_emergency_contacts') || [];
+              await storage.set('camp_emergency_contacts', 'main', contacts.filter(c => !isTestData(c.id) && !isTestData(c.userEmail)));
+              const after = await getMainData('camp_emergency_contacts') || [];
+              assert.notIncludes(after, c => isTestData(c.id), 'Test EC still exists');
+            }
+          },
+          {
+            name: "Remove test registration",
+            fn: async () => {
+              const rows = await storage.get('camp_registrations');
+              for (const row of (rows || []).filter(r => isTestData(r.id))) {
+                await storage.deleteRow('camp_registrations', row.id);
+              }
+              const after = await storage.get('camp_registrations');
+              assert.equal((after || []).filter(r => isTestData(r.id)).length, 0, 'Test registration still exists');
+            }
+          },
+          {
+            name: "Remove test counselor user",
+            fn: async () => {
+              const users = await getMainData('camp_counselor_users') || [];
+              await storage.set('camp_counselor_users', 'main', users.filter(u => !isTestData(u.email)));
+              const after = await getMainData('camp_counselor_users') || [];
+              assert.notIncludes(after, u => isTestData(u.email), 'Test counselor user still exists');
+            }
+          },
+          {
+            name: "Remove test counselor profile",
+            fn: async () => {
+              const rows = await storage.get('camp_counselors');
+              for (const row of (rows || []).filter(r => isTestData(r.id))) {
+                await storage.deleteRow('camp_counselors', row.id);
+              }
+              const after = await storage.get('camp_counselors');
+              assert.equal((after || []).filter(r => isTestData(r.id)).length, 0, 'Test counselor profile still exists');
+            }
+          },
+          {
+            name: "Remove test availability & schedule",
+            fn: async () => {
+              const avail = await getMainData('camp_counselor_availability') || {};
+              const cleanAvail = {};
+              for (const [k, v] of Object.entries(avail)) { if (!isTestData(k)) cleanAvail[k] = v; }
+              await storage.set('camp_counselor_availability', 'main', cleanAvail);
+
+              const sched = await getMainData('camp_counselor_schedule') || {};
+              const cleanSched = {};
+              for (const [k, v] of Object.entries(sched)) { if (!isTestData(k)) cleanSched[k] = v; }
+              await storage.set('camp_counselor_schedule', 'main', cleanSched);
+
+              const afterAvail = await getMainData('camp_counselor_availability') || {};
+              const afterSched = await getMainData('camp_counselor_schedule') || {};
+              assert.equal(Object.keys(afterAvail).filter(k => isTestData(k)).length, 0, 'Test availability still exists');
+              assert.equal(Object.keys(afterSched).filter(k => isTestData(k)).length, 0, 'Test schedule still exists');
+            }
+          },
+        ]
+      },
     ];
 
     // ==================== TEST RUNNER ====================
@@ -689,6 +1269,13 @@
       );
     };
 
+    const StatusBadge = ({ exists }) => (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${exists ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+        <span className={`w-2 h-2 rounded-full ${exists ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+        {exists ? 'In DB' : 'Not Added'}
+      </span>
+    );
+
     const TestSuiteCard = ({ suite, results, running, onRun }) => {
       const passed = results.filter(r => r.status === 'pass').length;
       const failed = results.filter(r => r.status === 'fail').length;
@@ -742,11 +1329,90 @@
       const [isBlocked, setIsBlocked] = useState(false);
       const [copied, setCopied] = useState(false);
       const [showResultsText, setShowResultsText] = useState(false);
+      const [parentStatus, setParentStatus] = useState({});
+      const [counselorStatus, setCounselorStatus] = useState({});
+      const [seedLoading, setSeedLoading] = useState({});
+      const [seedMessage, setSeedMessage] = useState(null);
+      const [seedChecking, setSeedChecking] = useState(true);
 
       // Safety: block on production
       useEffect(() => {
         if (SCHEMA !== 'dev') setIsBlocked(true);
       }, []);
+
+      // Load seed user status + photos on mount
+      const checkSeedStatus = useCallback(async () => {
+        setSeedChecking(true);
+        try {
+          if (Object.keys(COUNSELOR_PHOTOS).length === 0) {
+            try {
+              const resp = await fetch('/seed-photos.json');
+              if (resp.ok) COUNSELOR_PHOTOS = await resp.json();
+            } catch (e) { console.warn('Could not load seed-photos.json:', e.message); }
+          }
+          const parents = await getMainData('camp_parents') || [];
+          const pStatus = {};
+          PARENT_PROFILES.forEach(p => { pStatus[p.email] = parents.some(x => x.email === p.email); });
+          setParentStatus(pStatus);
+          const users = await getMainData('camp_counselor_users') || [];
+          const cStatus = {};
+          COUNSELOR_PROFILES.forEach(c => { cStatus[c.email] = users.some(u => u.email === c.email); });
+          setCounselorStatus(cStatus);
+        } catch (e) { console.error('Seed status check failed:', e); }
+        setSeedChecking(false);
+      }, []);
+      useEffect(() => { checkSeedStatus(); }, [checkSeedStatus]);
+
+      const showSeedMsg = (text, type = 'success') => {
+        setSeedMessage({ text, type });
+        setTimeout(() => setSeedMessage(null), 3000);
+      };
+      const handleSeedAdd = async (type, profile) => {
+        setSeedLoading(prev => ({ ...prev, [profile.email]: true }));
+        try {
+          if (type === 'parent') await seedAddParent(profile);
+          else await seedAddCounselor(profile);
+          showSeedMsg(`${profile.name} added`);
+          await checkSeedStatus();
+        } catch (e) { showSeedMsg(`Error: ${e.message}`, 'error'); }
+        setSeedLoading(prev => ({ ...prev, [profile.email]: false }));
+      };
+      const handleSeedRemove = async (type, profile) => {
+        setSeedLoading(prev => ({ ...prev, [profile.email]: true }));
+        try {
+          if (type === 'parent') await seedRemoveParent(profile);
+          else await seedRemoveCounselor(profile);
+          showSeedMsg(`${profile.name} removed`);
+          await checkSeedStatus();
+        } catch (e) { showSeedMsg(`Error: ${e.message}`, 'error'); }
+        setSeedLoading(prev => ({ ...prev, [profile.email]: false }));
+      };
+      const addAllSeeds = async () => {
+        setSeedLoading({ __all: true });
+        let added = 0;
+        for (const p of PARENT_PROFILES) {
+          if (!parentStatus[p.email]) { try { await seedAddParent(p); added++; } catch (e) { console.error(e); } }
+        }
+        for (const c of COUNSELOR_PROFILES) {
+          if (!counselorStatus[c.email]) { try { await seedAddCounselor(c); added++; } catch (e) { console.error(e); } }
+        }
+        showSeedMsg(`Added ${added} user(s)`);
+        await checkSeedStatus();
+        setSeedLoading({});
+      };
+      const removeAllSeeds = async () => {
+        setSeedLoading({ __all: true });
+        let removed = 0;
+        for (const p of PARENT_PROFILES) {
+          if (parentStatus[p.email]) { try { await seedRemoveParent(p); removed++; } catch (e) { console.error(e); } }
+        }
+        for (const c of COUNSELOR_PROFILES) {
+          if (counselorStatus[c.email]) { try { await seedRemoveCounselor(c); removed++; } catch (e) { console.error(e); } }
+        }
+        showSeedMsg(`Removed ${removed} user(s)`);
+        await checkSeedStatus();
+        setSeedLoading({});
+      };
 
       const runSuite = async (idx) => {
         setRunningIdx(idx);
@@ -763,6 +1429,10 @@
       };
 
       const runAll = async () => {
+        // Fresh test data for each full run
+        TEST_RUN_ID = Date.now();
+        TD = makeTestData();
+
         setRunningIdx(-1);
         const newResults = ALL_SUITES.map(() => []);
         setSuiteResults(newResults);
@@ -777,6 +1447,11 @@
         setRunningIdx(null);
       };
 
+      const runCleanupOnly = async () => {
+        const idx = ALL_SUITES.findIndex(s => s.category === 'cleanup');
+        if (idx >= 0) await runSuite(idx);
+      };
+
       // Summary stats
       const totalTests = ALL_SUITES.reduce((a, s) => a + s.tests.length, 0);
       const totalPassed = suiteResults.flat().filter(r => r.status === 'pass').length;
@@ -784,6 +1459,13 @@
       const totalRun = suiteResults.flat().length;
       const allDone = totalRun === totalTests && totalRun > 0;
       const allPassed = allDone && totalFailed === 0;
+
+      // Seed stats
+      const totalParentsIn = Object.values(parentStatus).filter(Boolean).length;
+      const totalCounselorsIn = Object.values(counselorStatus).filter(Boolean).length;
+      const totalSeedIn = totalParentsIn + totalCounselorsIn;
+      const totalSeedUsers = PARENT_PROFILES.length + COUNSELOR_PROFILES.length;
+      const isSeedAllLoading = seedLoading.__all;
 
       if (isBlocked) {
         return (
@@ -802,12 +1484,19 @@
         <div className="min-h-screen bg-gray-50">
           <VersionRibbon />
 
+          {/* Seed toast */}
+          {seedMessage && (
+            <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${seedMessage.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
+              {seedMessage.text}
+            </div>
+          )}
+
           {/* Header */}
           <div className="bg-green-900 text-white py-6 px-6">
             <div className="max-w-4xl mx-auto flex items-center justify-between">
               <div>
                 <h1 className="font-display text-4xl tracking-wide">Roosevelt Camp Test Suite</h1>
-                <p className="text-green-300 text-sm mt-1">Automated tests for database, business logic, and API endpoints</p>
+                <p className="text-green-300 text-sm mt-1">Tests, flow validation, and seed user management</p>
               </div>
               <a href="/prd.html" className="px-4 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm transition-colors">
                 {'\u2190'} Back to PRD
@@ -854,6 +1543,17 @@
                   </button>
                 )}
                 <button
+                  onClick={runCleanupOnly}
+                  disabled={runningIdx !== null}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    runningIdx !== null
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-orange-500 text-white hover:bg-orange-600 shadow-sm'
+                  }`}
+                >
+                  Cleanup Only
+                </button>
+                <button
                   onClick={runAll}
                   disabled={runningIdx !== null}
                   className={`px-5 py-2 rounded-lg font-medium transition-colors ${
@@ -868,17 +1568,132 @@
             </div>
           </div>
 
-          {/* Test suites */}
+          {/* Test suites grouped by section */}
           <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
-            {ALL_SUITES.map((suite, i) => (
-              <TestSuiteCard
-                key={i}
-                suite={suite}
-                results={suiteResults[i]}
-                running={runningIdx === i || runningIdx === -1}
-                onRun={() => runSuite(i)}
-              />
-            ))}
+            {ALL_SUITES.map((suite, i) => {
+              const prevSection = i > 0 ? ALL_SUITES[i - 1].section : null;
+              const showHeader = suite.section !== prevSection && SECTIONS[suite.section];
+              const sec = SECTIONS[suite.section];
+              return (
+                <React.Fragment key={i}>
+                  {showHeader && (
+                    <div className={`${i > 0 ? 'mt-8 pt-6 border-t-2 border-gray-300' : ''}`}>
+                      <h2 className="text-lg font-bold text-gray-800">{sec.title}</h2>
+                      <p className="text-sm text-gray-500 mb-3">{sec.subtitle}</p>
+                    </div>
+                  )}
+                  <TestSuiteCard
+                    suite={suite}
+                    results={suiteResults[i]}
+                    running={runningIdx === i || runningIdx === -1}
+                    onRun={() => runSuite(i)}
+                  />
+                </React.Fragment>
+              );
+            })}
+          </div>
+
+          {/* ==================== SEED USERS ==================== */}
+          <div className="max-w-4xl mx-auto px-6 pb-6">
+            <div className="mt-4 pt-6 border-t-2 border-gray-300">
+              <h2 className="text-lg font-bold text-gray-800">Seed Users</h2>
+              <p className="text-sm text-gray-500 mb-3">Pre-built parent and counselor profiles. Click Add to populate the dev database.</p>
+            </div>
+
+            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between px-5 py-3 bg-gray-50 border-b">
+                <div className="text-sm text-gray-600">
+                  <span className="font-bold text-gray-800">{totalSeedIn}/{totalSeedUsers}</span> users in database
+                  {seedChecking && <span className="text-gray-400 ml-2">(checking...)</span>}
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={checkSeedStatus} disabled={isSeedAllLoading}
+                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Refresh</button>
+                  <button onClick={addAllSeeds} disabled={isSeedAllLoading || totalSeedIn === totalSeedUsers}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${totalSeedIn === totalSeedUsers || isSeedAllLoading ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                    {isSeedAllLoading ? 'Working...' : 'Add All'}</button>
+                  <button onClick={removeAllSeeds} disabled={isSeedAllLoading || totalSeedIn === 0}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${totalSeedIn === 0 || isSeedAllLoading ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                    Remove All</button>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b bg-gray-50 text-left">
+                  <th className="px-5 py-2 text-gray-500 font-medium w-10"></th>
+                  <th className="px-5 py-2 text-gray-500 font-medium">Name</th>
+                  <th className="px-5 py-2 text-gray-500 font-medium hidden sm:table-cell">Email / Password</th>
+                  <th className="px-5 py-2 text-gray-500 font-medium hidden md:table-cell">Details</th>
+                  <th className="px-5 py-2 text-gray-500 font-medium text-center">Status</th>
+                  <th className="px-5 py-2 text-gray-500 font-medium text-right">Action</th>
+                </tr></thead>
+                <tbody>
+                  {PARENT_PROFILES.map(p => {
+                    const exists = parentStatus[p.email];
+                    const busy = !!seedLoading[p.email] || isSeedAllLoading;
+                    return (
+                      <tr key={p.email} className={`border-b hover:bg-gray-50 ${exists ? 'bg-green-50/40' : ''}`}>
+                        <td className="px-5 py-2.5 text-lg">{'\ud83d\udc6a'}</td>
+                        <td className="px-5 py-2.5">
+                          <div className="font-medium text-gray-800">{p.name}</div>
+                        </td>
+                        <td className="px-5 py-2.5 hidden sm:table-cell">
+                          <div className="text-gray-600 font-mono text-xs">{p.email}</div>
+                          <div className="text-gray-400 font-mono text-xs">{p.password}</div>
+                        </td>
+                        <td className="px-5 py-2.5 text-gray-500 text-xs hidden md:table-cell">
+                          {p.campers.length} camper{p.campers.length > 1 ? 's' : ''}, {p.registration?.weeks?.length || 0} wk
+                        </td>
+                        <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
+                        <td className="px-5 py-2.5 text-right">
+                          {!exists ? (
+                            <button onClick={() => handleSeedAdd('parent', p)} disabled={busy}
+                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                              {busy ? '...' : 'Add'}</button>
+                          ) : (
+                            <button onClick={() => handleSeedRemove('parent', p)} disabled={busy}
+                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                              {busy ? '...' : 'Remove'}</button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="border-b bg-gray-50"><td colSpan="6" className="px-5 py-1"></td></tr>
+                  {COUNSELOR_PROFILES.map(c => {
+                    const exists = counselorStatus[c.email];
+                    const busy = !!seedLoading[c.email] || isSeedAllLoading;
+                    const photoSrc = COUNSELOR_PHOTOS[c.id] || null;
+                    return (
+                      <tr key={c.email} className={`border-b hover:bg-gray-50 ${exists ? 'bg-green-50/40' : ''}`}>
+                        <td className="px-5 py-2.5">{photoSrc ? <img src={photoSrc} className="w-7 h-7 rounded-full object-cover" /> : <span className="text-lg">{'\ud83c\udfc0'}</span>}</td>
+                        <td className="px-5 py-2.5">
+                          <div className="font-medium text-gray-800">{c.name}</div>
+                        </td>
+                        <td className="px-5 py-2.5 hidden sm:table-cell">
+                          <div className="text-gray-600 font-mono text-xs">{c.email}</div>
+                          <div className="text-gray-400 font-mono text-xs">{c.password}</div>
+                        </td>
+                        <td className="px-5 py-2.5 text-gray-500 text-xs hidden md:table-cell">
+                          {c.position}, {c.year}
+                        </td>
+                        <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
+                        <td className="px-5 py-2.5 text-right">
+                          {!exists ? (
+                            <button onClick={() => handleSeedAdd('counselor', c)} disabled={busy}
+                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                              {busy ? '...' : 'Add'}</button>
+                          ) : (
+                            <button onClick={() => handleSeedRemove('counselor', c)} disabled={busy}
+                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                              {busy ? '...' : 'Remove'}</button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Copy Results Section */}
@@ -914,7 +1729,7 @@
 
           {/* Footer */}
           <div className="text-center text-gray-400 text-sm py-6 border-t border-gray-200 mt-4">
-            {"Read-only tests only \u2014 no data is modified. Safe to run anytime on dev."}
+            {"Database & Logic tests are read-only. Flow tests create __test__ data then clean up. Seed users are persistent \u2014 use Add/Remove to manage them."}
           </div>
         </div>
       );
