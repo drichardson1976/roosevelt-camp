@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.131";
-    const BUILD_DATE = new Date("2026-02-15T17:20:00");
+    const VERSION = "13.133";
+    const BUILD_DATE = new Date("2026-02-15T17:57:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -1677,34 +1677,9 @@
             </div>
           </div>
 
-          {/* Test suites grouped by section */}
-          <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
-            {ALL_SUITES.map((suite, i) => {
-              const prevSection = i > 0 ? ALL_SUITES[i - 1].section : null;
-              const showHeader = suite.section !== prevSection && SECTIONS[suite.section];
-              const sec = SECTIONS[suite.section];
-              return (
-                <React.Fragment key={i}>
-                  {showHeader && (
-                    <div className={`${i > 0 ? 'mt-8 pt-6 border-t-2 border-gray-300' : ''}`}>
-                      <h2 className="text-lg font-bold text-gray-800">{sec.title}</h2>
-                      <p className="text-sm text-gray-500 mb-3">{sec.subtitle}</p>
-                    </div>
-                  )}
-                  <TestSuiteCard
-                    suite={suite}
-                    results={suiteResults[i]}
-                    running={runningIdx === i || runningIdx === -1}
-                    onRun={() => runSuite(i)}
-                  />
-                </React.Fragment>
-              );
-            })}
-          </div>
-
           {/* ==================== SEED USERS ==================== */}
-          <div className="max-w-4xl mx-auto px-6 pb-6">
-            <div className="mt-4 pt-6 border-t-2 border-gray-300">
+          <div className="max-w-4xl mx-auto px-6 pt-6">
+            <div>
               <h2 className="text-lg font-bold text-gray-800">Seed Users</h2>
               <p className="text-sm text-gray-500 mb-3">Pre-built parent and counselor profiles. Click Add to populate the dev database.</p>
             </div>
@@ -1803,6 +1778,31 @@
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* Test suites grouped by section */}
+          <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+            {ALL_SUITES.map((suite, i) => {
+              const prevSection = i > 0 ? ALL_SUITES[i - 1].section : null;
+              const showHeader = suite.section !== prevSection && SECTIONS[suite.section];
+              const sec = SECTIONS[suite.section];
+              return (
+                <React.Fragment key={i}>
+                  {showHeader && (
+                    <div className={`${i > 0 ? 'mt-8 pt-6 border-t-2 border-gray-300' : ''}`}>
+                      <h2 className="text-lg font-bold text-gray-800">{sec.title}</h2>
+                      <p className="text-sm text-gray-500 mb-3">{sec.subtitle}</p>
+                    </div>
+                  )}
+                  <TestSuiteCard
+                    suite={suite}
+                    results={suiteResults[i]}
+                    running={runningIdx === i || runningIdx === -1}
+                    onRun={() => runSuite(i)}
+                  />
+                </React.Fragment>
+              );
+            })}
           </div>
 
           {/* Copy Results Section */}
