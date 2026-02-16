@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.137";
+    const VERSION = "13.141";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T18:45:00");
+    const BUILD_DATE = new Date("2026-02-15T21:52:00");
 
     const RELEASE_NOTES = [
+      { version: "13.142", date: "2026-02-15", time: "9:52 PM", author: "Derek Richardson", changes: ["Admin: Removed all messaging UI — Message All Parents button, individual Message buttons, Unread badge, Messages section in expanded parent, MessageComposer/ThreadViewer modals, Messages tab, Dashboard unread messages todo", "Admin: Parent row stats now show order-based counts (New/Pending/Paid) instead of individual session rows", "Admin: Expanded parent registrations now grouped by order instead of listing individual day rows", "Parent/Counselor: Removed dead messaging code — state variables, DB fetch, helper functions for camp_messages"] },
       { version: "13.139", date: "2026-02-15", time: "7:06 PM", author: "Derek Richardson", changes: ["Admin: Removed Messages section from Danger Zone"] },
       { version: "13.138", date: "2026-02-15", time: "6:45 PM", author: "Derek Richardson", changes: ["Parent: Added Edit button to Payments tab registration cards for unpaid registrations", "Tests: Fixed Audrey Richardson seed data — removed from campers list (she is a counselor, not a camper), replaced with Dylan Richardson", "Tests: Seed users table rows are now expandable — click to see auto-setup details (campers, emergency contacts, registration for parents; position, bio, availability for counselors)"] },
       { version: "13.136", date: "2026-02-15", time: "6:30 PM", author: "Derek Richardson", changes: ["Parent: Registration edit button now shows 'Edit' text instead of pencil icon for UX consistency"] },
@@ -3742,7 +3743,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
-      const [messages, setMessages] = useState([]);
       const [admins, setAdmins] = useState(DEFAULT_ADMINS);
       const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
       const [campers, setCampers] = useState([]); // Standalone campers collection
@@ -3800,7 +3800,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setLoading(true);
           try {
             // Parallel fetch all tables at once for faster loading
-            const [cd, cs, rg, pr, cu, av, ch, ms, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, campDatesData, gr, cecl] = await Promise.all([
+            const [cd, cs, rg, pr, cu, av, ch, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, campDatesData, gr, cecl] = await Promise.all([
               storage.get('camp_content'),
               storage.get('camp_counselors'),
               storage.get('camp_registrations'),
@@ -3808,7 +3808,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_counselor_users'),
               storage.get('camp_counselor_availability'),
               storage.get('camp_change_history'),
-              storage.get('camp_messages'),
               storage.get('camp_admins'),
               storage.get('camp_assignments'),
               storage.get('camp_campers'),
@@ -3832,7 +3831,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             if (av?.[0]?.data) setAvailability(av[0].data);
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
-            if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
             if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
             if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
@@ -4103,41 +4101,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         setProfileChangeRequests(requests);
         await storage.set('camp_profile_change_requests', 'main', requests);
         if (action) addToHistory('Profile', action);
-      };
-
-      const saveMessage = async (msg) => {
-        setMessages(prev => [...prev, msg]);
-        await storage.set('camp_messages', msg.id, msg);
-      };
-
-      const deleteMessage = async (msgId) => {
-        setMessages(prev => prev.filter(m => m.id !== msgId));
-        await supabase.from('camp_messages').delete().eq('id', msgId);
-      };
-
-      const updateMessage = async (msgId, updatedMsg) => {
-        setMessages(prev => prev.map(m => m.id === msgId ? updatedMsg : m));
-        await storage.set('camp_messages', updatedMsg.id, updatedMsg);
-      };
-
-      const markMessageRead = async (msgId, readerEmail) => {
-        const updated = messages.map(m => {
-          if (m.id === msgId && !m.readBy?.includes(readerEmail)) {
-            return { ...m, readBy: [...(m.readBy || []), readerEmail] };
-          }
-          return m;
-        });
-        setMessages(updated);
-        const msg = updated.find(m => m.id === msgId);
-        if (msg) await storage.set('camp_messages', msg.id, msg);
-      };
-
-      const getUnreadCount = (email) => {
-        return messages.filter(m =>
-          (m.to === 'all' || m.to?.includes(email)) &&
-          m.from !== email &&
-          !m.readBy?.includes(email)
-        ).length;
       };
 
       const getPending = () => registrations.filter(r => r.status === 'pending').length;
