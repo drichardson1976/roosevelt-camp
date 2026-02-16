@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.113";
+    const VERSION = "13.129";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-11T15:50:00");
+    const BUILD_DATE = new Date("2026-02-15T16:59:00");
 
     const RELEASE_NOTES = [
+      { version: "13.129", date: "2026-02-15", time: "4:59 PM", author: "Derek Richardson", changes: ["Parent: Contact Us — changed email to rhsdaycamp@gmail.com, removed phone number"] },
       { version: "13.127", date: "2026-02-15", time: "1:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod click-to-assign — pods now initialize with stable IDs so first click works reliably", "Admin: Counselor schedule cycling now includes 'not set' option (available → unavailable → not set)", "Admin: Day toggle also cycles through three states"] },
       { version: "13.126", date: "2026-02-15", time: "1:15 PM", author: "Audrey Richardson", changes: ["Login: Added prominent error popup when incorrect email or password is entered"] },
       { version: "13.125", date: "2026-02-15", time: "12:30 PM", author: "Audrey Richardson", changes: ["Admin: Fixed pod assignments — lifted date/session/pod state to parent so assignments persist across re-renders", "Admin: Fixed availability sync — admin edits now properly write to counselor availability table with correct data format, preserving counselor-set sessions"] },
@@ -5770,14 +5771,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   <div className="space-y-4">
                     <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
                       <p className="text-sm text-gray-500 mb-1">Email</p>
-                      <a href="mailto:campdirector@rhsbasketballdaycamp.com" className="text-green-700 font-bold text-lg hover:underline">campdirector@rhsbasketballdaycamp.com</a>
-                    </div>
-                    <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4">
-                      <p className="text-sm text-gray-500 mb-1">Phone (emergency use only)</p>
-                      <a href="tel:+14084104448" className="text-orange-700 font-bold text-lg hover:underline">(408) 410-4448</a>
+                      <a href="mailto:rhsdaycamp@gmail.com" className="text-green-700 font-bold text-lg hover:underline">rhsdaycamp@gmail.com</a>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 mt-6">For general questions, please email us. Phone is for camp-day emergencies only.</p>
+                  <p className="text-xs text-gray-400 mt-6">For general questions, please email us.</p>
                 </div>
               )}
 
