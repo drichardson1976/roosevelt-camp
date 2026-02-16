@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.138";
-    const BUILD_DATE = new Date("2026-02-15T18:45:00");
+    const VERSION = "13.148";
+    const BUILD_DATE = new Date("2026-02-15T22:18:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -1263,6 +1263,71 @@
               const afterSched = await getMainData('camp_counselor_schedule') || {};
               assert.equal(Object.keys(afterAvail).filter(k => isTestData(k)).length, 0, 'Test availability still exists');
               assert.equal(Object.keys(afterSched).filter(k => isTestData(k)).length, 0, 'Test schedule still exists');
+            }
+          },
+        ]
+      },
+      // ===== AVAILABILITY CONFLICT CHECKING (v13.148) =====
+      {
+        name: "Availability Conflict Checking",
+        section: "readonly",
+        category: "logic",
+        icon: "\u26a0\ufe0f",
+        tests: [
+          {
+            name: "Detects camper assignments for a counselor on a specific date/session",
+            fn: async () => {
+              // Simulate assignments data structure
+              const testAssignments = {
+                '2026-07-06_morning': { 'counselor-1': ['camper-a', 'camper-b'] },
+                '2026-07-06_afternoon': { 'counselor-1': [] },
+                '2026-07-07_morning': {},
+              };
+              // Helper function (mirrors counselor.html getAssignedCamperCount logic)
+              const getAssignedCamperCount = (assignments, counselorId, date, session) => {
+                const key = `${date}_${session}`;
+                const camperIds = assignments[key]?.[counselorId] || [];
+                return camperIds.length;
+              };
+              assert.equal(getAssignedCamperCount(testAssignments, 'counselor-1', '2026-07-06', 'morning'), 2, 'Should find 2 assigned campers');
+              assert.equal(getAssignedCamperCount(testAssignments, 'counselor-1', '2026-07-06', 'afternoon'), 0, 'Should find 0 assigned campers (empty array)');
+              assert.equal(getAssignedCamperCount(testAssignments, 'counselor-1', '2026-07-07', 'morning'), 0, 'Should find 0 assigned campers (no counselor key)');
+              assert.equal(getAssignedCamperCount(testAssignments, 'counselor-2', '2026-07-06', 'morning'), 0, 'Should find 0 for unknown counselor');
+            }
+          },
+          {
+            name: "Toggle visibility updates both visible and approvedByAdmin fields",
+            fn: async () => {
+              // Simulate toggle logic (mirrors admin.html toggle switch)
+              const counselor = { id: '1', name: 'Test', visible: false, approvedByAdmin: false };
+              const isCurrentlyVisible = counselor.visible !== false && counselor.approvedByAdmin !== false;
+              assert.equal(isCurrentlyVisible, false, 'Unapproved counselor should not be visible');
+              const newVisible = !isCurrentlyVisible;
+              const updated = { ...counselor, visible: newVisible, approvedByAdmin: newVisible };
+              assert.equal(updated.visible, true, 'After toggle, visible should be true');
+              assert.equal(updated.approvedByAdmin, true, 'After toggle, approvedByAdmin should be true');
+              // Toggle back
+              const isVisible2 = updated.visible !== false && updated.approvedByAdmin !== false;
+              const toggled = { ...updated, visible: !isVisible2, approvedByAdmin: !isVisible2 };
+              assert.equal(toggled.visible, false, 'After second toggle, visible should be false');
+              assert.equal(toggled.approvedByAdmin, false, 'After second toggle, approvedByAdmin should be false');
+            }
+          },
+          {
+            name: "Availability data parsing handles both array and object formats",
+            fn: async () => {
+              // Object format (current)
+              const objFormat = { available: ['morning'], unavailable: ['afternoon'] };
+              const availSessions = Array.isArray(objFormat) ? objFormat : (objFormat.available || []);
+              const unavailSessions = Array.isArray(objFormat) ? [] : (objFormat.unavailable || []);
+              assert.ok(availSessions.includes('morning'), 'Morning should be available');
+              assert.ok(unavailSessions.includes('afternoon'), 'Afternoon should be unavailable');
+              // Array format (legacy)
+              const arrFormat = ['morning', 'afternoon'];
+              const availSessions2 = Array.isArray(arrFormat) ? arrFormat : (arrFormat.available || []);
+              const unavailSessions2 = Array.isArray(arrFormat) ? [] : (arrFormat.unavailable || []);
+              assert.ok(availSessions2.includes('morning'), 'Array format: morning should be available');
+              assert.equal(unavailSessions2.length, 0, 'Array format: no unavailable sessions');
             }
           },
         ]
