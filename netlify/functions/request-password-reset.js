@@ -1,14 +1,23 @@
 const crypto = require('crypto');
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
     const { email } = JSON.parse(event.body);
     if (!email) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Email is required' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Email is required' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -63,7 +72,7 @@ exports.handler = async (event) => {
 
     // Always return success (prevents email enumeration)
     if (!userType) {
-      return { statusCode: 200, body: JSON.stringify({ success: true }) };
+      return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
     }
 
     // Generate a unique token
@@ -130,8 +139,8 @@ exports.handler = async (event) => {
       } catch (alertErr) { console.error('Failed to send delivery alert:', alertErr.message); }
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };

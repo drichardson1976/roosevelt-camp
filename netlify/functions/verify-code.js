@@ -1,12 +1,21 @@
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
     const { phone, code } = JSON.parse(event.body);
     if (!phone || !code) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Phone and code are required' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Phone and code are required' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -32,7 +41,7 @@ exports.handler = async (event) => {
     const tokens = await tokensRes.json();
 
     if (!tokens?.length) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'No verification code found. Please request a new code.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'No verification code found. Please request a new code.' }) };
     }
 
     // Find a matching, unused, unexpired token
@@ -46,9 +55,9 @@ exports.handler = async (event) => {
       // Check if code was correct but expired
       const expiredMatch = tokens.find(t => t.data.code === code && !t.data.used);
       if (expiredMatch) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'This code has expired. Please request a new one.' }) };
+        return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'This code has expired. Please request a new one.' }) };
       }
-      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid code. Please check and try again.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Invalid code. Please check and try again.' }) };
     }
 
     // Mark token as used
@@ -66,6 +75,7 @@ exports.handler = async (event) => {
     // Return the user's login info
     return {
       statusCode: 200,
+      headers: CORS_HEADERS,
       body: JSON.stringify({
         success: true,
         email: validToken.data.email,
@@ -75,6 +85,6 @@ exports.handler = async (event) => {
       })
     };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };

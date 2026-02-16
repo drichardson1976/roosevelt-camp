@@ -33,10 +33,21 @@ async function sendDeliveryAlert(originalTo, subject, errorDetails) {
   }
 }
 
+// CORS headers — allows localhost and production to call this function
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
-  // Only allow POST requests
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
@@ -44,7 +55,7 @@ exports.handler = async (event) => {
 
     // Validate required fields
     if (!to || !subject || !html) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
     }
 
     // CC the camp email on all outgoing emails (skip if camp email is already a recipient)
@@ -75,13 +86,13 @@ exports.handler = async (event) => {
     if (!response.ok) {
       // Email delivery failed — alert the camp
       await sendDeliveryAlert(to, subject, JSON.stringify(data));
-      return { statusCode: response.status, body: JSON.stringify({ error: data }) };
+      return { statusCode: response.status, headers: CORS_HEADERS, body: JSON.stringify({ error: data }) };
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true, data }) };
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, data }) };
   } catch (error) {
     // Unexpected error — alert the camp
     await sendDeliveryAlert('unknown', 'unknown', error.message);
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };

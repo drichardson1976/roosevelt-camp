@@ -1,16 +1,25 @@
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
     const { token, newPassword } = JSON.parse(event.body);
     if (!token || !newPassword) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Token and new password are required' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Token and new password are required' }) };
     }
 
     if (newPassword.length < 4) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Password must be at least 4 characters' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Password must be at least 4 characters' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -32,19 +41,19 @@ exports.handler = async (event) => {
     const tokenRows = await tokenRes.json();
 
     if (!tokenRows?.length || !tokenRows[0]?.data) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Invalid or expired reset link. Please request a new one.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Invalid or expired reset link. Please request a new one.' }) };
     }
 
     const tokenData = tokenRows[0].data;
 
     // Check if token is already used
     if (tokenData.used) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'This reset link has already been used. Please request a new one.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'This reset link has already been used. Please request a new one.' }) };
     }
 
     // Check if token is expired
     if (new Date(tokenData.expiresAt) < new Date()) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'This reset link has expired. Please request a new one.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'This reset link has expired. Please request a new one.' }) };
     }
 
     const { email, userType } = tokenData;
@@ -61,7 +70,7 @@ exports.handler = async (event) => {
     const usersData = await usersRes.json();
 
     if (!usersData?.[0]?.data) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Could not find user data' }) };
+      return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Could not find user data' }) };
     }
 
     // Update password in the JSONB array
@@ -76,7 +85,7 @@ exports.handler = async (event) => {
     });
 
     if (!found) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'User account not found' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'User account not found' }) };
     }
 
     // Save updated users back to Supabase
@@ -92,7 +101,7 @@ exports.handler = async (event) => {
     });
 
     if (!updateRes.ok) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to update password' }) };
+      return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Failed to update password' }) };
     }
 
     // Mark token as used
@@ -108,11 +117,11 @@ exports.handler = async (event) => {
     });
 
     // Return user info so client can auto-login
-    return { statusCode: 200, body: JSON.stringify({
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({
       success: true,
       user: { email: found.email, name: found.name, role: userType, roles: found.roles || [userType] }
     }) };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };

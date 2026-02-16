@@ -1,13 +1,22 @@
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
     const { to, body } = JSON.parse(event.body);
 
     if (!to || !body) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: to, body' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields: to, body' }) };
     }
 
     const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -15,7 +24,7 @@ exports.handler = async (event) => {
     const FROM_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
     if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Twilio not configured' }) };
+      return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Twilio not configured' }) };
     }
 
     // Normalize phone number to E.164 format (+1XXXXXXXXXX)
@@ -44,11 +53,11 @@ exports.handler = async (event) => {
     const data = await response.json();
 
     if (!response.ok) {
-      return { statusCode: response.status, body: JSON.stringify({ error: data.message || data }) };
+      return { statusCode: response.status, headers: CORS_HEADERS, body: JSON.stringify({ error: data.message || data }) };
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true, sid: data.sid }) };
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, sid: data.sid }) };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };

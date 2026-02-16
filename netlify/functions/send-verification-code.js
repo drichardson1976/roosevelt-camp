@@ -1,12 +1,21 @@
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
     const { phone } = JSON.parse(event.body);
     if (!phone) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Phone number is required' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Phone number is required' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -25,7 +34,7 @@ exports.handler = async (event) => {
 
     const inputDigits = normalizePhone(phone);
     if (inputDigits.length !== 10) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Please enter a valid 10-digit phone number.' }) };
+      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Please enter a valid 10-digit phone number.' }) };
     }
 
     // Look up parent by phone number
@@ -63,7 +72,7 @@ exports.handler = async (event) => {
     // Always return success to prevent phone enumeration
     if (!foundUser) {
       console.log(`Phone lookup: no user found for digits ${inputDigits} in schema ${schema}`);
-      return { statusCode: 200, body: JSON.stringify({ success: true }) };
+      return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
     }
     console.log(`Phone lookup: found ${foundUser.name} (${foundUser.userType}) in schema ${schema}`);
 
@@ -120,11 +129,11 @@ exports.handler = async (event) => {
 
     if (!smsRes.ok) {
       console.error('Twilio error details:', JSON.stringify(smsData));
-      return { statusCode: 500, body: JSON.stringify({ error: `SMS failed: ${smsData.message || 'Could not send verification code. Please try again.'}` }) };
+      return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: `SMS failed: ${smsData.message || 'Could not send verification code. Please try again.'}` }) };
     }
 
-    return { statusCode: 200, body: JSON.stringify({ success: true }) };
+    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
   }
 };
