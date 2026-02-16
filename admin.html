@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.149";
+    const VERSION = "13.152";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T22:27:00");
+    const BUILD_DATE = new Date("2026-02-15T23:18:00");
 
     const RELEASE_NOTES = [
+      { version: "13.152", date: "2026-02-15", time: "11:18 PM", author: "Derek Richardson", changes: ["Admin: Work Availability tab redesigned — responsive card grid calendar matching parent registration style (1/2/3/5 columns)", "Admin: Single counselor view shows full-width green/red/gray AM/PM buttons; multi-counselor view shows colored initial pills per session", "Admin: Counselor filter chips with All/None quick toggles, green month tab pills", "Admin: New 'Work Schedule' tab — same card grid showing assigned sessions with camper counts per counselor", "Admin: Work Schedule single-counselor view shows green buttons with camper count; multi-counselor shows initial pills with counts"] },
       { version: "13.151", date: "2026-02-15", time: "11:03 PM", author: "Derek Richardson", changes: ["Counselor: Availability tab redesigned — responsive card grid (1/2/3/5 columns), emoji AM/PM buttons with ✓/✗ icons, yellow border for partial availability, removed green instructions banner", "Counselor: 'My Schedule' tab renamed to 'Scheduled to Work' with card grid layout — green buttons show camper count per session, gray for unassigned", "Counselor: New Pod Detail Modal — click any assigned session to see camper photos, names, grades, ages plus other counselors working same session", "Counselor: Fixed myCounselor scoping — moved to top of CounselorDash, removed 4 redundant re-declarations"] },
       { version: "13.150", date: "2026-02-15", time: "10:27 PM", author: "Derek Richardson", changes: ["Admin: Camper card stats redesigned — now shows Parents, Sessions, Paid, In Pods (matching Parents page style)", "Admin: Removed redundant summary stat cards from bottom of Campers tab", "Parent: Fixed crash on login — removed leftover getUnreadCount() reference from deleted messaging code"] },
       { version: "13.148", date: "2026-02-15", time: "10:18 PM", author: "Derek Richardson", changes: ["Admin: Cleared Dashboard tab — replaced task tracking UI with placeholder (will be rebuilt later)", "Admin: Counselors tab now shows ALL counselors with toggle switch for website visibility and approval", "Admin: Unapproved counselors displayed with amber left border and 'Not visible on website' badge", "Admin: Work Availability tab replaced with multi-counselor calendar view — month selector, counselor filter chips, per-date availability grid", "Admin: Tab badges now show total counselor count instead of pending approval count", "Counselor: Profile editing locked — counselors can view but not edit their profile (admin-only control)", "Counselor: Availability changes now warn about pod conflicts when campers are assigned to affected sessions", "Tests: Added availability conflict checking tests"] },
@@ -7389,7 +7390,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           badge: () => counselors.length,
           children: {
             'counselors': { label: 'Counselors', badge: () => counselors.length },
-            'availability': { label: 'Work Availability' }
+            'availability': { label: 'Work Availability' },
+            'workschedule': { label: 'Work Schedule' }
           },
           defaultChild: 'counselors'
         },
@@ -8060,6 +8062,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const setScheduleMonth = setCounselorScheduleMonth;
         const [availCalMonth, setAvailCalMonth] = useState(null);
         const [availCalHidden, setAvailCalHidden] = useState({});
+        const [schedCalMonth, setSchedCalMonth] = useState(null);
+        const [schedCalHidden, setSchedCalHidden] = useState({});
 
         // Helper: count sessions where counselor is marked eligible by admin
         const getCounselorEligibleCount = (counselorId) => {
@@ -8563,138 +8567,339 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </div>
               )}
 
+              {/* ===== WORK AVAILABILITY TAB ===== */}
               {adminParentTab === 'counselor' && getActiveChildTab('counselor') === 'availability' && (
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <div>
-                      <h2 className="font-bold text-xl">Work Availability</h2>
-                      <p className="text-sm text-gray-500">View counselor availability across all camp dates</p>
-                    </div>
-                  </div>
-
-                  {/* Month selector tabs */}
-                  <div className="flex gap-2 mb-4 flex-wrap">
-                    {(() => {
-                      const months = [...new Set(CAMP_DATES.map(d => {
-                        const date = new Date(d + 'T12:00:00');
-                        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                      }))];
-                      if (!availCalMonth && months.length > 0) {
-                        setTimeout(() => setAvailCalMonth(months[0]), 0);
-                      }
-                      return months.map(m => {
-                        const [yr, mo] = m.split('-');
-                        const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-                        return (
-                          <button
-                            key={m}
-                            onClick={() => setAvailCalMonth(m)}
-                            className={`px-4 py-2 rounded-lg font-medium ${availCalMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      });
-                    })()}
-                  </div>
-
-                  {/* Counselor filter */}
-                  <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700 mb-2">Show counselors:</div>
-                    <div className="flex gap-2 flex-wrap">
-                      {counselors.map(c => {
-                        const isShown = !availCalHidden[c.id];
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => setAvailCalHidden(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
-                            className={`px-3 py-1 rounded-full text-sm font-medium transition ${
-                              isShown ? 'bg-purple-100 text-purple-700 border border-purple-300' : 'bg-gray-200 text-gray-500 border border-gray-300'
-                            }`}
-                          >
-                            {isShown ? '✓ ' : ''}{c.name.split(' ')[0]}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Availability calendar */}
-                  {availCalMonth && (() => {
-                    const [yr, mo] = availCalMonth.split('-').map(Number);
-                    const monthDates = CAMP_DATES.filter(d => {
+                <div className="space-y-6">
+                  {(() => {
+                    // Auto-select first month
+                    const months = [...new Set(CAMP_DATES.map(d => {
                       const date = new Date(d + 'T12:00:00');
-                      return date.getFullYear() === yr && date.getMonth() + 1 === mo;
-                    });
-                    const getDayName = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
-                    const formatDateShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    }))];
+                    if (!availCalMonth && months.length > 0) {
+                      setTimeout(() => setAvailCalMonth(months[0]), 0);
+                    }
                     const visibleCounselors = counselors.filter(c => !availCalHidden[c.id]);
+                    const allShown = counselors.length > 0 && visibleCounselors.length === counselors.length;
+                    const noneShown = visibleCounselors.length === 0;
+
+                    // Get availability state for a counselor on a date/session
+                    const getAvailState = (c, date, session) => {
+                      const counselorAvail = availability[c.email] || {};
+                      const dateAvail = counselorAvail[date] || {};
+                      const availSessions = Array.isArray(dateAvail) ? dateAvail : (dateAvail.available || []);
+                      const unavailSessions = Array.isArray(dateAvail) ? [] : (dateAvail.unavailable || []);
+                      if (availSessions.includes(session)) return 'available';
+                      if (unavailSessions.includes(session)) return 'unavailable';
+                      return 'not-set';
+                    };
+
+                    // Get month dates
+                    const getMonthDates = () => {
+                      if (!availCalMonth) return [];
+                      const [yr, mo] = availCalMonth.split('-').map(Number);
+                      return CAMP_DATES.filter(d => {
+                        const date = new Date(d + 'T12:00:00');
+                        return date.getFullYear() === yr && date.getMonth() + 1 === mo;
+                      });
+                    };
 
                     return (
-                      <div className="space-y-3">
-                        {monthDates.map(d => {
-                          const morningBlocked = isSessionBlocked(d, 'morning');
-                          const afternoonBlocked = isSessionBlocked(d, 'afternoon');
-                          return (
-                            <div key={d} className="bg-white rounded-xl shadow overflow-hidden">
-                              <div className="bg-gray-100 px-4 py-2 font-bold flex justify-between items-center">
-                                <span>{getDayName(d)}, {formatDateShort(d)}</span>
-                                {(morningBlocked || afternoonBlocked) && (
-                                  <span className="text-xs text-red-500">
-                                    {morningBlocked && afternoonBlocked ? '🚫 Both sessions blocked' :
-                                     morningBlocked ? '🚫 AM blocked' : '🚫 PM blocked'}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="divide-y">
-                                {visibleCounselors.map(c => {
-                                  const counselorAvail = availability[c.email] || {};
-                                  const dateAvail = counselorAvail[d] || {};
-                                  const availSessions = Array.isArray(dateAvail) ? dateAvail : (dateAvail.available || []);
-                                  const unavailSessions = Array.isArray(dateAvail) ? [] : (dateAvail.unavailable || []);
-                                  const morningState = availSessions.includes('morning') ? 'available' : unavailSessions.includes('morning') ? 'unavailable' : 'not-set';
-                                  const afternoonState = availSessions.includes('afternoon') ? 'available' : unavailSessions.includes('afternoon') ? 'unavailable' : 'not-set';
-                                  return (
-                                    <div key={c.id} className="px-4 py-2 flex items-center gap-3">
-                                      <div className="w-32 truncate text-sm font-medium">{c.name}</div>
-                                      <div className="flex gap-2">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                                          morningBlocked ? 'bg-gray-100 text-gray-400' :
-                                          morningState === 'available' ? 'bg-green-100 text-green-700' :
-                                          morningState === 'unavailable' ? 'bg-red-100 text-red-700' :
-                                          'bg-gray-100 text-gray-500'
-                                        }`}>
-                                          ☀️ AM {morningBlocked ? '🚫' : morningState === 'available' ? '✓' : morningState === 'unavailable' ? '✗' : '○'}
-                                        </span>
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                                          afternoonBlocked ? 'bg-gray-100 text-gray-400' :
-                                          afternoonState === 'available' ? 'bg-green-100 text-green-700' :
-                                          afternoonState === 'unavailable' ? 'bg-red-100 text-red-700' :
-                                          'bg-gray-100 text-gray-500'
-                                        }`}>
-                                          🌙 PM {afternoonBlocked ? '🚫' : afternoonState === 'available' ? '✓' : afternoonState === 'unavailable' ? '✗' : '○'}
-                                        </span>
+                      <>
+                        {/* Counselor filter chips */}
+                        <div className="bg-white rounded-xl shadow p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-medium text-gray-700">Show counselors:</span>
+                            <button onClick={() => setAvailCalHidden({})} className={'px-2 py-0.5 rounded text-xs font-medium ' + (allShown ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => { const h = {}; counselors.forEach(c => h[c.id] = true); setAvailCalHidden(h); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (noneShown ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {counselors.map(c => {
+                              const isShown = !availCalHidden[c.id];
+                              return (
+                                <button key={c.id} onClick={() => setAvailCalHidden(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
+                                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition border ${isShown ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                                  {isShown ? '✓ ' : ''}{(c.firstName || c.name?.split(' ')[0] || '?')}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Month tabs */}
+                        <div className="flex flex-wrap gap-2">
+                          {months.map(m => {
+                            const [yr, mo] = m.split('-');
+                            const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long' });
+                            return (
+                              <button key={m} onClick={() => setAvailCalMonth(m)}
+                                className={'px-6 py-2 rounded-lg font-medium ' + (availCalMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Responsive card grid */}
+                        {getMonthDates().length === 0 ? (
+                          <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No camp dates in this month.</div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {getMonthDates().map(date => {
+                              const d = new Date(date + 'T12:00:00');
+                              const amBlocked = isSessionBlocked(date, 'morning');
+                              const pmBlocked = isSessionBlocked(date, 'afternoon');
+                              const fullyBlocked = amBlocked && pmBlocked;
+
+                              // Compute states for all visible counselors
+                              const amStates = visibleCounselors.map(c => ({ c, state: getAvailState(c, date, 'morning') }));
+                              const pmStates = visibleCounselors.map(c => ({ c, state: getAvailState(c, date, 'afternoon') }));
+                              const allAmAvail = amStates.length > 0 && amStates.every(s => s.state === 'available');
+                              const allPmAvail = pmStates.length > 0 && pmStates.every(s => s.state === 'available');
+                              const allAmUnavail = amStates.length > 0 && amStates.every(s => s.state === 'unavailable');
+                              const allPmUnavail = pmStates.length > 0 && pmStates.every(s => s.state === 'unavailable');
+                              const anyAvail = amStates.some(s => s.state === 'available') || pmStates.some(s => s.state === 'available');
+
+                              const cardBorder = fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                                (allAmAvail && allPmAvail) ? 'border-green-300 bg-green-50' :
+                                (allAmUnavail && allPmUnavail) ? 'border-red-300 bg-red-50' :
+                                anyAvail ? 'border-yellow-300 bg-yellow-50' :
+                                'border-gray-200 bg-white';
+
+                              // Pill color helper
+                              const pillStyle = (state) => state === 'available' ? 'bg-green-500 text-white' : state === 'unavailable' ? 'bg-red-400 text-white' : 'bg-gray-200 text-gray-500';
+
+                              // Single counselor button style
+                              const singleBtn = (state, blocked) => blocked ? 'bg-gray-100 text-gray-400' :
+                                state === 'available' ? 'bg-green-500 text-white' :
+                                state === 'unavailable' ? 'bg-red-500 text-white' :
+                                'bg-white border text-gray-600';
+                              const singleIcon = (state, blocked) => blocked ? ' 🚫' : state === 'available' ? ' ✓' : state === 'unavailable' ? ' ✗' : '';
+
+                              return (
+                                <div key={date} className={'rounded-lg border-2 overflow-hidden transition-shadow hover:shadow-md ' + cardBorder}>
+                                  <div className="p-2 text-center font-medium bg-gray-100">
+                                    <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                    <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                  </div>
+                                  {fullyBlocked ? (
+                                    <div className="p-2 text-center text-xs text-red-500">🚫 Blocked</div>
+                                  ) : visibleCounselors.length === 0 ? (
+                                    <div className="p-2 space-y-1">
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
+                                    </div>
+                                  ) : visibleCounselors.length === 1 ? (
+                                    <div className="p-2 space-y-1">
+                                      <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(amStates[0]?.state, amBlocked)}>
+                                        ☀️ AM{singleIcon(amStates[0]?.state, amBlocked)}
+                                      </div>
+                                      <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(pmStates[0]?.state, pmBlocked)}>
+                                        🌙 PM{singleIcon(pmStates[0]?.state, pmBlocked)}
                                       </div>
                                     </div>
-                                  );
-                                })}
-                                {visibleCounselors.length === 0 && (
-                                  <div className="px-4 py-3 text-sm text-gray-500 text-center">No counselors selected. Use the filter above to show counselors.</div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {monthDates.length === 0 && (
-                          <div className="text-center py-8 text-gray-500">No camp dates in this month.</div>
+                                  ) : (
+                                    <div className="p-2 space-y-2">
+                                      <div>
+                                        <div className="text-xs text-gray-500 mb-1">☀️ AM{amBlocked ? ' 🚫' : ''}</div>
+                                        {amBlocked ? null : (
+                                          <div className="flex flex-wrap gap-1">
+                                            {amStates.map(({ c, state }) => (
+                                              <span key={c.id} className={'inline-block px-1.5 py-0.5 rounded text-xs font-bold ' + pillStyle(state)} title={`${c.firstName || c.name?.split(' ')[0]} — ${state}`}>
+                                                {(c.firstName || c.name?.split(' ')[0] || '?')[0]}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-gray-500 mb-1">🌙 PM{pmBlocked ? ' 🚫' : ''}</div>
+                                        {pmBlocked ? null : (
+                                          <div className="flex flex-wrap gap-1">
+                                            {pmStates.map(({ c, state }) => (
+                                              <span key={c.id} className={'inline-block px-1.5 py-0.5 rounded text-xs font-bold ' + pillStyle(state)} title={`${c.firstName || c.name?.split(' ')[0]} — ${state}`}>
+                                                {(c.firstName || c.name?.split(' ')[0] || '?')[0]}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                      </div>
+
+                        {/* Legend */}
+                        <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 justify-center text-sm">
+                          <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available ✓</span></div>
+                          <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-400 rounded" /><span>Unavailable ✗</span></div>
+                          <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" /><span>Not Set</span></div>
+                          <div className="flex items-center gap-2"><span>🚫</span><span>Session Blocked</span></div>
+                        </div>
+                      </>
                     );
                   })()}
+                </div>
+              )}
 
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                    <strong>Legend:</strong> ✓ = Available • ✗ = Unavailable • ○ = Not set • 🚫 = Session blocked
-                  </div>
+              {/* ===== WORK SCHEDULE TAB ===== */}
+              {adminParentTab === 'counselor' && getActiveChildTab('counselor') === 'workschedule' && (
+                <div className="space-y-6">
+                  {(() => {
+                    // Auto-select first month
+                    const months = [...new Set(CAMP_DATES.map(d => {
+                      const date = new Date(d + 'T12:00:00');
+                      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    }))];
+                    if (!schedCalMonth && months.length > 0) {
+                      setTimeout(() => setSchedCalMonth(months[0]), 0);
+                    }
+                    const visibleCounselors = counselors.filter(c => !schedCalHidden[c.id]);
+                    const allShown = counselors.length > 0 && visibleCounselors.length === counselors.length;
+                    const noneShown = visibleCounselors.length === 0;
+
+                    // Get assigned camper count for a counselor on a date/session
+                    const getAssignedCount = (c, date, session) => {
+                      const key = `${date}_${session}`;
+                      return ((assignments[key] || {})[c.id] || []).length;
+                    };
+
+                    // Get month dates
+                    const getMonthDates = () => {
+                      if (!schedCalMonth) return [];
+                      const [yr, mo] = schedCalMonth.split('-').map(Number);
+                      return CAMP_DATES.filter(d => {
+                        const date = new Date(d + 'T12:00:00');
+                        return date.getFullYear() === yr && date.getMonth() + 1 === mo;
+                      });
+                    };
+
+                    return (
+                      <>
+                        {/* Counselor filter chips */}
+                        <div className="bg-white rounded-xl shadow p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <span className="text-sm font-medium text-gray-700">Show counselors:</span>
+                            <button onClick={() => setSchedCalHidden({})} className={'px-2 py-0.5 rounded text-xs font-medium ' + (allShown ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => { const h = {}; counselors.forEach(c => h[c.id] = true); setSchedCalHidden(h); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (noneShown ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                          </div>
+                          <div className="flex gap-2 flex-wrap">
+                            {counselors.map(c => {
+                              const isShown = !schedCalHidden[c.id];
+                              return (
+                                <button key={c.id} onClick={() => setSchedCalHidden(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
+                                  className={`px-3 py-1.5 rounded-full text-sm font-medium transition border ${isShown ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                                  {isShown ? '✓ ' : ''}{(c.firstName || c.name?.split(' ')[0] || '?')}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Month tabs */}
+                        <div className="flex flex-wrap gap-2">
+                          {months.map(m => {
+                            const [yr, mo] = m.split('-');
+                            const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long' });
+                            return (
+                              <button key={m} onClick={() => setSchedCalMonth(m)}
+                                className={'px-6 py-2 rounded-lg font-medium ' + (schedCalMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Responsive card grid */}
+                        {getMonthDates().length === 0 ? (
+                          <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No camp dates in this month.</div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {getMonthDates().map(date => {
+                              const d = new Date(date + 'T12:00:00');
+
+                              // Compute counts for visible counselors
+                              const amCounts = visibleCounselors.map(c => ({ c, count: getAssignedCount(c, date, 'morning') }));
+                              const pmCounts = visibleCounselors.map(c => ({ c, count: getAssignedCount(c, date, 'afternoon') }));
+                              const anyAmAssigned = amCounts.some(s => s.count > 0);
+                              const anyPmAssigned = pmCounts.some(s => s.count > 0);
+                              const anyAssigned = anyAmAssigned || anyPmAssigned;
+
+                              const cardBorder = (anyAmAssigned && anyPmAssigned) ? 'border-green-300 bg-green-50' :
+                                anyAssigned ? 'border-yellow-300 bg-yellow-50' :
+                                'border-gray-200 bg-white';
+
+                              return (
+                                <div key={date} className={'rounded-lg border-2 overflow-hidden transition-shadow hover:shadow-md ' + cardBorder}>
+                                  <div className="p-2 text-center font-medium bg-gray-100">
+                                    <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                    <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                  </div>
+                                  {visibleCounselors.length === 0 ? (
+                                    <div className="p-2 space-y-1">
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
+                                    </div>
+                                  ) : visibleCounselors.length === 1 ? (
+                                    <div className="p-2 space-y-1">
+                                      {amCounts[0]?.count > 0 ? (
+                                        <div className="w-full p-1.5 rounded text-xs font-medium text-center bg-green-500 text-white">
+                                          ☀️ AM · {amCounts[0].count} camper{amCounts[0].count !== 1 ? 's' : ''}
+                                        </div>
+                                      ) : (
+                                        <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
+                                      )}
+                                      {pmCounts[0]?.count > 0 ? (
+                                        <div className="w-full p-1.5 rounded text-xs font-medium text-center bg-green-500 text-white">
+                                          🌙 PM · {pmCounts[0].count} camper{pmCounts[0].count !== 1 ? 's' : ''}
+                                        </div>
+                                      ) : (
+                                        <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="p-2 space-y-2">
+                                      <div>
+                                        <div className="text-xs text-gray-500 mb-1">☀️ AM</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {amCounts.map(({ c, count }) => (
+                                            <span key={c.id} className={'inline-block px-1.5 py-0.5 rounded text-xs font-bold ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                              title={`${c.firstName || c.name?.split(' ')[0]} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
+                                              {(c.firstName || c.name?.split(' ')[0] || '?')[0]}{count > 0 ? count : ''}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-gray-500 mb-1">🌙 PM</div>
+                                        <div className="flex flex-wrap gap-1">
+                                          {pmCounts.map(({ c, count }) => (
+                                            <span key={c.id} className={'inline-block px-1.5 py-0.5 rounded text-xs font-bold ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                              title={`${c.firstName || c.name?.split(' ')[0]} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
+                                              {(c.firstName || c.name?.split(' ')[0] || '?')[0]}{count > 0 ? count : ''}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {/* Legend */}
+                        <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 justify-center text-sm">
+                          <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Assigned (with camper count)</span></div>
+                          <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" /><span>Not Assigned</span></div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
 
