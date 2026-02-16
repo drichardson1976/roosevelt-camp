@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.156";
+    const VERSION = "13.157";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T23:58:00");
+    const BUILD_DATE = new Date("2026-02-16T00:06:00");
 
     const RELEASE_NOTES = [
+      { version: "13.157", date: "2026-02-16", time: "12:06 AM", author: "Derek Richardson", changes: ["Admin: AM/PM sessions now visually separated in multi-counselor card view with labeled headers and divider line", "Admin: AM section labeled with ☀️ AM (amber), PM section labeled with 🌙 PM (indigo) — clear distinction when ovals wrap to multiple rows", "Admin: Applied to both Work Availability and Work Schedule tabs", "Admin: Edit Availability modal now supports multi-month selection (both July and August at once, both selected by default)", "Admin: Edit Availability modal displays dates grouped into Mon-Fri weeks side by side with week labels", "Admin: Edit Availability modal widened to max-w-4xl for better week layout"] },
       { version: "13.156", date: "2026-02-15", time: "11:58 PM", author: "Derek Richardson", changes: ["Admin: Multi-counselor ovals now use CSS grid (max 5 per row) — scales to 20 counselors by wrapping to multiple rows", "Admin: Ovals only expand vertically when needed (>5 counselors), never horizontally", "Admin: Font size increased from 9px to 10px for better readability at scale", "Admin: Applied to both Work Availability and Work Schedule tabs"] },
       { version: "13.155", date: "2026-02-15", time: "11:55 PM", author: "Derek Richardson", changes: ["Admin: Renamed 'Edit Schedule' to 'Edit Availability' on Counselor cards — button now green-themed", "Admin: Edit Availability modal redesigned with card grid calendar matching Work Availability tab style", "Admin: Modal uses draft state — changes only saved when clicking Save, Cancel discards changes", "Admin: Save syncs availability to both camp_counselor_availability and camp_counselor_schedule tables"] },
       { version: "13.154", date: "2026-02-15", time: "11:48 PM", author: "Derek Richardson", changes: ["Tests: Added 16 test counselor profiles (c5-c20) with varied availability data for testing multi-counselor views", "Tests: Counselors can be individually added/removed or bulk added/removed via seed buttons", "Admin: Added 'Delete All Counselor Data' button to Danger Zone — wipes all counselor profiles, logins, availability, and schedules in one action", "Database: Inserted 16 test counselors into dev schema with profiles, user accounts, availability, and schedules"] },
@@ -7074,7 +7075,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [podSelectedSession, setPodSelectedSession] = useState('morning'); // Persist selected session in Pod Setup
       const [podSessionPods, setPodSessionPods] = useState({}); // Persist pod data in Pod Setup
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being edited (availability modal)
-      const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in availability modal
+      const [counselorScheduleMonths, setCounselorScheduleMonths] = useState([]); // Months selected in availability modal (array for multi-select)
       const [counselorAvailDraft, setCounselorAvailDraft] = useState(null); // Draft copy of availability for Save/Cancel
       const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
@@ -8063,8 +8064,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         // Use lifted state for availability modal to prevent closing on state updates
         const managingSchedule = counselorScheduleModal;
         const setManagingSchedule = setCounselorScheduleModal;
-        const scheduleMonth = counselorScheduleMonth;
-        const setScheduleMonth = setCounselorScheduleMonth;
+        const scheduleMonths = counselorScheduleMonths;
+        const setScheduleMonths = setCounselorScheduleMonths;
         const availDraft = counselorAvailDraft;
         const setAvailDraft = setCounselorAvailDraft;
         const [availCalMonths, setAvailCalMonths] = useState([]);
@@ -8398,7 +8399,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                           {/* Actions */}
                           <div className="flex gap-2 flex-wrap justify-end">
-                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); setAvailDraft(JSON.parse(JSON.stringify(availability[c.email] || {}))); }} className="px-3 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 text-sm">Edit Availability</button>
+                            <button onClick={() => { setManagingSchedule(c); setScheduleMonths([]); setAvailDraft(JSON.parse(JSON.stringify(availability[c.email] || {}))); }} className="px-3 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 text-sm">Edit Availability</button>
                             <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit Profile</button>
                           </div>
                         </div>
@@ -8497,14 +8498,37 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       showToast(`Availability saved for ${managingSchedule.name}`);
                     };
 
-                    // Build months
+                    // Build months and auto-select all by default
                     const months = [...new Set(CAMP_DATES.map(d => {
                       const date = new Date(d + 'T12:00:00');
                       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
                     }))];
-                    if (!scheduleMonth && months.length > 0) {
-                      setTimeout(() => setScheduleMonth(months[0]), 0);
+                    if (scheduleMonths.length === 0 && months.length > 0) {
+                      setTimeout(() => setScheduleMonths([...months]), 0);
                     }
+
+                    // Get dates for selected months
+                    const getModalDates = () => CAMP_DATES.filter(d => {
+                      const date = new Date(d + 'T12:00:00');
+                      const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      return scheduleMonths.includes(mk);
+                    });
+
+                    // Group dates into weeks (Mon-Fri rows)
+                    const groupIntoWeeks = (dates) => {
+                      const weeks = [];
+                      let currentWeek = [];
+                      dates.forEach(d => {
+                        const dn = new Date(d + 'T12:00:00');
+                        if (currentWeek.length > 0 && dn.getDay() === 1) {
+                          weeks.push(currentWeek);
+                          currentWeek = [];
+                        }
+                        currentWeek.push(d);
+                      });
+                      if (currentWeek.length > 0) weeks.push(currentWeek);
+                      return weeks;
+                    };
 
                     // Button styles matching Work Availability tab
                     const btnStyle = (state, blocked) => blocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
@@ -8515,90 +8539,92 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                     return (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                      <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="bg-green-600 text-white px-6 py-4">
                           <h2 className="font-display text-xl">Edit Availability</h2>
                           <p className="text-green-200 text-sm">{managingSchedule.name}</p>
                         </div>
                         <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
-                          {/* Month selector */}
+                          {/* Month selector (multi-select, both default) */}
                           <div className="flex gap-2 mb-4">
                             {months.map(m => {
                               const [yr, mo] = m.split('-');
                               const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long' });
+                              const isActive = scheduleMonths.includes(m);
                               return (
-                                <button key={m} onClick={() => setScheduleMonth(m)}
-                                  className={'px-4 py-2 rounded-lg font-medium ' + (scheduleMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700 hover:bg-green-50')}>
+                                <button key={m} onClick={() => setScheduleMonths(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m].sort())}
+                                  className={'px-4 py-2 rounded-lg font-medium ' + (isActive ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700 hover:bg-green-50')}>
                                   {label}
                                 </button>
                               );
                             })}
                           </div>
 
-                          {/* Card grid */}
-                          {scheduleMonth && (() => {
-                            const [year, month] = scheduleMonth.split('-').map(Number);
-                            const monthDates = CAMP_DATES.filter(d => {
-                              const date = new Date(d + 'T12:00:00');
-                              return date.getFullYear() === year && date.getMonth() + 1 === month;
-                            });
-
+                          {/* Card grid — grouped by week, 5 columns (Mon-Fri) */}
+                          {getModalDates().length === 0 ? (
+                            <div className="text-center text-gray-500 py-6">Select a month above to view availability.</div>
+                          ) : groupIntoWeeks(getModalDates()).map((week, wi) => {
+                            const firstDate = new Date(week[0] + 'T12:00:00');
+                            const weekLabel = `Week of ${firstDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
                             return (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                                {monthDates.map(d => {
-                                  const amBlocked = isSessionBlocked(d, 'morning');
-                                  const pmBlocked = isSessionBlocked(d, 'afternoon');
-                                  const fullyBlocked = amBlocked && pmBlocked;
-                                  const amState = getDraftState(d, 'morning');
-                                  const pmState = getDraftState(d, 'afternoon');
-                                  const bothAvail = amState === 'available' && pmState === 'available';
-                                  const bothUnavail = amState === 'unavailable' && pmState === 'unavailable';
-                                  const anyAvail = amState === 'available' || pmState === 'available';
-                                  const anyUnavail = amState === 'unavailable' || pmState === 'unavailable';
+                              <div key={wi} className="mb-4">
+                                <div className="text-xs font-medium text-gray-500 mb-1.5">{weekLabel}</div>
+                                <div className="grid grid-cols-5 gap-2">
+                                  {week.map(d => {
+                                    const amBlocked = isSessionBlocked(d, 'morning');
+                                    const pmBlocked = isSessionBlocked(d, 'afternoon');
+                                    const fullyBlocked = amBlocked && pmBlocked;
+                                    const amState = getDraftState(d, 'morning');
+                                    const pmState = getDraftState(d, 'afternoon');
+                                    const bothAvail = amState === 'available' && pmState === 'available';
+                                    const bothUnavail = amState === 'unavailable' && pmState === 'unavailable';
+                                    const anyAvail = amState === 'available' || pmState === 'available';
+                                    const anyUnavail = amState === 'unavailable' || pmState === 'unavailable';
 
-                                  const cardBorder = fullyBlocked ? 'border-gray-200 bg-gray-50' :
-                                    bothAvail ? 'border-green-300 bg-green-50' :
-                                    bothUnavail ? 'border-red-300 bg-red-50' :
-                                    (anyAvail || anyUnavail) ? 'border-yellow-300 bg-yellow-50' :
-                                    'border-gray-200 bg-white';
+                                    const cardBorder = fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                                      bothAvail ? 'border-green-300 bg-green-50' :
+                                      bothUnavail ? 'border-red-300 bg-red-50' :
+                                      (anyAvail || anyUnavail) ? 'border-yellow-300 bg-yellow-50' :
+                                      'border-gray-200 bg-white';
 
-                                  const headerBg = fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
-                                    bothAvail ? 'bg-green-200 hover:bg-green-300' :
-                                    bothUnavail ? 'bg-red-200 hover:bg-red-300' :
-                                    (anyAvail || anyUnavail) ? 'bg-yellow-200 hover:bg-yellow-300' :
-                                    'bg-gray-100 hover:bg-gray-200';
+                                    const headerBg = fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
+                                      bothAvail ? 'bg-green-200 hover:bg-green-300' :
+                                      bothUnavail ? 'bg-red-200 hover:bg-red-300' :
+                                      (anyAvail || anyUnavail) ? 'bg-yellow-200 hover:bg-yellow-300' :
+                                      'bg-gray-100 hover:bg-gray-200';
 
-                                  const dn = new Date(d + 'T12:00:00');
+                                    const dn = new Date(d + 'T12:00:00');
 
-                                  return (
-                                    <div key={d} className={'rounded-lg border-2 overflow-hidden transition-shadow hover:shadow-md ' + cardBorder}>
-                                      <button onClick={() => !fullyBlocked && toggleDraftDay(d)} disabled={fullyBlocked}
-                                        className={'w-full p-2 text-center font-bold transition-colors ' + headerBg}>
-                                        <div className="text-xs text-gray-600">{['Mon','Tue','Wed','Thu','Fri'][dn.getDay() - 1]}</div>
-                                        <div className="text-sm">{dn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                                      </button>
-                                      {fullyBlocked ? (
-                                        <div className="p-2 text-center text-xs text-red-500">🚫 Blocked</div>
-                                      ) : (
-                                        <div className="p-2 space-y-1">
-                                          <button onClick={() => !amBlocked && toggleDraftSession(d, 'morning')} disabled={amBlocked}
-                                            className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(amState, amBlocked)}>
-                                            ☀️ AM{btnIcon(amState, amBlocked)}
-                                          </button>
-                                          <button onClick={() => !pmBlocked && toggleDraftSession(d, 'afternoon')} disabled={pmBlocked}
-                                            className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(pmState, pmBlocked)}>
-                                            🌙 PM{btnIcon(pmState, pmBlocked)}
-                                          </button>
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })}
+                                    return (
+                                      <div key={d} className={'rounded-lg border-2 overflow-hidden transition-shadow hover:shadow-md ' + cardBorder}>
+                                        <button onClick={() => !fullyBlocked && toggleDraftDay(d)} disabled={fullyBlocked}
+                                          className={'w-full p-2 text-center font-bold transition-colors ' + headerBg}>
+                                          <div className="text-xs text-gray-600">{['Mon','Tue','Wed','Thu','Fri'][dn.getDay() - 1]}</div>
+                                          <div className="text-sm">{dn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                        </button>
+                                        {fullyBlocked ? (
+                                          <div className="p-2 text-center text-xs text-red-500">🚫 Blocked</div>
+                                        ) : (
+                                          <div className="p-2 space-y-1">
+                                            <button onClick={() => !amBlocked && toggleDraftSession(d, 'morning')} disabled={amBlocked}
+                                              className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(amState, amBlocked)}>
+                                              ☀️ AM{btnIcon(amState, amBlocked)}
+                                            </button>
+                                            <button onClick={() => !pmBlocked && toggleDraftSession(d, 'afternoon')} disabled={pmBlocked}
+                                              className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(pmState, pmBlocked)}>
+                                              🌙 PM{btnIcon(pmState, pmBlocked)}
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             );
-                          })()}
+                          })}
 
-                          <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-600">
+                          <div className="mt-2 flex flex-wrap gap-4 justify-center text-sm text-gray-600">
                             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-full" /><span>Available</span></div>
                             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded-full" /><span>Unavailable</span></div>
                             <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-200 rounded-full border" /><span>Not Set</span></div>
@@ -8759,31 +8785,38 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   ) : (() => {
                                     const cols = Math.min(visibleCounselors.length, 5);
                                     return (
-                                    <div className="p-1.5 space-y-1">
+                                    <div className="p-1.5 space-y-0">
                                       {amBlocked ? (
                                         <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
                                       ) : (
-                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
-                                          {amStates.map(({ c, state }) => (
-                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
-                                              style={{fontSize: '10px'}}
-                                              title={`${getName(c)} — ${state}`}>
-                                              {getName(c)}
-                                            </span>
-                                          ))}
+                                        <div>
+                                          <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#d97706', letterSpacing: '0.05em'}}>☀️ AM</div>
+                                          <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                            {amStates.map(({ c, state }) => (
+                                              <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
+                                                style={{fontSize: '10px'}}
+                                                title={`${getName(c)} — ${state}`}>
+                                                {getName(c)}
+                                              </span>
+                                            ))}
+                                          </div>
                                         </div>
                                       )}
+                                      <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />
                                       {pmBlocked ? (
                                         <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
                                       ) : (
-                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
-                                          {pmStates.map(({ c, state }) => (
-                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
-                                              style={{fontSize: '10px'}}
-                                              title={`${getName(c)} — ${state}`}>
-                                              {getName(c)}
-                                            </span>
-                                          ))}
+                                        <div>
+                                          <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#4f46e5', letterSpacing: '0.05em'}}>🌙 PM</div>
+                                          <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                            {pmStates.map(({ c, state }) => (
+                                              <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
+                                                style={{fontSize: '10px'}}
+                                                title={`${getName(c)} — ${state}`}>
+                                                {getName(c)}
+                                              </span>
+                                            ))}
+                                          </div>
                                         </div>
                                       )}
                                     </div>
@@ -8929,24 +8962,31 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   ) : (() => {
                                     const cols = Math.min(visibleCounselors.length, 5);
                                     return (
-                                    <div className="p-1.5 space-y-1">
-                                      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
-                                        {amCounts.map(({ c, count }) => (
-                                          <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
-                                            style={{fontSize: '10px'}}
-                                            title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
-                                            {getName(c)}
-                                          </span>
-                                        ))}
+                                    <div className="p-1.5 space-y-0">
+                                      <div>
+                                        <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#d97706', letterSpacing: '0.05em'}}>☀️ AM</div>
+                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                          {amCounts.map(({ c, count }) => (
+                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                              style={{fontSize: '10px'}}
+                                              title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
+                                              {getName(c)}
+                                            </span>
+                                          ))}
+                                        </div>
                                       </div>
-                                      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
-                                        {pmCounts.map(({ c, count }) => (
-                                          <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
-                                            style={{fontSize: '10px'}}
-                                            title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
-                                            {getName(c)}
-                                          </span>
-                                        ))}
+                                      <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />
+                                      <div>
+                                        <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#4f46e5', letterSpacing: '0.05em'}}>🌙 PM</div>
+                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                          {pmCounts.map(({ c, count }) => (
+                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                              style={{fontSize: '10px'}}
+                                              title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
+                                              {getName(c)}
+                                            </span>
+                                          ))}
+                                        </div>
                                       </div>
                                     </div>
                                     );
