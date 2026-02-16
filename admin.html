@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.157";
+    const VERSION = "13.158";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-16T00:06:00");
+    const BUILD_DATE = new Date("2026-02-16T00:29:00");
 
     const RELEASE_NOTES = [
+      { version: "13.158", date: "2026-02-16", time: "12:29 AM", author: "Derek Richardson", changes: ["Admin: Removed double confirmation dialog when marking Venmo payment as received — now a single informative confirmation", "Admin: Added Week, Day, and Session filters to Work Availability and Work Schedule tabs — filter calendar by specific weeks, days of week (Mon-Fri), and AM/PM session", "Admin: Added Week and Day filters to Pod Setup date grid — reduce visible calendar to specific weeks or days", "Admin: Added Camper View mode to Pod Setup — select a camper to see all their paid sessions and assign them to counselors individually or bulk-assign all unassigned sessions at once", "Admin: Camper View shows assignment status table with per-session counselor dropdown and 'Assign All Unassigned' bulk action"] },
       { version: "13.157", date: "2026-02-16", time: "12:06 AM", author: "Derek Richardson", changes: ["Admin: AM/PM sessions now visually separated in multi-counselor card view with labeled headers and divider line", "Admin: AM section labeled with ☀️ AM (amber), PM section labeled with 🌙 PM (indigo) — clear distinction when ovals wrap to multiple rows", "Admin: Applied to both Work Availability and Work Schedule tabs", "Admin: Edit Availability modal now supports multi-month selection (both July and August at once, both selected by default)", "Admin: Edit Availability modal displays dates grouped into Mon-Fri weeks side by side with week labels", "Admin: Edit Availability modal widened to max-w-4xl for better week layout"] },
       { version: "13.156", date: "2026-02-15", time: "11:58 PM", author: "Derek Richardson", changes: ["Admin: Multi-counselor ovals now use CSS grid (max 5 per row) — scales to 20 counselors by wrapping to multiple rows", "Admin: Ovals only expand vertically when needed (>5 counselors), never horizontally", "Admin: Font size increased from 9px to 10px for better readability at scale", "Admin: Applied to both Work Availability and Work Schedule tabs"] },
       { version: "13.155", date: "2026-02-15", time: "11:55 PM", author: "Derek Richardson", changes: ["Admin: Renamed 'Edit Schedule' to 'Edit Availability' on Counselor cards — button now green-themed", "Admin: Edit Availability modal redesigned with card grid calendar matching Work Availability tab style", "Admin: Modal uses draft state — changes only saved when clicking Save, Cancel discards changes", "Admin: Save syncs availability to both camp_counselor_availability and camp_counselor_schedule tables"] },
@@ -5099,7 +5100,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== ASSIGNMENTS TAB ====================
-    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers, selectedDate, setSelectedDate, selectedSession, setSelectedSession, sessionPods, setSessionPods }) => {
+    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers, selectedDate, setSelectedDate, selectedSession, setSelectedSession, sessionPods, setSessionPods, podCalWeeks, setPodCalWeeks, podCalDays, setPodCalDays, podCamperView, setPodCamperView, podSelectedCamper, setPodSelectedCamper, counselorSchedule }) => {
       const [draggedItem, setDraggedItem] = useState(null); // { type: 'camper' | 'counselor', data: ... }
       const [dragOverTarget, setDragOverTarget] = useState(null); // { podId, type: 'camper' | 'counselor' }
 
@@ -5130,13 +5131,33 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }
       }, [selectedMonth, months, setSelectedMonth]);
 
-      // Get dates for selected month
+      // Auto-initialize week filter when month changes
+      const podAvailableWeeks = React.useMemo(() => {
+        if (!selectedMonth) return [];
+        const [year, month] = selectedMonth.split('-').map(Number);
+        return CAMP_WEEKS.filter(w => {
+          const d = new Date(w.start + 'T12:00:00');
+          return d.getFullYear() === year && d.getMonth() === month - 1;
+        });
+      }, [selectedMonth]);
+      const podAvailableWeekStarts = podAvailableWeeks.map(w => w.start);
+      React.useEffect(() => {
+        if (podAvailableWeekStarts.length > 0) {
+          setPodCalWeeks([...podAvailableWeekStarts]);
+        }
+      }, [selectedMonth]);
+
+      // Get dates for selected month with week/day filters
       const getMonthDates = () => {
         if (!selectedMonth) return [];
         const [year, month] = selectedMonth.split('-').map(Number);
         return CAMP_DATES.filter(date => {
           const d = new Date(date + 'T12:00:00');
-          return d.getFullYear() === year && d.getMonth() === month - 1;
+          if (d.getFullYear() !== year || d.getMonth() !== month - 1) return false;
+          const week = CAMP_WEEKS.find(w => w.dates.includes(date));
+          if (week && podCalWeeks.length > 0 && !podCalWeeks.includes(week.start)) return false;
+          if (!podCalDays.includes(d.getDay())) return false;
+          return true;
         });
       };
 
@@ -5530,8 +5551,200 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       const pods = getCurrentPods();
 
+      // === CAMPER VIEW HELPERS ===
+      const getCampersWithApprovedRegs = () => {
+        const camperMap = {};
+        registrations.filter(r => r.status === 'approved').forEach(r => {
+          const id = r.camperId || r.childId;
+          const name = r.camperName || r.childName || 'Unknown';
+          if (!camperMap[id]) camperMap[id] = { id, name, regs: [] };
+          camperMap[id].regs.push(r);
+        });
+        return Object.values(camperMap).sort((a, b) => a.name.localeCompare(b.name));
+      };
+
+      const getCamperSessions = (camperId) => {
+        const camperRegs = registrations.filter(r =>
+          (r.camperId === camperId || r.childId === camperId) && r.status === 'approved'
+        );
+        const sessions = [];
+        camperRegs.forEach(r => {
+          (r.sessions || []).forEach(session => {
+            const key = `${r.date}_${session}`;
+            const sessionAssignments = assignments[key] || {};
+            let assignedCounselorId = null;
+            Object.entries(sessionAssignments).forEach(([cId, camperIds]) => {
+              if ((camperIds || []).includes(camperId)) assignedCounselorId = cId;
+            });
+            const assignedCounselor = assignedCounselorId ? counselors.find(c => c.id === assignedCounselorId) : null;
+            const eligible = counselors.filter(c => {
+              const cs = counselorSchedule[c.id] || {};
+              const daySchedule = cs[r.date] || {};
+              return daySchedule[session] === true;
+            });
+            sessions.push({ date: r.date, session, key, assignedCounselorId, assignedCounselor, eligibleCounselors: eligible });
+          });
+        });
+        return sessions.sort((a, b) => a.date.localeCompare(b.date) || a.session.localeCompare(b.session));
+      };
+
+      const handleCamperSessionAssign = (camperId, sessionInfo, newCounselorId) => {
+        const key = sessionInfo.key;
+        const newAssignments = JSON.parse(JSON.stringify(assignments));
+        if (newAssignments[key]) {
+          Object.keys(newAssignments[key]).forEach(cId => {
+            newAssignments[key][cId] = (newAssignments[key][cId] || []).filter(id => id !== camperId);
+            if (newAssignments[key][cId].length === 0) delete newAssignments[key][cId];
+          });
+        }
+        if (newCounselorId) {
+          if (!newAssignments[key]) newAssignments[key] = {};
+          if (!newAssignments[key][newCounselorId]) newAssignments[key][newCounselorId] = [];
+          newAssignments[key][newCounselorId].push(camperId);
+        }
+        onSaveAssignments(newAssignments, `Assigned camper for ${key}`);
+        setSessionPods(prev => { const u = { ...prev }; delete u[key]; return u; });
+      };
+
+      const handleBulkAssign = (camperId) => {
+        const sessions = getCamperSessions(camperId);
+        const unassigned = sessions.filter(s => !s.assignedCounselorId);
+        if (unassigned.length === 0) { showToast('All sessions already assigned'); return; }
+        const newAssignments = JSON.parse(JSON.stringify(assignments));
+        let assignedCount = 0;
+        const affectedKeys = [];
+        unassigned.forEach(s => {
+          if (s.eligibleCounselors.length === 0) return;
+          const withLoad = s.eligibleCounselors.map(c => ({
+            counselor: c,
+            load: ((newAssignments[s.key] || {})[c.id] || []).length
+          }));
+          withLoad.sort((a, b) => a.load - b.load);
+          const best = withLoad.find(w => w.load < KIDS_PER_COUNSELOR);
+          if (!best) return;
+          if (!newAssignments[s.key]) newAssignments[s.key] = {};
+          if (!newAssignments[s.key][best.counselor.id]) newAssignments[s.key][best.counselor.id] = [];
+          newAssignments[s.key][best.counselor.id].push(camperId);
+          affectedKeys.push(s.key);
+          assignedCount++;
+        });
+        if (assignedCount > 0) {
+          onSaveAssignments(newAssignments, `Bulk assigned camper to ${assignedCount} sessions`);
+          setSessionPods(prev => { const u = { ...prev }; affectedKeys.forEach(k => delete u[k]); return u; });
+          showToast(`Assigned ${assignedCount} session${assignedCount > 1 ? 's' : ''}`);
+        } else {
+          showToast('No eligible counselors for unassigned sessions');
+        }
+      };
+
       return (
         <div className="space-y-6">
+          {/* View Mode Toggle */}
+          <div className="flex gap-2">
+            <button onClick={() => { setPodCamperView(false); setPodSelectedCamper(null); }}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${!podCamperView ? 'bg-green-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
+              Date View
+            </button>
+            <button onClick={() => setPodCamperView(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium ${podCamperView ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}>
+              Camper View
+            </button>
+          </div>
+
+          {/* === CAMPER VIEW === */}
+          {podCamperView && (
+            <div className="space-y-4">
+              <div className="bg-white rounded-xl shadow p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select a Camper:</label>
+                <select value={podSelectedCamper || ''}
+                  onChange={e => setPodSelectedCamper(e.target.value || null)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">-- Choose a camper --</option>
+                  {getCampersWithApprovedRegs().map(c => (
+                    <option key={c.id} value={c.id}>{c.name} ({c.regs.length} session{c.regs.length !== 1 ? 's' : ''})</option>
+                  ))}
+                </select>
+              </div>
+
+              {podSelectedCamper && (() => {
+                const sessions = getCamperSessions(podSelectedCamper);
+                const camperProfile = (allCampers || []).find(c => c.id === podSelectedCamper);
+                const camperName = camperProfile?.name || getCampersWithApprovedRegs().find(c => c.id === podSelectedCamper)?.name || 'Unknown';
+                const unassignedCount = sessions.filter(s => !s.assignedCounselorId).length;
+                const assignedCount = sessions.filter(s => s.assignedCounselorId).length;
+
+                return (
+                  <div className="bg-white rounded-xl shadow p-4 space-y-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <h3 className="font-bold text-lg">{camperName}</h3>
+                        <p className="text-sm text-gray-500">{sessions.length} total sessions — {assignedCount} assigned, {unassignedCount} unassigned</p>
+                      </div>
+                      {unassignedCount > 0 && (
+                        <button onClick={() => handleBulkAssign(podSelectedCamper)}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">
+                          Assign All Unassigned ({unassignedCount})
+                        </button>
+                      )}
+                    </div>
+
+                    {sessions.length === 0 ? (
+                      <p className="text-gray-500 text-sm">No approved sessions found for this camper.</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b bg-gray-50">
+                              <th className="text-left py-2 px-3 font-medium text-gray-600">Date</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-600">Day</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-600">Session</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-600">Status</th>
+                              <th className="text-left py-2 px-3 font-medium text-gray-600">Assigned To</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sessions.map(s => {
+                              const dt = new Date(s.date + 'T12:00:00');
+                              const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+                              const dateLabel = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              return (
+                                <tr key={s.key} className="border-b hover:bg-gray-50">
+                                  <td className="py-2 px-3">{dateLabel}</td>
+                                  <td className="py-2 px-3">{dayName}</td>
+                                  <td className="py-2 px-3">{s.session === 'morning' ? '☀️ AM' : '🌙 PM'}</td>
+                                  <td className="py-2 px-3">
+                                    {s.assignedCounselor
+                                      ? <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Assigned</span>
+                                      : <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700">Unassigned</span>}
+                                  </td>
+                                  <td className="py-2 px-3">
+                                    <select value={s.assignedCounselorId || ''}
+                                      onChange={e => handleCamperSessionAssign(podSelectedCamper, s, e.target.value || null)}
+                                      className="border border-gray-300 rounded px-2 py-1 text-sm w-full max-w-xs">
+                                      <option value="">Unassigned</option>
+                                      {s.eligibleCounselors.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name || c.firstName + ' ' + c.lastName}</option>
+                                      ))}
+                                      {s.assignedCounselor && !s.eligibleCounselors.find(c => c.id === s.assignedCounselorId) && (
+                                        <option value={s.assignedCounselorId}>{s.assignedCounselor.name} (not eligible)</option>
+                                      )}
+                                    </select>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* === DATE VIEW === */}
+          {!podCamperView && <>
           {/* Month Selector */}
           <div className="bg-white rounded-xl shadow p-4">
             <div className="flex flex-wrap gap-2 mb-4">
@@ -5548,6 +5761,37 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   {m.name}
                 </button>
               ))}
+            </div>
+
+            {/* Week / Day filters */}
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
+                <button onClick={() => setPodCalWeeks([...podAvailableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === podAvailableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                <button onClick={() => setPodCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                {podAvailableWeeks.map(w => {
+                  const wd = new Date(w.start + 'T12:00:00');
+                  const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const isActive = podCalWeeks.includes(w.start);
+                  return (
+                    <button key={w.start} onClick={() => setPodCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
+                <button onClick={() => setPodCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                <button onClick={() => setPodCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
+                  <button key={day} onClick={() => setPodCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${podCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <p className="text-sm text-gray-500 mb-4">
@@ -5999,6 +6243,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           </div>
           )}
+          </>}
 
         </div>
       );
@@ -7074,6 +7319,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [podSelectedDate, setPodSelectedDate] = useState(null); // Persist selected date in Pod Setup
       const [podSelectedSession, setPodSelectedSession] = useState('morning'); // Persist selected session in Pod Setup
       const [podSessionPods, setPodSessionPods] = useState({}); // Persist pod data in Pod Setup
+      const [podCalWeeks, setPodCalWeeks] = useState([]); // Week filter for Pod Setup date grid
+      const [podCalDays, setPodCalDays] = useState([1,2,3,4,5]); // Day filter for Pod Setup (Mon-Fri)
+      const [podCamperView, setPodCamperView] = useState(false); // Camper-centric view toggle
+      const [podSelectedCamper, setPodSelectedCamper] = useState(null); // Selected camper in camper view
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being edited (availability modal)
       const [counselorScheduleMonths, setCounselorScheduleMonths] = useState([]); // Months selected in availability modal (array for multi-select)
       const [counselorAvailDraft, setCounselorAvailDraft] = useState(null); // Draft copy of availability for Save/Cancel
@@ -8070,8 +8319,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const setAvailDraft = setCounselorAvailDraft;
         const [availCalMonths, setAvailCalMonths] = useState([]);
         const [availCalHidden, setAvailCalHidden] = useState({});
+        const [availCalWeeks, setAvailCalWeeks] = useState([]);
+        const [availCalDays, setAvailCalDays] = useState([1,2,3,4,5]);
+        const [availCalSession, setAvailCalSession] = useState('both');
         const [schedCalMonths, setSchedCalMonths] = useState([]);
         const [schedCalHidden, setSchedCalHidden] = useState({});
+        const [schedCalWeeks, setSchedCalWeeks] = useState([]);
+        const [schedCalDays, setSchedCalDays] = useState([1,2,3,4,5]);
+        const [schedCalSession, setSchedCalSession] = useState('both');
 
         // Helper: count sessions where counselor is marked eligible by admin
         const getCounselorEligibleCount = (counselorId) => {
@@ -8675,12 +8930,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       return 'not-set';
                     };
 
-                    // Get dates for all selected months
+                    // Weeks available for selected months
+                    const availableWeeks = CAMP_WEEKS.filter(w => {
+                      const d = new Date(w.start + 'T12:00:00');
+                      const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                      return availCalMonths.includes(mk);
+                    });
+                    const availableWeekStarts = availableWeeks.map(w => w.start);
+                    // Auto-initialize weeks (select all)
+                    if (availCalWeeks.length === 0 && availableWeekStarts.length > 0) {
+                      setTimeout(() => setAvailCalWeeks([...availableWeekStarts]), 0);
+                    }
+
+                    // Get dates for all selected months + week/day filters
                     const getSelectedDates = () => {
                       return CAMP_DATES.filter(d => {
                         const date = new Date(d + 'T12:00:00');
                         const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                        return availCalMonths.includes(mk);
+                        if (!availCalMonths.includes(mk)) return false;
+                        const week = CAMP_WEEKS.find(w => w.dates.includes(d));
+                        if (week && availCalWeeks.length > 0 && !availCalWeeks.includes(week.start)) return false;
+                        if (!availCalDays.includes(date.getDay())) return false;
+                        return true;
                       });
                     };
 
@@ -8722,6 +8993,46 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               </button>
                             );
                           })}
+                        </div>
+
+                        {/* Week / Day / Session filters */}
+                        <div className="bg-white rounded-xl shadow p-4 space-y-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
+                            <button onClick={() => setAvailCalWeeks([...availableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setAvailCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {availableWeeks.map(w => {
+                              const wd = new Date(w.start + 'T12:00:00');
+                              const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              const isActive = availCalWeeks.includes(w.start);
+                              return (
+                                <button key={w.start} onClick={() => setAvailCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
+                            <button onClick={() => setAvailCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setAvailCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
+                              <button key={day} onClick={() => setAvailCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${availCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Session:</span>
+                            {[{key: 'both', label: 'Both'}, {key: 'morning', label: 'AM Only'}, {key: 'afternoon', label: 'PM Only'}].map(({key, label}) => (
+                              <button key={key} onClick={() => setAvailCalSession(key)}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${availCalSession === key ? 'bg-green-600 text-white border-green-600' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
                         {/* Responsive card grid */}
@@ -8770,23 +9081,25 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     <div className="p-2 text-center text-xs text-red-500">🚫 Blocked</div>
                                   ) : visibleCounselors.length === 0 ? (
                                     <div className="p-2 space-y-1">
-                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">AM</div>
-                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">PM</div>
+                                      {(availCalSession === 'both' || availCalSession === 'morning') && <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">AM</div>}
+                                      {(availCalSession === 'both' || availCalSession === 'afternoon') && <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">PM</div>}
                                     </div>
                                   ) : visibleCounselors.length === 1 ? (
                                     <div className="p-2 space-y-1">
-                                      <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(amStates[0]?.state, amBlocked)}>
+                                      {(availCalSession === 'both' || availCalSession === 'morning') && <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(amStates[0]?.state, amBlocked)}>
                                         {getName(visibleCounselors[0])}{singleIcon(amStates[0]?.state, amBlocked)}
-                                      </div>
-                                      <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(pmStates[0]?.state, pmBlocked)}>
+                                      </div>}
+                                      {(availCalSession === 'both' || availCalSession === 'afternoon') && <div className={'w-full p-1.5 rounded text-xs font-medium text-center ' + singleBtn(pmStates[0]?.state, pmBlocked)}>
                                         {getName(visibleCounselors[0])}{singleIcon(pmStates[0]?.state, pmBlocked)}
-                                      </div>
+                                      </div>}
                                     </div>
                                   ) : (() => {
                                     const cols = Math.min(visibleCounselors.length, 5);
+                                    const showAm = availCalSession === 'both' || availCalSession === 'morning';
+                                    const showPm = availCalSession === 'both' || availCalSession === 'afternoon';
                                     return (
                                     <div className="p-1.5 space-y-0">
-                                      {amBlocked ? (
+                                      {showAm && (amBlocked ? (
                                         <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
                                       ) : (
                                         <div>
@@ -8801,9 +9114,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             ))}
                                           </div>
                                         </div>
-                                      )}
-                                      <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />
-                                      {pmBlocked ? (
+                                      ))}
+                                      {showAm && showPm && <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />}
+                                      {showPm && (pmBlocked ? (
                                         <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
                                       ) : (
                                         <div>
@@ -8818,7 +9131,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             ))}
                                           </div>
                                         </div>
-                                      )}
+                                      ))}
                                     </div>
                                     );
                                   })()}
@@ -8863,12 +9176,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       return ((assignments[key] || {})[c.id] || []).length;
                     };
 
-                    // Get dates for all selected months
+                    // Weeks available for selected months
+                    const availableWeeks = CAMP_WEEKS.filter(w => {
+                      const d = new Date(w.start + 'T12:00:00');
+                      const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                      return schedCalMonths.includes(mk);
+                    });
+                    const availableWeekStarts = availableWeeks.map(w => w.start);
+                    if (schedCalWeeks.length === 0 && availableWeekStarts.length > 0) {
+                      setTimeout(() => setSchedCalWeeks([...availableWeekStarts]), 0);
+                    }
+
+                    // Get dates for all selected months + week/day filters
                     const getSelectedDates = () => {
                       return CAMP_DATES.filter(d => {
                         const date = new Date(d + 'T12:00:00');
                         const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                        return schedCalMonths.includes(mk);
+                        if (!schedCalMonths.includes(mk)) return false;
+                        const week = CAMP_WEEKS.find(w => w.dates.includes(d));
+                        if (week && schedCalWeeks.length > 0 && !schedCalWeeks.includes(week.start)) return false;
+                        if (!schedCalDays.includes(date.getDay())) return false;
+                        return true;
                       });
                     };
 
@@ -8912,6 +9240,46 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           })}
                         </div>
 
+                        {/* Week / Day / Session filters */}
+                        <div className="bg-white rounded-xl shadow p-4 space-y-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
+                            <button onClick={() => setSchedCalWeeks([...availableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setSchedCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {availableWeeks.map(w => {
+                              const wd = new Date(w.start + 'T12:00:00');
+                              const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              const isActive = schedCalWeeks.includes(w.start);
+                              return (
+                                <button key={w.start} onClick={() => setSchedCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
+                            <button onClick={() => setSchedCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setSchedCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
+                              <button key={day} onClick={() => setSchedCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${schedCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium text-gray-700 w-14">Session:</span>
+                            {[{key: 'both', label: 'Both'}, {key: 'morning', label: 'AM Only'}, {key: 'afternoon', label: 'PM Only'}].map(({key, label}) => (
+                              <button key={key} onClick={() => setSchedCalSession(key)}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${schedCalSession === key ? 'bg-green-600 text-white border-green-600' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
                         {/* Responsive card grid */}
                         {getSelectedDates().length === 0 ? (
                           <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">Select a month above to view schedule.</div>
@@ -8939,31 +9307,33 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   </div>
                                   {visibleCounselors.length === 0 ? (
                                     <div className="p-2 space-y-1">
-                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">AM</div>
-                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">PM</div>
+                                      {(schedCalSession === 'both' || schedCalSession === 'morning') && <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">AM</div>}
+                                      {(schedCalSession === 'both' || schedCalSession === 'afternoon') && <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">PM</div>}
                                     </div>
                                   ) : visibleCounselors.length === 1 ? (
                                     <div className="p-2 space-y-1">
-                                      {amCounts[0]?.count > 0 ? (
+                                      {(schedCalSession === 'both' || schedCalSession === 'morning') && (amCounts[0]?.count > 0 ? (
                                         <div className="w-full p-1.5 rounded text-xs font-medium text-center bg-green-500 text-white">
                                           {getName(visibleCounselors[0])} · {amCounts[0].count}
                                         </div>
                                       ) : (
                                         <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">{getName(visibleCounselors[0])}</div>
-                                      )}
-                                      {pmCounts[0]?.count > 0 ? (
+                                      ))}
+                                      {(schedCalSession === 'both' || schedCalSession === 'afternoon') && (pmCounts[0]?.count > 0 ? (
                                         <div className="w-full p-1.5 rounded text-xs font-medium text-center bg-green-500 text-white">
                                           {getName(visibleCounselors[0])} · {pmCounts[0].count}
                                         </div>
                                       ) : (
                                         <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">{getName(visibleCounselors[0])}</div>
-                                      )}
+                                      ))}
                                     </div>
                                   ) : (() => {
                                     const cols = Math.min(visibleCounselors.length, 5);
+                                    const showAm = schedCalSession === 'both' || schedCalSession === 'morning';
+                                    const showPm = schedCalSession === 'both' || schedCalSession === 'afternoon';
                                     return (
                                     <div className="p-1.5 space-y-0">
-                                      <div>
+                                      {showAm && <div>
                                         <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#d97706', letterSpacing: '0.05em'}}>☀️ AM</div>
                                         <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
                                           {amCounts.map(({ c, count }) => (
@@ -8974,9 +9344,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             </span>
                                           ))}
                                         </div>
-                                      </div>
-                                      <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />
-                                      <div>
+                                      </div>}
+                                      {showAm && showPm && <div style={{borderTop: '1px solid #e5e7eb', margin: '3px 0'}} />}
+                                      {showPm && <div>
                                         <div className="text-center mb-0.5" style={{fontSize: '9px', fontWeight: 600, color: '#4f46e5', letterSpacing: '0.05em'}}>🌙 PM</div>
                                         <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
                                           {pmCounts.map(({ c, count }) => (
@@ -8987,7 +9357,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                             </span>
                                           ))}
                                         </div>
-                                      </div>
+                                      </div>}
                                     </div>
                                     );
                                   })()}
@@ -9177,7 +9547,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               actions: (
                                 <button
                                   onClick={async () => {
-                                    if (!confirm(`Are you sure you want to mark payment as received for ${camperNames.join(', ')}?`)) return;
                                     if (!confirm(`This will mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')} (${regs.length} session(s)).\n\nCamper(s) will become eligible for pod assignment. Confirm?`)) return;
                                     const now = new Date().toISOString();
                                     const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`;
@@ -9859,6 +10228,15 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   setSelectedSession={setPodSelectedSession}
                   sessionPods={podSessionPods}
                   setSessionPods={setPodSessionPods}
+                  podCalWeeks={podCalWeeks}
+                  setPodCalWeeks={setPodCalWeeks}
+                  podCalDays={podCalDays}
+                  setPodCalDays={setPodCalDays}
+                  podCamperView={podCamperView}
+                  setPodCamperView={setPodCamperView}
+                  podSelectedCamper={podSelectedCamper}
+                  setPodSelectedCamper={setPodSelectedCamper}
+                  counselorSchedule={counselorSchedule}
                 />
               )}
 
