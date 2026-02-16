@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Roosevelt Camp — The Journey</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .slide { display: none; min-height: 100vh; }
+    .slide.active { display: flex; }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .gradient-text { background: linear-gradient(135deg, #10b981, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .timeline-dot { width: 16px; height: 16px; border-radius: 50%; }
+    .slide-counter { font-variant-numeric: tabular-nums; }
+    .icon-circle { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; }
+    .icon-sm { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white overflow-hidden">
+
+  <!-- Navigation -->
+  <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-gray-800/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-2xl border border-gray-700">
+    <button onclick="prevSlide()" class="text-gray-400 hover:text-white transition-colors p-1">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span class="text-gray-400 text-sm font-medium slide-counter" id="slideCounter">1 / 18</span>
+    <button onclick="nextSlide()" class="text-gray-400 hover:text-white transition-colors p-1">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="fixed top-0 left-0 w-full h-1 bg-gray-800 z-50">
+    <div id="progressBar" class="h-full bg-gradient-to-r from-green-500 to-blue-500 transition-all duration-500" style="width: 5%"></div>
+  </div>
+
+  <!-- ==================== SLIDE 1: TITLE ==================== -->
+  <div class="slide active" data-slide="1">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 mb-6"></div>
+      <h1 class="text-6xl md:text-8xl font-black mb-6 gradient-text leading-tight">Building Roosevelt Camp</h1>
+      <p class="text-2xl md:text-3xl text-gray-400 font-light mb-8">How a dad and his teenage daughter built a real business app<br>in 17 days — with AI doing the heavy lifting</p>
+      <div class="flex items-center gap-8 text-lg text-gray-500">
+        <span>Derek & Audrey Richardson</span>
+        <span class="text-gray-700">|</span>
+        <span>January — February 2026</span>
+      </div>
+      <div class="mt-12 text-gray-600 text-sm">Press <kbd class="px-2 py-1 bg-gray-800 rounded border border-gray-700">&rarr;</kbd> or click the arrow to begin</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 2: CONTEXT ==================== -->
+  <div class="slide" data-slide="2">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">A Little Background</p>
+      <h2 class="text-5xl md:text-7xl font-bold mb-10 leading-tight max-w-4xl">I run a summer basketball day camp</h2>
+      <div class="bg-gray-900 rounded-2xl p-10 border border-gray-800 max-w-3xl">
+        <p class="text-2xl text-gray-300 leading-relaxed">Every summer, parents sign up their kids, counselors volunteer their time, and I coordinate the whole thing.</p>
+        <p class="text-xl text-gray-500 mt-6">Registration forms. Emergency contacts. Payment tracking. Pod assignments. Schedule management. It's a lot to juggle.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 3: THE PROBLEM ==================== -->
+  <div class="slide" data-slide="3">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-red-400 font-semibold text-lg tracking-widest uppercase mb-6">The Problem</p>
+      <h2 class="text-5xl md:text-7xl font-bold mb-10 leading-tight max-w-4xl">Everything was<br><span class="text-red-400">manual</span></h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mt-4">
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+          <div class="icon-circle bg-red-500/20 text-red-400 mx-auto mb-4">1</div>
+          <p class="text-xl font-semibold mb-2">Paper sign-ups</p>
+          <p class="text-gray-500">Forms get lost, handwriting is illegible, no easy way to search or update</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+          <div class="icon-circle bg-red-500/20 text-red-400 mx-auto mb-4">2</div>
+          <p class="text-xl font-semibold mb-2">Payment chaos</p>
+          <p class="text-gray-500">Venmo payments with no tracking — who paid? For which kid? Which sessions?</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+          <div class="icon-circle bg-red-500/20 text-red-400 mx-auto mb-4">3</div>
+          <p class="text-xl font-semibold mb-2">Safety gaps</p>
+          <p class="text-gray-500">Emergency contacts on sticky notes. Which kid goes home with which adult?</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 4: THE BOLD IDEA ==================== -->
+  <div class="slide" data-slide="4">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-blue-400 font-semibold text-lg tracking-widest uppercase mb-6">The Idea</p>
+      <h2 class="text-5xl md:text-7xl font-bold mb-10 leading-tight max-w-5xl">"What if we just...<br><span class="gradient-text">built it ourselves?</span>"</h2>
+      <div class="bg-gray-900 rounded-2xl p-10 border border-gray-800 max-w-3xl">
+        <p class="text-2xl text-gray-300 leading-relaxed">I'm not a professional software developer. My daughter Audrey is 16. But we had an idea and a new kind of tool:</p>
+        <p class="text-3xl text-green-400 font-bold mt-6">Claude — an AI that writes code.</p>
+        <p class="text-xl text-gray-500 mt-6">We describe what we want in plain English. The AI writes the code. We test it, give feedback, and iterate. Like having a developer on-call 24/7.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 5: WHAT WE NEEDED ==================== -->
+  <div class="slide" data-slide="5">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-purple-400 font-semibold text-lg tracking-widest uppercase mb-6">The Vision</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-12">One website that does everything</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl">
+        <div class="bg-gradient-to-b from-green-900/30 to-gray-900 rounded-2xl p-8 border border-green-800">
+          <div class="icon-circle bg-green-500/20 text-green-400 mx-auto mb-4">P</div>
+          <p class="font-bold text-2xl mb-3 text-green-400">For Parents</p>
+          <ul class="space-y-2 text-gray-400 text-left text-lg">
+            <li>Create an account in minutes</li>
+            <li>Add their kids' info</li>
+            <li>Pick camp dates on a calendar</li>
+            <li>Pay and track payments</li>
+            <li>See who their kid's counselor is</li>
+          </ul>
+        </div>
+        <div class="bg-gradient-to-b from-blue-900/30 to-gray-900 rounded-2xl p-8 border border-blue-800">
+          <div class="icon-circle bg-blue-500/20 text-blue-400 mx-auto mb-4">C</div>
+          <p class="font-bold text-2xl mb-3 text-blue-400">For Counselors</p>
+          <ul class="space-y-2 text-gray-400 text-left text-lg">
+            <li>Apply with a profile and photo</li>
+            <li>Set which days they're available</li>
+            <li>See their assigned campers</li>
+            <li>View their weekly schedule</li>
+            <li>Get notified of changes</li>
+          </ul>
+        </div>
+        <div class="bg-gradient-to-b from-purple-900/30 to-gray-900 rounded-2xl p-8 border border-purple-800">
+          <div class="icon-circle bg-purple-500/20 text-purple-400 mx-auto mb-4">A</div>
+          <p class="font-bold text-2xl mb-3 text-purple-400">For Me (Admin)</p>
+          <ul class="space-y-2 text-gray-400 text-left text-lg">
+            <li>Approve registrations</li>
+            <li>Track who's paid</li>
+            <li>Build daily pods</li>
+            <li>Send messages to families</li>
+            <li>Manage the whole operation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 6: HOW IT WORKS ==================== -->
+  <div class="slide" data-slide="6">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">How It Actually Works</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-12">Talk to AI. Get a website.</h2>
+      <div class="max-w-3xl w-full space-y-6">
+        <div class="flex items-center gap-6 bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="icon-circle bg-amber-500/20 text-amber-400">1</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">I describe what I want</p>
+            <p class="text-gray-500">"Add a calendar where parents can click days to register their kid for morning or afternoon sessions"</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-6 bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="icon-circle bg-amber-500/20 text-amber-400">2</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">Claude writes the code</p>
+            <p class="text-gray-500">Generates a working calendar with buttons, pricing, discounts — in minutes</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-6 bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="icon-circle bg-amber-500/20 text-amber-400">3</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">We test it and give feedback</p>
+            <p class="text-gray-500">"The button is too small. Add a discount for full-week signups. Show the total before submitting."</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-6 bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="icon-circle bg-amber-500/20 text-amber-400">4</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">Repeat — hundreds of times</p>
+            <p class="text-gray-500">Each cycle takes minutes, not days. Features that would cost thousands? Done in an evening.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 7: SPEED ==================== -->
+  <div class="slide" data-slide="7">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">The Speed Was Unreal</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-14">17 Days of Building</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl">
+        <div>
+          <p class="text-6xl md:text-7xl font-black gradient-text">284</p>
+          <p class="text-gray-400 text-lg mt-2">Updates shipped</p>
+        </div>
+        <div>
+          <p class="text-6xl md:text-7xl font-black gradient-text">3</p>
+          <p class="text-gray-400 text-lg mt-2">User portals built</p>
+        </div>
+        <div>
+          <p class="text-6xl md:text-7xl font-black gradient-text">6</p>
+          <p class="text-gray-400 text-lg mt-2">Automated services</p>
+          <p class="text-gray-600 text-sm">email, SMS, login, etc.</p>
+        </div>
+        <div>
+          <p class="text-6xl md:text-7xl font-black gradient-text">$0</p>
+          <p class="text-gray-400 text-lg mt-2">Spent on developers</p>
+        </div>
+      </div>
+      <div class="mt-14 bg-gray-900 rounded-xl px-8 py-5 border border-gray-800 max-w-2xl">
+        <p class="text-xl text-gray-300">A professional team would quote this project at <span class="text-white font-bold">$50,000-$100,000</span> and <span class="text-white font-bold">3-6 months</span>.</p>
+        <p class="text-lg text-green-400 mt-3 font-semibold">We built it in 17 evenings and weekends.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 8: THE JOURNEY — WEEK 1 ==================== -->
+  <div class="slide" data-slide="8">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">Week 1</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10 text-center">From Zero to a Working App</h2>
+      <div class="max-w-3xl w-full space-y-6">
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-green-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Day 1: The skeleton</p>
+            <p class="text-gray-400 text-lg">Login page, parent sign-up, counselor profiles, admin dashboard — all in a single day</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-blue-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Days 2-3: Making it real</p>
+            <p class="text-gray-400 text-lg">Photo uploads, a 6-step parent onboarding wizard, counselor availability calendars</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-purple-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Days 4-5: Camp operations</p>
+            <p class="text-gray-400 text-lg">Session scheduling, drag-and-drop pod building, emergency contact management</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-amber-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">End of week 1: It works</p>
+            <p class="text-gray-400 text-lg">A parent could sign up, register their kid, and an admin could manage the whole camp</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 9: WEEK 2 ==================== -->
+  <div class="slide" data-slide="9">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 fade-in">
+      <p class="text-blue-400 font-semibold text-lg tracking-widest uppercase mb-6">Week 2</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10 text-center">Making It Professional</h2>
+      <div class="max-w-3xl w-full space-y-6">
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-green-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Payment tracking</p>
+            <p class="text-gray-400 text-lg">Parents pay via Venmo with a unique code. Admin marks payments received. Automatic invoice emails.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-blue-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Real email and text messages</p>
+            <p class="text-gray-400 text-lg">Welcome emails, password resets, SMS verification codes — all automated from the website</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-purple-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Counselor management system</p>
+            <p class="text-gray-400 text-lg">Multi-month availability calendars, work schedule assignments, profile management with photo uploads</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5">
+          <div class="timeline-dot bg-amber-500 mt-2 flex-shrink-0"></div>
+          <div>
+            <p class="text-2xl font-semibold">Admin operations dashboard</p>
+            <p class="text-gray-400 text-lg">Registration approval workflows, pod assignments, calendar filters, and full content management</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 10: BIGGEST DAY ==================== -->
+  <div class="slide" data-slide="10">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-orange-400 font-semibold text-lg tracking-widest uppercase mb-6">The Marathon</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10">Our Most Productive Day</h2>
+      <div class="max-w-5xl w-full">
+        <div class="flex items-end gap-1 justify-center mb-8 h-48">
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:85px"></div><span class="text-xs text-gray-600 mt-1">1/29</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:33px"></div><span class="text-xs text-gray-600 mt-1">1/30</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:48px"></div><span class="text-xs text-gray-600 mt-1">1/31</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:4px"></div><span class="text-xs text-gray-600 mt-1">2/1</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:78px"></div><span class="text-xs text-gray-600 mt-1">2/2</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:30px"></div><span class="text-xs text-gray-600 mt-1">2/3</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:26px"></div><span class="text-xs text-gray-600 mt-1">2/6</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-blue-700 rounded-t" style="width:36px;height:162px"></div><span class="text-xs text-gray-600 mt-1">2/7</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-orange-500 rounded-t" style="width:36px;height:192px"></div><span class="text-xs text-white font-bold mt-1">2/8</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:48px"></div><span class="text-xs text-gray-600 mt-1">2/9</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:137px"></div><span class="text-xs text-gray-600 mt-1">2/10</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:30px"></div><span class="text-xs text-gray-600 mt-1">2/11</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:33px"></div><span class="text-xs text-gray-600 mt-1">2/12</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:4px"></div><span class="text-xs text-gray-600 mt-1">2/13</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-gray-700 rounded-t" style="width:36px;height:15px"></div><span class="text-xs text-gray-600 mt-1">2/14</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-green-600 rounded-t" style="width:36px;height:111px"></div><span class="text-xs text-gray-600 mt-1">2/15</span></div>
+          <div class="flex flex-col items-center gap-1"><div class="bg-green-600 rounded-t" style="width:36px;height:15px"></div><span class="text-xs text-gray-600 mt-1">2/16</span></div>
+        </div>
+        <p class="text-gray-500 text-sm mb-6">Each bar = updates shipped that day</p>
+        <p class="text-2xl text-gray-300">On February 8, we shipped <span class="text-orange-400 font-bold">52 updates</span> in a single day. Onboarding, payments, emergency contacts, the approval system — all built and working by bedtime.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 11: WHAT AI IS ACTUALLY LIKE ==================== -->
+  <div class="slide" data-slide="11">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">The Real Talk</p>
+      <h2 class="text-5xl md:text-7xl font-bold mb-10 leading-tight max-w-5xl">What working with AI<br>is <span class="gradient-text">actually</span> like</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mt-4">
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left">
+          <p class="text-green-400 font-bold text-xl mb-4">It's amazing at...</p>
+          <ul class="space-y-4 text-gray-300 text-lg">
+            <li class="flex items-start gap-3"><span class="text-green-400 mt-0.5">+</span> Turning your ideas into working features in minutes</li>
+            <li class="flex items-start gap-3"><span class="text-green-400 mt-0.5">+</span> Handling the tedious, repetitive parts</li>
+            <li class="flex items-start gap-3"><span class="text-green-400 mt-0.5">+</span> Remembering every detail (if you teach it how)</li>
+            <li class="flex items-start gap-3"><span class="text-green-400 mt-0.5">+</span> Working at 11 PM when inspiration strikes</li>
+          </ul>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left">
+          <p class="text-amber-400 font-bold text-xl mb-4">You still need to...</p>
+          <ul class="space-y-4 text-gray-300 text-lg">
+            <li class="flex items-start gap-3"><span class="text-amber-400 mt-0.5">!</span> Know what you want to build</li>
+            <li class="flex items-start gap-3"><span class="text-amber-400 mt-0.5">!</span> Test everything like a real user</li>
+            <li class="flex items-start gap-3"><span class="text-amber-400 mt-0.5">!</span> Give clear, specific feedback</li>
+            <li class="flex items-start gap-3"><span class="text-amber-400 mt-0.5">!</span> Make product decisions (AI won't do that for you)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 12: TEACHING THE AI ==================== -->
+  <div class="slide" data-slide="12">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">The Secret Sauce</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10 leading-tight max-w-5xl">We wrote an instruction manual<br>for the AI</h2>
+      <div class="bg-gray-900 rounded-2xl p-10 border border-gray-800 max-w-3xl text-left">
+        <p class="text-2xl text-gray-300 leading-relaxed mb-6">Think of it like onboarding a new employee. We created a document that tells the AI:</p>
+        <ul class="space-y-4 text-xl text-gray-400">
+          <li class="flex items-start gap-3"><span class="text-amber-400 mt-1 font-bold">-</span> How we like things organized</li>
+          <li class="flex items-start gap-3"><span class="text-amber-400 mt-1 font-bold">-</span> What mistakes to avoid (we learned the hard way)</li>
+          <li class="flex items-start gap-3"><span class="text-amber-400 mt-1 font-bold">-</span> How to track versions and changes</li>
+          <li class="flex items-start gap-3"><span class="text-amber-400 mt-1 font-bold">-</span> Always push updates so Audrey and I stay in sync</li>
+          <li class="flex items-start gap-3"><span class="text-amber-400 mt-1 font-bold">-</span> An 18-item "Never Forget" checklist</li>
+        </ul>
+        <p class="text-lg text-green-400 mt-8 font-semibold">The AI reads this before every work session. It's like giving your assistant a perfect memory.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 13: THE ITERATION GAME ==================== -->
+  <div class="slide" data-slide="13">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-blue-400 font-semibold text-lg tracking-widest uppercase mb-6">The Process</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10 leading-tight max-w-5xl">It's not magic.<br>It's <span class="text-blue-400">iteration</span>.</h2>
+      <div class="bg-gray-900 rounded-2xl p-10 border border-gray-800 max-w-3xl text-left">
+        <p class="text-2xl text-gray-300 leading-relaxed mb-6">Nothing comes out perfect the first time. Here's a real example:</p>
+        <div class="space-y-4 text-lg">
+          <div class="flex items-start gap-3">
+            <span class="text-gray-600 font-mono text-sm mt-1 w-16 flex-shrink-0">v1</span>
+            <p class="text-gray-400">"Build a registration page" — <span class="text-gray-600">basic but clunky</span></p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-gray-600 font-mono text-sm mt-1 w-16 flex-shrink-0">v2</span>
+            <p class="text-gray-400">"Make the calendar clickable" — <span class="text-gray-600">better, but no discounts</span></p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-gray-600 font-mono text-sm mt-1 w-16 flex-shrink-0">v3</span>
+            <p class="text-gray-400">"Add 10% off for a full week" — <span class="text-gray-600">nice, but totals are wrong</span></p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-gray-600 font-mono text-sm mt-1 w-16 flex-shrink-0">v4</span>
+            <p class="text-gray-400">"Fix the math and show a summary" — <span class="text-gray-600">getting close</span></p>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="text-green-500 font-mono text-sm mt-1 w-16 flex-shrink-0">v5</span>
+            <p class="text-green-400 font-semibold">"Add multi-kid support" — shipped it</p>
+          </div>
+        </div>
+        <p class="text-lg text-gray-500 mt-8">Each iteration took 5-15 minutes. By version 5 we had something a pro team would spend weeks on.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 14: AUDREY ==================== -->
+  <div class="slide" data-slide="14">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-pink-400 font-semibold text-lg tracking-widest uppercase mb-6">The Best Part</p>
+      <h2 class="text-5xl md:text-7xl font-bold mb-10 leading-tight max-w-5xl">My 16-year-old<br>ships production code</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl">
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left">
+          <p class="text-pink-400 font-bold text-xl mb-4">What Audrey Built</p>
+          <ul class="space-y-3 text-gray-300 text-lg">
+            <li>Required safety policies parents must accept</li>
+            <li>Reorganized the parent dashboard layout</li>
+            <li>Counselor visibility controls</li>
+            <li>Smart camper selection shortcuts</li>
+          </ul>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left">
+          <p class="text-blue-400 font-bold text-xl mb-4">What She's Learning</p>
+          <ul class="space-y-3 text-gray-300 text-lg">
+            <li>How to think about user experience</li>
+            <li>How to describe what you want clearly</li>
+            <li>How to test and find problems</li>
+            <li>That building things is <em>possible</em></li>
+          </ul>
+        </div>
+      </div>
+      <p class="text-gray-500 text-xl mt-10 max-w-2xl">She's not studying computer science. She's just a teenager who said "I want to help build this" — and now she can.</p>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 15: THINGS BROKE ==================== -->
+  <div class="slide" data-slide="15">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-rose-400 font-semibold text-lg tracking-widest uppercase mb-6">Keeping It Real</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10 leading-tight max-w-5xl">Things broke.<br><span class="text-rose-400">A lot.</span></h2>
+      <div class="max-w-3xl w-full space-y-6">
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 flex items-start gap-5">
+          <div class="icon-sm bg-rose-500/20 text-rose-400">x</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">The "one giant file" disaster</p>
+            <p class="text-gray-400">We put everything in one file until it was 12,000 lines long. Splitting it broke five things at once.</p>
+          </div>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 flex items-start gap-5">
+          <div class="icon-sm bg-rose-500/20 text-rose-400">x</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">The "typing makes the cursor disappear" bug</p>
+            <p class="text-gray-400">Every form was unusable for a day. Took hours to figure out why — the page was refreshing itself on every keystroke.</p>
+          </div>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 flex items-start gap-5">
+          <div class="icon-sm bg-rose-500/20 text-rose-400">x</div>
+          <div class="text-left">
+            <p class="text-xl font-semibold">The "invisible database crash"</p>
+            <p class="text-gray-400">Restructured the database wrong. Lost access to parent accounts for 10 versions until we figured it out.</p>
+          </div>
+        </div>
+      </div>
+      <p class="text-green-400 text-xl mt-10 font-semibold max-w-2xl">Every failure taught us something. We documented each fix so the AI would never make the same mistake twice.</p>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 16: QUALITY ==================== -->
+  <div class="slide" data-slide="16">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-cyan-400 font-semibold text-lg tracking-widest uppercase mb-6">Quality Control</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-10">We built our own testing system</h2>
+      <div class="bg-gray-900 rounded-2xl p-10 border border-gray-800 max-w-3xl">
+        <div class="flex items-center justify-center gap-4 mb-8">
+          <div class="text-6xl font-black text-green-400">140</div>
+          <div class="text-left">
+            <p class="text-2xl font-semibold text-white">automated checks</p>
+            <p class="text-gray-500 text-lg">all passing</p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-left">
+          <div class="bg-gray-800 rounded-xl p-4">
+            <p class="text-green-400 font-semibold">Database</p>
+            <p class="text-gray-400 text-sm">Can we connect? Do all 24 tables exist?</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4">
+            <p class="text-green-400 font-semibold">Data integrity</p>
+            <p class="text-gray-400 text-sm">Is the data structured correctly?</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4">
+            <p class="text-green-400 font-semibold">Business rules</p>
+            <p class="text-gray-400 text-sm">Are discounts calculated correctly?</p>
+          </div>
+          <div class="bg-gray-800 rounded-xl p-4">
+            <p class="text-green-400 font-semibold">Services</p>
+            <p class="text-gray-400 text-sm">Do email and SMS endpoints work?</p>
+          </div>
+        </div>
+        <p class="text-lg text-gray-500 mt-6">One click runs all 140 tests. If anything breaks, we know immediately — before any parent ever sees a problem.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 17: WHAT'S NEXT ==================== -->
+  <div class="slide" data-slide="17">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">Looking Ahead</p>
+      <h2 class="text-5xl md:text-6xl font-bold mb-12">What Happens Next</h2>
+      <div class="max-w-3xl w-full space-y-6 text-left">
+        <div class="flex items-center gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div class="icon-sm bg-blue-500/20 text-blue-400">1</div>
+          <p class="text-xl text-gray-300">Optimize for phones — parents will use this at drop-off and pick-up</p>
+        </div>
+        <div class="flex items-center gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div class="icon-sm bg-blue-500/20 text-blue-400">2</div>
+          <p class="text-xl text-gray-300">Add Google and Apple Sign-In for one-click login</p>
+        </div>
+        <div class="flex items-center gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800">
+          <div class="icon-sm bg-blue-500/20 text-blue-400">3</div>
+          <p class="text-xl text-gray-300">Multi-parent families — let both parents manage registrations with their own login</p>
+        </div>
+        <div class="flex items-center gap-5 bg-gradient-to-r from-green-900/30 to-gray-900 rounded-xl p-6 border border-green-800">
+          <div class="icon-sm bg-green-500/20 text-green-400">*</div>
+          <p class="text-xl text-green-300 font-semibold">Camp opens this summer — the real test with real families</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 18: CLOSING ==================== -->
+  <div class="slide" data-slide="18">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-blue-500 mb-8"></div>
+      <h2 class="text-5xl md:text-7xl font-black mb-8 leading-tight max-w-5xl">You don't need to be a developer<br>to <span class="gradient-text">build something real</span></h2>
+      <p class="text-2xl md:text-3xl text-gray-400 font-light mb-4 max-w-3xl">A dad with an idea, a teenager who wanted to help, and an AI that never sleeps.</p>
+      <p class="text-xl text-gray-500 mb-12 max-w-2xl">17 days. A full business application. Zero lines of code written by hand.</p>
+      <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 max-w-2xl">
+        <p class="text-xl text-gray-300 leading-relaxed">The barrier to building software isn't skill anymore.</p>
+        <p class="text-2xl text-green-400 font-bold mt-4">It's just deciding to start.</p>
+      </div>
+      <div class="flex items-center gap-8 text-lg text-gray-600 mt-12">
+        <span>Derek & Audrey Richardson</span>
+        <span class="text-gray-700">|</span>
+        <span>Roosevelt Basketball Day Camp</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let current = 1;
+    const total = document.querySelectorAll('.slide').length;
+
+    function showSlide(n) {
+      if (n < 1 || n > total) return;
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const slide = document.querySelector(`[data-slide="${n}"]`);
+      slide.classList.add('active');
+      slide.querySelector('.fade-in')?.classList.remove('fade-in');
+      void slide.querySelector('div')?.offsetWidth;
+      slide.querySelector('div')?.classList.add('fade-in');
+      current = n;
+      document.getElementById('slideCounter').textContent = `${current} / ${total}`;
+      document.getElementById('progressBar').style.width = `${(current / total) * 100}%`;
+    }
+
+    function nextSlide() { showSlide(current + 1); }
+    function prevSlide() { showSlide(current - 1); }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+      if (e.key === 'Home') { e.preventDefault(); showSlide(1); }
+      if (e.key === 'End') { e.preventDefault(); showSlide(total); }
+    });
+
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+    document.addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].screenX;
+      if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+    });
+
+    showSlide(1);
+  </script>
+</body>
+</html>
