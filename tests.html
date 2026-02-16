@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.148";
-    const BUILD_DATE = new Date("2026-02-15T22:18:00");
+    const VERSION = "13.154";
+    const BUILD_DATE = new Date("2026-02-15T23:48:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -367,6 +367,102 @@
         phone: '(555) 123-4243', password: 'camp', position: 'Center', year: 'Sophomore',
         bio: 'Versatile player known for rebounding and blocking opponents shots.  ', order: 3,
         availability: { '2026-07-13':[false,true],'2026-07-14':[false,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[false,false],'2026-08-19':[false,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c5', email: 'sophia@msn.com', name: 'Sophia Martinez',
+        phone: '(555) 555-1005', password: 'camp', position: 'Point Guard', year: 'Senior',
+        bio: 'Floor general with elite court vision and 4 years of varsity experience.', order: 4,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,false],'2026-07-17':[true,false],'2026-08-10':[true,true],'2026-08-11':[false,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,false],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[false,false],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c6', email: 'isabella@msn.com', name: 'Isabella Chen',
+        phone: '(555) 555-1006', password: 'camp', position: 'Shooting Guard', year: 'Junior',
+        bio: 'Sharpshooter averaging 18 points per game with range beyond the arc.', order: 5,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,true],'2026-07-15':[false,true],'2026-07-16':[false,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[false,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,false],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c7', email: 'olivia@msn.com', name: 'Olivia Johnson',
+        phone: '(555) 555-1007', password: 'camp', position: 'Small Forward', year: 'Senior',
+        bio: 'Defensive stopper who leads the team in steals and deflections.', order: 6,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[false,false],'2026-08-10':[false,true],'2026-08-11':[true,true],'2026-08-12':[false,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[false,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[false,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,false],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,false] },
+      },
+      {
+        id: 'c8', email: 'ava@msn.com', name: 'Ava Williams',
+        phone: '(555) 555-1008', password: 'camp', position: 'Power Forward', year: 'Sophomore',
+        bio: 'Athletic post player who dominates the boards on both ends.', order: 7,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[false,true],'2026-07-16':[false,true],'2026-07-17':[true,true],'2026-08-10':[true,false],'2026-08-11':[true,true],'2026-08-12':[false,true],'2026-08-13':[false,true],'2026-08-14':[true,false],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[false,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[false,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c9', email: 'mia@msn.com', name: 'Mia Davis',
+        phone: '(555) 555-1009', password: 'camp', position: 'Center', year: 'Junior',
+        bio: 'Shot-blocking specialist with a developing mid-range game.', order: 8,
+        availability: { '2026-07-13':[false,true],'2026-07-14':[false,true],'2026-07-15':[true,false],'2026-07-16':[true,true],'2026-07-17':[false,false],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,false],'2026-08-13':[false,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,false],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[false,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,false],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c10', email: 'charlotte@msn.com', name: 'Charlotte Brown',
+        phone: '(555) 555-1010', password: 'camp', position: 'Point Guard', year: 'Freshman',
+        bio: 'Quick and crafty ball handler with natural leadership skills.', order: 9,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,false],'2026-07-15':[true,false],'2026-07-16':[true,false],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[false,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[false,true],'2026-08-20':[true,true],'2026-08-21':[false,true],'2026-08-24':[false,false],'2026-08-25':[true,true],'2026-08-26':[false,false],'2026-08-27':[true,false],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c11', email: 'harper@msn.com', name: 'Harper Wilson',
+        phone: '(555) 555-1011', password: 'camp', position: 'Shooting Guard', year: 'Senior',
+        bio: 'Clutch scorer known for hitting big shots in pressure moments.', order: 10,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[false,true],'2026-07-16':[false,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[false,true],'2026-08-12':[true,true],'2026-08-13':[false,false],'2026-08-14':[false,true],'2026-08-17':[true,true],'2026-08-18':[true,false],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[true,false],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[false,false],'2026-08-27':[false,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c12', email: 'evelyn@msn.com', name: 'Evelyn Moore',
+        phone: '(555) 555-1012', password: 'camp', position: 'Small Forward', year: 'Junior',
+        bio: 'Versatile two-way player who can guard multiple positions.', order: 11,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,false],'2026-07-15':[true,true],'2026-07-16':[true,false],'2026-07-17':[true,false],'2026-08-10':[false,true],'2026-08-11':[true,false],'2026-08-12':[true,true],'2026-08-13':[true,false],'2026-08-14':[false,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[false,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,false],'2026-08-25':[false,false],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[false,true] },
+      },
+      {
+        id: 'c13', email: 'abigail@msn.com', name: 'Abigail Taylor',
+        phone: '(555) 555-1013', password: 'camp', position: 'Power Forward', year: 'Sophomore',
+        bio: 'High-energy rebounder with an improving three-point shot.', order: 12,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[false,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,false],'2026-08-11':[true,false],'2026-08-12':[true,true],'2026-08-13':[false,true],'2026-08-14':[true,false],'2026-08-17':[true,false],'2026-08-18':[false,false],'2026-08-19':[true,true],'2026-08-20':[true,false],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,false],'2026-08-26':[true,false],'2026-08-27':[true,false],'2026-08-28':[false,true] },
+      },
+      {
+        id: 'c14', email: 'ella@msn.com', name: 'Ella Anderson',
+        phone: '(555) 555-1014', password: 'camp', position: 'Center', year: 'Senior',
+        bio: 'Post presence averaging a double-double with great footwork.', order: 13,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[false,true],'2026-07-17':[false,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,false],'2026-08-13':[true,true],'2026-08-14':[false,true],'2026-08-17':[true,false],'2026-08-18':[false,true],'2026-08-19':[true,false],'2026-08-20':[false,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[false,true],'2026-08-26':[false,false],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c15', email: 'scarlett@msn.com', name: 'Scarlett Thomas',
+        phone: '(555) 555-1015', password: 'camp', position: 'Point Guard', year: 'Junior',
+        bio: 'Pass-first point guard with excellent assist-to-turnover ratio.', order: 14,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,true],'2026-07-15':[true,false],'2026-07-16':[false,true],'2026-07-17':[true,false],'2026-08-10':[true,true],'2026-08-11':[true,false],'2026-08-12':[false,false],'2026-08-13':[false,true],'2026-08-14':[true,false],'2026-08-17':[true,true],'2026-08-18':[false,true],'2026-08-19':[true,false],'2026-08-20':[true,false],'2026-08-21':[true,true],'2026-08-24':[false,true],'2026-08-25':[false,true],'2026-08-26':[true,false],'2026-08-27':[false,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c16', email: 'grace@msn.com', name: 'Grace Jackson',
+        phone: '(555) 555-1016', password: 'camp', position: 'Shooting Guard', year: 'Freshman',
+        bio: 'Lights-out shooter who works tirelessly on her craft.', order: 15,
+        availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,false],'2026-08-12':[false,true],'2026-08-13':[true,true],'2026-08-14':[true,false],'2026-08-17':[false,false],'2026-08-18':[false,false],'2026-08-19':[true,false],'2026-08-20':[false,true],'2026-08-21':[true,false],'2026-08-24':[true,true],'2026-08-25':[true,false],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
+      },
+      {
+        id: 'c17', email: 'lily@msn.com', name: 'Lily White',
+        phone: '(555) 555-1017', password: 'camp', position: 'Small Forward', year: 'Senior',
+        bio: 'Team captain who leads by example with hustle and heart.', order: 16,
+        availability: { '2026-07-13':[false,false],'2026-07-14':[false,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[false,false],'2026-08-11':[true,false],'2026-08-12':[false,true],'2026-08-13':[true,false],'2026-08-14':[true,false],'2026-08-17':[true,false],'2026-08-18':[true,true],'2026-08-19':[false,true],'2026-08-20':[false,true],'2026-08-21':[false,false],'2026-08-24':[false,false],'2026-08-25':[true,false],'2026-08-26':[true,true],'2026-08-27':[false,false],'2026-08-28':[false,true] },
+      },
+      {
+        id: 'c18', email: 'chloe@msn.com', name: 'Chloe Harris',
+        phone: '(555) 555-1018', password: 'camp', position: 'Power Forward', year: 'Junior',
+        bio: 'Physical interior player with soft hands around the basket.', order: 17,
+        availability: { '2026-07-13':[true,false],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,false],'2026-07-17':[false,false],'2026-08-10':[false,true],'2026-08-11':[true,false],'2026-08-12':[true,true],'2026-08-13':[false,true],'2026-08-14':[true,false],'2026-08-17':[true,true],'2026-08-18':[false,false],'2026-08-19':[false,true],'2026-08-20':[true,false],'2026-08-21':[true,false],'2026-08-24':[true,true],'2026-08-25':[false,true],'2026-08-26':[true,true],'2026-08-27':[false,true],'2026-08-28':[true,false] },
+      },
+      {
+        id: 'c19', email: 'zoey@msn.com', name: 'Zoey Clark',
+        phone: '(555) 555-1019', password: 'camp', position: 'Center', year: 'Sophomore',
+        bio: 'Rim protector with a growing offensive repertoire.', order: 18,
+        availability: { '2026-07-13':[false,false],'2026-07-14':[true,false],'2026-07-15':[true,true],'2026-07-16':[false,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[false,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[false,true],'2026-08-18':[true,false],'2026-08-19':[true,false],'2026-08-20':[true,true],'2026-08-21':[false,false],'2026-08-24':[true,false],'2026-08-25':[false,true],'2026-08-26':[false,true],'2026-08-27':[true,false],'2026-08-28':[false,true] },
+      },
+      {
+        id: 'c20', email: 'penelope@msn.com', name: 'Penelope Lewis',
+        phone: '(555) 555-1020', password: 'camp', position: 'Point Guard / Shooting Guard', year: 'Junior',
+        bio: 'Combo guard who can score and distribute equally well.', order: 19,
+        availability: { '2026-07-13':[false,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[false,false],'2026-08-10':[true,false],'2026-08-11':[true,true],'2026-08-12':[true,false],'2026-08-13':[true,false],'2026-08-14':[true,false],'2026-08-17':[false,false],'2026-08-18':[false,false],'2026-08-19':[true,true],'2026-08-20':[false,false],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[false,false],'2026-08-26':[false,false],'2026-08-27':[false,false],'2026-08-28':[true,false] },
       },
     ];
 
