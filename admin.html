@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.143";
+    const VERSION = "13.149";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T22:18:00");
+    const BUILD_DATE = new Date("2026-02-15T22:27:00");
 
     const RELEASE_NOTES = [
+      { version: "13.149", date: "2026-02-15", time: "10:27 PM", author: "Derek Richardson", changes: ["Admin: Camper card stats redesigned — now shows Parents, Sessions, Paid, In Pods (matching Parents page style)", "Admin: Removed redundant summary stat cards from bottom of Campers tab"] },
       { version: "13.148", date: "2026-02-15", time: "10:18 PM", author: "Derek Richardson", changes: ["Admin: Cleared Dashboard tab — replaced task tracking UI with placeholder (will be rebuilt later)", "Admin: Counselors tab now shows ALL counselors with toggle switch for website visibility and approval", "Admin: Unapproved counselors displayed with amber left border and 'Not visible on website' badge", "Admin: Work Availability tab replaced with multi-counselor calendar view — month selector, counselor filter chips, per-date availability grid", "Admin: Tab badges now show total counselor count instead of pending approval count", "Counselor: Profile editing locked — counselors can view but not edit their profile (admin-only control)", "Counselor: Availability changes now warn about pod conflicts when campers are assigned to affected sessions", "Tests: Added availability conflict checking tests"] },
       { version: "13.142", date: "2026-02-15", time: "9:52 PM", author: "Derek Richardson", changes: ["Admin: Removed all messaging UI — Message All Parents button, individual Message buttons, Unread badge, Messages section in expanded parent, MessageComposer/ThreadViewer modals, Messages tab, Dashboard unread messages todo", "Admin: Parent row stats now show order-based counts (New/Pending/Paid) instead of individual session rows", "Admin: Expanded parent registrations now grouped by order instead of listing individual day rows", "Parent/Counselor: Removed dead messaging code — state variables, DB fetch, helper functions for camp_messages"] },
       { version: "13.139", date: "2026-02-15", time: "7:06 PM", author: "Derek Richardson", changes: ["Admin: Removed Messages section from Danger Zone"] },
@@ -4375,7 +4376,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== CAMPERS TAB ====================
-    const CampersTab = ({ parents, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, onSaveEmergencyContacts, showToast, addToHistory }) => {
+    const CampersTab = ({ parents, registrations, campers, camperParentLinks, emergencyContacts, onSaveCampers, onSaveLinks, onDeleteCamper, onSaveEmergencyContacts, showToast, addToHistory, assignments }) => {
       const [searchTerm, setSearchTerm] = useState('');
       const [sortBy, setSortBy] = useState('name');
       const [editingCamper, setEditingCamper] = useState(null);
@@ -4558,10 +4559,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="space-y-4">
               {sortedCampers.map(camper => {
                 const isExpanded = expandedCamper === camper.id;
-                const approved = camper.registrations.filter(r => r.status === 'approved').length;
-                const pending = camper.registrations.filter(r => r.status === 'pending').length;
                 const camperParentEmails = (camper.parents || []).map(p => p?.email).filter(Boolean);
                 const camperContacts = emergencyContacts.filter(ec => camperParentEmails.includes(ec.userEmail));
+                const parentCount = camper.parents?.length || 0;
+                const activeRegs = camper.registrations.filter(r => r.status !== 'cancelled');
+                const totalSessions = activeRegs.reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
+                const paidSessions = camper.registrations.filter(r => r.status === 'approved').reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
+                const inPods = (() => {
+                  let count = 0;
+                  const asgn = assignments || {};
+                  Object.keys(asgn).forEach(key => {
+                    const counselors = asgn[key] || {};
+                    Object.values(counselors).forEach(camperIds => {
+                      if ((camperIds || []).includes(camper.id)) count++;
+                    });
+                  });
+                  return count;
+                })();
 
                 return (
                   <div key={camper.id} className="bg-white rounded-xl shadow overflow-hidden">
@@ -4597,17 +4611,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                       {/* Stats */}
                       <div className="flex gap-3 text-center flex-wrap">
-                        <div title="Approved registrations">
-                          <div className={`text-lg font-bold ${approved > 0 ? 'text-green-600' : 'text-gray-400'}`}>{approved}</div>
-                          <div className="text-xs text-gray-500">Approved</div>
+                        <div title="Parents linked to this camper">
+                          <div className={`text-lg font-bold ${parentCount > 0 ? 'text-teal-600' : 'text-gray-400'}`}>{parentCount}</div>
+                          <div className="text-xs text-gray-500">Parents</div>
                         </div>
-                        <div title="Pending registrations">
-                          <div className={`text-lg font-bold ${pending > 0 ? 'text-yellow-600' : 'text-gray-400'}`}>{pending}</div>
-                          <div className="text-xs text-gray-500">Pending</div>
+                        <div title="Total registered session slots (non-cancelled)">
+                          <div className={`text-lg font-bold ${totalSessions > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{totalSessions}</div>
+                          <div className="text-xs text-gray-500">Sessions</div>
                         </div>
-                        <div title="Emergency contacts">
-                          <div className={`text-lg font-bold ${camperContacts.length > 0 ? 'text-blue-600' : 'text-gray-400'}`}>{camperContacts.length}</div>
-                          <div className="text-xs text-gray-500">EC</div>
+                        <div title="Paid session slots (approved)">
+                          <div className={`text-lg font-bold ${paidSessions > 0 ? 'text-green-600' : 'text-gray-400'}`}>{paidSessions}</div>
+                          <div className="text-xs text-gray-500">Paid</div>
+                        </div>
+                        <div title="Pod assignments (date+session slots assigned to a counselor)">
+                          <div className={`text-lg font-bold ${inPods > 0 ? 'text-purple-600' : 'text-gray-400'}`}>{inPods}</div>
+                          <div className="text-xs text-gray-500">In Pods</div>
                         </div>
                       </div>
 
@@ -4752,30 +4770,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               })}
             </div>
           )}
-
-          {/* Summary Stats */}
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-green-600">{allCampers.length}</div>
-              <div className="text-gray-600">Total Campers</div>
-            </div>
-            <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-green-600">
-                {allCampers.reduce((sum, c) => sum + c.registrations.filter(r => r.status === 'approved').length, 0)}
-              </div>
-              <div className="text-gray-600">Approved Registrations</div>
-            </div>
-            <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-yellow-600">
-                {allCampers.reduce((sum, c) => sum + c.registrations.filter(r => r.status === 'pending').length, 0)}
-              </div>
-              <div className="text-gray-600">Pending Registrations</div>
-            </div>
-            <div className="bg-white rounded-xl shadow p-4 text-center">
-              <div className="text-3xl font-bold text-purple-600">{parents.length}</div>
-              <div className="text-gray-600">Parent Accounts</div>
-            </div>
-          </div>
 
           {/* Add/Edit Camper Modal */}
           {showAddForm && (
@@ -9532,6 +9526,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   onSaveEmergencyContacts={saveEmergencyContacts}
                   showToast={showToast}
                   addToHistory={addToHistory}
+                  assignments={assignments}
                 />
               )}
 
