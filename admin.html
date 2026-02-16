@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.134";
+    const VERSION = "13.135";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T18:09:00");
+    const BUILD_DATE = new Date("2026-02-15T18:22:00");
 
     const RELEASE_NOTES = [
+      { version: "13.135", date: "2026-02-15", time: "6:22 PM", author: "Derek Richardson", changes: ["Admin: Registration subtab badges now show order count instead of individual session count (1 registration with 2 kids x 3 sessions = 1, not 6)"] },
       { version: "13.134", date: "2026-02-15", time: "6:09 PM", author: "Derek Richardson", changes: ["Admin: Registration cards now match parent dashboard style — grouped by camper with date ranges instead of individual day rows", "Admin: Cards show condensed camper summary (days, date range, session type, amount) matching parent portal exactly"] },
       { version: "13.132", date: "2026-02-15", time: "5:30 PM", author: "Derek Richardson", changes: ["Netlify: All system emails now BCC rhsdaycamp@gmail.com so camp admin sees every email sent", "Netlify: Email delivery failures now trigger an alert email to rhsdaycamp@gmail.com with recipient, subject, error details, and timestamp", "Netlify: Updated send-email.js and request-password-reset.js with BCC + failure alerts"] },
       { version: "13.131", date: "2026-02-15", time: "5:20 PM", author: "Derek Richardson", changes: ["Tests: Seed functions now use actual signup flow — counselor add sends welcome email, logs change history, and creates profile with pending approval (visible:false) matching real onboarding", "Tests: Parent seed add already updated in prior commit with same improvements"] },
@@ -7691,10 +7692,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         ).length;
       };
 
-      const getPending = () => registrations.filter(r => r.status === 'pending' && ['sent', 'submitted'].includes(r.paymentStatus)).length;
-      const getApproved = () => registrations.filter(r => r.status === 'approved').length;
-      const getCancelled = () => registrations.filter(r => r.status === 'cancelled' || r.status === 'rejected').length;
-      const getUnpaid = () => registrations.filter(r => r.status === 'pending' && r.paymentStatus === 'unpaid').length;
+      const countOrders = (regs) => new Set(regs.map(r => r.orderId || r.id)).size;
+      const getPending = () => countOrders(registrations.filter(r => r.status === 'pending' && ['sent', 'submitted'].includes(r.paymentStatus)));
+      const getApproved = () => countOrders(registrations.filter(r => r.status === 'approved'));
+      const getCancelled = () => countOrders(registrations.filter(r => r.status === 'cancelled' || r.status === 'rejected'));
+      const getUnpaid = () => countOrders(registrations.filter(r => r.status === 'pending' && r.paymentStatus === 'unpaid'));
 
       // ==================== ADMIN TAB CONFIGURATION ====================
       const ADMIN_TAB_CONFIG = {
@@ -7721,12 +7723,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         'registrations': {
           label: '✅ Registrations',
           hasChildren: true,
-          badge: () => registrations.filter(r => r.status === 'pending' && ['sent', 'submitted'].includes(r.paymentStatus)).length,
+          badge: () => getPending(),
           children: {
             'new': { label: 'New', badge: () => getUnpaid() },
             'pending': { label: 'Pending Approval', badge: () => getPending() },
             'paid': { label: 'Paid', badge: () => getApproved() },
-            'invoices': { label: 'Customer Invoices', badge: () => registrations.filter(r => r.invoiceId).length }
+            'invoices': { label: 'Customer Invoices', badge: () => countOrders(registrations.filter(r => r.invoiceId)) }
           },
           defaultChild: 'new'
         },
