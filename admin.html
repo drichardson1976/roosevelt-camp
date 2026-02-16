@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.158";
+    const VERSION = "13.159";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-16T00:29:00");
+    const BUILD_DATE = new Date("2026-02-16T00:41:00");
 
     const RELEASE_NOTES = [
+      { version: "13.159", date: "2026-02-16", time: "12:41 AM", author: "Derek Richardson", changes: ["Admin: Changed 'Days' filter from day-of-week (Mon/Tue/Wed/Thu/Fri) to individual date pills (Mon 7/7, Tue 7/8, etc.)", "Admin: Dates filter shows every camp date — click to select/deselect specific days you want to see", "Admin: Selecting/deselecting a week automatically adds/removes its dates from the date filter", "Admin: Applied consistently to Work Availability, Work Schedule, and Pod Setup tabs"] },
       { version: "13.158", date: "2026-02-16", time: "12:29 AM", author: "Derek Richardson", changes: ["Admin: Removed double confirmation dialog when marking Venmo payment as received — now a single informative confirmation", "Admin: Added Week, Day, and Session filters to Work Availability and Work Schedule tabs — filter calendar by specific weeks, days of week (Mon-Fri), and AM/PM session", "Admin: Added Week and Day filters to Pod Setup date grid — reduce visible calendar to specific weeks or days", "Admin: Added Camper View mode to Pod Setup — select a camper to see all their paid sessions and assign them to counselors individually or bulk-assign all unassigned sessions at once", "Admin: Camper View shows assignment status table with per-session counselor dropdown and 'Assign All Unassigned' bulk action"] },
       { version: "13.157", date: "2026-02-16", time: "12:06 AM", author: "Derek Richardson", changes: ["Admin: AM/PM sessions now visually separated in multi-counselor card view with labeled headers and divider line", "Admin: AM section labeled with ☀️ AM (amber), PM section labeled with 🌙 PM (indigo) — clear distinction when ovals wrap to multiple rows", "Admin: Applied to both Work Availability and Work Schedule tabs", "Admin: Edit Availability modal now supports multi-month selection (both July and August at once, both selected by default)", "Admin: Edit Availability modal displays dates grouped into Mon-Fri weeks side by side with week labels", "Admin: Edit Availability modal widened to max-w-4xl for better week layout"] },
       { version: "13.156", date: "2026-02-15", time: "11:58 PM", author: "Derek Richardson", changes: ["Admin: Multi-counselor ovals now use CSS grid (max 5 per row) — scales to 20 counselors by wrapping to multiple rows", "Admin: Ovals only expand vertically when needed (>5 counselors), never horizontally", "Admin: Font size increased from 9px to 10px for better readability at scale", "Admin: Applied to both Work Availability and Work Schedule tabs"] },
@@ -5100,7 +5101,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     // ==================== ASSIGNMENTS TAB ====================
-    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers, selectedDate, setSelectedDate, selectedSession, setSelectedSession, sessionPods, setSessionPods, podCalWeeks, setPodCalWeeks, podCalDays, setPodCalDays, podCamperView, setPodCamperView, podSelectedCamper, setPodSelectedCamper, counselorSchedule }) => {
+    const AssignmentsTab = ({ registrations, counselors, users, assignments, availability, onSaveAssignments, showToast, selectedMonth, setSelectedMonth, campers: allCampers, selectedDate, setSelectedDate, selectedSession, setSelectedSession, sessionPods, setSessionPods, podCalWeeks, setPodCalWeeks, podCalDates, setPodCalDates, podCamperView, setPodCamperView, podSelectedCamper, setPodSelectedCamper, counselorSchedule }) => {
       const [draggedItem, setDraggedItem] = useState(null); // { type: 'camper' | 'counselor', data: ... }
       const [dragOverTarget, setDragOverTarget] = useState(null); // { podId, type: 'camper' | 'counselor' }
 
@@ -5132,6 +5133,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       }, [selectedMonth, months, setSelectedMonth]);
 
       // Auto-initialize week filter when month changes
+      // All dates for selected month (unfiltered)
+      const allPodMonthDates = React.useMemo(() => {
+        if (!selectedMonth) return [];
+        const [year, month] = selectedMonth.split('-').map(Number);
+        return CAMP_DATES.filter(date => {
+          const d = new Date(date + 'T12:00:00');
+          return d.getFullYear() === year && d.getMonth() === month - 1;
+        });
+      }, [selectedMonth]);
+
       const podAvailableWeeks = React.useMemo(() => {
         if (!selectedMonth) return [];
         const [year, month] = selectedMonth.split('-').map(Number);
@@ -5145,23 +5156,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (podAvailableWeekStarts.length > 0) {
           setPodCalWeeks([...podAvailableWeekStarts]);
         }
+        if (allPodMonthDates.length > 0) {
+          setPodCalDates([...allPodMonthDates]);
+        }
       }, [selectedMonth]);
 
-      // Get dates for selected month with week/day filters
-      const getMonthDates = () => {
-        if (!selectedMonth) return [];
-        const [year, month] = selectedMonth.split('-').map(Number);
-        return CAMP_DATES.filter(date => {
-          const d = new Date(date + 'T12:00:00');
-          if (d.getFullYear() !== year || d.getMonth() !== month - 1) return false;
-          const week = CAMP_WEEKS.find(w => w.dates.includes(date));
-          if (week && podCalWeeks.length > 0 && !podCalWeeks.includes(week.start)) return false;
-          if (!podCalDays.includes(d.getDay())) return false;
-          return true;
-        });
-      };
+      // Dates filtered by week selection (for date pill display)
+      const podWeekFilteredDates = allPodMonthDates.filter(d => {
+        const week = CAMP_WEEKS.find(w => w.dates.includes(d));
+        return !week || podCalWeeks.length === 0 || podCalWeeks.includes(week.start);
+      });
 
-      const monthDates = getMonthDates();
+      // Final filtered dates
+      const monthDates = podWeekFilteredDates.filter(d => podCalDates.includes(d));
 
       // Get session key
       const getSessionKey = () => selectedDate ? `${selectedDate}_${selectedSession}` : '';
@@ -5763,18 +5770,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               ))}
             </div>
 
-            {/* Week / Day filters */}
+            {/* Week / Date filters */}
             <div className="space-y-2 mb-4">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
-                <button onClick={() => setPodCalWeeks([...podAvailableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === podAvailableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                <button onClick={() => setPodCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                <button onClick={() => { setPodCalWeeks([...podAvailableWeekStarts]); setPodCalDates([...allPodMonthDates]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === podAvailableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                <button onClick={() => { setPodCalWeeks([]); setPodCalDates([]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
                 {podAvailableWeeks.map(w => {
                   const wd = new Date(w.start + 'T12:00:00');
                   const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                   const isActive = podCalWeeks.includes(w.start);
                   return (
-                    <button key={w.start} onClick={() => setPodCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                    <button key={w.start} onClick={() => {
+                      const newWeeks = isActive ? podCalWeeks.filter(x => x !== w.start) : [...podCalWeeks, w.start].sort();
+                      setPodCalWeeks(newWeeks);
+                      if (isActive) {
+                        setPodCalDates(prev => prev.filter(d => !w.dates.includes(d)));
+                      } else {
+                        setPodCalDates(prev => [...new Set([...prev, ...w.dates])].sort());
+                      }
+                    }}
                       className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                       {label}
                     </button>
@@ -5782,15 +5797,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 })}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
-                <button onClick={() => setPodCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                <button onClick={() => setPodCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
-                {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
-                  <button key={day} onClick={() => setPodCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${podCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                    {label}
-                  </button>
-                ))}
+                <span className="text-sm font-medium text-gray-700 w-14">Dates:</span>
+                <button onClick={() => setPodCalDates([...podWeekFilteredDates])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDates.length === podWeekFilteredDates.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                <button onClick={() => setPodCalDates([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (podCalDates.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                {podWeekFilteredDates.map(d => {
+                  const dt = new Date(d + 'T12:00:00');
+                  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+                  const label = `${dayName} ${dt.getMonth() + 1}/${dt.getDate()}`;
+                  const isActive = podCalDates.includes(d);
+                  return (
+                    <button key={d} onClick={() => setPodCalDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())}
+                      className={`px-2 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -7320,7 +7341,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [podSelectedSession, setPodSelectedSession] = useState('morning'); // Persist selected session in Pod Setup
       const [podSessionPods, setPodSessionPods] = useState({}); // Persist pod data in Pod Setup
       const [podCalWeeks, setPodCalWeeks] = useState([]); // Week filter for Pod Setup date grid
-      const [podCalDays, setPodCalDays] = useState([1,2,3,4,5]); // Day filter for Pod Setup (Mon-Fri)
+      const [podCalDates, setPodCalDates] = useState([]); // Specific date filter for Pod Setup
       const [podCamperView, setPodCamperView] = useState(false); // Camper-centric view toggle
       const [podSelectedCamper, setPodSelectedCamper] = useState(null); // Selected camper in camper view
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being edited (availability modal)
@@ -8320,12 +8341,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [availCalMonths, setAvailCalMonths] = useState([]);
         const [availCalHidden, setAvailCalHidden] = useState({});
         const [availCalWeeks, setAvailCalWeeks] = useState([]);
-        const [availCalDays, setAvailCalDays] = useState([1,2,3,4,5]);
+        const [availCalDates, setAvailCalDates] = useState([]);
         const [availCalSession, setAvailCalSession] = useState('both');
         const [schedCalMonths, setSchedCalMonths] = useState([]);
         const [schedCalHidden, setSchedCalHidden] = useState({});
         const [schedCalWeeks, setSchedCalWeeks] = useState([]);
-        const [schedCalDays, setSchedCalDays] = useState([1,2,3,4,5]);
+        const [schedCalDates, setSchedCalDates] = useState([]);
         const [schedCalSession, setSchedCalSession] = useState('both');
 
         // Helper: count sessions where counselor is marked eligible by admin
@@ -8930,6 +8951,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       return 'not-set';
                     };
 
+                    // All dates for selected months (unfiltered, for date pill display)
+                    const allMonthDates = CAMP_DATES.filter(d => {
+                      const date = new Date(d + 'T12:00:00');
+                      const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      return availCalMonths.includes(mk);
+                    });
                     // Weeks available for selected months
                     const availableWeeks = CAMP_WEEKS.filter(w => {
                       const d = new Date(w.start + 'T12:00:00');
@@ -8937,22 +8964,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       return availCalMonths.includes(mk);
                     });
                     const availableWeekStarts = availableWeeks.map(w => w.start);
-                    // Auto-initialize weeks (select all)
+                    // Auto-initialize weeks and dates (select all)
                     if (availCalWeeks.length === 0 && availableWeekStarts.length > 0) {
                       setTimeout(() => setAvailCalWeeks([...availableWeekStarts]), 0);
                     }
+                    // Dates filtered by week selection (for date pills)
+                    const weekFilteredDates = allMonthDates.filter(d => {
+                      const week = CAMP_WEEKS.find(w => w.dates.includes(d));
+                      return !week || availCalWeeks.length === 0 || availCalWeeks.includes(week.start);
+                    });
+                    if (availCalDates.length === 0 && weekFilteredDates.length > 0) {
+                      setTimeout(() => setAvailCalDates([...weekFilteredDates]), 0);
+                    }
 
-                    // Get dates for all selected months + week/day filters
+                    // Final filtered dates
                     const getSelectedDates = () => {
-                      return CAMP_DATES.filter(d => {
-                        const date = new Date(d + 'T12:00:00');
-                        const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                        if (!availCalMonths.includes(mk)) return false;
-                        const week = CAMP_WEEKS.find(w => w.dates.includes(d));
-                        if (week && availCalWeeks.length > 0 && !availCalWeeks.includes(week.start)) return false;
-                        if (!availCalDays.includes(date.getDay())) return false;
-                        return true;
-                      });
+                      return weekFilteredDates.filter(d => availCalDates.includes(d));
                     };
 
                     // Counselor name helper
@@ -8995,18 +9022,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           })}
                         </div>
 
-                        {/* Week / Day / Session filters */}
+                        {/* Week / Date / Session filters */}
                         <div className="bg-white rounded-xl shadow p-4 space-y-3">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
-                            <button onClick={() => setAvailCalWeeks([...availableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                            <button onClick={() => setAvailCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            <button onClick={() => { setAvailCalWeeks([...availableWeekStarts]); setAvailCalDates([...allMonthDates]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => { setAvailCalWeeks([]); setAvailCalDates([]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
                             {availableWeeks.map(w => {
                               const wd = new Date(w.start + 'T12:00:00');
                               const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                               const isActive = availCalWeeks.includes(w.start);
                               return (
-                                <button key={w.start} onClick={() => setAvailCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                                <button key={w.start} onClick={() => {
+                                  const newWeeks = isActive ? availCalWeeks.filter(x => x !== w.start) : [...availCalWeeks, w.start].sort();
+                                  setAvailCalWeeks(newWeeks);
+                                  // Update date pills: add/remove this week's dates
+                                  if (isActive) {
+                                    setAvailCalDates(prev => prev.filter(d => !w.dates.includes(d)));
+                                  } else {
+                                    setAvailCalDates(prev => [...new Set([...prev, ...w.dates])].sort());
+                                  }
+                                }}
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                   {label}
                                 </button>
@@ -9014,15 +9050,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             })}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
-                            <button onClick={() => setAvailCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                            <button onClick={() => setAvailCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
-                            {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
-                              <button key={day} onClick={() => setAvailCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${availCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                                {label}
-                              </button>
-                            ))}
+                            <span className="text-sm font-medium text-gray-700 w-14">Dates:</span>
+                            <button onClick={() => setAvailCalDates([...weekFilteredDates])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDates.length === weekFilteredDates.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setAvailCalDates([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (availCalDates.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {weekFilteredDates.map(d => {
+                              const dt = new Date(d + 'T12:00:00');
+                              const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+                              const label = `${dayName} ${dt.getMonth() + 1}/${dt.getDate()}`;
+                              const isActive = availCalDates.includes(d);
+                              return (
+                                <button key={d} onClick={() => setAvailCalDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())}
+                                  className={`px-2 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                  {label}
+                                </button>
+                              );
+                            })}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-gray-700 w-14">Session:</span>
@@ -9176,6 +9218,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       return ((assignments[key] || {})[c.id] || []).length;
                     };
 
+                    // All dates for selected months (unfiltered)
+                    const allMonthDates = CAMP_DATES.filter(d => {
+                      const date = new Date(d + 'T12:00:00');
+                      const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      return schedCalMonths.includes(mk);
+                    });
                     // Weeks available for selected months
                     const availableWeeks = CAMP_WEEKS.filter(w => {
                       const d = new Date(w.start + 'T12:00:00');
@@ -9186,18 +9234,17 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     if (schedCalWeeks.length === 0 && availableWeekStarts.length > 0) {
                       setTimeout(() => setSchedCalWeeks([...availableWeekStarts]), 0);
                     }
+                    const weekFilteredDates = allMonthDates.filter(d => {
+                      const week = CAMP_WEEKS.find(w => w.dates.includes(d));
+                      return !week || schedCalWeeks.length === 0 || schedCalWeeks.includes(week.start);
+                    });
+                    if (schedCalDates.length === 0 && weekFilteredDates.length > 0) {
+                      setTimeout(() => setSchedCalDates([...weekFilteredDates]), 0);
+                    }
 
-                    // Get dates for all selected months + week/day filters
+                    // Final filtered dates
                     const getSelectedDates = () => {
-                      return CAMP_DATES.filter(d => {
-                        const date = new Date(d + 'T12:00:00');
-                        const mk = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                        if (!schedCalMonths.includes(mk)) return false;
-                        const week = CAMP_WEEKS.find(w => w.dates.includes(d));
-                        if (week && schedCalWeeks.length > 0 && !schedCalWeeks.includes(week.start)) return false;
-                        if (!schedCalDays.includes(date.getDay())) return false;
-                        return true;
-                      });
+                      return weekFilteredDates.filter(d => schedCalDates.includes(d));
                     };
 
                     // Counselor name helper
@@ -9240,18 +9287,26 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           })}
                         </div>
 
-                        {/* Week / Day / Session filters */}
+                        {/* Week / Date / Session filters */}
                         <div className="bg-white rounded-xl shadow p-4 space-y-3">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-gray-700 w-14">Weeks:</span>
-                            <button onClick={() => setSchedCalWeeks([...availableWeekStarts])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                            <button onClick={() => setSchedCalWeeks([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            <button onClick={() => { setSchedCalWeeks([...availableWeekStarts]); setSchedCalDates([...allMonthDates]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === availableWeekStarts.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => { setSchedCalWeeks([]); setSchedCalDates([]); }} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalWeeks.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
                             {availableWeeks.map(w => {
                               const wd = new Date(w.start + 'T12:00:00');
                               const label = wd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                               const isActive = schedCalWeeks.includes(w.start);
                               return (
-                                <button key={w.start} onClick={() => setSchedCalWeeks(prev => prev.includes(w.start) ? prev.filter(x => x !== w.start) : [...prev, w.start].sort())}
+                                <button key={w.start} onClick={() => {
+                                  const newWeeks = isActive ? schedCalWeeks.filter(x => x !== w.start) : [...schedCalWeeks, w.start].sort();
+                                  setSchedCalWeeks(newWeeks);
+                                  if (isActive) {
+                                    setSchedCalDates(prev => prev.filter(d => !w.dates.includes(d)));
+                                  } else {
+                                    setSchedCalDates(prev => [...new Set([...prev, ...w.dates])].sort());
+                                  }
+                                }}
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
                                   {label}
                                 </button>
@@ -9259,15 +9314,21 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             })}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-medium text-gray-700 w-14">Days:</span>
-                            <button onClick={() => setSchedCalDays([1,2,3,4,5])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDays.length === 5 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
-                            <button onClick={() => setSchedCalDays([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDays.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
-                            {[{day: 1, label: 'Mon'}, {day: 2, label: 'Tue'}, {day: 3, label: 'Wed'}, {day: 4, label: 'Thu'}, {day: 5, label: 'Fri'}].map(({day, label}) => (
-                              <button key={day} onClick={() => setSchedCalDays(prev => prev.includes(day) ? prev.filter(x => x !== day) : [...prev, day].sort())}
-                                className={`px-3 py-1 rounded-lg text-xs font-medium transition border ${schedCalDays.includes(day) ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-                                {label}
-                              </button>
-                            ))}
+                            <span className="text-sm font-medium text-gray-700 w-14">Dates:</span>
+                            <button onClick={() => setSchedCalDates([...weekFilteredDates])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDates.length === weekFilteredDates.length ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>All</button>
+                            <button onClick={() => setSchedCalDates([])} className={'px-2 py-0.5 rounded text-xs font-medium ' + (schedCalDates.length === 0 ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')}>None</button>
+                            {weekFilteredDates.map(d => {
+                              const dt = new Date(d + 'T12:00:00');
+                              const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+                              const label = `${dayName} ${dt.getMonth() + 1}/${dt.getDate()}`;
+                              const isActive = schedCalDates.includes(d);
+                              return (
+                                <button key={d} onClick={() => setSchedCalDates(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort())}
+                                  className={`px-2 py-1 rounded-lg text-xs font-medium transition border ${isActive ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                  {label}
+                                </button>
+                              );
+                            })}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-medium text-gray-700 w-14">Session:</span>
@@ -10230,8 +10291,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   setSessionPods={setPodSessionPods}
                   podCalWeeks={podCalWeeks}
                   setPodCalWeeks={setPodCalWeeks}
-                  podCalDays={podCalDays}
-                  setPodCalDays={setPodCalDays}
+                  podCalDates={podCalDates}
+                  setPodCalDates={setPodCalDates}
                   podCamperView={podCamperView}
                   setPodCamperView={setPodCamperView}
                   podSelectedCamper={podSelectedCamper}
