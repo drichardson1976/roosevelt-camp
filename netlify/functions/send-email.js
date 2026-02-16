@@ -58,10 +58,10 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
     }
 
-    // CC the camp email on all outgoing emails (skip if camp email is already a recipient)
+    // BCC the camp email on all outgoing emails (skip if camp email is already a recipient)
     const toList = Array.isArray(to) ? to : [to];
     const isCampRecipient = toList.some(addr => addr.toLowerCase() === CAMP_EMAIL.toLowerCase());
-    const cc = isCampRecipient ? undefined : [CAMP_EMAIL];
+    const bcc = isCampRecipient ? undefined : [CAMP_EMAIL];
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -72,7 +72,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: toList,
-        ...(cc ? { cc } : {}),
+        ...(bcc ? { bcc } : {}),
         subject,
         html,
         reply_to: replyTo || CAMP_EMAIL,

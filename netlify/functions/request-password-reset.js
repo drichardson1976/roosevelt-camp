@@ -112,7 +112,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: [email],
-        cc: [CAMP_EMAIL],
+        bcc: [CAMP_EMAIL],
         subject: emailSubject,
         html: emailHtml,
         reply_to: CAMP_EMAIL,
