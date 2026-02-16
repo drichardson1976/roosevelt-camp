@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.154";
-    const BUILD_DATE = new Date("2026-02-15T23:48:00");
+    const VERSION = "13.162";
+    const BUILD_DATE = new Date("2026-02-16T00:56:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -340,6 +340,357 @@
         ],
         emergencyContacts: [{ name: 'Sarah Richardson', phone: '(206) 555-6003', relationship: 'Parent' }],
         registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      // --- Parents 7-50 (auto-generated test data) ---
+      {
+        email: 'amanda@msn.com', name: 'Amanda Thompson', phone: '(206) 555-7001', password: 'camp',
+        campers: [{ name: 'Chloe Thompson', birthdate: '2016-03-14', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Bill Thompson', phone: '(206) 555-7002', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'brian@msn.com', name: 'Brian Davis', phone: '(206) 555-7003', password: 'camp',
+        campers: [
+          { name: 'Liam Davis', birthdate: '2015-07-22', grade: '6', phone: '' },
+          { name: 'Emma Davis', birthdate: '2017-11-08', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Nancy Davis', phone: '(206) 555-7004', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1], sessions: ['morning'] },
+      },
+      {
+        email: 'christina@msn.com', name: 'Christina Brown', phone: '(206) 555-7005', password: 'camp',
+        campers: [{ name: 'Olivia Brown', birthdate: '2018-01-30', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'Tom Brown', phone: '(206) 555-7006', relationship: 'Parent' }],
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['afternoon'] },
+      },
+      {
+        email: 'daniel@msn.com', name: 'Daniel Wilson', phone: '(206) 555-7007', password: 'camp',
+        campers: [
+          { name: 'Jack Wilson', birthdate: '2014-05-18', grade: '7', phone: '(206) 555-7009' },
+          { name: 'Grace Wilson', birthdate: '2016-09-25', grade: '5', phone: '' },
+          { name: 'Mia Wilson', birthdate: '2019-02-11', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Helen Wilson', phone: '(206) 555-7008', relationship: 'Grandparent' },
+          { name: 'Steve Wilson', phone: '(206) 555-7010', relationship: 'Other', otherRelationship: 'Uncle' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'emily@msn.com', name: 'Emily Martinez', phone: '(206) 555-7011', password: 'camp',
+        campers: [{ name: 'Sebastian Martinez', birthdate: '2015-10-03', grade: '6', phone: '' }],
+        emergencyContacts: [{ name: 'Carlos Martinez', phone: '(206) 555-7012', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'frank@msn.com', name: 'Frank Anderson', phone: '(206) 555-7013', password: 'camp',
+        campers: [
+          { name: 'Ben Anderson', birthdate: '2016-12-07', grade: '5', phone: '' },
+          { name: 'Zoe Anderson', birthdate: '2018-06-19', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Linda Anderson', phone: '(206) 555-7014', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK4], sessions: ['morning'] },
+      },
+      {
+        email: 'grace@msn.com', name: 'Grace Taylor', phone: '(206) 555-7015', password: 'camp',
+        campers: [{ name: 'Aiden Taylor', birthdate: '2017-04-23', grade: '4', phone: '' }],
+        emergencyContacts: [{ name: 'Robert Taylor', phone: '(206) 555-7016', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'henry@msn.com', name: 'Henry Lee', phone: '(206) 555-7017', password: 'camp',
+        campers: [
+          { name: 'Nathan Lee', birthdate: '2015-08-15', grade: '6', phone: '(206) 555-7019' },
+          { name: 'Sophia Lee', birthdate: '2018-03-02', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Mary Lee', phone: '(206) 555-7018', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'] },
+      },
+      {
+        email: 'isabelle@msn.com', name: 'Isabelle Harris', phone: '(206) 555-7020', password: 'camp',
+        campers: [{ name: 'Ella Harris', birthdate: '2016-06-11', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Janet Harris', phone: '(206) 555-7021', relationship: 'Other', otherRelationship: 'Aunt' }],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning'] },
+      },
+      {
+        email: 'jason@msn.com', name: 'Jason Clark', phone: '(206) 555-7022', password: 'camp',
+        campers: [
+          { name: 'Caleb Clark', birthdate: '2014-11-28', grade: '7', phone: '' },
+          { name: 'Lily Clark', birthdate: '2017-07-16', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Patricia Clark', phone: '(206) 555-7023', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'karen@msn.com', name: 'Karen Lewis', phone: '(206) 555-7024', password: 'camp',
+        campers: [{ name: 'Owen Lewis', birthdate: '2018-09-05', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'George Lewis', phone: '(206) 555-7025', relationship: 'Parent' }],
+        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'larry@msn.com', name: 'Larry Robinson', phone: '(206) 555-7026', password: 'camp',
+        campers: [
+          { name: 'Wyatt Robinson', birthdate: '2015-02-14', grade: '6', phone: '' },
+          { name: 'Harper Robinson', birthdate: '2017-10-31', grade: '4', phone: '' },
+          { name: 'Luna Robinson', birthdate: '2019-05-20', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Diane Robinson', phone: '(206) 555-7027', relationship: 'Grandparent' },
+          { name: 'Mark Robinson', phone: '(206) 555-7028', relationship: 'Other', otherRelationship: 'Neighbor' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'michelle@msn.com', name: 'Michelle Walker', phone: '(206) 555-7029', password: 'camp',
+        campers: [{ name: 'Leo Walker', birthdate: '2016-01-09', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Paul Walker', phone: '(206) 555-7030', relationship: 'Parent' }],
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning'] },
+      },
+      {
+        email: 'nathan@msn.com', name: 'Nathan Hall', phone: '(206) 555-7031', password: 'camp',
+        campers: [
+          { name: 'Mason Hall', birthdate: '2014-08-22', grade: '7', phone: '(206) 555-7033' },
+          { name: 'Aria Hall', birthdate: '2016-04-17', grade: '5', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Ruth Hall', phone: '(206) 555-7032', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['afternoon'] },
+      },
+      {
+        email: 'olivia@msn.com', name: 'Olivia Young', phone: '(206) 555-7034', password: 'camp',
+        campers: [{ name: 'Logan Young', birthdate: '2017-12-03', grade: '4', phone: '' }],
+        emergencyContacts: [{ name: 'Betty Young', phone: '(206) 555-7035', relationship: 'Other', otherRelationship: 'Aunt' }],
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'peter@msn.com', name: 'Peter King', phone: '(206) 555-7036', password: 'camp',
+        campers: [
+          { name: 'Luke King', birthdate: '2015-06-28', grade: '6', phone: '' },
+          { name: 'Nora King', birthdate: '2018-11-15', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Dorothy King', phone: '(206) 555-7037', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'rachel@msn.com', name: 'Rachel Wright', phone: '(206) 555-7038', password: 'camp',
+        campers: [{ name: 'Isaac Wright', birthdate: '2016-10-21', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Sam Wright', phone: '(206) 555-7039', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'steve@msn.com', name: 'Steve Lopez', phone: '(206) 555-7040', password: 'camp',
+        campers: [
+          { name: 'Diego Lopez', birthdate: '2014-03-07', grade: '7', phone: '' },
+          { name: 'Camila Lopez', birthdate: '2017-09-14', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Rosa Lopez', phone: '(206) 555-7041', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning'] },
+      },
+      {
+        email: 'tina@msn.com', name: 'Tina Scott', phone: '(206) 555-7042', password: 'camp',
+        campers: [{ name: 'Hannah Scott', birthdate: '2018-05-26', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'Kevin Scott', phone: '(206) 555-7043', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'] },
+      },
+      {
+        email: 'victor@msn.com', name: 'Victor Green', phone: '(206) 555-7044', password: 'camp',
+        campers: [
+          { name: 'Elijah Green', birthdate: '2015-12-19', grade: '6', phone: '(206) 555-7046' },
+          { name: 'Layla Green', birthdate: '2017-06-08', grade: '4', phone: '' },
+          { name: 'Ruby Green', birthdate: '2019-08-30', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Barbara Green', phone: '(206) 555-7045', relationship: 'Grandparent' },
+          { name: 'Tim Green', phone: '(206) 555-7047', relationship: 'Other', otherRelationship: 'Neighbor' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'wendy@msn.com', name: 'Wendy Adams', phone: '(206) 555-7048', password: 'camp',
+        campers: [{ name: 'Violet Adams', birthdate: '2016-07-13', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Charles Adams', phone: '(206) 555-7049', relationship: 'Parent' }],
+        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'xavier@msn.com', name: 'Xavier Nelson', phone: '(206) 555-7050', password: 'camp',
+        campers: [
+          { name: 'Theo Nelson', birthdate: '2014-10-04', grade: '7', phone: '' },
+          { name: 'Iris Nelson', birthdate: '2017-02-22', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Gloria Nelson', phone: '(206) 555-7051', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'yvonne@msn.com', name: 'Yvonne Carter', phone: '(206) 555-7052', password: 'camp',
+        campers: [{ name: 'Miles Carter', birthdate: '2015-04-16', grade: '6', phone: '' }],
+        emergencyContacts: [{ name: 'Frank Carter', phone: '(206) 555-7053', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning'] },
+      },
+      {
+        email: 'zach@msn.com', name: 'Zach Mitchell', phone: '(206) 555-7054', password: 'camp',
+        campers: [
+          { name: 'Asher Mitchell', birthdate: '2016-11-29', grade: '5', phone: '' },
+          { name: 'Piper Mitchell', birthdate: '2018-08-10', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Sandra Mitchell', phone: '(206) 555-7055', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK4], sessions: ['afternoon'] },
+      },
+      {
+        email: 'angela@msn.com', name: 'Angela Perez', phone: '(206) 555-7056', password: 'camp',
+        campers: [{ name: 'Mateo Perez', birthdate: '2017-01-18', grade: '4', phone: '' }],
+        emergencyContacts: [{ name: 'Carmen Perez', phone: '(206) 555-7057', relationship: 'Other', otherRelationship: 'Aunt' }],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'brett@msn.com', name: 'Brett Roberts', phone: '(206) 555-7058', password: 'camp',
+        campers: [
+          { name: 'Gavin Roberts', birthdate: '2014-07-09', grade: '7', phone: '(206) 555-7060' },
+          { name: 'Scarlett Roberts', birthdate: '2016-02-28', grade: '5', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Donna Roberts', phone: '(206) 555-7059', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'catherine@msn.com', name: 'Catherine Turner', phone: '(206) 555-7061', password: 'camp',
+        campers: [{ name: 'Stella Turner', birthdate: '2018-04-05', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'Edward Turner', phone: '(206) 555-7062', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1], sessions: ['morning'] },
+      },
+      {
+        email: 'dennis@msn.com', name: 'Dennis Phillips', phone: '(206) 555-7063', password: 'camp',
+        campers: [
+          { name: 'Jaxon Phillips', birthdate: '2015-09-12', grade: '6', phone: '' },
+          { name: 'Aurora Phillips', birthdate: '2017-05-27', grade: '4', phone: '' },
+          { name: 'Ivy Phillips', birthdate: '2019-12-14', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Sharon Phillips', phone: '(206) 555-7064', relationship: 'Grandparent' },
+          { name: 'Wayne Phillips', phone: '(206) 555-7065', relationship: 'Other', otherRelationship: 'Neighbor' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'erica@msn.com', name: 'Erica Campbell', phone: '(206) 555-7066', password: 'camp',
+        campers: [{ name: 'Paisley Campbell', birthdate: '2016-08-21', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Howard Campbell', phone: '(206) 555-7067', relationship: 'Parent' }],
+        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'fred@msn.com', name: 'Fred Parker', phone: '(206) 555-7068', password: 'camp',
+        campers: [
+          { name: 'Hudson Parker', birthdate: '2014-12-03', grade: '7', phone: '' },
+          { name: 'Hazel Parker', birthdate: '2017-08-19', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Joan Parker', phone: '(206) 555-7069', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['afternoon'] },
+      },
+      {
+        email: 'gina@msn.com', name: 'Gina Evans', phone: '(206) 555-7070', password: 'camp',
+        campers: [{ name: 'Everett Evans', birthdate: '2018-10-16', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'Roy Evans', phone: '(206) 555-7071', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'harold@msn.com', name: 'Harold Edwards', phone: '(206) 555-7072', password: 'camp',
+        campers: [
+          { name: 'Carter Edwards', birthdate: '2015-05-30', grade: '6', phone: '' },
+          { name: 'Willow Edwards', birthdate: '2018-01-14', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Martha Edwards', phone: '(206) 555-7073', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning'] },
+      },
+      {
+        email: 'irene@msn.com', name: 'Irene Collins', phone: '(206) 555-7074', password: 'camp',
+        campers: [{ name: 'Emery Collins', birthdate: '2016-03-08', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Albert Collins', phone: '(206) 555-7075', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1, WEEK2, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'jeff@msn.com', name: 'Jeff Stewart', phone: '(206) 555-7076', password: 'camp',
+        campers: [
+          { name: 'Dominic Stewart', birthdate: '2014-09-24', grade: '7', phone: '(206) 555-7078' },
+          { name: 'Penelope Stewart', birthdate: '2016-06-10', grade: '5', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Carol Stewart', phone: '(206) 555-7077', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['afternoon'] },
+      },
+      {
+        email: 'kelly@msn.com', name: 'Kelly Sanchez', phone: '(206) 555-7079', password: 'camp',
+        campers: [{ name: 'Ezra Sanchez', birthdate: '2017-11-07', grade: '4', phone: '' }],
+        emergencyContacts: [{ name: 'Miguel Sanchez', phone: '(206) 555-7080', relationship: 'Other', otherRelationship: 'Uncle' }],
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning'] },
+      },
+      {
+        email: 'laura@msn.com', name: 'Laura Morris', phone: '(206) 555-7081', password: 'camp',
+        campers: [
+          { name: 'Silas Morris', birthdate: '2015-02-19', grade: '6', phone: '' },
+          { name: 'Nova Morris', birthdate: '2017-07-31', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Virginia Morris', phone: '(206) 555-7082', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'marcus@msn.com', name: 'Marcus Rogers', phone: '(206) 555-7083', password: 'camp',
+        campers: [{ name: 'Kai Rogers', birthdate: '2016-05-14', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Evelyn Rogers', phone: '(206) 555-7084', relationship: 'Parent' }],
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'nicole@msn.com', name: 'Nicole Reed', phone: '(206) 555-7085', password: 'camp',
+        campers: [
+          { name: 'Roman Reed', birthdate: '2014-04-02', grade: '7', phone: '' },
+          { name: 'Aaliyah Reed', birthdate: '2016-12-18', grade: '5', phone: '' },
+          { name: 'Mila Reed', birthdate: '2019-06-25', grade: '2', phone: '' },
+        ],
+        emergencyContacts: [
+          { name: 'Shirley Reed', phone: '(206) 555-7086', relationship: 'Grandparent' },
+          { name: 'Dave Reed', phone: '(206) 555-7087', relationship: 'Other', otherRelationship: 'Uncle' },
+        ],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'oscar@msn.com', name: 'Oscar Cook', phone: '(206) 555-7088', password: 'camp',
+        campers: [{ name: 'Felix Cook', birthdate: '2017-09-09', grade: '4', phone: '' }],
+        emergencyContacts: [{ name: 'Lois Cook', phone: '(206) 555-7089', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK4], sessions: ['morning'] },
+      },
+      {
+        email: 'paula@msn.com', name: 'Paula Morgan', phone: '(206) 555-7090', password: 'camp',
+        campers: [
+          { name: 'Axel Morgan', birthdate: '2015-11-26', grade: '6', phone: '(206) 555-7092' },
+          { name: 'Clara Morgan', birthdate: '2018-07-03', grade: '3', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Judy Morgan', phone: '(206) 555-7091', relationship: 'Other', otherRelationship: 'Aunt' }],
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['afternoon'] },
+      },
+      {
+        email: 'quincy@msn.com', name: 'Quincy Bell', phone: '(206) 555-7093', password: 'camp',
+        campers: [{ name: 'Beckett Bell', birthdate: '2016-02-10', grade: '5', phone: '' }],
+        emergencyContacts: [{ name: 'Norma Bell', phone: '(206) 555-7094', relationship: 'Parent' }],
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'rosa@msn.com', name: 'Rosa Murphy', phone: '(206) 555-7095', password: 'camp',
+        campers: [
+          { name: 'Santiago Murphy', birthdate: '2014-06-20', grade: '7', phone: '' },
+          { name: 'Athena Murphy', birthdate: '2017-03-15', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Joe Murphy', phone: '(206) 555-7096', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+      },
+      {
+        email: 'scott@msn.com', name: 'Scott Bailey', phone: '(206) 555-7097', password: 'camp',
+        campers: [{ name: 'Jasper Bailey', birthdate: '2018-12-28', grade: '3', phone: '' }],
+        emergencyContacts: [{ name: 'Faye Bailey', phone: '(206) 555-7098', relationship: 'Other', otherRelationship: 'Neighbor' }],
+        registration: { weeks: [WEEK3], sessions: ['afternoon'] },
+      },
+      {
+        email: 'teresa@msn.com', name: 'Teresa Rivera', phone: '(206) 555-7099', password: 'camp',
+        campers: [
+          { name: 'Adrian Rivera', birthdate: '2015-08-06', grade: '6', phone: '' },
+          { name: 'Jade Rivera', birthdate: '2017-12-22', grade: '4', phone: '' },
+        ],
+        emergencyContacts: [{ name: 'Antonio Rivera', phone: '(206) 555-7100', relationship: 'Grandparent' }],
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
       },
     ];
 
