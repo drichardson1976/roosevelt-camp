@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.133";
-    const BUILD_DATE = new Date("2026-02-15T17:57:00");
+    const VERSION = "13.138";
+    const BUILD_DATE = new Date("2026-02-15T18:45:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -336,7 +336,7 @@
       {
         email: 'derek.richardson@gmail.com', name: 'Derek Richardson', phone: '(206) 555-6001', password: 'camp',
         campers: [
-          { name: 'Audrey Richardson', birthdate: '2008-05-20', grade: '12', phone: '(206) 555-6002' },
+          { name: 'Dylan Richardson', birthdate: '2014-09-15', grade: '7', phone: '(206) 555-6002' },
         ],
         emergencyContacts: [{ name: 'Sarah Richardson', phone: '(206) 555-6003', relationship: 'Parent' }],
         registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
@@ -1443,6 +1443,7 @@
       const [seedLoading, setSeedLoading] = useState({});
       const [seedMessage, setSeedMessage] = useState(null);
       const [seedChecking, setSeedChecking] = useState(true);
+      const [expandedSeed, setExpandedSeed] = useState({});
 
       // Safety: block on production
       useEffect(() => {
@@ -1714,11 +1715,17 @@
                   {PARENT_PROFILES.map(p => {
                     const exists = parentStatus[p.email];
                     const busy = !!seedLoading[p.email] || isSeedAllLoading;
+                    const isExpanded = expandedSeed[p.email];
                     return (
-                      <tr key={p.email} className={`border-b hover:bg-gray-50 ${exists ? 'bg-green-50/40' : ''}`}>
+                      <React.Fragment key={p.email}>
+                      <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
+                        onClick={() => setExpandedSeed(prev => ({...prev, [p.email]: !prev[p.email]}))}>
                         <td className="px-5 py-2.5 text-lg">{'\ud83d\udc6a'}</td>
                         <td className="px-5 py-2.5">
-                          <div className="font-medium text-gray-800">{p.name}</div>
+                          <div className="font-medium text-gray-800">
+                            <span className={`inline-block mr-1 text-xs transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>▶</span>
+                            {p.name}
+                          </div>
                         </td>
                         <td className="px-5 py-2.5 hidden sm:table-cell">
                           <div className="text-gray-600 font-mono text-xs">{p.email}</div>
@@ -1728,7 +1735,7 @@
                           {p.campers.length} camper{p.campers.length > 1 ? 's' : ''}, {p.registration?.weeks?.length || 0} wk
                         </td>
                         <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
-                        <td className="px-5 py-2.5 text-right">
+                        <td className="px-5 py-2.5 text-right" onClick={e => e.stopPropagation()}>
                           {!exists ? (
                             <button onClick={() => handleSeedAdd('parent', p)} disabled={busy}
                               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
@@ -1740,6 +1747,50 @@
                           )}
                         </td>
                       </tr>
+                      {isExpanded && (
+                        <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
+                          <td colSpan="6" className="px-5 py-3">
+                            <div className="ml-6 space-y-2 text-xs">
+                              <div>
+                                <span className="font-semibold text-gray-700">Phone:</span>
+                                <span className="ml-2 text-gray-600">{p.phone}</span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-700">Campers:</span>
+                                <div className="ml-4 mt-1 space-y-1">
+                                  {p.campers.map((c, i) => (
+                                    <div key={i} className="flex gap-4 text-gray-600">
+                                      <span className="font-medium">{c.name}</span>
+                                      <span>Grade {c.grade}</span>
+                                      <span>DOB: {c.birthdate}</span>
+                                      <span>{c.phone}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-700">Emergency Contacts:</span>
+                                <div className="ml-4 mt-1 space-y-1">
+                                  {p.emergencyContacts.map((ec, i) => (
+                                    <div key={i} className="text-gray-600">
+                                      {ec.name} — {ec.phone} ({ec.relationship})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                              {p.registration && (
+                                <div>
+                                  <span className="font-semibold text-gray-700">Registration:</span>
+                                  <span className="ml-2 text-gray-600">
+                                    {p.registration.weeks.length} week{p.registration.weeks.length > 1 ? 's' : ''} • {p.registration.sessions.join(' + ')}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                   <tr className="border-b bg-gray-50"><td colSpan="6" className="px-5 py-1"></td></tr>
@@ -1747,11 +1798,18 @@
                     const exists = counselorStatus[c.email];
                     const busy = !!seedLoading[c.email] || isSeedAllLoading;
                     const photoSrc = COUNSELOR_PHOTOS[c.id] || null;
+                    const isExpanded = expandedSeed[c.email];
+                    const availDays = c.availability ? Object.keys(c.availability).length : 0;
                     return (
-                      <tr key={c.email} className={`border-b hover:bg-gray-50 ${exists ? 'bg-green-50/40' : ''}`}>
+                      <React.Fragment key={c.email}>
+                      <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
+                        onClick={() => setExpandedSeed(prev => ({...prev, [c.email]: !prev[c.email]}))}>
                         <td className="px-5 py-2.5">{photoSrc ? <img src={photoSrc} className="w-7 h-7 rounded-full object-cover" /> : <span className="text-lg">{'\ud83c\udfc0'}</span>}</td>
                         <td className="px-5 py-2.5">
-                          <div className="font-medium text-gray-800">{c.name}</div>
+                          <div className="font-medium text-gray-800">
+                            <span className={`inline-block mr-1 text-xs transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>▶</span>
+                            {c.name}
+                          </div>
                         </td>
                         <td className="px-5 py-2.5 hidden sm:table-cell">
                           <div className="text-gray-600 font-mono text-xs">{c.email}</div>
@@ -1761,7 +1819,7 @@
                           {c.position}, {c.year}
                         </td>
                         <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
-                        <td className="px-5 py-2.5 text-right">
+                        <td className="px-5 py-2.5 text-right" onClick={e => e.stopPropagation()}>
                           {!exists ? (
                             <button onClick={() => handleSeedAdd('counselor', c)} disabled={busy}
                               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
@@ -1773,6 +1831,49 @@
                           )}
                         </td>
                       </tr>
+                      {isExpanded && (
+                        <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
+                          <td colSpan="6" className="px-5 py-3">
+                            <div className="ml-6 space-y-2 text-xs">
+                              <div>
+                                <span className="font-semibold text-gray-700">Phone:</span>
+                                <span className="ml-2 text-gray-600">{c.phone}</span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-700">Position:</span>
+                                <span className="ml-2 text-gray-600">{c.position}</span>
+                              </div>
+                              <div>
+                                <span className="font-semibold text-gray-700">Year:</span>
+                                <span className="ml-2 text-gray-600">{c.year}</span>
+                              </div>
+                              {c.bio && (
+                                <div>
+                                  <span className="font-semibold text-gray-700">Bio:</span>
+                                  <span className="ml-2 text-gray-600">{c.bio}</span>
+                                </div>
+                              )}
+                              <div>
+                                <span className="font-semibold text-gray-700">Availability:</span>
+                                <span className="ml-2 text-gray-600">{availDays} days set</span>
+                                <div className="ml-4 mt-1 flex flex-wrap gap-1">
+                                  {Object.entries(c.availability || {}).map(([date, slots]) => (
+                                    <span key={date} className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                      slots[0] && slots[1] ? 'bg-green-100 text-green-700' :
+                                      slots[0] || slots[1] ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-red-100 text-red-700'
+                                    }`}>
+                                      {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'})}
+                                      {slots[0] && slots[1] ? ' ✓' : slots[0] ? ' AM' : slots[1] ? ' PM' : ' ✗'}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>

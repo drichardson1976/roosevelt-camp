@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.136";
+    const VERSION = "13.137";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T18:30:00");
+    const BUILD_DATE = new Date("2026-02-15T18:45:00");
 
     const RELEASE_NOTES = [
+      { version: "13.138", date: "2026-02-15", time: "6:45 PM", author: "Derek Richardson", changes: ["Parent: Added Edit button to Payments tab registration cards for unpaid registrations", "Tests: Fixed Audrey Richardson seed data — removed from campers list (she is a counselor, not a camper), replaced with Dylan Richardson", "Tests: Seed users table rows are now expandable — click to see auto-setup details (campers, emergency contacts, registration for parents; position, bio, availability for counselors)"] },
       { version: "13.136", date: "2026-02-15", time: "6:30 PM", author: "Derek Richardson", changes: ["Parent: Registration edit button now shows 'Edit' text instead of pencil icon for UX consistency"] },
       { version: "13.135", date: "2026-02-15", time: "6:22 PM", author: "Derek Richardson", changes: ["Admin: Registration subtab badges now show order count instead of individual session count (1 registration with 2 kids x 3 sessions = 1, not 6)"] },
       { version: "13.134", date: "2026-02-15", time: "6:09 PM", author: "Derek Richardson", changes: ["Admin: Registration cards now match parent dashboard style — grouped by camper with date ranges instead of individual day rows", "Admin: Cards show condensed camper summary (days, date range, session type, amount) matching parent portal exactly"] },
@@ -5680,13 +5681,36 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           }`}>
                             <div className="flex justify-between items-start mb-3">
                               <div className="font-bold text-lg text-green-800">{title}</div>
-                              {isPaid ? (
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
-                              ) : isSent ? (
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
-                              ) : (
-                                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
-                              )}
+                              <div className="flex items-center gap-2">
+                                {paymentStatus === 'unpaid' && (
+                                  <button
+                                    onClick={() => {
+                                      const childIds = [...new Set(regs.map(r => r.childId))];
+                                      const dateMap = {};
+                                      regs.forEach(r => {
+                                        if (!dateMap[r.date]) dateMap[r.date] = [];
+                                        r.sessions?.forEach(s => {
+                                          if (!dateMap[r.date].includes(s)) dateMap[r.date].push(s);
+                                        });
+                                      });
+                                      setSelectedChildren(childIds);
+                                      setSelectedDates(dateMap);
+                                      setEditingOrderId(orderKey);
+                                      setShowRegistrationModal(true);
+                                    }}
+                                    className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
+                                {isPaid ? (
+                                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>
+                                ) : isSent ? (
+                                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Payment Sent</span>
+                                ) : (
+                                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Payment Due</span>
+                                )}
+                              </div>
                             </div>
                             {/* Per-camper breakdown */}
                             <div className="space-y-2 mb-3">
