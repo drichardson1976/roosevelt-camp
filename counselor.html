@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.144";
+    const VERSION = "13.151";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T22:18:00");
+    const BUILD_DATE = new Date("2026-02-15T23:03:00");
 
     const RELEASE_NOTES = [
+      { version: "13.151", date: "2026-02-15", time: "11:03 PM", author: "Derek Richardson", changes: ["Counselor: Availability tab redesigned — responsive card grid (1/2/3/5 columns), emoji AM/PM buttons with ✓/✗ icons, yellow border for partial availability, removed green instructions banner", "Counselor: 'My Schedule' tab renamed to 'Scheduled to Work' with card grid layout — green buttons show camper count per session, gray for unassigned", "Counselor: New Pod Detail Modal — click any assigned session to see camper photos, names, grades, ages plus other counselors working same session", "Counselor: Fixed myCounselor scoping — moved to top of CounselorDash, removed 4 redundant re-declarations"] },
       { version: "13.150", date: "2026-02-15", time: "10:27 PM", author: "Derek Richardson", changes: ["Admin: Camper card stats redesigned — now shows Parents, Sessions, Paid, In Pods (matching Parents page style)", "Admin: Removed redundant summary stat cards from bottom of Campers tab", "Parent: Fixed crash on login — removed leftover getUnreadCount() reference from deleted messaging code"] },
       { version: "13.148", date: "2026-02-15", time: "10:18 PM", author: "Derek Richardson", changes: ["Admin: Cleared Dashboard tab — replaced task tracking UI with placeholder (will be rebuilt later)", "Admin: Counselors tab now shows ALL counselors with toggle switch for website visibility and approval", "Admin: Unapproved counselors displayed with amber left border and 'Not visible on website' badge", "Admin: Work Availability tab replaced with multi-counselor calendar view — month selector, counselor filter chips, per-date availability grid", "Admin: Tab badges now show total counselor count instead of pending approval count", "Counselor: Profile editing locked — counselors can view but not edit their profile (admin-only control)", "Counselor: Availability changes now warn about pod conflicts when campers are assigned to affected sessions", "Tests: Added availability conflict checking tests"] },
       { version: "13.142", date: "2026-02-15", time: "9:52 PM", author: "Derek Richardson", changes: ["Admin: Removed all messaging UI — Message All Parents button, individual Message buttons, Unread badge, Messages section in expanded parent, MessageComposer/ThreadViewer modals, Messages tab, Dashboard unread messages todo", "Admin: Parent row stats now show order-based counts (New/Pending/Paid) instead of individual session rows", "Admin: Expanded parent registrations now grouped by order instead of listing individual day rows", "Parent/Counselor: Removed dead messaging code — state variables, DB fetch, helper functions for camp_messages"] },
@@ -2336,6 +2337,114 @@ Please sign in your child with the counselor on duty at the main gym entrance.
     // CounselorProfileEditModal removed — profile editing is now admin-only
     // Counselors should contact the Camp Director to update their profile
 
+    // ==================== POD DETAIL MODAL ====================
+    const PodDetailModal = ({ date, session, assignments, counselors, campers, myCounselorId, onClose }) => {
+      const d = new Date(date + 'T12:00:00');
+      const dateLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      const sessionLabel = session === 'morning' ? '☀️ Morning (9:00 AM – 12:00 PM)' : '🌙 Afternoon (12:00 – 3:00 PM)';
+      const key = `${date}_${session}`;
+      const sessionAssignments = assignments[key] || {};
+
+      const renderCamperRow = (camperId) => {
+        const camper = (campers || []).find(c => c.id === camperId);
+        const photo = camper ? getDisplayPhoto(camper.photo) : null;
+        const age = camper?.birthdate ? calculateAge(camper.birthdate) : null;
+        const name = camper ? `${camper.firstName || ''} ${camper.lastName || ''}`.trim() : 'Unknown Camper';
+        const initials = camper ? `${(camper.firstName || '?')[0]}${(camper.lastName || '?')[0]}`.toUpperCase() : '??';
+
+        return (
+          <div key={camperId} className="flex items-center gap-3 py-2">
+            {photo ? (
+              <img src={photo} className="w-10 h-10 rounded-full object-cover border-2 border-green-200" alt={name} />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-green-100 border-2 border-green-200 flex items-center justify-center text-green-700 font-bold text-sm">{initials}</div>
+            )}
+            <div>
+              <div className="font-medium text-gray-800">{name}</div>
+              <div className="text-xs text-gray-500">
+                {camper?.grade ? `Grade ${camper.grade}` : ''}{camper?.grade && age != null ? ' · ' : ''}{age != null ? `Age ${age}` : ''}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // My pod
+      const myCamperIds = sessionAssignments[myCounselorId] || [];
+
+      // Other counselors
+      const otherCounselors = Object.entries(sessionAssignments)
+        .filter(([cId]) => cId !== myCounselorId)
+        .map(([cId, cCamperIds]) => {
+          const counselor = (counselors || []).find(c => c.id === cId);
+          return { counselor, camperIds: cCamperIds || [] };
+        });
+
+      return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-green-800">{dateLabel}</h2>
+                  <p className="text-gray-600">{sessionLabel}</p>
+                </div>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
+              </div>
+
+              {/* My Pod */}
+              <div className="mb-6">
+                <h3 className="font-bold text-green-700 mb-3 flex items-center gap-2">
+                  <span>🏀</span> My Pod ({myCamperIds.length} camper{myCamperIds.length !== 1 ? 's' : ''})
+                </h3>
+                {myCamperIds.length > 0 ? (
+                  <div className="bg-green-50 rounded-lg p-3 divide-y divide-green-100">
+                    {myCamperIds.map(id => renderCamperRow(id))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm">No campers assigned to your pod.</p>
+                )}
+              </div>
+
+              {/* Other Counselors */}
+              {otherCounselors.length > 0 && (
+                <div>
+                  <h3 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <span>👥</span> Other Counselors Working
+                  </h3>
+                  <div className="space-y-4">
+                    {otherCounselors.map(({ counselor, camperIds }) => {
+                      const cPhoto = counselor ? getDisplayPhoto(counselor.photo) : null;
+                      const cName = counselor ? `${counselor.firstName || ''} ${counselor.lastName || ''}`.trim() : 'Unknown';
+                      const cInitials = counselor ? `${(counselor.firstName || '?')[0]}${(counselor.lastName || '?')[0]}`.toUpperCase() : '??';
+                      return (
+                        <div key={counselor?.id || cName} className="bg-gray-50 rounded-lg p-3">
+                          <div className="flex items-center gap-3 mb-2">
+                            {cPhoto ? (
+                              <img src={cPhoto} className="w-8 h-8 rounded-full object-cover border" alt={cName} />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-gray-200 border flex items-center justify-center text-gray-600 font-bold text-xs">{cInitials}</div>
+                            )}
+                            <span className="font-medium text-gray-800">{cName}</span>
+                            <span className="text-xs text-gray-500">({camperIds.length} camper{camperIds.length !== 1 ? 's' : ''})</span>
+                          </div>
+                          {camperIds.length > 0 && (
+                            <div className="ml-11 divide-y divide-gray-100">
+                              {camperIds.map(id => renderCamperRow(id))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    };
+
     // ==================== PHOTO UPLOAD MODAL ====================
     const PhotoUploadModal = ({ currentPhoto, onSave, onCancel, shape = 'circle' }) => {
       const fileInputRef = useRef(null);
@@ -3173,7 +3282,9 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         const month = counselorDashMonth;
         const setMonth = setCounselorDashMonth;
         const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
+        const [podModal, setPodModal] = useState(null); // { date, session } for PodDetailModal
         const myAvail = availability[user?.email] || {};
+        const myCounselor = counselors.find(c => c.email === user?.email);
 
         const getMonthDates = (m) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === m);
 
@@ -3189,7 +3300,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         // Sync availability data to counselorSchedule so admin dashboard sees it
         // Saves both available (true) and unavailable (false) sessions
         const syncSchedule = async (newAvail) => {
-          const myCounselor = counselors.find(c => c.email === user?.email);
           if (!myCounselor) return;
           const newSchedule = { ...counselorSchedule };
           newSchedule[myCounselor.id] = {};
@@ -3341,7 +3451,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         // Get counselor next steps hints (modeled after parent dashboard)
         const getCounselorHints = () => {
           const hints = [];
-          const myCounselor = counselors.find(c => c.email === user?.email);
 
           // Step 1: Application approval
           const isApproved = myCounselor?.approvedByAdmin;
@@ -3437,7 +3546,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                 <ScrollableTabs persistKey="counselor-tabs">
                   {['nextsteps', 'availability', 'schedule'].map(t => (
                     <button key={t} onClick={() => setCounselorTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (counselorTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'nextsteps' ? '📊 Dashboard' : t === 'availability' ? '📅 Availability' : t === 'schedule' ? '📋 My Schedule' : t}
+                      {t === 'nextsteps' ? '📊 Dashboard' : t === 'availability' ? '📅 Availability' : t === 'schedule' ? '📋 Scheduled to Work' : t}
                     </button>
                   ))}
                 </ScrollableTabs>
@@ -3449,7 +3558,6 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               {/* ===== DASHBOARD TAB ===== */}
               {counselorTab === 'nextsteps' && (() => {
                 const hints = getCounselorHints();
-                const myCounselor = counselors.find(c => c.email === user?.email);
                 return (
                   <div className="space-y-6">
                     {/* Application Status Banner */}
@@ -3483,7 +3591,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
                               <div className="bg-white rounded-lg p-6 text-center shadow-sm">
                                 <div className="text-4xl mb-3">🎉</div>
                                 <h4 className="font-bold text-lg text-green-700 mb-2">You're all set!</h4>
-                                <p className="text-gray-600">All steps are complete. Check the Availability tab to update your schedule or the My Schedule tab to see your assignments.</p>
+                                <p className="text-gray-600">All steps are complete. Check the Availability tab to update your schedule or the Scheduled to Work tab to see your assignments.</p>
                               </div>
                             </div>
                           ) : (
@@ -3551,198 +3659,188 @@ Please sign in your child with the counselor on duty at the main gym entrance.
               {/* ===== AVAILABILITY TAB ===== */}
               {counselorTab === 'availability' && (
                 <div className="space-y-6">
-              {/* Stats Overview */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-white rounded-xl shadow p-4 text-center">
-                  <div className="text-2xl font-bold text-green-600">{stats.available}</div>
-                  <div className="text-sm text-gray-600">Sessions Available</div>
-                </div>
-                <div className="bg-white rounded-xl shadow p-4 text-center">
-                  <div className="text-2xl font-bold text-red-600">{stats.unavailable}</div>
-                  <div className="text-sm text-gray-600">Unavailable</div>
-                </div>
-                <div className="bg-white rounded-xl shadow p-4 text-center">
-                  <div className="text-2xl font-bold text-gray-600">{stats.notSet}</div>
-                  <div className="text-sm text-gray-600">Not Set</div>
-                </div>
-                <div className="bg-white rounded-xl shadow p-4 text-center">
-                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-                  <div className="text-sm text-gray-600">Total Sessions</div>
-                </div>
-              </div>
+                  {/* Stats Overview */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="bg-white rounded-xl shadow p-4 text-center">
+                      <div className="text-2xl font-bold text-green-600">{stats.available}</div>
+                      <div className="text-sm text-gray-600">Available</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow p-4 text-center">
+                      <div className="text-2xl font-bold text-red-600">{stats.unavailable}</div>
+                      <div className="text-sm text-gray-600">Unavailable</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow p-4 text-center">
+                      <div className="text-2xl font-bold text-gray-600">{stats.notSet}</div>
+                      <div className="text-sm text-gray-600">Not Set</div>
+                    </div>
+                    <div className="bg-white rounded-xl shadow p-4 text-center">
+                      <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                      <div className="text-sm text-gray-600">Total Sessions</div>
+                    </div>
+                  </div>
 
-              {/* Instructions */}
-              <div className="bg-green-100 border-l-4 border-green-600 p-4 rounded-lg mb-6">
-                <h3 className="font-bold text-green-800 mb-2">📅 Set Your Availability</h3>
-                <p className="text-green-800 text-sm mb-2 font-bold">This is NOT signing up for sessions. You are telling the admin which days you can work. The admin will then create assignments based on your availability.</p>
-                <p className="text-green-800 text-sm mb-2">Click on AM or PM to cycle through: <span className="font-medium">Available</span> → <span className="font-medium">Unavailable</span> → <span className="font-medium">Not Set</span>. You can also click the day header to toggle both AM and PM at once.</p>
-                <p className="text-green-700 text-sm">Camp runs weekdays only: July 13-17 & August 10-28, 2026</p>
-              </div>
+                  {/* Month Tabs + Bulk Actions */}
+                  <div className="flex flex-wrap gap-2">
+                    {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                      <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
+                    ))}
+                    <div className="flex-1" />
+                    <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
+                      Mark All Available
+                    </button>
+                    <button onClick={() => clearMonth(month)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
+                      Clear Month
+                    </button>
+                  </div>
 
-              {/* Month Tabs */}
-              <div className="flex flex-wrap gap-2 mb-4">
-                {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
-                  <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
-                ))}
-                <div className="flex-1" />
-                {/* Bulk Actions */}
-                <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
-                  Mark All Available
-                </button>
-                <button onClick={() => clearMonth(month)} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm">
-                  Clear Month
-                </button>
-              </div>
+                  {/* Responsive Card Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    {getMonthDates(month).map(date => {
+                      const d = new Date(date + 'T12:00:00');
+                      const mState = getState(date, 'morning');
+                      const aState = getState(date, 'afternoon');
+                      const bothAvail = mState === 'available' && aState === 'available';
+                      const bothUnavail = mState === 'unavailable' && aState === 'unavailable';
+                      const partial = (mState === 'available' || aState === 'available') && (mState !== aState);
+                      const cardBorder = bothAvail ? 'border-green-300 bg-green-50' : bothUnavail ? 'border-red-300 bg-red-50' : partial ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white';
+                      const headerBg = bothAvail ? 'bg-green-200 hover:bg-green-300' : bothUnavail ? 'bg-red-200 hover:bg-red-300' : partial ? 'bg-yellow-100 hover:bg-yellow-200' : 'bg-gray-100 hover:bg-gray-200';
+                      const sessionBtn = (s) => s === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : s === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-white hover:bg-gray-50 border text-gray-600';
+                      const sessionIcon = (s) => s === 'available' ? ' ✓' : s === 'unavailable' ? ' ✗' : '';
 
-              {/* Calendar Grid */}
-              <div className="bg-white rounded-xl shadow p-6">
-                <div className="grid grid-cols-5 gap-3">
-                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <div key={d} className="text-center font-bold text-green-800">{d}</div>)}
-                  {getMonthDates(month).map(date => {
-                    const d = new Date(date + 'T12:00:00');
-                    const mState = getState(date, 'morning');
-                    const aState = getState(date, 'afternoon');
-                    const bothAvail = mState === 'available' && aState === 'available';
-                    const bothUnavail = mState === 'unavailable' && aState === 'unavailable';
-                    const style = (s) => s === 'available' ? 'bg-green-500 text-white hover:bg-green-600' : s === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-gray-200 text-gray-600 hover:bg-gray-300';
-                    const cardBorder = bothAvail ? 'border-green-300 bg-green-50' : bothUnavail ? 'border-red-300 bg-red-50' : 'border-gray-200';
-                    return (
-                      <div key={date} className={'rounded-lg border-2 overflow-hidden hover:shadow-md transition-shadow ' + cardBorder}>
-                        <div
-                          className={'p-1 text-center font-bold cursor-pointer transition-colors ' + (bothAvail ? 'bg-green-200 hover:bg-green-300' : bothUnavail ? 'bg-red-200 hover:bg-red-300' : 'bg-gray-100 hover:bg-gray-200')}
-                          onClick={() => toggleDay(date)}
-                        >
-                          <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
-                          <div className="text-sm text-green-800">{d.getDate()}</div>
+                      return (
+                        <div key={date} className={'rounded-lg border-2 overflow-hidden hover:shadow-md transition-shadow ' + cardBorder}>
+                          <div className={'p-2 text-center font-medium cursor-pointer transition-colors ' + headerBg} onClick={() => toggleDay(date)}>
+                            <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                            <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                          </div>
+                          <div className="p-2 space-y-1">
+                            <button onClick={() => cycle(date, 'morning')} className={'w-full p-1.5 rounded text-xs font-medium transition-colors ' + sessionBtn(mState)}>
+                              ☀️ AM{sessionIcon(mState)}
+                            </button>
+                            <button onClick={() => cycle(date, 'afternoon')} className={'w-full p-1.5 rounded text-xs font-medium transition-colors ' + sessionBtn(aState)}>
+                              🌙 PM{sessionIcon(aState)}
+                            </button>
+                          </div>
                         </div>
-                        <div className="p-1 space-y-1">
-                          <button onClick={() => cycle(date, 'morning')} className={'w-full py-1.5 rounded text-xs font-medium transition-colors ' + style(mState)}>
-                            AM
-                          </button>
-                          <button onClick={() => cycle(date, 'afternoon')} className={'w-full py-1.5 rounded text-xs font-medium transition-colors ' + style(aState)}>
-                            PM
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
 
-                {/* Legend */}
-                <div className="mt-6 pt-4 border-t flex flex-wrap gap-4 justify-center text-sm">
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available — I can work this session</span></div>
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" /><span>Unavailable — I cannot work this session</span></div>
-                  <div className="flex items-center gap-2"><div className="w-4 h-4 bg-gray-200 rounded" /><span>Not Set — Haven't decided yet</span></div>
-                </div>
-              </div>
-
+                  {/* Legend */}
+                  <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-4 justify-center text-sm">
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available ✓</span></div>
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" /><span>Unavailable ✗</span></div>
+                    <div className="flex items-center gap-2"><div className="w-4 h-4 bg-white border rounded" /><span>Not Set</span></div>
+                  </div>
                 </div>
               )}
 
+              {/* ===== SCHEDULED TO WORK TAB ===== */}
               {counselorTab === 'schedule' && (
                 <div className="space-y-6">
-                  <div className="bg-blue-100 border-l-4 border-blue-600 p-4 rounded-lg">
-                    <h3 className="font-bold text-blue-800 mb-2">📅 My Assignments</h3>
-                    <p className="text-blue-800 text-sm">View your assigned sessions and pod campers. Only admins can make changes to assignments.</p>
-                  </div>
-
-                  {/* Get counselor ID */}
                   {(() => {
-                    const myCounselor = counselors.find(c => c.email === user?.email);
                     if (!myCounselor) {
                       return <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No counselor profile found.</div>;
                     }
 
-                    // Get all assignments for this counselor
-                    // assignments structure: { "date_session": { counselorId: [childId, ...] } }
-                    const myAssignments = {};
+                    // Build assignment map for this counselor across all dates
+                    const myAssignmentMap = {};
+                    let daysAssigned = 0;
+                    let totalSessions = 0;
                     Object.entries(assignments).forEach(([dateSession, counselorAssignments]) => {
                       const [date, session] = dateSession.split('_');
                       const camperIds = counselorAssignments[myCounselor.id] || [];
-
                       if (camperIds.length > 0) {
-                        if (!myAssignments[date]) myAssignments[date] = {};
-                        myAssignments[date][session] = camperIds;
+                        if (!myAssignmentMap[date]) myAssignmentMap[date] = {};
+                        myAssignmentMap[date][session] = camperIds;
+                        totalSessions++;
                       }
                     });
-
-                    const sortedDates = Object.keys(myAssignments).sort();
-
-                    if (sortedDates.length === 0) {
-                      return (
-                        <div className="bg-white rounded-xl shadow p-6 text-center">
-                          <p className="text-gray-500">You haven't been assigned to any sessions yet.</p>
-                          <p className="text-sm text-gray-400 mt-2">Check back later or contact the admin.</p>
-                        </div>
-                      );
-                    }
+                    daysAssigned = Object.keys(myAssignmentMap).length;
 
                     return (
-                      <div className="space-y-4">
-                        {sortedDates.map(date => {
-                          const d = new Date(date + 'T12:00:00');
-                          const sessions = myAssignments[date];
+                      <>
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="bg-white rounded-xl shadow p-4 text-center">
+                            <div className="text-2xl font-bold text-green-600">{daysAssigned}</div>
+                            <div className="text-sm text-gray-600">Days Assigned</div>
+                          </div>
+                          <div className="bg-white rounded-xl shadow p-4 text-center">
+                            <div className="text-2xl font-bold text-blue-600">{totalSessions}</div>
+                            <div className="text-sm text-gray-600">Total Sessions</div>
+                          </div>
+                        </div>
 
-                          return (
-                            <div key={date} className="bg-white rounded-xl shadow p-6">
-                              <h3 className="font-bold text-lg text-green-800 mb-4">
-                                {d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
-                              </h3>
+                        {/* Month Tabs */}
+                        <div className="flex flex-wrap gap-2">
+                          {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                            <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
+                          ))}
+                        </div>
 
-                              <div className="space-y-4">
-                                {sessions.morning && (
-                                  <div className="border-l-4 border-yellow-500 pl-4 bg-yellow-50 p-3 rounded">
-                                    <h4 className="font-bold text-yellow-700 mb-2">☀️ Morning Session (9:00 AM - 12:00 PM)</h4>
-                                    {sessions.morning.length > 0 ? (
-                                      <div className="space-y-1">
-                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.morning.length} campers):</p>
-                                        {sessions.morning.map(camperId => {
-                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
-                                          return (
-                                            <div key={camperId} className="flex items-center gap-2 text-sm">
-                                              <span className="text-green-600">•</span>
-                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
+                        {/* Responsive Card Grid */}
+                        {getMonthDates(month).length === 0 ? (
+                          <div className="bg-white rounded-xl shadow p-6 text-center text-gray-500">No camp dates in this month.</div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                            {getMonthDates(month).map(date => {
+                              const d = new Date(date + 'T12:00:00');
+                              const amCampers = myAssignmentMap[date]?.morning || [];
+                              const pmCampers = myAssignmentMap[date]?.afternoon || [];
+                              const hasAm = amCampers.length > 0;
+                              const hasPm = pmCampers.length > 0;
+                              const hasBoth = hasAm && hasPm;
+                              const hasAny = hasAm || hasPm;
+                              const cardBorder = hasBoth ? 'border-green-300 bg-green-50' : hasAny ? 'border-yellow-300 bg-yellow-50' : 'border-gray-200 bg-white';
+                              const headerBg = hasBoth ? 'bg-green-200' : hasAny ? 'bg-yellow-100' : 'bg-gray-100';
+
+                              return (
+                                <div key={date} className={'rounded-lg border-2 overflow-hidden transition-shadow ' + cardBorder + (hasAny ? ' hover:shadow-md' : '')}>
+                                  <div className={'p-2 text-center font-medium ' + headerBg}>
+                                    <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
+                                    <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                                  </div>
+                                  <div className="p-2 space-y-1">
+                                    {hasAm ? (
+                                      <button onClick={() => setPodModal({ date, session: 'morning' })} className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                        ☀️ AM · {amCampers.length} camper{amCampers.length !== 1 ? 's' : ''}
+                                      </button>
                                     ) : (
-                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
+                                    )}
+                                    {hasPm ? (
+                                      <button onClick={() => setPodModal({ date, session: 'afternoon' })} className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                        🌙 PM · {pmCampers.length} camper{pmCampers.length !== 1 ? 's' : ''}
+                                      </button>
+                                    ) : (
+                                      <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
                                     )}
                                   </div>
-                                )}
-
-                                {sessions.afternoon && (
-                                  <div className="border-l-4 border-blue-500 pl-4 bg-blue-50 p-3 rounded">
-                                    <h4 className="font-bold text-blue-700 mb-2">🌙 Afternoon Session (12:00 PM - 3:00 PM)</h4>
-                                    {sessions.afternoon.length > 0 ? (
-                                      <div className="space-y-1">
-                                        <p className="text-sm text-gray-600 mb-2">Your Pod ({sessions.afternoon.length} campers):</p>
-                                        {sessions.afternoon.map(camperId => {
-                                          const camper = registrations.find(r => r.camperId === camperId || r.childId === camperId);
-                                          return (
-                                            <div key={camperId} className="flex items-center gap-2 text-sm">
-                                              <span className="text-green-600">•</span>
-                                              <span>{camper?.camperName || camper?.childName || 'Unknown Camper'}</span>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    ) : (
-                                      <p className="text-sm text-gray-500">No campers assigned yet.</p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </>
                     );
                   })()}
                 </div>
               )}
             </div>
+
+            {/* Pod Detail Modal */}
+            {podModal && myCounselor && (
+              <PodDetailModal
+                date={podModal.date}
+                session={podModal.session}
+                assignments={assignments}
+                counselors={counselors}
+                campers={campers}
+                myCounselorId={myCounselor.id}
+                onClose={() => setPodModal(null)}
+              />
+            )}
           </div>
         );
       };

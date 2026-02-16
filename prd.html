@@ -22,8 +22,8 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const VERSION = "13.147";
-    const BUILD_DATE = new Date("2026-02-15T22:18:00");
+    const VERSION = "13.151";
+    const BUILD_DATE = new Date("2026-02-15T23:03:00");
     const getEnvironment = () => {
       const h = window.location.hostname;
       return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
@@ -187,9 +187,10 @@
       { area: "Counselor Experience", items: [
         { name: "5-step application wizard", done: true },
         { name: "Dashboard with next steps and approval status", done: true },
-        { name: "Set availability by day (with day-header toggle)", done: true },
+        { name: "Responsive availability card grid with emoji AM/PM buttons", done: true },
         { name: "Availability conflict warnings when campers are assigned", done: true },
-        { name: "View assigned schedule", done: true },
+        { name: "Scheduled to Work tab with card grid and camper counts", done: true },
+        { name: "Pod Detail Modal — view camper photos/names/ages and other counselors", done: true },
         { name: "Profile is read-only (admin manages profiles)", done: true },
       ]},
       { area: "Admin Dashboard", items: [
