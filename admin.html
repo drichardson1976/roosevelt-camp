@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.154";
+    const VERSION = "13.155";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T23:48:00");
+    const BUILD_DATE = new Date("2026-02-15T23:55:00");
 
     const RELEASE_NOTES = [
+      { version: "13.155", date: "2026-02-15", time: "11:55 PM", author: "Derek Richardson", changes: ["Admin: Renamed 'Edit Schedule' to 'Edit Availability' on Counselor cards — button now green-themed", "Admin: Edit Availability modal redesigned with card grid calendar matching Work Availability tab style", "Admin: Modal uses draft state — changes only saved when clicking Save, Cancel discards changes", "Admin: Save syncs availability to both camp_counselor_availability and camp_counselor_schedule tables"] },
       { version: "13.154", date: "2026-02-15", time: "11:48 PM", author: "Derek Richardson", changes: ["Tests: Added 16 test counselor profiles (c5-c20) with varied availability data for testing multi-counselor views", "Tests: Counselors can be individually added/removed or bulk added/removed via seed buttons", "Admin: Added 'Delete All Counselor Data' button to Danger Zone — wipes all counselor profiles, logins, availability, and schedules in one action", "Database: Inserted 16 test counselors into dev schema with profiles, user accounts, availability, and schedules"] },
       { version: "13.153", date: "2026-02-15", time: "11:34 PM", author: "Derek Richardson", changes: ["Admin: Both July and August can now be selected simultaneously on Work Availability and Work Schedule tabs", "Admin: Multi-counselor view now shows full first names (Audrey, Emma) in compact ovals instead of single initials", "Admin: Removed AM/PM labels and emojis from multi-counselor card view — ovals are green (available/assigned), red (unavailable), or gray (not set)", "Admin: Ovals auto-size with flex layout to fit 5-6 counselors per card row"] },
       { version: "13.152", date: "2026-02-15", time: "11:18 PM", author: "Derek Richardson", changes: ["Admin: Work Availability tab redesigned — responsive card grid calendar matching parent registration style (1/2/3/5 columns)", "Admin: Single counselor view shows full-width green/red/gray AM/PM buttons; multi-counselor view shows colored initial pills per session", "Admin: Counselor filter chips with All/None quick toggles, green month tab pills", "Admin: New 'Work Schedule' tab — same card grid showing assigned sessions with camper counts per counselor", "Admin: Work Schedule single-counselor view shows green buttons with camper count; multi-counselor shows initial pills with counts"] },
@@ -7071,8 +7072,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [podSelectedDate, setPodSelectedDate] = useState(null); // Persist selected date in Pod Setup
       const [podSelectedSession, setPodSelectedSession] = useState('morning'); // Persist selected session in Pod Setup
       const [podSessionPods, setPodSessionPods] = useState({}); // Persist pod data in Pod Setup
-      const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
-      const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
+      const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being edited (availability modal)
+      const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in availability modal
+      const [counselorAvailDraft, setCounselorAvailDraft] = useState(null); // Draft copy of availability for Save/Cancel
       const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
@@ -8057,11 +8059,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const [showModal, setShowModal] = useState(false);
         const [confirmDeleteCounselor, setConfirmDeleteCounselor] = useState(null);
         const [deleteConfirmText, setDeleteConfirmText] = useState('');
-        // Use lifted state for schedule modal to prevent closing on state updates
+        // Use lifted state for availability modal to prevent closing on state updates
         const managingSchedule = counselorScheduleModal;
         const setManagingSchedule = setCounselorScheduleModal;
         const scheduleMonth = counselorScheduleMonth;
         const setScheduleMonth = setCounselorScheduleMonth;
+        const availDraft = counselorAvailDraft;
+        const setAvailDraft = setCounselorAvailDraft;
         const [availCalMonths, setAvailCalMonths] = useState([]);
         const [availCalHidden, setAvailCalHidden] = useState({});
         const [schedCalMonths, setSchedCalMonths] = useState([]);
@@ -8393,7 +8397,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                           {/* Actions */}
                           <div className="flex gap-2 flex-wrap justify-end">
-                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); }} className="px-3 py-1 bg-purple-50 text-purple-600 rounded hover:bg-purple-100 text-sm">Edit Schedule</button>
+                            <button onClick={() => { setManagingSchedule(c); setScheduleMonth(null); setAvailDraft(JSON.parse(JSON.stringify(availability[c.email] || {}))); }} className="px-3 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100 text-sm">Edit Availability</button>
                             <button onClick={() => { setEditCounselor(c); setShowModal(true); }} className="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 text-sm">Edit Profile</button>
                           </div>
                         </div>
@@ -8406,46 +8410,131 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
                   )}
 
-                  {/* Schedule Modal */}
-                  {managingSchedule && (
+                  {/* Edit Availability Modal */}
+                  {managingSchedule && availDraft && (() => {
+                    // Helper: get availability state from draft
+                    const getDraftState = (date, session) => {
+                      const dateAvail = availDraft[date] || {};
+                      const availSessions = Array.isArray(dateAvail) ? dateAvail : (dateAvail.available || []);
+                      const unavailSessions = Array.isArray(dateAvail) ? [] : (dateAvail.unavailable || []);
+                      if (availSessions.includes(session)) return 'available';
+                      if (unavailSessions.includes(session)) return 'unavailable';
+                      return 'not-set';
+                    };
+
+                    // Toggle a single session in draft
+                    const toggleDraftSession = (date, session) => {
+                      const current = getDraftState(date, session);
+                      const otherSession = session === 'morning' ? 'afternoon' : 'morning';
+                      const otherState = getDraftState(date, otherSession);
+                      const existing = availDraft[date] || {};
+                      const existingAvail = Array.isArray(existing) ? existing : (existing.available || []);
+                      const existingUnavail = Array.isArray(existing) ? [] : (existing.unavailable || []);
+
+                      let newAvail, newUnavail;
+                      if (current === 'not-set') {
+                        newAvail = [...new Set([...existingAvail, session])];
+                        newUnavail = existingUnavail.filter(s => s !== session);
+                      } else if (current === 'available') {
+                        newAvail = existingAvail.filter(s => s !== session);
+                        newUnavail = [...new Set([...existingUnavail, session])];
+                      } else {
+                        newAvail = existingAvail.filter(s => s !== session);
+                        newUnavail = existingUnavail.filter(s => s !== session);
+                      }
+
+                      const newDraft = { ...availDraft };
+                      if (newAvail.length === 0 && newUnavail.length === 0) {
+                        delete newDraft[date];
+                      } else {
+                        newDraft[date] = { available: newAvail, unavailable: newUnavail };
+                      }
+                      setAvailDraft(newDraft);
+                    };
+
+                    // Toggle whole day in draft
+                    const toggleDraftDay = (date) => {
+                      const amState = getDraftState(date, 'morning');
+                      const pmState = getDraftState(date, 'afternoon');
+                      const allAvailable = amState === 'available' && pmState === 'available';
+                      const allUnavailable = amState === 'unavailable' && pmState === 'unavailable';
+
+                      const newDraft = { ...availDraft };
+                      if (allAvailable) {
+                        newDraft[date] = { available: [], unavailable: ['morning', 'afternoon'] };
+                      } else if (allUnavailable) {
+                        delete newDraft[date];
+                      } else {
+                        newDraft[date] = { available: ['morning', 'afternoon'], unavailable: [] };
+                      }
+                      setAvailDraft(newDraft);
+                    };
+
+                    // Save handler
+                    const handleSaveAvailability = async () => {
+                      const newAvailability = { ...availability, [managingSchedule.email]: availDraft };
+                      await saveAvail(newAvailability);
+                      addToHistory('Counselor Availability', `Updated availability for ${managingSchedule.name}`);
+                      // Sync to counselor schedule
+                      const newSchedule = { ...counselorSchedule };
+                      const cs = {};
+                      Object.entries(availDraft).forEach(([date, dateData]) => {
+                        const avail = Array.isArray(dateData) ? dateData : (dateData.available || []);
+                        const unavail = Array.isArray(dateData) ? [] : (dateData.unavailable || []);
+                        const morning = avail.includes('morning') ? true : unavail.includes('morning') ? false : undefined;
+                        const afternoon = avail.includes('afternoon') ? true : unavail.includes('afternoon') ? false : undefined;
+                        if (morning !== undefined || afternoon !== undefined) {
+                          cs[date] = {};
+                          if (morning !== undefined) cs[date].morning = morning;
+                          if (afternoon !== undefined) cs[date].afternoon = afternoon;
+                        }
+                      });
+                      newSchedule[managingSchedule.id] = cs;
+                      await saveCounselorSchedule(newSchedule, `Synced schedule for ${managingSchedule.name}`);
+                      setManagingSchedule(null);
+                      setAvailDraft(null);
+                      showToast(`Availability saved for ${managingSchedule.name}`);
+                    };
+
+                    // Build months
+                    const months = [...new Set(CAMP_DATES.map(d => {
+                      const date = new Date(d + 'T12:00:00');
+                      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    }))];
+                    if (!scheduleMonth && months.length > 0) {
+                      setTimeout(() => setScheduleMonth(months[0]), 0);
+                    }
+
+                    // Button styles matching Work Availability tab
+                    const btnStyle = (state, blocked) => blocked ? 'bg-gray-100 text-gray-400 cursor-not-allowed' :
+                      state === 'available' ? 'bg-green-500 text-white hover:bg-green-600' :
+                      state === 'unavailable' ? 'bg-red-500 text-white hover:bg-red-600' :
+                      'bg-white border text-gray-600 hover:bg-gray-50';
+                    const btnIcon = (state, blocked) => blocked ? ' 🚫' : state === 'available' ? ' ✓' : state === 'unavailable' ? ' ✗' : '';
+
+                    return (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="bg-purple-600 text-white px-6 py-4">
-                          <h2 className="font-display text-xl">Set Work Eligibility</h2>
-                          <p className="text-purple-200 text-sm">{managingSchedule.name}</p>
+                        <div className="bg-green-600 text-white px-6 py-4">
+                          <h2 className="font-display text-xl">Edit Availability</h2>
+                          <p className="text-green-200 text-sm">{managingSchedule.name}</p>
                         </div>
-                        <div className="p-4 overflow-y-auto max-h-[calc(90vh-120px)]">
-                          <p className="text-sm text-gray-600 mb-4">
-                            Mark which sessions this counselor is eligible to work. They will only be scheduled if a camper is assigned to them.
-                          </p>
-
+                        <div className="p-4 overflow-y-auto max-h-[calc(90vh-140px)]">
                           {/* Month selector */}
                           <div className="flex gap-2 mb-4">
-                            {(() => {
-                              const months = [...new Set(CAMP_DATES.map(d => {
-                                const date = new Date(d + 'T12:00:00');
-                                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-                              }))];
-                              if (!scheduleMonth && months.length > 0) {
-                                setTimeout(() => setScheduleMonth(months[0]), 0);
-                              }
-                              return months.map(m => {
-                                const [year, month] = m.split('-');
-                                const label = new Date(year, month - 1).toLocaleDateString('en-US', { month: 'short' });
-                                return (
-                                  <button
-                                    key={m}
-                                    onClick={() => setScheduleMonth(m)}
-                                    className={`px-4 py-2 rounded-lg font-medium ${scheduleMonth === m ? 'bg-purple-600 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              });
-                            })()}
+                            {months.map(m => {
+                              const [yr, mo] = m.split('-');
+                              const label = new Date(yr, mo - 1).toLocaleDateString('en-US', { month: 'long' });
+                              return (
+                                <button key={m} onClick={() => setScheduleMonth(m)}
+                                  className={'px-4 py-2 rounded-lg font-medium ' + (scheduleMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700 hover:bg-green-50')}>
+                                  {label}
+                                </button>
+                              );
+                            })}
                           </div>
 
-                          {/* Date Grid - matches Sessions tab style */}
+                          {/* Card grid */}
                           {scheduleMonth && (() => {
                             const [year, month] = scheduleMonth.split('-').map(Number);
                             const monthDates = CAMP_DATES.filter(d => {
@@ -8453,102 +8542,54 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                               return date.getFullYear() === year && date.getMonth() + 1 === month;
                             });
 
-                            const getDayName = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' });
-                            const formatDateShort = (d) => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
                             return (
                               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                                 {monthDates.map(d => {
-                                  const morningBlocked = isSessionBlocked(d, 'morning');
-                                  const afternoonBlocked = isSessionBlocked(d, 'afternoon');
-                                  const fullyBlocked = morningBlocked && afternoonBlocked;
-                                  const morningEligible = counselorSchedule[managingSchedule.id]?.[d]?.morning === true;
-                                  const afternoonEligible = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === true;
-                                  // Check for explicitly unavailable (false) vs not set (undefined)
-                                  const morningUnavailable = counselorSchedule[managingSchedule.id]?.[d]?.morning === false;
-                                  const afternoonUnavailable = counselorSchedule[managingSchedule.id]?.[d]?.afternoon === false;
-                                  const bothEligible = morningEligible && afternoonEligible;
-                                  const bothUnavailable = morningUnavailable && afternoonUnavailable;
-                                  const partialEligible = (morningEligible || afternoonEligible) && !bothEligible;
-                                  const hasUnavailable = (morningUnavailable || afternoonUnavailable) && !bothUnavailable;
+                                  const amBlocked = isSessionBlocked(d, 'morning');
+                                  const pmBlocked = isSessionBlocked(d, 'afternoon');
+                                  const fullyBlocked = amBlocked && pmBlocked;
+                                  const amState = getDraftState(d, 'morning');
+                                  const pmState = getDraftState(d, 'afternoon');
+                                  const bothAvail = amState === 'available' && pmState === 'available';
+                                  const bothUnavail = amState === 'unavailable' && pmState === 'unavailable';
+                                  const anyAvail = amState === 'available' || pmState === 'available';
+                                  const anyUnavail = amState === 'unavailable' || pmState === 'unavailable';
 
-                                  // Check if counselor has campers assigned
-                                  const morningAssigned = (assignments[`${d}_morning`]?.[managingSchedule.id]?.length || 0) > 0;
-                                  const afternoonAssigned = (assignments[`${d}_afternoon`]?.[managingSchedule.id]?.length || 0) > 0;
+                                  const cardBorder = fullyBlocked ? 'border-gray-200 bg-gray-50' :
+                                    bothAvail ? 'border-green-300 bg-green-50' :
+                                    bothUnavail ? 'border-red-300 bg-red-50' :
+                                    (anyAvail || anyUnavail) ? 'border-yellow-300 bg-yellow-50' :
+                                    'border-gray-200 bg-white';
+
+                                  const headerBg = fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
+                                    bothAvail ? 'bg-green-200 hover:bg-green-300' :
+                                    bothUnavail ? 'bg-red-200 hover:bg-red-300' :
+                                    (anyAvail || anyUnavail) ? 'bg-yellow-200 hover:bg-yellow-300' :
+                                    'bg-gray-100 hover:bg-gray-200';
+
+                                  const dn = new Date(d + 'T12:00:00');
 
                                   return (
-                                    <div
-                                      key={d}
-                                      className={`rounded-lg border-2 overflow-hidden ${
-                                        fullyBlocked ? 'border-gray-300 bg-gray-50' :
-                                        bothEligible ? 'border-green-300 bg-green-50' :
-                                        bothUnavailable ? 'border-red-300 bg-red-50' :
-                                        partialEligible ? 'border-yellow-300 bg-yellow-50' :
-                                        hasUnavailable ? 'border-orange-300 bg-orange-50' :
-                                        'border-gray-200 bg-white'
-                                      }`}
-                                    >
-                                      {/* Date Header - Click to toggle whole day */}
-                                      <button
-                                        onClick={() => !fullyBlocked && toggleCounselorDay(managingSchedule.id, d)}
-                                        disabled={fullyBlocked}
-                                        className={`w-full p-2 text-center font-bold transition-colors ${
-                                          fullyBlocked ? 'bg-gray-200 cursor-not-allowed' :
-                                          bothEligible ? 'bg-green-200 hover:bg-green-300' :
-                                          bothUnavailable ? 'bg-red-200 hover:bg-red-300' :
-                                          partialEligible ? 'bg-yellow-200 hover:bg-yellow-300' :
-                                          hasUnavailable ? 'bg-orange-200 hover:bg-orange-300' :
-                                          'bg-gray-100 hover:bg-gray-200'
-                                        }`}
-                                      >
-                                        <div className="text-xs text-gray-600">{getDayName(d)}</div>
-                                        <div>{formatDateShort(d)}</div>
+                                    <div key={d} className={'rounded-lg border-2 overflow-hidden transition-shadow hover:shadow-md ' + cardBorder}>
+                                      <button onClick={() => !fullyBlocked && toggleDraftDay(d)} disabled={fullyBlocked}
+                                        className={'w-full p-2 text-center font-bold transition-colors ' + headerBg}>
+                                        <div className="text-xs text-gray-600">{['Mon','Tue','Wed','Thu','Fri'][dn.getDay() - 1]}</div>
+                                        <div className="text-sm">{dn.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                       </button>
-
-                                      {/* Session Buttons */}
-                                      <div className="p-2 space-y-2">
-                                        {/* Morning Session */}
-                                        <button
-                                          onClick={() => !morningBlocked && toggleCounselorEligibility(managingSchedule.id, d, 'morning')}
-                                          disabled={morningBlocked}
-                                          className={`w-full p-2 rounded text-left text-sm transition-colors ${
-                                            morningBlocked ? 'bg-gray-100 cursor-not-allowed' :
-                                            morningEligible ? 'bg-green-100 hover:bg-green-200' :
-                                            morningUnavailable ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
-                                          }`}
-                                        >
-                                          <div className="flex justify-between items-center">
-                                            <span className="font-medium">☀️ AM</span>
-                                            <span className={morningBlocked ? 'text-gray-400' : morningEligible ? 'text-green-600' : morningUnavailable ? 'text-red-600' : 'text-gray-400'}>
-                                              {morningBlocked ? '🚫' : morningEligible ? '✓' : morningUnavailable ? '✗' : '○'}
-                                            </span>
-                                          </div>
-                                          {morningAssigned && (
-                                            <div className="text-xs text-green-600 mt-1">🏕️ Has campers</div>
-                                          )}
-                                        </button>
-
-                                        {/* Afternoon Session */}
-                                        <button
-                                          onClick={() => !afternoonBlocked && toggleCounselorEligibility(managingSchedule.id, d, 'afternoon')}
-                                          disabled={afternoonBlocked}
-                                          className={`w-full p-2 rounded text-left text-sm transition-colors ${
-                                            afternoonBlocked ? 'bg-gray-100 cursor-not-allowed' :
-                                            afternoonEligible ? 'bg-green-100 hover:bg-green-200' :
-                                            afternoonUnavailable ? 'bg-red-100 hover:bg-red-200' : 'bg-white hover:bg-gray-50'
-                                          }`}
-                                        >
-                                          <div className="flex justify-between items-center">
-                                            <span className="font-medium">🌙 PM</span>
-                                            <span className={afternoonBlocked ? 'text-gray-400' : afternoonEligible ? 'text-green-600' : afternoonUnavailable ? 'text-red-600' : 'text-gray-400'}>
-                                              {afternoonBlocked ? '🚫' : afternoonEligible ? '✓' : afternoonUnavailable ? '✗' : '○'}
-                                            </span>
-                                          </div>
-                                          {afternoonAssigned && (
-                                            <div className="text-xs text-green-600 mt-1">🏕️ Has campers</div>
-                                          )}
-                                        </button>
-                                      </div>
+                                      {fullyBlocked ? (
+                                        <div className="p-2 text-center text-xs text-red-500">🚫 Blocked</div>
+                                      ) : (
+                                        <div className="p-2 space-y-1">
+                                          <button onClick={() => !amBlocked && toggleDraftSession(d, 'morning')} disabled={amBlocked}
+                                            className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(amState, amBlocked)}>
+                                            ☀️ AM{btnIcon(amState, amBlocked)}
+                                          </button>
+                                          <button onClick={() => !pmBlocked && toggleDraftSession(d, 'afternoon')} disabled={pmBlocked}
+                                            className={'w-full p-1.5 rounded text-xs font-medium text-center transition-colors ' + btnStyle(pmState, pmBlocked)}>
+                                            🌙 PM{btnIcon(pmState, pmBlocked)}
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -8556,16 +8597,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             );
                           })()}
 
-                          <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-600">
-                            <strong>Legend:</strong> ✓ = Available • ✗ = Unavailable • ○ = Not set • 🚫 = Session blocked • 🏕️ = Has campers
+                          <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm text-gray-600">
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-green-500 rounded-full" /><span>Available</span></div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-500 rounded-full" /><span>Unavailable</span></div>
+                            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-gray-200 rounded-full border" /><span>Not Set</span></div>
+                            <div className="flex items-center gap-1"><span>🚫</span><span>Blocked</span></div>
                           </div>
                         </div>
-                        <div className="p-4 border-t">
-                          <button onClick={() => setManagingSchedule(null)} className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">Done</button>
+                        <div className="p-4 border-t flex gap-3">
+                          <button onClick={() => { setManagingSchedule(null); setAvailDraft(null); }}
+                            className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
+                            Cancel
+                          </button>
+                          <button onClick={handleSaveAvailability}
+                            className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium">
+                            Save
+                          </button>
                         </div>
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
               )}
 
