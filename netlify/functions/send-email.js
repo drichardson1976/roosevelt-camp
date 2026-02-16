@@ -1,3 +1,38 @@
+const CAMP_EMAIL = 'rhsdaycamp@gmail.com';
+
+// Send a delivery failure alert to the camp email (best-effort, never throws)
+async function sendDeliveryAlert(originalTo, subject, errorDetails) {
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
+        to: [CAMP_EMAIL],
+        subject: `⚠️ Email Delivery Failed: ${subject}`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #dc2626;">Email Delivery Failed</h2>
+          <p>An email could not be delivered. Details below:</p>
+          <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">To</td><td style="padding: 8px; border: 1px solid #ddd;">${Array.isArray(originalTo) ? originalTo.join(', ') : originalTo}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Subject</td><td style="padding: 8px; border: 1px solid #ddd;">${subject}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Error</td><td style="padding: 8px; border: 1px solid #ddd; color: #dc2626;">${errorDetails}</td></tr>
+            <tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Time</td><td style="padding: 8px; border: 1px solid #ddd;">${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PST</td></tr>
+          </table>
+          <p style="color: #666; font-size: 14px;">This is an automated alert from the camp email system.</p>
+        </div>`,
+        reply_to: CAMP_EMAIL,
+        headers: { 'X-Entity-Ref-ID': `alert-${Date.now()}` },
+      }),
+    });
+  } catch (e) {
+    console.error('Failed to send delivery alert:', e.message);
+  }
+}
+
 exports.handler = async (event) => {
   // Only allow POST requests
   if (event.httpMethod !== 'POST') {
@@ -12,6 +47,11 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
     }
 
+    // CC the camp email on all outgoing emails (skip if camp email is already a recipient)
+    const toList = Array.isArray(to) ? to : [to];
+    const isCampRecipient = toList.some(addr => addr.toLowerCase() === CAMP_EMAIL.toLowerCase());
+    const cc = isCampRecipient ? undefined : [CAMP_EMAIL];
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -20,10 +60,11 @@ exports.handler = async (event) => {
       },
       body: JSON.stringify({
         from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
-        to: Array.isArray(to) ? to : [to],
+        to: toList,
+        ...(cc ? { cc } : {}),
         subject,
         html,
-        reply_to: replyTo || 'rhsdaycamp@gmail.com',
+        reply_to: replyTo || CAMP_EMAIL,
         headers: { 'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2)}` },
         ...(attachments ? { attachments } : {}),
       }),
@@ -32,11 +73,15 @@ exports.handler = async (event) => {
     const data = await response.json();
 
     if (!response.ok) {
+      // Email delivery failed — alert the camp
+      await sendDeliveryAlert(to, subject, JSON.stringify(data));
       return { statusCode: response.status, body: JSON.stringify({ error: data }) };
     }
 
     return { statusCode: 200, body: JSON.stringify({ success: true, data }) };
   } catch (error) {
+    // Unexpected error — alert the camp
+    await sendDeliveryAlert('unknown', 'unknown', error.message);
     return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
   }
 };

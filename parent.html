@@ -50,6 +50,7 @@
     const BUILD_DATE = new Date("2026-02-15T17:10:00");
 
     const RELEASE_NOTES = [
+      { version: "13.132", date: "2026-02-15", time: "5:30 PM", author: "Derek Richardson", changes: ["Netlify: All system emails now CC rhsdaycamp@gmail.com so camp admin sees every email sent", "Netlify: Email delivery failures now trigger an alert email to rhsdaycamp@gmail.com with recipient, subject, error details, and timestamp", "Netlify: Updated send-email.js and request-password-reset.js with CC + failure alerts"] },
       { version: "13.131", date: "2026-02-15", time: "5:20 PM", author: "Derek Richardson", changes: ["Tests: Seed functions now use actual signup flow — counselor add sends welcome email, logs change history, and creates profile with pending approval (visible:false) matching real onboarding", "Tests: Parent seed add already updated in prior commit with same improvements"] },
       { version: "13.130", date: "2026-02-15", time: "5:10 PM", author: "Derek Richardson", changes: ["Parent: Session Registration cards now show Venmo reference, payment screenshot, and invoice ID for paid/sent registrations — matching the Payments tab"] },
       { version: "13.129", date: "2026-02-15", time: "4:59 PM", author: "Derek Richardson", changes: ["Parent: Contact Us — changed email to rhsdaycamp@gmail.com, removed phone number"] },

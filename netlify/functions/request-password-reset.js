@@ -89,8 +89,12 @@ exports.handler = async (event) => {
     // Build reset link (query param before hash so window.location.search picks it up)
     const resetLink = `${SITE_URL}/?reset=${token}#login`;
 
-    // Send email via Resend
-    await fetch('https://api.resend.com/emails', {
+    // Send email via Resend (CC camp email, alert on failure)
+    const CAMP_EMAIL = 'rhsdaycamp@gmail.com';
+    const emailSubject = 'Password Reset Request';
+    const emailHtml = `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Password Reset</h2><p>Hi ${userName},</p><p>We received a request to reset your password for Roosevelt Basketball Day Camp.</p><p><a href="${resetLink}" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset My Password</a></p><p style="color: #666; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p></div>`;
+
+    const emailRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
@@ -99,12 +103,32 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
         to: [email],
-        subject: 'Password Reset Request',
-        html: `<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto;"><h2 style="color: #15803d;">Password Reset</h2><p>Hi ${userName},</p><p>We received a request to reset your password for Roosevelt Basketball Day Camp.</p><p><a href="${resetLink}" style="display: inline-block; background-color: #15803d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">Reset My Password</a></p><p style="color: #666; font-size: 14px;">This link will expire in 1 hour. If you didn't request this, you can safely ignore this email.</p></div>`,
-        reply_to: 'rhsdaycamp@gmail.com',
+        cc: [CAMP_EMAIL],
+        subject: emailSubject,
+        html: emailHtml,
+        reply_to: CAMP_EMAIL,
         headers: { 'X-Entity-Ref-ID': `${Date.now()}-${Math.random().toString(36).slice(2)}` },
       }),
     });
+
+    if (!emailRes.ok) {
+      const emailErr = await emailRes.json();
+      // Alert camp about delivery failure (best-effort)
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'Roosevelt Basketball Day Camp <campdirector@rhsbasketballdaycamp.com>',
+            to: [CAMP_EMAIL],
+            subject: `⚠️ Email Delivery Failed: ${emailSubject}`,
+            html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #dc2626;">Email Delivery Failed</h2><p>A password reset email could not be delivered.</p><table style="border-collapse: collapse; width: 100%; margin: 16px 0;"><tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">To</td><td style="padding: 8px; border: 1px solid #ddd;">${email}</td></tr><tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Error</td><td style="padding: 8px; border: 1px solid #ddd; color: #dc2626;">${JSON.stringify(emailErr)}</td></tr><tr><td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">Time</td><td style="padding: 8px; border: 1px solid #ddd;">${new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' })} PST</td></tr></table></div>`,
+            reply_to: CAMP_EMAIL,
+            headers: { 'X-Entity-Ref-ID': `alert-${Date.now()}` },
+          }),
+        });
+      } catch (alertErr) { console.error('Failed to send delivery alert:', alertErr.message); }
+    }
 
     return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (error) {
