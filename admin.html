@@ -45,11 +45,12 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.155";
+    const VERSION = "13.156";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T23:55:00");
+    const BUILD_DATE = new Date("2026-02-15T23:58:00");
 
     const RELEASE_NOTES = [
+      { version: "13.156", date: "2026-02-15", time: "11:58 PM", author: "Derek Richardson", changes: ["Admin: Multi-counselor ovals now use CSS grid (max 5 per row) — scales to 20 counselors by wrapping to multiple rows", "Admin: Ovals only expand vertically when needed (>5 counselors), never horizontally", "Admin: Font size increased from 9px to 10px for better readability at scale", "Admin: Applied to both Work Availability and Work Schedule tabs"] },
       { version: "13.155", date: "2026-02-15", time: "11:55 PM", author: "Derek Richardson", changes: ["Admin: Renamed 'Edit Schedule' to 'Edit Availability' on Counselor cards — button now green-themed", "Admin: Edit Availability modal redesigned with card grid calendar matching Work Availability tab style", "Admin: Modal uses draft state — changes only saved when clicking Save, Cancel discards changes", "Admin: Save syncs availability to both camp_counselor_availability and camp_counselor_schedule tables"] },
       { version: "13.154", date: "2026-02-15", time: "11:48 PM", author: "Derek Richardson", changes: ["Tests: Added 16 test counselor profiles (c5-c20) with varied availability data for testing multi-counselor views", "Tests: Counselors can be individually added/removed or bulk added/removed via seed buttons", "Admin: Added 'Delete All Counselor Data' button to Danger Zone — wipes all counselor profiles, logins, availability, and schedules in one action", "Database: Inserted 16 test counselors into dev schema with profiles, user accounts, availability, and schedules"] },
       { version: "13.153", date: "2026-02-15", time: "11:34 PM", author: "Derek Richardson", changes: ["Admin: Both July and August can now be selected simultaneously on Work Availability and Work Schedule tabs", "Admin: Multi-counselor view now shows full first names (Audrey, Emma) in compact ovals instead of single initials", "Admin: Removed AM/PM labels and emojis from multi-counselor card view — ovals are green (available/assigned), red (unavailable), or gray (not set)", "Admin: Ovals auto-size with flex layout to fit 5-6 counselors per card row"] },
@@ -8755,32 +8756,39 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                         {getName(visibleCounselors[0])}{singleIcon(pmStates[0]?.state, pmBlocked)}
                                       </div>
                                     </div>
-                                  ) : (
-                                    <div className="p-2 space-y-1">
-                                      <div className="flex flex-wrap gap-0.5">
-                                        {amBlocked ? (
-                                          <div className="w-full p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
-                                        ) : amStates.map(({ c, state }) => (
-                                          <span key={c.id} className={'inline-block px-1 py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
-                                            style={{fontSize: '9px', maxWidth: '100%', minWidth: 0, flex: '1 1 0'}}
-                                            title={`${getName(c)} — ${state}`}>
-                                            {getName(c)}
-                                          </span>
-                                        ))}
-                                      </div>
-                                      <div className="flex flex-wrap gap-0.5">
-                                        {pmBlocked ? (
-                                          <div className="w-full p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
-                                        ) : pmStates.map(({ c, state }) => (
-                                          <span key={c.id} className={'inline-block px-1 py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
-                                            style={{fontSize: '9px', maxWidth: '100%', minWidth: 0, flex: '1 1 0'}}
-                                            title={`${getName(c)} — ${state}`}>
-                                            {getName(c)}
-                                          </span>
-                                        ))}
-                                      </div>
+                                  ) : (() => {
+                                    const cols = Math.min(visibleCounselors.length, 5);
+                                    return (
+                                    <div className="p-1.5 space-y-1">
+                                      {amBlocked ? (
+                                        <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
+                                      ) : (
+                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                          {amStates.map(({ c, state }) => (
+                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
+                                              style={{fontSize: '10px'}}
+                                              title={`${getName(c)} — ${state}`}>
+                                              {getName(c)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
+                                      {pmBlocked ? (
+                                        <div className="p-1 rounded text-xs bg-gray-100 text-gray-400 text-center">🚫</div>
+                                      ) : (
+                                        <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
+                                          {pmStates.map(({ c, state }) => (
+                                            <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + pillBg(state)}
+                                              style={{fontSize: '10px'}}
+                                              title={`${getName(c)} — ${state}`}>
+                                              {getName(c)}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
+                                    );
+                                  })()}
                                 </div>
                               );
                             })}
@@ -8918,28 +8926,31 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                         <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">{getName(visibleCounselors[0])}</div>
                                       )}
                                     </div>
-                                  ) : (
-                                    <div className="p-2 space-y-1">
-                                      <div className="flex flex-wrap gap-0.5">
+                                  ) : (() => {
+                                    const cols = Math.min(visibleCounselors.length, 5);
+                                    return (
+                                    <div className="p-1.5 space-y-1">
+                                      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
                                         {amCounts.map(({ c, count }) => (
-                                          <span key={c.id} className={'inline-block px-1 py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
-                                            style={{fontSize: '9px', maxWidth: '100%', minWidth: 0, flex: '1 1 0'}}
+                                          <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                            style={{fontSize: '10px'}}
                                             title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
                                             {getName(c)}
                                           </span>
                                         ))}
                                       </div>
-                                      <div className="flex flex-wrap gap-0.5">
+                                      <div style={{display: 'grid', gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: '2px'}}>
                                         {pmCounts.map(({ c, count }) => (
-                                          <span key={c.id} className={'inline-block px-1 py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
-                                            style={{fontSize: '9px', maxWidth: '100%', minWidth: 0, flex: '1 1 0'}}
+                                          <span key={c.id} className={'block py-0.5 rounded-full text-center font-medium truncate ' + (count > 0 ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-500')}
+                                            style={{fontSize: '10px'}}
                                             title={`${getName(c)} — ${count > 0 ? count + ' campers' : 'not assigned'}`}>
                                             {getName(c)}
                                           </span>
                                         ))}
                                       </div>
                                     </div>
-                                  )}
+                                    );
+                                  })()}
                                 </div>
                               );
                             })}
