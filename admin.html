@@ -45,12 +45,13 @@
     console.log('Roosevelt Camp - Environment:', ENV, '- Schema:', SCHEMA);
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.127";
+    const VERSION = "13.134";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-14T15:00:00");
+    const BUILD_DATE = new Date("2026-02-15T18:09:00");
 
     const RELEASE_NOTES = [
-      { version: "13.132", date: "2026-02-15", time: "5:30 PM", author: "Derek Richardson", changes: ["Netlify: All system emails now CC rhsdaycamp@gmail.com so camp admin sees every email sent", "Netlify: Email delivery failures now trigger an alert email to rhsdaycamp@gmail.com with recipient, subject, error details, and timestamp", "Netlify: Updated send-email.js and request-password-reset.js with CC + failure alerts"] },
+      { version: "13.134", date: "2026-02-15", time: "6:09 PM", author: "Derek Richardson", changes: ["Admin: Registration cards now match parent dashboard style — grouped by camper with date ranges instead of individual day rows", "Admin: Cards show condensed camper summary (days, date range, session type, amount) matching parent portal exactly"] },
+      { version: "13.132", date: "2026-02-15", time: "5:30 PM", author: "Derek Richardson", changes: ["Netlify: All system emails now BCC rhsdaycamp@gmail.com so camp admin sees every email sent", "Netlify: Email delivery failures now trigger an alert email to rhsdaycamp@gmail.com with recipient, subject, error details, and timestamp", "Netlify: Updated send-email.js and request-password-reset.js with BCC + failure alerts"] },
       { version: "13.131", date: "2026-02-15", time: "5:20 PM", author: "Derek Richardson", changes: ["Tests: Seed functions now use actual signup flow — counselor add sends welcome email, logs change history, and creates profile with pending approval (visible:false) matching real onboarding", "Tests: Parent seed add already updated in prior commit with same improvements"] },
       { version: "13.130", date: "2026-02-15", time: "5:10 PM", author: "Derek Richardson", changes: ["Parent: Session Registration cards now show Venmo reference, payment screenshot, and invoice ID for paid/sent registrations — matching the Payments tab"] },
       { version: "13.129", date: "2026-02-15", time: "4:59 PM", author: "Derek Richardson", changes: ["Parent: Contact Us — changed email to rhsdaycamp@gmail.com, removed phone number"] },
@@ -8943,60 +8944,107 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     const paidOrders = groupByOrder(registrations.filter(r => r.status === 'approved' && ['paid', 'confirmed'].includes(r.paymentStatus)));
                     const cancelledRegs = registrations.filter(r => r.status === 'rejected' || r.status === 'cancelled');
 
+                    const formatDateRange = (dates) => {
+                      const sorted = [...dates].sort();
+                      const fmt = (d) => {
+                        const dt = new Date(d + 'T12:00:00');
+                        const month = dt.toLocaleDateString('en-US', { month: 'short' });
+                        const day = dt.getDate();
+                        const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+                        return `${month} ${day}${suffix}`;
+                      };
+                      if (sorted.length === 1) return fmt(sorted[0]);
+                      const ranges = [];
+                      let rangeStart = sorted[0], prev = sorted[0];
+                      for (let i = 1; i <= sorted.length; i++) {
+                        const cur = sorted[i];
+                        const prevDate = new Date(prev + 'T12:00:00');
+                        const curDate = cur ? new Date(cur + 'T12:00:00') : null;
+                        const isConsecutive = curDate && (curDate - prevDate) <= 86400000 * 3;
+                        if (!isConsecutive) {
+                          ranges.push(rangeStart === prev ? fmt(rangeStart) : `${fmt(rangeStart)} - ${fmt(prev)}`);
+                          rangeStart = cur;
+                        }
+                        prev = cur;
+                      }
+                      return ranges.join(', ');
+                    };
+
                     const renderOrderCard = (orderId, regs, options = {}) => {
-                      const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))];
                       const parent = users.find(u => u.email === regs[0].parentEmail);
                       const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
                       const venmoCode = regs[0]?.venmoCode;
                       const sortedRegs = [...regs].sort((a, b) => new Date(a.date) - new Date(b.date));
                       const screenshot = regs[0]?.venmoScreenshot;
                       const screenshotUrl = screenshot ? (typeof screenshot === 'string' ? screenshot : screenshot?.cropped || screenshot) : null;
+                      const paymentStatus = sortedRegs[0]?.paymentStatus || 'unpaid';
+                      const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
+                      const isSent = paymentStatus === 'sent';
+
+                      // Group by camper within this order
+                      const byCamper = {};
+                      sortedRegs.forEach(r => {
+                        const name = r.camperName || r.childName || 'Unknown';
+                        if (!byCamper[name]) byCamper[name] = [];
+                        byCamper[name].push(r);
+                      });
 
                       return (
                         <div key={orderId} className={`border-2 rounded-xl p-4 ${options.borderClass || 'border-gray-200'}`}>
-                          <div className="flex justify-between items-start mb-2">
+                          <div className="flex justify-between items-start mb-3">
                             <div>
-                              <h4 className="font-bold text-lg">{camperNames.join(', ')}</h4>
+                              <h4 className="font-bold text-lg text-green-800">{Object.keys(byCamper).join(' & ')}</h4>
                               <p className="text-sm text-gray-500">Parent: {parent?.name || regs[0].parentName} ({regs[0].parentEmail})</p>
                             </div>
                             {options.actions}
                           </div>
-                          <div className="mt-2 space-y-1">
-                            {sortedRegs.map(reg => (
-                              <div key={reg.id} className="text-sm text-gray-600 bg-white rounded px-3 py-1.5 flex justify-between">
-                                <span>
-                                  <strong>{reg.camperName || reg.childName}</strong> — {new Date(reg.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                                  {' \u2022 '}{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}
+                          <div className="space-y-2 mb-3">
+                            {Object.entries(byCamper).map(([camperName, camperRegs]) => {
+                              const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                              const dates = sortedCamperRegs.map(r => r.date);
+                              const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                              const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
+                              const hasAM = sessions.includes('morning');
+                              const hasPM = sessions.includes('afternoon');
+                              const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                              return (
+                                <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : 'bg-blue-100'}`}>
+                                  <div className="flex justify-between items-center">
+                                    <div>
+                                      <span className="font-medium">{camperName}</span>
+                                      <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
+                                    </div>
+                                    <span className="font-medium">${camperTotal.toFixed(2)}</span>
+                                  </div>
+                                  <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} {'\u2022'} {formatDateRange(dates)}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {venmoCode && (
+                            <div className={`text-xs mt-2 ${isPaid ? 'text-green-600' : 'text-blue-600'}`}>
+                              Venmo Reference: <span className="font-mono font-bold">{venmoCode}</span>
+                              {sortedRegs[0]?.paymentSentAt && (
+                                <span className="ml-2 text-gray-500">
+                                  Sent {new Date(sortedRegs[0].paymentSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(sortedRegs[0].paymentSentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                                 </span>
-                                <span className="font-medium">${(parseFloat(reg.totalAmount) || 0).toFixed(2)}</span>
-                              </div>
-                            ))}
+                              )}
+                            </div>
+                          )}
+                          {screenshotUrl && (
+                            <div className="mt-2 mb-1">
+                              <img src={screenshotUrl} alt="Venmo payment screenshot" className="max-h-32 object-contain rounded-lg border cursor-pointer" onClick={() => window.open(screenshotUrl, '_blank')} />
+                            </div>
+                          )}
+                          {isPaid && sortedRegs[0]?.invoiceId && (
+                            <div className="mt-2">
+                              <span className="text-xs text-green-600">Invoice: <span className="font-mono font-bold">{sortedRegs[0].invoiceId}</span></span>
+                            </div>
+                          )}
+                          <div className={`flex justify-between items-center pt-2 mt-2 ${isPaid ? 'border-t border-green-300' : 'border-t border-blue-200'}`}>
+                            <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                            <span className="text-xs text-gray-400">Submitted: {regs[0].registeredAt ? new Date(regs[0].registeredAt).toLocaleString() : 'Unknown'}</span>
                           </div>
-                          <div className="mt-3 flex items-center gap-4">
-                            {venmoCode && (
-                              <div className="bg-white border-2 border-blue-300 rounded-lg px-3 py-2">
-                                <span className="text-xs text-gray-500">Reference:</span>
-                                <span className="font-mono font-bold text-blue-700 ml-2">{venmoCode}</span>
-                              </div>
-                            )}
-                            <div className="font-bold text-lg">${totalAmount.toFixed(2)}</div>
-                          </div>
-                          {/* Venmo screenshot — always shown */}
-                          <div className="mt-2">
-                            {screenshotUrl ? (
-                              <img
-                                src={screenshotUrl}
-                                alt="Venmo payment screenshot"
-                                className="max-h-32 object-contain rounded-lg border cursor-pointer"
-                                onClick={() => window.open(screenshotUrl, '_blank')}
-                              />
-                            ) : (
-                              <div className="w-24 h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                                <span className="text-xs text-gray-400 text-center px-1">No payment screenshot</span>
-                              </div>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 mt-2">Submitted: {regs[0].registeredAt ? new Date(regs[0].registeredAt).toLocaleString() : 'Unknown'}</p>
                         </div>
                       );
                     };
@@ -10217,6 +10265,32 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               )}
 
               {adminParentTab === 'registrations' && (() => {
+                const formatDateRange2 = (dates) => {
+                  const sorted = [...dates].sort();
+                  const fmt = (d) => {
+                    const dt = new Date(d + 'T12:00:00');
+                    const month = dt.toLocaleDateString('en-US', { month: 'short' });
+                    const day = dt.getDate();
+                    const suffix = day === 1 || day === 21 || day === 31 ? 'st' : day === 2 || day === 22 ? 'nd' : day === 3 || day === 23 ? 'rd' : 'th';
+                    return `${month} ${day}${suffix}`;
+                  };
+                  if (sorted.length === 1) return fmt(sorted[0]);
+                  const ranges = [];
+                  let rangeStart = sorted[0], prev = sorted[0];
+                  for (let i = 1; i <= sorted.length; i++) {
+                    const cur = sorted[i];
+                    const prevDate = new Date(prev + 'T12:00:00');
+                    const curDate = cur ? new Date(cur + 'T12:00:00') : null;
+                    const isConsecutive = curDate && (curDate - prevDate) <= 86400000 * 3;
+                    if (!isConsecutive) {
+                      ranges.push(rangeStart === prev ? fmt(rangeStart) : `${fmt(rangeStart)} - ${fmt(prev)}`);
+                      rangeStart = cur;
+                    }
+                    prev = cur;
+                  }
+                  return ranges.join(', ');
+                };
+
                 // Group registrations by orderId for the three sections
                 const groupByOrder = (regs) => {
                   const byOrder = {};
@@ -10233,58 +10307,79 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 const paidOrders = groupByOrder(registrations.filter(r => r.status === 'approved' && ['paid', 'confirmed'].includes(r.paymentStatus)));
 
                 const renderRegCard = (orderId, regs, options = {}) => {
-                  const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))];
                   const parent = users.find(u => u.email === regs[0].parentEmail);
                   const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
                   const venmoCode = regs[0]?.venmoCode;
                   const sortedRegs = [...regs].sort((a, b) => new Date(a.date) - new Date(b.date));
                   const screenshot = regs[0]?.venmoScreenshot;
                   const screenshotUrl = screenshot ? (typeof screenshot === 'string' ? screenshot : screenshot?.cropped || screenshot) : null;
+                  const paymentStatus = sortedRegs[0]?.paymentStatus || 'unpaid';
+                  const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
+                  const isSent = paymentStatus === 'sent';
+
+                  const byCamper = {};
+                  sortedRegs.forEach(r => {
+                    const name = r.camperName || r.childName || 'Unknown';
+                    if (!byCamper[name]) byCamper[name] = [];
+                    byCamper[name].push(r);
+                  });
 
                   return (
                     <div key={orderId} className={`border-2 rounded-xl p-4 ${options.borderClass || 'border-gray-200'}`}>
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-bold text-lg">{camperNames.join(', ')}</h4>
+                          <h4 className="font-bold text-lg text-green-800">{Object.keys(byCamper).join(' & ')}</h4>
                           <p className="text-sm text-gray-500">Parent: {parent?.name || regs[0].parentName} ({regs[0].parentEmail})</p>
                         </div>
                         {options.actions}
                       </div>
-                      <div className="mt-2 space-y-1">
-                        {sortedRegs.map(reg => (
-                          <div key={reg.id} className="text-sm text-gray-600 bg-white rounded px-3 py-1.5 flex justify-between">
-                            <span>
-                              <strong>{reg.camperName || reg.childName}</strong> — {new Date(reg.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                              {' \u2022 '}{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}
+                      <div className="space-y-2 mb-3">
+                        {Object.entries(byCamper).map(([camperName, camperRegs]) => {
+                          const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
+                          const dates = sortedCamperRegs.map(r => r.date);
+                          const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                          const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
+                          const hasAM = sessions.includes('morning');
+                          const hasPM = sessions.includes('afternoon');
+                          const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                          return (
+                            <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : 'bg-blue-100'}`}>
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-medium">{camperName}</span>
+                                  <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
+                                </div>
+                                <span className="font-medium">${camperTotal.toFixed(2)}</span>
+                              </div>
+                              <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} {'\u2022'} {formatDateRange2(dates)}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {venmoCode && (
+                        <div className={`text-xs mt-2 ${isPaid ? 'text-green-600' : 'text-blue-600'}`}>
+                          Venmo Reference: <span className="font-mono font-bold">{venmoCode}</span>
+                          {sortedRegs[0]?.paymentSentAt && (
+                            <span className="ml-2 text-gray-500">
+                              Sent {new Date(sortedRegs[0].paymentSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {new Date(sortedRegs[0].paymentSentAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                             </span>
-                            <span className="font-medium">${(parseFloat(reg.totalAmount) || 0).toFixed(2)}</span>
-                          </div>
-                        ))}
+                          )}
+                        </div>
+                      )}
+                      {screenshotUrl && (
+                        <div className="mt-2 mb-1">
+                          <img src={screenshotUrl} alt="Venmo payment screenshot" className="max-h-32 object-contain rounded-lg border cursor-pointer" onClick={() => window.open(screenshotUrl, '_blank')} />
+                        </div>
+                      )}
+                      {isPaid && sortedRegs[0]?.invoiceId && (
+                        <div className="mt-2">
+                          <span className="text-xs text-green-600">Invoice: <span className="font-mono font-bold">{sortedRegs[0].invoiceId}</span></span>
+                        </div>
+                      )}
+                      <div className={`flex justify-between items-center pt-2 mt-2 ${isPaid ? 'border-t border-green-300' : 'border-t border-blue-200'}`}>
+                        <span className="font-bold text-lg">${totalAmount.toFixed(2)}</span>
+                        <span className="text-xs text-gray-400">Submitted: {regs[0].registeredAt ? new Date(regs[0].registeredAt).toLocaleString() : 'Unknown'}</span>
                       </div>
-                      <div className="mt-3 flex items-center gap-4">
-                        {venmoCode && (
-                          <div className="bg-white border-2 border-blue-300 rounded-lg px-3 py-2">
-                            <span className="text-xs text-gray-500">Reference:</span>
-                            <span className="font-mono font-bold text-blue-700 ml-2">{venmoCode}</span>
-                          </div>
-                        )}
-                        <div className="font-bold text-lg">${totalAmount.toFixed(2)}</div>
-                      </div>
-                      <div className="mt-2">
-                        {screenshotUrl ? (
-                          <img
-                            src={screenshotUrl}
-                            alt="Venmo payment screenshot"
-                            className="max-h-32 object-contain rounded-lg border cursor-pointer"
-                            onClick={() => window.open(screenshotUrl, '_blank')}
-                          />
-                        ) : (
-                          <div className="w-24 h-32 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 flex items-center justify-center">
-                            <span className="text-xs text-gray-400 text-center px-1">No payment screenshot</span>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 mt-2">Submitted: {regs[0].registeredAt ? new Date(regs[0].registeredAt).toLocaleString() : 'Unknown'}</p>
                     </div>
                   );
                 };
