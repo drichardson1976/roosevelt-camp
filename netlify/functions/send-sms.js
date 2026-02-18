@@ -1,22 +1,44 @@
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const { sanitizeString, isValidPhone } = require('./utils/validation');
+
+const ALLOWED_ORIGINS = [
+  'https://rhsbasketballdaycamp.com',
+  'https://www.rhsbasketballdaycamp.com',
+  'http://localhost:8000',
+  'http://localhost:8888',
+  'http://localhost:3000',
+  'http://127.0.0.1:8000',
+];
+
+function getCorsHeaders(event) {
+  const origin = event?.headers?.origin || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: getCorsHeaders(event), body: '' };
   }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { to, body } = JSON.parse(event.body);
+    const parsed = JSON.parse(event.body);
 
-    if (!to || !body) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields: to, body' }) };
+    // Validate and sanitize inputs
+    const to = typeof parsed.to === 'string' ? parsed.to.trim() : '';
+    const smsBody = sanitizeString(parsed.body, 1600);
+
+    if (!to || !isValidPhone(to)) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'A valid 10-digit phone number is required' }) };
+    }
+    if (!smsBody) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Message body is required' }) };
     }
 
     const ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -24,7 +46,7 @@ exports.handler = async (event) => {
     const FROM_NUMBER = process.env.TWILIO_PHONE_NUMBER;
 
     if (!ACCOUNT_SID || !AUTH_TOKEN || !FROM_NUMBER) {
-      return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Twilio not configured' }) };
+      return { statusCode: 500, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Twilio not configured' }) };
     }
 
     // Normalize phone number to E.164 format (+1XXXXXXXXXX)
@@ -46,18 +68,18 @@ exports.handler = async (event) => {
       body: new URLSearchParams({
         To: normalized,
         From: FROM_NUMBER,
-        Body: body
+        Body: smsBody
       }).toString()
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      return { statusCode: response.status, headers: CORS_HEADERS, body: JSON.stringify({ error: data.message || data }) };
+      return { statusCode: response.status, headers: getCorsHeaders(event), body: JSON.stringify({ error: data.message || data }) };
     }
 
-    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, sid: data.sid }) };
+    return { statusCode: 200, headers: getCorsHeaders(event), body: JSON.stringify({ success: true, sid: data.sid }) };
   } catch (error) {
-    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: getCorsHeaders(event), body: JSON.stringify({ error: error.message }) };
   }
 };

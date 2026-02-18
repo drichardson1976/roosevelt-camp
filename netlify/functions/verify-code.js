@@ -1,21 +1,42 @@
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const { sanitizeString } = require('./utils/validation');
+
+const ALLOWED_ORIGINS = [
+  'https://rhsbasketballdaycamp.com',
+  'https://www.rhsbasketballdaycamp.com',
+  'http://localhost:8000',
+  'http://localhost:8888',
+  'http://localhost:3000',
+  'http://127.0.0.1:8000',
+];
+
+function getCorsHeaders(event) {
+  const origin = event?.headers?.origin || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: getCorsHeaders(event), body: '' };
   }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { phone, code } = JSON.parse(event.body);
-    if (!phone || !code) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Phone and code are required' }) };
+    const parsed = JSON.parse(event.body);
+    const phone = typeof parsed.phone === 'string' ? parsed.phone.trim() : '';
+    const code = sanitizeString(parsed.code, 10);
+
+    if (!phone) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Phone number is required' }) };
+    }
+    if (!code || !/^\d+$/.test(code)) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'A valid numeric verification code is required' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -41,7 +62,7 @@ exports.handler = async (event) => {
     const tokens = await tokensRes.json();
 
     if (!tokens?.length) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'No verification code found. Please request a new code.' }) };
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'No verification code found. Please request a new code.' }) };
     }
 
     // Find a matching, unused, unexpired token
@@ -55,9 +76,9 @@ exports.handler = async (event) => {
       // Check if code was correct but expired
       const expiredMatch = tokens.find(t => t.data.code === code && !t.data.used);
       if (expiredMatch) {
-        return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'This code has expired. Please request a new one.' }) };
+        return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'This code has expired. Please request a new one.' }) };
       }
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Invalid code. Please check and try again.' }) };
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Invalid code. Please check and try again.' }) };
     }
 
     // Mark token as used
@@ -75,7 +96,7 @@ exports.handler = async (event) => {
     // Return the user's login info
     return {
       statusCode: 200,
-      headers: CORS_HEADERS,
+      headers: getCorsHeaders(event),
       body: JSON.stringify({
         success: true,
         email: validToken.data.email,
@@ -85,6 +106,6 @@ exports.handler = async (event) => {
       })
     };
   } catch (error) {
-    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: getCorsHeaders(event), body: JSON.stringify({ error: error.message }) };
   }
 };

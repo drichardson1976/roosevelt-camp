@@ -1,3 +1,5 @@
+const { sanitizeString, isValidEmail } = require('./utils/validation');
+
 const CAMP_EMAIL = 'rhsdaycamp@gmail.com';
 
 // Send a delivery failure alert to the camp email (best-effort, never throws)
@@ -33,33 +35,67 @@ async function sendDeliveryAlert(originalTo, subject, errorDetails) {
   }
 }
 
-// CORS headers — allows localhost and production to call this function
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+// CORS — dynamic origin check for localhost + production
+const ALLOWED_ORIGINS = [
+  'https://rhsbasketballdaycamp.com',
+  'https://www.rhsbasketballdaycamp.com',
+  'http://localhost:8000',
+  'http://localhost:8888',
+  'http://localhost:3000',
+  'http://127.0.0.1:8000',
+];
+
+function getCorsHeaders(event) {
+  const origin = event?.headers?.origin || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 exports.handler = async (event) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: getCorsHeaders(event), body: '' };
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { to, subject, html, replyTo, attachments } = JSON.parse(event.body);
+    const parsed = JSON.parse(event.body);
 
     // Validate required fields
-    if (!to || !subject || !html) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
+    if (!parsed.to || !parsed.subject || !parsed.html) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Missing required fields: to, subject, html' }) };
     }
 
+    // Validate and sanitize inputs
+    const toList = Array.isArray(parsed.to) ? parsed.to : [parsed.to];
+    for (const addr of toList) {
+      if (!isValidEmail(addr)) {
+        return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: `Invalid email address: ${sanitizeString(addr, 100)}` }) };
+      }
+    }
+
+    const subject = sanitizeString(parsed.subject, 500);
+    if (!subject) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Subject is required' }) };
+    }
+
+    // HTML body is allowed to contain tags (it's email HTML), so only trim and limit length
+    const html = typeof parsed.html === 'string' ? parsed.html.trim().slice(0, 50000) : '';
+    if (!html) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Email body (html) is required' }) };
+    }
+
+    const replyTo = parsed.replyTo;
+    const attachments = parsed.attachments;
+
     // BCC the camp email on all outgoing emails (skip if camp email is already a recipient)
-    const toList = Array.isArray(to) ? to : [to];
     const isCampRecipient = toList.some(addr => addr.toLowerCase() === CAMP_EMAIL.toLowerCase());
     const bcc = isCampRecipient ? undefined : [CAMP_EMAIL];
 
@@ -85,14 +121,14 @@ exports.handler = async (event) => {
 
     if (!response.ok) {
       // Email delivery failed — alert the camp
-      await sendDeliveryAlert(to, subject, JSON.stringify(data));
-      return { statusCode: response.status, headers: CORS_HEADERS, body: JSON.stringify({ error: data }) };
+      await sendDeliveryAlert(toList, subject, JSON.stringify(data));
+      return { statusCode: response.status, headers: getCorsHeaders(event), body: JSON.stringify({ error: data }) };
     }
 
-    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true, data }) };
+    return { statusCode: 200, headers: getCorsHeaders(event), body: JSON.stringify({ success: true, data }) };
   } catch (error) {
     // Unexpected error — alert the camp
     await sendDeliveryAlert('unknown', 'unknown', error.message);
-    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: getCorsHeaders(event), body: JSON.stringify({ error: error.message }) };
   }
 };

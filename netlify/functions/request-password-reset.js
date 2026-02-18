@@ -1,23 +1,40 @@
 const crypto = require('crypto');
+const { checkRateLimit, getClientIp } = require('./utils/rate-limiter');
+const { sanitizeString, isValidEmail } = require('./utils/validation');
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
+const ALLOWED_ORIGINS = [
+  'https://rhsbasketballdaycamp.com',
+  'https://www.rhsbasketballdaycamp.com',
+  'http://localhost:8000',
+  'http://localhost:8888',
+  'http://localhost:3000',
+  'http://127.0.0.1:8000',
+];
+
+function getCorsHeaders(event) {
+  const origin = event?.headers?.origin || '';
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  };
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+    return { statusCode: 204, headers: getCorsHeaders(event), body: '' };
   }
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
   try {
-    const { email } = JSON.parse(event.body);
-    if (!email) {
-      return { statusCode: 400, headers: CORS_HEADERS, body: JSON.stringify({ error: 'Email is required' }) };
+    const parsed = JSON.parse(event.body);
+    const email = sanitizeString(parsed.email, 254).toLowerCase();
+
+    if (!email || !isValidEmail(email)) {
+      return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'A valid email address is required' }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -29,6 +46,20 @@ exports.handler = async (event) => {
     const origin = event.headers.origin || event.headers.referer || '';
     const isDev = origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('github.io');
     const schema = isDev ? 'dev' : 'public';
+
+    // Rate limit: 3 password reset requests per hour per IP
+    const ip = getClientIp(event);
+    const rateCheck = await checkRateLimit({
+      supabaseUrl: SUPABASE_URL,
+      supabaseKey: SUPABASE_KEY,
+      schema,
+      key: `reset:${ip}`,
+      maxAttempts: 3,
+      windowMs: 60 * 60 * 1000 // 1 hour
+    });
+    if (!rateCheck.allowed) {
+      return { statusCode: 429, headers: getCorsHeaders(event), body: JSON.stringify({ error: rateCheck.message }) };
+    }
 
     // Check if email exists in camp_parents or camp_counselor_users
     let userType = null;
@@ -72,7 +103,7 @@ exports.handler = async (event) => {
 
     // Always return success (prevents email enumeration)
     if (!userType) {
-      return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
+      return { statusCode: 200, headers: getCorsHeaders(event), body: JSON.stringify({ success: true }) };
     }
 
     // Generate a unique token
@@ -139,8 +170,8 @@ exports.handler = async (event) => {
       } catch (alertErr) { console.error('Failed to send delivery alert:', alertErr.message); }
     }
 
-    return { statusCode: 200, headers: CORS_HEADERS, body: JSON.stringify({ success: true }) };
+    return { statusCode: 200, headers: getCorsHeaders(event), body: JSON.stringify({ success: true }) };
   } catch (error) {
-    return { statusCode: 500, headers: CORS_HEADERS, body: JSON.stringify({ error: error.message }) };
+    return { statusCode: 500, headers: getCorsHeaders(event), body: JSON.stringify({ error: error.message }) };
   }
 };
