@@ -39,9 +39,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.165";
+    const VERSION = "13.166";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-18T20:31:00");
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -979,18 +979,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             ? `<h3 style="color: #15803d;">Next Steps</h3><ul style="line-height: 1.8;">${tips.join('')}</ul>`
             : `<h3 style="color: #15803d;">Next Step</h3><ul style="line-height: 1.8;">${tips.join('')}</ul>`;
 
-          // Extract hero image for email attachment (CID inline)
+          // Extract hero image for email — URL (CDN) or base64 (legacy)
           const heroData = sitePhotos?.hero;
-          const heroBase64 = heroData ? (typeof heroData === 'string' ? heroData : heroData.cropped) : null;
-          const heroMatch = heroBase64 ? heroBase64.match(/^data:image\/(.*?);base64,(.*)$/) : null;
-          const heroImageHtml = heroMatch
-            ? '<img src="cid:hero-image" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />'
-            : '';
-          const emailAttachments = heroMatch ? [{
-            filename: `hero.${heroMatch[1] === 'jpeg' ? 'jpg' : heroMatch[1]}`,
-            content: heroMatch[2],
-            content_id: 'hero-image'
-          }] : undefined;
+          const heroSrc = heroData ? (typeof heroData === 'string' ? heroData : heroData.cropped) : null;
+          let heroImageHtml = '';
+          let emailAttachments;
+          if (heroSrc && heroSrc.startsWith('http')) {
+            // CDN URL — just use an img tag directly
+            heroImageHtml = '<img src="' + heroSrc + '" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />';
+          } else if (heroSrc) {
+            // Legacy base64 — use CID inline attachment
+            const heroMatch = heroSrc.match(/^data:image\/(.*?);base64,(.*)$/);
+            if (heroMatch) {
+              heroImageHtml = '<img src="cid:hero-image" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />';
+              emailAttachments = [{ filename: `hero.${heroMatch[1] === 'jpeg' ? 'jpg' : heroMatch[1]}`, content: heroMatch[2], content_id: 'hero-image' }];
+            }
+          }
 
           fetch('/.netlify/functions/send-email', {
             method: 'POST',
@@ -1893,6 +1897,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       useEffect(() => {
         const i = new Image();
+        if (image && image.startsWith('http')) i.crossOrigin = 'anonymous';
         i.onload = () => setImg(i);
         i.src = image;
       }, [image]);
@@ -2693,6 +2698,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
         setCounselors(cs);
         for (const c of cs) await storage.set('camp_counselors', c.id, c);
         if (action) addToHistory('Counselor', action);
@@ -2749,6 +2761,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveParents = async (p, action = null) => {
+        // Upload any new base64 parent photos to Storage CDN
+        for (const parent of p) {
+          if (parent.photo && !photoStorage.isUrl(parent.photo)) {
+            const id = (parent.email || '').replace(/[^a-zA-Z0-9]/g, '_') || 'p_' + Date.now();
+            const url = await photoStorage.uploadPhoto('parents', id, parent.photo);
+            if (url) parent.photo = url;
+          }
+        }
         setParents(p);
         await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
@@ -2785,20 +2805,43 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Assignment', action);
       };
       const saveCampers = async (c, action = null) => {
+        // Upload any new base64 camper photos to Storage CDN
+        for (const camper of c) {
+          if (camper.photo && !photoStorage.isUrl(camper.photo)) {
+            const url = await photoStorage.uploadPhoto('campers', camper.id, camper.photo);
+            if (url) camper.photo = url;
+          }
+        }
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
       };
       const saveFoodPhotos = async (photos) => {
-        setFoodPhotos(photos);
-        await storage.set('camp_food_photos', 'main', photos);
+        // Upload any new base64 photos to Storage CDN
+        const uploaded = { ...photos };
+        for (const [key, val] of Object.entries(uploaded)) {
+          if (val && !photoStorage.isUrl(val)) {
+            const url = await photoStorage.uploadPhoto('food', key, val);
+            if (url) uploaded[key] = url;
+          }
+        }
+        setFoodPhotos(uploaded);
+        await storage.set('camp_food_photos', 'main', uploaded);
         addToHistory('Content', 'Updated food photos');
         showToast('Photo updated!');
       };
 
       const saveSitePhotos = async (photos, photoName = null) => {
-        setSitePhotos(photos);
-        await storage.set('camp_site_photos', 'main', photos);
+        // Upload any new base64 photos to Storage CDN
+        const uploaded = { ...photos };
+        for (const [key, val] of Object.entries(uploaded)) {
+          if (val && !photoStorage.isUrl(val)) {
+            const url = await photoStorage.uploadPhoto('site', key, val);
+            if (url) uploaded[key] = url;
+          }
+        }
+        setSitePhotos(uploaded);
+        await storage.set('camp_site_photos', 'main', uploaded);
         if (photoName) addToHistory('Content', `Updated ${photoName} photo`);
         showToast('Photo updated!');
       };
@@ -2863,6 +2906,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // New save functions for onboarding system
       const saveEmergencyContacts = async (contacts, action = null) => {
+        // Upload any new base64 EC photos to Storage CDN
+        for (const ec of contacts) {
+          if (ec.photo && !photoStorage.isUrl(ec.photo)) {
+            const url = await photoStorage.uploadPhoto('emergency-contacts', ec.id, ec.photo);
+            if (url) ec.photo = url;
+          }
+        }
         setEmergencyContacts(contacts);
         await storage.set('camp_emergency_contacts', 'main', contacts);
         if (action) addToHistory('Emergency Contacts', action);
@@ -3733,18 +3783,22 @@ As a 1099 contractor, you are responsible for:
 
             // Send welcome email (fire and forget — don't block onboarding)
             try {
-              // Extract hero image for email attachment (CID inline)
+              // Extract hero image for email — URL (CDN) or base64 (legacy)
               const heroData = sitePhotos?.hero;
-              const heroBase64 = heroData ? (typeof heroData === 'string' ? heroData : heroData.cropped) : null;
-              const heroMatch = heroBase64 ? heroBase64.match(/^data:image\/(.*?);base64,(.*)$/) : null;
-              const heroImageHtml = heroMatch
-                ? '<img src="cid:hero-image" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />'
-                : '';
-              const emailAttachments = heroMatch ? [{
-                filename: `hero.${heroMatch[1] === 'jpeg' ? 'jpg' : heroMatch[1]}`,
-                content: heroMatch[2],
-                content_id: 'hero-image'
-              }] : undefined;
+              const heroSrc = heroData ? (typeof heroData === 'string' ? heroData : heroData.cropped) : null;
+              let heroImageHtml = '';
+              let emailAttachments;
+              if (heroSrc && heroSrc.startsWith('http')) {
+                // CDN URL — just use an img tag directly
+                heroImageHtml = '<img src="' + heroSrc + '" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />';
+              } else if (heroSrc) {
+                // Legacy base64 — use CID inline attachment
+                const heroMatch = heroSrc.match(/^data:image\/(.*?);base64,(.*)$/);
+                if (heroMatch) {
+                  heroImageHtml = '<img src="cid:hero-image" alt="Roosevelt Basketball Day Camp" style="width: 100%; max-width: 600px; border-radius: 12px; margin-bottom: 20px;" />';
+                  emailAttachments = [{ filename: `hero.${heroMatch[1] === 'jpeg' ? 'jpg' : heroMatch[1]}`, content: heroMatch[2], content_id: 'hero-image' }];
+                }
+              }
 
               fetch('/.netlify/functions/send-email', {
                 method: 'POST',

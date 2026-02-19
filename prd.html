@@ -22,8 +22,8 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const VERSION = "13.152";
-    const BUILD_DATE = new Date("2026-02-15T23:18:00");
+    const VERSION = "13.166";
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
     const getEnvironment = () => {
       const h = window.location.hostname;
       return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
@@ -210,6 +210,13 @@
         { name: "Edit website content", done: true },
         { name: "Full history/audit log", done: true },
         { name: "Reorganize tabs into groups", done: false },
+        { name: "Photo migration tool in Danger Zone (move base64 to CDN)", done: true },
+      ]},
+      { area: "Performance", items: [
+        { name: "Photos stored on Supabase Storage CDN instead of database", done: true },
+        { name: "Auto-upload to CDN on photo save (all pages)", done: true },
+        { name: "ImageCropper crossOrigin support for re-editing CDN photos", done: true },
+        { name: "Welcome emails use CDN URLs for hero image", done: true },
       ]},
       { area: "Emails & Texts", items: [
         { name: "Welcome email on signup", done: true },
@@ -228,6 +235,7 @@
       { name: "Email", icon: "\ud83d\udce7", desc: "Resend sends emails (confirmations, password resets, invoices)." },
       { name: "Texting", icon: "\ud83d\udcf1", desc: "Twilio sends SMS codes when someone forgets their login." },
       { name: "Google Login", icon: "\ud83d\udd11", desc: "Parents can sign in with their Google account instead of a password." },
+      { name: "Photo Storage", icon: "\ud83d\uddbc\ufe0f", desc: "Supabase Storage (CDN) hosts all photos as fast-loading image files instead of storing them in the database." },
     ];
 
     // ==================== COMPONENTS ====================

@@ -27,9 +27,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.151";
+    const VERSION = "13.166";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T23:03:00");
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -1118,6 +1118,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       useEffect(() => {
         const i = new Image();
+        if (image && image.startsWith('http')) i.crossOrigin = 'anonymous';
         i.onload = () => setImg(i);
         i.src = image;
       }, [image]);
@@ -1995,6 +1996,13 @@ Please sign in your child with the counselor on duty at the main gym entrance.
       };
 
       const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
         setCounselors(cs);
         for (const c of cs) await storage.set('camp_counselors', c.id, c);
         if (action) addToHistory('Counselor', action);

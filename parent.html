@@ -27,9 +27,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.161";
+    const VERSION = "13.166";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-16T00:56:00");
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -1906,6 +1906,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       useEffect(() => {
         const i = new Image();
+        if (image && image.startsWith('http')) i.crossOrigin = 'anonymous';
         i.onload = () => setImg(i);
         i.src = image;
       }, [image]);
@@ -2723,6 +2724,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
         setCounselors(cs);
         for (const c of cs) await storage.set('camp_counselors', c.id, c);
         if (action) addToHistory('Counselor', action);
@@ -2779,6 +2787,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveParents = async (p, action = null) => {
+        // Upload any new base64 parent photos to Storage CDN
+        for (const parent of p) {
+          if (parent.photo && !photoStorage.isUrl(parent.photo)) {
+            const id = (parent.email || '').replace(/[^a-zA-Z0-9]/g, '_') || 'p_' + Date.now();
+            const url = await photoStorage.uploadPhoto('parents', id, parent.photo);
+            if (url) parent.photo = url;
+          }
+        }
         setParents(p);
         await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
@@ -2815,6 +2831,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Assignment', action);
       };
       const saveCampers = async (c, action = null) => {
+        // Upload any new base64 camper photos to Storage CDN
+        for (const camper of c) {
+          if (camper.photo && !photoStorage.isUrl(camper.photo)) {
+            const url = await photoStorage.uploadPhoto('campers', camper.id, camper.photo);
+            if (url) camper.photo = url;
+          }
+        }
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
@@ -2909,6 +2932,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // New save functions for onboarding system
       const saveEmergencyContacts = async (contacts, action = null) => {
+        // Upload any new base64 EC photos to Storage CDN
+        for (const ec of contacts) {
+          if (ec.photo && !photoStorage.isUrl(ec.photo)) {
+            const url = await photoStorage.uploadPhoto('emergency-contacts', ec.id, ec.photo);
+            if (url) ec.photo = url;
+          }
+        }
         setEmergencyContacts(contacts);
         await storage.set('camp_emergency_contacts', 'main', contacts);
         if (action) addToHistory('Emergency Contacts', action);

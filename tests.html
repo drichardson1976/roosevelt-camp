@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.162";
-    const BUILD_DATE = new Date("2026-02-16T00:56:00");
+    const VERSION = "13.166";
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -1775,6 +1775,74 @@
               const unavailSessions2 = Array.isArray(arrFormat) ? [] : (arrFormat.unavailable || []);
               assert.ok(availSessions2.includes('morning'), 'Array format: morning should be available');
               assert.equal(unavailSessions2.length, 0, 'Array format: no unavailable sessions');
+            }
+          },
+        ]
+      },
+
+      // ===== PHOTO STORAGE HELPERS =====
+      {
+        name: "Photo Storage Helpers",
+        section: "readonly",
+        category: "logic",
+        icon: "\ud83d\udcf7",
+        tests: [
+          {
+            name: "photoStorage.isUrl detects HTTP URLs",
+            fn: async () => {
+              assert.equal(photoStorage.isUrl('https://example.com/photo.jpg'), true, 'HTTPS URL should be detected');
+              assert.equal(photoStorage.isUrl('http://example.com/photo.jpg'), true, 'HTTP URL should be detected');
+              assert.equal(photoStorage.isUrl(null), false, 'null should return false');
+              assert.equal(photoStorage.isUrl(''), false, 'empty string should return false');
+              assert.equal(photoStorage.isUrl('data:image/jpeg;base64,/9j/4AAQ'), false, 'base64 should return false');
+            }
+          },
+          {
+            name: "photoStorage.isUrl handles photo objects",
+            fn: async () => {
+              assert.equal(photoStorage.isUrl({ cropped: 'https://example.com/photo.jpg' }), true, 'Object with URL cropped should be detected');
+              assert.equal(photoStorage.isUrl({ cropped: 'data:image/jpeg;base64,abc' }), false, 'Object with base64 cropped should return false');
+              assert.equal(photoStorage.isUrl({ cropped: null }), false, 'Object with null cropped should return false');
+            }
+          },
+          {
+            name: "photoStorage.upload returns null for invalid input",
+            fn: async () => {
+              const result1 = await photoStorage.upload('test', 'test', null);
+              assert.equal(result1, null, 'null base64 should return null');
+              const result2 = await photoStorage.upload('test', 'test', '');
+              assert.equal(result2, null, 'empty base64 should return null');
+              const result3 = await photoStorage.upload('test', 'test', 'not-a-data-url');
+              assert.equal(result3, null, 'invalid format should return null');
+            }
+          },
+          {
+            name: "photoStorage.upload passes through existing URLs",
+            fn: async () => {
+              const url = 'https://example.com/existing-photo.jpg';
+              const result = await photoStorage.upload('test', 'test', url);
+              assert.equal(result, url, 'Existing URL should be returned as-is');
+            }
+          },
+          {
+            name: "photoStorage.uploadPhoto handles various input types",
+            fn: async () => {
+              const result1 = await photoStorage.uploadPhoto('test', 'test', null);
+              assert.equal(result1, null, 'null photo should return null');
+              const url = 'https://example.com/photo.jpg';
+              const result2 = await photoStorage.uploadPhoto('test', 'test', url);
+              assert.equal(result2, url, 'URL string should pass through');
+              const result3 = await photoStorage.uploadPhoto('test', 'test', { cropped: url });
+              assert.equal(result3, url, 'Object with URL cropped should pass through');
+            }
+          },
+          {
+            name: "getDisplayPhoto works with CDN URLs",
+            fn: async () => {
+              const url = 'https://cdn.supabase.co/photo.jpg';
+              assert.equal(getDisplayPhoto(url), url, 'URL string should return as-is');
+              assert.equal(getDisplayPhoto({ cropped: url }), url, 'Object with URL cropped should return URL');
+              assert.equal(getDisplayPhoto(null), null, 'null should return null');
             }
           },
         ]

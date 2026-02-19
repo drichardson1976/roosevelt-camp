@@ -101,6 +101,70 @@ var generateVenmoCode = function(name, salt) {
 
 var getSessionCost = function(content) { return parseInt((content.sessionCost || '$60').replace(/[^0-9]/g, '')) || 60; };
 
+// ==================== PHOTO STORAGE (CDN) ====================
+var photoStorage = {
+  // Check if a value is already a URL (vs base64 data)
+  isUrl: function(value) {
+    if (!value) return false;
+    if (typeof value === 'string') return value.startsWith('http');
+    if (value.cropped) return value.cropped.startsWith('http');
+    return false;
+  },
+
+  // Upload a base64 image to Supabase Storage, return the public URL
+  // folder: 'site', 'food', 'counselors', 'parents', 'campers', 'emergency-contacts'
+  // filename: e.g. 'hero', 'c_123456', 'snack_fruit'
+  // base64: the data URL from the crop tool (data:image/jpeg;base64,...)
+  upload: async function(folder, filename, base64) {
+    if (!base64 || !supabase) return null;
+    // If it's already a URL, no need to upload
+    if (base64.startsWith('http')) return base64;
+    try {
+      // Extract the binary data from the base64 string
+      var match = base64.match(/^data:image\/(.*?);base64,(.*)$/);
+      if (!match) return null;
+      var ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+      var raw = atob(match[2]);
+      var arr = new Uint8Array(raw.length);
+      for (var j = 0; j < raw.length; j++) arr[j] = raw.charCodeAt(j);
+      var blob = new Blob([arr], { type: 'image/' + match[1] });
+
+      // Build the path: schema/folder/filename.ext
+      var path = SCHEMA + '/' + folder + '/' + filename + '.' + ext;
+
+      // Upload (upsert so re-uploads overwrite)
+      var result = await supabase.storage.from('camp-photos').upload(path, blob, {
+        contentType: 'image/' + match[1],
+        upsert: true
+      });
+      if (result.error) throw result.error;
+
+      // Return the public URL
+      var urlResult = supabase.storage.from('camp-photos').getPublicUrl(path);
+      return urlResult.data.publicUrl;
+    } catch (e) {
+      console.error('Photo upload failed:', e);
+      return null;
+    }
+  },
+
+  // Upload a photo object (with cropped/original/transform) — only uploads the cropped version
+  // Returns the URL string (not the object) since we no longer need to store originals in the DB
+  uploadPhoto: async function(folder, filename, photo) {
+    if (!photo) return null;
+    // Already a URL string
+    if (typeof photo === 'string' && photo.startsWith('http')) return photo;
+    // Photo object with cropped field
+    var cropped = typeof photo === 'string' ? photo : photo.cropped;
+    if (!cropped) return null;
+    // Already a URL
+    if (cropped.startsWith('http')) return cropped;
+    // Upload and return URL
+    var url = await photoStorage.upload(folder, filename, cropped);
+    return url;
+  }
+};
+
 // ==================== CONSTANTS ====================
 var KIDS_PER_COUNSELOR = 5;
 

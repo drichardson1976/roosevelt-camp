@@ -27,9 +27,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.164";
+    const VERSION = "13.166";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-16T00:56:00");
+    const BUILD_DATE = new Date("2026-02-18T23:30:00");
 
     // ==================== CONSTANTS ====================
 
@@ -5475,6 +5475,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       useEffect(() => {
         const i = new Image();
+        if (image && image.startsWith('http')) i.crossOrigin = 'anonymous';
         i.onload = () => setImg(i);
         i.src = image;
       }, [image]);
@@ -6261,6 +6262,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
         setCounselors(cs);
         for (const c of cs) await storage.set('camp_counselors', c.id, c);
         if (action) addToHistory('Counselor', action);
@@ -6317,6 +6325,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       };
 
       const saveParents = async (p, action = null) => {
+        // Upload any new base64 parent photos to Storage CDN
+        for (const parent of p) {
+          if (parent.photo && !photoStorage.isUrl(parent.photo)) {
+            const id = (parent.email || '').replace(/[^a-zA-Z0-9]/g, '_') || 'p_' + Date.now();
+            const url = await photoStorage.uploadPhoto('parents', id, parent.photo);
+            if (url) parent.photo = url;
+          }
+        }
         setParents(p);
         await storage.set('camp_parents', 'main', p);
         if (action) addToHistory('Parent', action);
@@ -6362,20 +6378,43 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Assignment', action);
       };
       const saveCampers = async (c, action = null) => {
+        // Upload any new base64 camper photos to Storage CDN
+        for (const camper of c) {
+          if (camper.photo && !photoStorage.isUrl(camper.photo)) {
+            const url = await photoStorage.uploadPhoto('campers', camper.id, camper.photo);
+            if (url) camper.photo = url;
+          }
+        }
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
       };
       const saveFoodPhotos = async (photos) => {
-        setFoodPhotos(photos);
-        await storage.set('camp_food_photos', 'main', photos);
+        // Upload any new base64 photos to Storage CDN
+        const uploaded = { ...photos };
+        for (const [key, val] of Object.entries(uploaded)) {
+          if (val && !photoStorage.isUrl(val)) {
+            const url = await photoStorage.uploadPhoto('food', key, val);
+            if (url) uploaded[key] = url;
+          }
+        }
+        setFoodPhotos(uploaded);
+        await storage.set('camp_food_photos', 'main', uploaded);
         addToHistory('Content', 'Updated food photos');
         showToast('Photo updated!');
       };
 
       const saveSitePhotos = async (photos, photoName = null) => {
-        setSitePhotos(photos);
-        await storage.set('camp_site_photos', 'main', photos);
+        // Upload any new base64 photos to Storage CDN
+        const uploaded = { ...photos };
+        for (const [key, val] of Object.entries(uploaded)) {
+          if (val && !photoStorage.isUrl(val)) {
+            const url = await photoStorage.uploadPhoto('site', key, val);
+            if (url) uploaded[key] = url;
+          }
+        }
+        setSitePhotos(uploaded);
+        await storage.set('camp_site_photos', 'main', uploaded);
         if (photoName) addToHistory('Content', `Updated ${photoName} photo`);
         showToast('Photo updated!');
       };
@@ -6446,6 +6485,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // New save functions for onboarding system
       const saveEmergencyContacts = async (contacts, action = null) => {
+        // Upload any new base64 EC photos to Storage CDN
+        for (const ec of contacts) {
+          if (ec.photo && !photoStorage.isUrl(ec.photo)) {
+            const url = await photoStorage.uploadPhoto('emergency-contacts', ec.id, ec.photo);
+            if (url) ec.photo = url;
+          }
+        }
         setEmergencyContacts(contacts);
         await storage.set('camp_emergency_contacts', 'main', contacts);
         if (action) addToHistory('Emergency Contacts', action);
@@ -9375,6 +9421,116 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Photo Migration Tool */}
+                  <div className="bg-white rounded-xl shadow p-6 border-2 border-blue-200">
+                    <h3 className="font-bold text-lg text-blue-800 mb-2">📸 Migrate Photos to Storage CDN</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Scans all tables for base64 photo data and uploads them to Supabase Storage (CDN). Replaces the giant text blobs with small URLs. Run once to speed up page loads dramatically.
+                    </p>
+                    <button
+                      id="migratePhotosBtn"
+                      onClick={async () => {
+                        const btn = document.getElementById('migratePhotosBtn');
+                        const log = document.getElementById('migratePhotosLog');
+                        btn.disabled = true;
+                        btn.textContent = 'Migrating...';
+                        log.textContent = '';
+                        const addLog = (msg) => { log.textContent += msg + '\n'; log.scrollTop = log.scrollHeight; };
+                        let migrated = 0;
+                        let failed = 0;
+                        try {
+                          // 1. Site photos (object)
+                          addLog('--- Site Photos ---');
+                          const sp = { ...(sitePhotos || {}) };
+                          for (const [key, val] of Object.entries(sp)) {
+                            if (val && !photoStorage.isUrl(val)) {
+                              const url = await photoStorage.uploadPhoto('site', key, val);
+                              if (url) { sp[key] = url; migrated++; addLog('  ✅ ' + key); }
+                              else { failed++; addLog('  ❌ ' + key + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + key + ' (already URL or empty)'); }
+                          }
+                          if (Object.keys(sp).length > 0) { setSitePhotos(sp); await storage.set('camp_site_photos', 'main', sp); }
+
+                          // 2. Food photos (object)
+                          addLog('--- Food Photos ---');
+                          const fp = { ...(foodPhotos || {}) };
+                          for (const [key, val] of Object.entries(fp)) {
+                            if (val && !photoStorage.isUrl(val)) {
+                              const url = await photoStorage.uploadPhoto('food', key, val);
+                              if (url) { fp[key] = url; migrated++; addLog('  ✅ ' + key); }
+                              else { failed++; addLog('  ❌ ' + key + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + key + ' (already URL or empty)'); }
+                          }
+                          if (Object.keys(fp).length > 0) { setFoodPhotos(fp); await storage.set('camp_food_photos', 'main', fp); }
+
+                          // 3. Counselors (individual rows)
+                          addLog('--- Counselors ---');
+                          const cs = counselors.map(c => ({ ...c }));
+                          for (const c of cs) {
+                            if (c.photo && !photoStorage.isUrl(c.photo)) {
+                              const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+                              if (url) { c.photo = url; migrated++; addLog('  ✅ ' + (c.name || c.id)); }
+                              else { failed++; addLog('  ❌ ' + (c.name || c.id) + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + (c.name || c.id) + ' (already URL or no photo)'); }
+                          }
+                          setCounselors(cs);
+                          for (const c of cs) await storage.set('camp_counselors', c.id, c);
+
+                          // 4. Campers (array)
+                          addLog('--- Campers ---');
+                          const cam = (campers || []).map(c => ({ ...c }));
+                          for (const c of cam) {
+                            if (c.photo && !photoStorage.isUrl(c.photo)) {
+                              const url = await photoStorage.uploadPhoto('campers', c.id, c.photo);
+                              if (url) { c.photo = url; migrated++; addLog('  ✅ ' + (c.name || c.id)); }
+                              else { failed++; addLog('  ❌ ' + (c.name || c.id) + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + (c.name || c.id) + ' (already URL or no photo)'); }
+                          }
+                          if (cam.length > 0) { setCampers(cam); await storage.set('camp_campers', 'main', cam); }
+
+                          // 5. Parents (array)
+                          addLog('--- Parents ---');
+                          const pa = (parents || []).map(p => ({ ...p }));
+                          for (const p of pa) {
+                            if (p.photo && !photoStorage.isUrl(p.photo)) {
+                              const id = (p.email || '').replace(/[^a-zA-Z0-9]/g, '_') || 'p_' + Date.now();
+                              const url = await photoStorage.uploadPhoto('parents', id, p.photo);
+                              if (url) { p.photo = url; migrated++; addLog('  ✅ ' + (p.name || p.email)); }
+                              else { failed++; addLog('  ❌ ' + (p.name || p.email) + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + (p.name || p.email) + ' (already URL or no photo)'); }
+                          }
+                          if (pa.length > 0) { setParents(pa); await storage.set('camp_parents', 'main', pa); }
+
+                          // 6. Emergency contacts (array)
+                          addLog('--- Emergency Contacts ---');
+                          const ec = (emergencyContacts || []).map(e => ({ ...e }));
+                          for (const e of ec) {
+                            if (e.photo && !photoStorage.isUrl(e.photo)) {
+                              const url = await photoStorage.uploadPhoto('emergency-contacts', e.id, e.photo);
+                              if (url) { e.photo = url; migrated++; addLog('  ✅ ' + (e.name || e.id)); }
+                              else { failed++; addLog('  ❌ ' + (e.name || e.id) + ' (upload failed)'); }
+                            } else { addLog('  ⏭️ ' + (e.name || e.id) + ' (already URL or no photo)'); }
+                          }
+                          if (ec.length > 0) { setEmergencyContacts(ec); await storage.set('camp_emergency_contacts', 'main', ec); }
+
+                          addLog('');
+                          addLog(`Done! Migrated: ${migrated}, Failed: ${failed}`);
+                          addToHistory('Migration', `Migrated ${migrated} photos to Storage CDN (${failed} failed)`);
+                          showToast(`Migrated ${migrated} photos to CDN!`);
+                        } catch (err) {
+                          addLog('ERROR: ' + err.message);
+                          showToast('Migration error: ' + err.message, 'error');
+                        }
+                        btn.disabled = false;
+                        btn.textContent = '📸 Migrate Photos to Storage CDN';
+                      }}
+                      className="px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 w-full font-bold"
+                    >
+                      📸 Migrate Photos to Storage CDN
+                    </button>
+                    <pre id="migratePhotosLog" className="mt-3 p-3 bg-gray-100 rounded text-xs text-gray-700 max-h-64 overflow-auto whitespace-pre-wrap" style={{minHeight: '40px'}}></pre>
                   </div>
 
                   {/* SECTION 1: Tables CLEARED by Delete All Button */}
