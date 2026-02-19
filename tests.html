@@ -1844,6 +1844,16 @@
         const id = setInterval(update, 1000);
         return () => clearInterval(id);
       }, []);
+      const formatBuildDate = () => {
+        const d = BUILD_DATE;
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()} ${hours}:${min} ${ampm} PST`;
+      };
       const bgColor = ENV === 'development' ? 'bg-red-600' : 'bg-green-600';
       return (
         <div className={`${bgColor} text-white text-sm font-mono py-1 px-4 flex items-center justify-center gap-2`}>
@@ -1854,7 +1864,8 @@
           <span>TEST SUITE</span>
           <span>{'\u2022'}</span>
           <span>Schema: {SCHEMA}</span>
-          <span>({elapsed})</span>
+          <span>{'\u2022'}</span>
+          <span>Built: {formatBuildDate()} ({elapsed})</span>
         </div>
       );
     };

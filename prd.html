@@ -233,10 +233,32 @@
     // ==================== COMPONENTS ====================
 
     const VersionRibbon = () => {
+      const [elapsed, setElapsed] = useState('');
+      useEffect(() => {
+        const update = () => {
+          const secs = Math.floor((new Date() - BUILD_DATE) / 1000);
+          if (secs < 60) setElapsed(`${secs}s ago`);
+          else if (secs < 3600) setElapsed(`${Math.floor(secs / 60)}m ${secs % 60}s ago`);
+          else setElapsed(`${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m ago`);
+        };
+        update();
+        const id = setInterval(update, 1000);
+        return () => clearInterval(id);
+      }, []);
+      const formatBuildDate = () => {
+        const d = BUILD_DATE;
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${days[d.getDay()]} ${months[d.getMonth()]} ${d.getDate()} ${hours}:${min} ${ampm} PST`;
+      };
       const bgColor = ENV === 'development' ? 'bg-red-600' : 'bg-green-600';
       return (
         <div className={`${bgColor} text-white text-sm font-mono py-1 px-4 text-center`}>
-          {ENV === 'development' ? 'DEVELOPMENT' : 'PRODUCTION'} {'\u2022'} v{VERSION}
+          {ENV === 'development' ? 'DEVELOPMENT' : 'PRODUCTION'} {'\u2022'} v{VERSION} {'\u2022'} PRD {'\u2022'} Built: {formatBuildDate()} ({elapsed})
         </div>
       );
     };
