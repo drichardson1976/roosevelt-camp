@@ -554,10 +554,12 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 ### Development (localhost)
 ```bash
 cd /Users/derek/Documents/roosevelt-camp
-python3 -m http.server
+netlify dev --port 8000
 # Opens on http://localhost:8000
 # Uses DEV schema
+# Runs Netlify functions locally (login, email, SMS, etc.)
 ```
+**Important:** Do NOT use `python3 -m http.server` — it can't run the Netlify serverless functions (login, password reset, etc.). Always use `netlify dev`.
 
 ### Production
 - Netlify deployment
