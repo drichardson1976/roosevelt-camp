@@ -1,8 +1,8 @@
 **IMPORTANT: Read this entire file carefully — do not skim. Every section contains instructions you must follow.**
 
 # CLAUDE CODE REFERENCE DOCUMENT
-**Version:** 13.038
-**Last Updated:** 2026-02-15
+**Version:** 13.039
+**Last Updated:** 2026-02-19
 **Purpose:** Critical information that must NEVER be lost during conversation compaction
 
 ---
@@ -214,6 +214,15 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 ```
 
+### Supabase Storage (CDN)
+Photos are stored in Supabase Storage instead of the database for faster page loads.
+
+- **Bucket:** `camp-photos` (public, 5MB limit, JPEG/PNG/WebP/GIF)
+- **Folder structure:** `{schema}/site/`, `{schema}/food/`, `{schema}/counselors/`, `{schema}/parents/`, `{schema}/campers/`, `{schema}/emergency-contacts/`
+- **Public URL pattern:** `https://rdrtsebhninqgfbrleft.supabase.co/storage/v1/object/public/camp-photos/{schema}/{folder}/{filename}`
+- **Policies:** Public read, anon insert/update/delete (app uses anon key)
+- **Created by:** Migration `07_create_storage_bucket.sql` (applied 2026-02-19)
+
 ### Table Structure (STANDARD)
 ALL Supabase tables follow this structure:
 ```sql
@@ -238,7 +247,7 @@ await storage.set('table_name', 'main', dataArray);
 
 ---
 
-## 📋 ACTIVE TABLES (24 tables)
+## 📋 ACTIVE TABLES (25 tables)
 
 These tables are actively used in the application code:
 
@@ -278,6 +287,7 @@ These tables are actively used in the application code:
 23. **camp_onboarding_progress** - User onboarding completion tracking (JSONB object: {email: progress})
 24. **camp_change_history** - Audit log of all changes (JSONB array)
 25. **camp_password_reset_tokens** - Password reset tokens (each row = one token, id=token string)
+26. **camp_rate_limits** - Rate limiting for password resets and other actions (JSONB object: {identifier: timestamps})
 
 ---
 
@@ -386,6 +396,9 @@ const getFoodPhoto = (key) => {
 - **02_migrate_data_CORRECT.sql** - Split registered_users into new tables
 - **03_verify_both_schemas.sql** - Verify migration success
 - **04_list_all_tables.sql** - List all tables in both schemas
+- **05_delete_unused_tables.sql** - Delete legacy/unused tables (2026-02-08)
+- **06_create_ec_links_dev.sql** - Create camp_camper_emergency_contact_links in dev schema
+- **07_create_storage_bucket.sql** - Create camp-photos storage bucket + policies (2026-02-19)
 
 ---
 
@@ -403,6 +416,10 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 - Netlify CLI auto-detects the site from the project folder (linked via `netlify link`)
 - If you create a new project, set up a separate `.mcp.json` in that project's folder with its own IDs
 
+**MCP Verification Status (2026-02-19):**
+- **Supabase MCP** — Verified working. Can list tables, run SQL, apply migrations.
+- **Netlify MCP** — Verified working. Can read project details, deploy sites, manage env vars.
+
 ---
 
 ## 🌐 EXTERNAL SERVICES & INFRASTRUCTURE
@@ -410,6 +427,7 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 ### Netlify (Hosting & Serverless Functions)
 - **Site:** Deployed from GitHub, auto-deploys on push to `main`
 - **Domain:** rhsbasketballdaycamp.com (DNS managed in Netlify)
+- **Team members:** Derek Richardson (owner), Audrey Richardson (invited 2026-02-19)
 - **Functions directory:** `netlify/functions/`
 - **Environment Variables (Site configuration → Environment variables):**
   - `RESEND_API_KEY` — API key for Resend email service
@@ -437,12 +455,14 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 - **Reply-To:** `rhsdaycamp@gmail.com` (Gmail inbox for managing responses)
 - **DNS records added to Netlify:** DKIM (3 TXT records), SPF (TXT), MX, DMARC (TXT)
 
-### Supabase (Database)
+### Supabase (Database & Storage)
 - **Project:** Roosevelt Camp
 - **URL:** `https://rdrtsebhninqgfbrleft.supabase.co`
 - **Schemas:** `dev` (localhost/dev) and `public` (production)
+- **Storage:** `camp-photos` bucket for all photo uploads (CDN-backed)
 - **Anon key:** Used in client-side code (safe for browsers)
 - **Service role key:** Used in Netlify functions only (never exposed to client)
+- **Team members:** Derek Richardson (owner), Audrey Richardson (invited 2026-02-19)
 
 ### Twilio (SMS)
 - **Account:** derek.richardson@gmail.com
