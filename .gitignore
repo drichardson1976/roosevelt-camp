@@ -10,5 +10,8 @@ node_modules/
 # Claude Code local settings
 .claude/
 
+# MCP server config (contains access tokens - each person creates their own)
+.mcp.json
+
 # Lock files
 deno.lock
