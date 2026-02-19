@@ -42,13 +42,14 @@ Create the file `.claude/settings.local.json` in the project folder with this co
 ```
 Or just ask Claude: "Set up my project permissions so you don't have to ask me to approve routine operations."
 
-### 2. Set up MCP servers (lets Claude talk to GitHub and Supabase directly)
-Run these in a terminal (NOT inside Claude Code):
+### 2. Set up MCP servers (lets Claude talk to GitHub, Supabase, and Netlify directly)
+MCP servers are already configured in `.mcp.json` (project-scoped). They activate automatically when Claude Code opens this project. No keys needed — Supabase and Netlify use browser login on first use.
+
+If you need to re-add them manually:
 ```bash
-claude mcp add github -- npx -y @anthropic/github-mcp-server --repo drichardson1976/roosevelt-camp
-claude mcp add supabase -- npx -y @supabase/mcp-server --supabase-url https://rdrtsebhninqgfbrleft.supabase.co --supabase-key PASTE_KEY_HERE
-```
-Get the key from **Netlify → Site configuration → Environment variables → SUPABASE_SERVICE_ROLE_KEY**. Ask Dad if you need help finding it.
+claude mcp add --scope project supabase -- npx -y @supabase/mcp-server-supabase@latest --project-ref=rdrtsebhninqgfbrleft
+claude mcp add --scope project netlify -- npx -y @netlify/mcp@latest
+claude mcp add --scope project github -- npx -y @anthropic/github-mcp-server --repo drichardson1976/roosevelt-camp
 ```
 
 ### 3. Set up pre-commit hook (warns about version mismatches)
@@ -385,6 +386,22 @@ const getFoodPhoto = (key) => {
 - **02_migrate_data_CORRECT.sql** - Split registered_users into new tables
 - **03_verify_both_schemas.sql** - Verify migration success
 - **04_list_all_tables.sql** - List all tables in both schemas
+
+---
+
+## 🔗 MCP SERVERS & PROJECT IDS (Do NOT Mix Up)
+
+MCP servers are configured per-project in `.mcp.json` so Claude only talks to the right service. This table is the single source of truth — if you add a new project, add a row here.
+
+| Project | Supabase Project Ref | Supabase URL | Netlify Site ID | Netlify Domain |
+|---------|---------------------|--------------|-----------------|----------------|
+| **Roosevelt Camp** | `rdrtsebhninqgfbrleft` | `https://rdrtsebhninqgfbrleft.supabase.co` | `94ce673f-907a-4b03-bb13-9544dc98a132` | rhsbasketballdaycamp.com |
+
+**How this prevents mix-ups:**
+- MCP servers are in `.mcp.json` at the project root (not global) — they only activate when Claude opens that specific project folder
+- Supabase MCP is locked to `--project-ref=rdrtsebhninqgfbrleft` so it can only see this one database
+- Netlify CLI auto-detects the site from the project folder (linked via `netlify link`)
+- If you create a new project, set up a separate `.mcp.json` in that project's folder with its own IDs
 
 ---
 

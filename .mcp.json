@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=rdrtsebhninqgfbrleft"
+      ],
+      "env": {}
+    },
+    "netlify": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@netlify/mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}
