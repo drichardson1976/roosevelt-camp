@@ -82,11 +82,9 @@ After completing ANY work:
 1. **`git add`** — Stage all changed files
 2. **`git commit`** — Commit with descriptive message including author attribution
 3. **`git push`** — **MANDATORY** - Push changes to remote so others have access immediately
-4. **Say "Start testing" with links** — Always end your final message with "Start testing" plus clickable hyperlinks. **Choose ONE based on where you pushed:**
-   - **If you pushed to `dev` only (development change):** Show localhost links ONLY. Do NOT include the production URL.
-     `Start testing: [Main Site](http://localhost:8000) | [Tests](http://localhost:8000/tests.html)`
-   - **If you pushed to `main` (production release):** Show the live site link ONLY. Do NOT include localhost. (tests.html only works against the dev database, not production)
-     `Start testing: [Live Site](https://rhsbasketballdaycamp.com)`
+4. **Say "Start testing" with links** — Always show BOTH a Main Site link and a Tests link. Choose the domain based on where you pushed:
+   - **Pushed to `dev`:** `Start testing: [Main Site](http://localhost:8000) | [Tests](http://localhost:8000/tests.html)`
+   - **Pushed to `main`:** `Start testing: [Main Site](https://rhsbasketballdaycamp.com) | [Tests](https://rhsbasketballdaycamp.com/tests.html)`
 
 ### PRD & Tests Maintenance (MANDATORY — update EVERY time changes are made)
 - **RULE: Any change to the project MUST include corresponding updates to `prd.html` and `tests.html`** — these files are how Derek and Audrey understand and verify the system. Skipping updates makes the documentation and tests stale.
