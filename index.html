@@ -28,11 +28,14 @@
     </div>
   </div>
 
+  <script>window.__t0 = performance.now(); console.log('⏱️ [STEP 1] HTML parsed, starting script downloads...');</script>
   <script src="config.js"></script>
   <script src="release-notes.js"></script>
   <script src="utils.js"></script>
+  <script>window.__t1 = performance.now(); console.log('⏱️ [STEP 2] All scripts downloaded: ' + (window.__t1 - window.__t0).toFixed(0) + 'ms');</script>
 
   <script type="text/babel">
+    console.log('⏱️ [STEP 3] Babel compiled + React starting: ' + (performance.now() - window.__t0).toFixed(0) + 'ms (Babel took ' + (performance.now() - window.__t1).toFixed(0) + 'ms)');
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
@@ -2610,6 +2613,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Phase 1 load error:', e); }
+          console.log('⏱️ [STEP 4] Phase 1 DB loaded (4 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms');
           setLoading(false);
 
           // Phase 2: Load remaining 16 tables in background (needed for login, onboarding, admin)
@@ -2649,6 +2653,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
           } catch (e) { console.error('Phase 2 load error:', e); }
+          console.log('⏱️ [STEP 5] Phase 2 DB loaded (16 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms — all data ready');
           setBackgroundLoaded(true);
         };
         load();
