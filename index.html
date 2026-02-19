@@ -19,7 +19,14 @@
   </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f0fdf4">
+      <div style="text-align:center">
+        <div style="font-size:4rem;animation:spin 2s linear infinite;display:inline-block">🏀</div>
+        <style>@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}</style>
+      </div>
+    </div>
+  </div>
 
   <script src="config.js"></script>
   <script src="release-notes.js"></script>
@@ -29,9 +36,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.163";
+    const VERSION = "13.165";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-15T22:18:00");
+    const BUILD_DATE = new Date("2026-02-18T20:31:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -2539,6 +2546,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [loading, setLoading] = useState(true);
       const [showBanner, setShowBanner] = useState(false);
       const [transitioning, setTransitioning] = useState(false); // Global transition state for login/registration
+      const [backgroundLoaded, setBackgroundLoaded] = useState(false); // Phase 2 data loaded
       
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
@@ -2590,10 +2598,23 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         const load = async () => {
           setLoading(true);
           try {
-            // Parallel fetch all tables at once for faster loading
-            const [cd, cs, rg, pr, cu, av, ch, ms, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch] = await Promise.all([
+            // Phase 1: Load only the 4 tables needed for public pages (Home, Schedule, Pricing, Location, Counselors)
+            const [cd, cs, sp, fp] = await Promise.all([
               storage.get('camp_content'),
               storage.get('camp_counselors'),
+              storage.get('camp_site_photos'),
+              storage.get('camp_food_photos'),
+            ]);
+            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
+            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
+            if (sp?.[0]?.data) setSitePhotos(sp[0].data);
+            if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
+          } catch (e) { console.error('Phase 1 load error:', e); }
+          setLoading(false);
+
+          // Phase 2: Load remaining 16 tables in background (needed for login, onboarding, admin)
+          try {
+            const [rg, pr, cu, av, ch, ms, ad, as2, cp, cpl, ec, op, acr, pcr, bs, csch] = await Promise.all([
               storage.get('camp_registrations'),
               storage.get('camp_parents'),
               storage.get('camp_counselor_users'),
@@ -2604,8 +2625,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_assignments'),
               storage.get('camp_campers'),
               storage.get('camp_camper_parent_links'),
-              storage.get('camp_food_photos'),
-              storage.get('camp_site_photos'),
               storage.get('camp_emergency_contacts'),
               storage.get('camp_onboarding_progress'),
               storage.get('camp_availability_change_requests'),
@@ -2613,8 +2632,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_blocked_sessions'),
               storage.get('camp_counselor_schedule'),
             ]);
-            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
-            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
             if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
             if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
@@ -2625,16 +2642,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
-            if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
-            if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
             if (op?.[0]?.data) setOnboardingProgress(op[0].data || {});
             if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
             if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
-          } catch (e) { console.error('Load error:', e); }
-          setLoading(false);
+          } catch (e) { console.error('Phase 2 load error:', e); }
+          setBackgroundLoaded(true);
         };
         load();
       }, []);
@@ -4109,6 +4124,11 @@ As a 1099 contractor, you are responsible for:
 
         // Handle Google Sign-In — look up the Google email in existing accounts
         const handleGoogleCredential = (googleEmail, googleName) => {
+          // Guard: Phase 2 data (admins, parents, counselorUsers) must be loaded for Google login
+          if (!backgroundLoaded) {
+            setError('Still loading account data. Please try again in a moment.');
+            return;
+          }
           // Check admins
           const admin = admins.find(a => a.username?.toLowerCase() === googleEmail || a.email?.toLowerCase() === googleEmail);
           if (admin) {
@@ -4204,6 +4224,7 @@ As a 1099 contractor, you are responsible for:
 
         // Show parent onboarding wizard
         if (mode === 'onboardParent') {
+          if (!backgroundLoaded) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="animate-spin text-4xl inline-block mb-2">🏀</div><p className="text-gray-600">Setting up...</p></div></div>;
           return (
             <ParentOnboarding
               onComplete={(newUser) => {
@@ -4231,6 +4252,7 @@ As a 1099 contractor, you are responsible for:
 
         // Show counselor onboarding wizard
         if (mode === 'onboardCounselor') {
+          if (!backgroundLoaded) return <div className="min-h-screen bg-green-50 flex items-center justify-center"><div className="text-center"><div className="animate-spin text-4xl inline-block mb-2">🏀</div><p className="text-gray-600">Setting up...</p></div></div>;
           return (
             <CounselorOnboarding
               onComplete={(newUser) => {
