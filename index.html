@@ -39,9 +39,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.167";
+    const VERSION = "13.169";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-19T21:28:00");
+    const BUILD_DATE = new Date("2026-02-19T23:12:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -2605,6 +2605,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       useEffect(() => {
         const load = async () => {
           setLoading(true);
+          // Safety timeout: show page with defaults after 5 seconds even if DB is slow/down
+          const safetyTimer = setTimeout(() => {
+            setLoading(false);
+            console.warn('⏱️ [TIMEOUT] Database took too long — showing page with default content');
+          }, 5000);
           try {
             // Phase 1: Load only the 4 tables needed for public pages (Home, Schedule, Pricing, Location, Counselors)
             const [cd, cs, sp, fp] = await Promise.all([
@@ -2618,6 +2623,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Phase 1 load error:', e); }
+          clearTimeout(safetyTimer);
           console.log('⏱️ [STEP 4] Phase 1 DB loaded (4 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms');
           setLoading(false);
 
@@ -4161,12 +4167,14 @@ As a 1099 contractor, you are responsible for:
           setLoginLoading(true);
           setError('');
           try {
+            const loginStart = performance.now();
             const res = await fetch('/.netlify/functions/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email, password })
             });
             const data = await res.json();
+            console.log('⏱️ [LOGIN] API call took: ' + (performance.now() - loginStart).toFixed(0) + 'ms');
             if (res.ok && data.success) {
               sessionStorage.setItem('user', JSON.stringify(data.user));
               const role = data.user.role;

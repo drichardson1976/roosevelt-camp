@@ -19,17 +19,20 @@
 </head>
 <body>
   <div id="root"></div>
-  
+
+  <script>window.__t0 = performance.now(); console.log('⏱️ [ADMIN STEP 1] HTML parsed, starting script downloads...');</script>
   <script src="config.js"></script>
   <script src="release-notes.js"></script>
   <script src="utils.js"></script>
+  <script>window.__t1 = performance.now(); console.log('⏱️ [ADMIN STEP 2] All scripts downloaded: ' + (window.__t1 - window.__t0).toFixed(0) + 'ms');</script>
   <script type="text/babel">
+    console.log('⏱️ [ADMIN STEP 3] Babel compiled + React starting: ' + (performance.now() - window.__t0).toFixed(0) + 'ms (Babel took ' + (performance.now() - window.__t1).toFixed(0) + 'ms)');
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.166";
+    const VERSION = "13.168";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-18T23:30:00");
+    const BUILD_DATE = new Date("2026-02-19T23:12:00");
 
     // ==================== CONSTANTS ====================
 
@@ -6188,20 +6191,44 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       useEffect(() => {
         const load = async () => {
           setLoading(true);
+          // Safety timeout: show page with defaults after 5 seconds even if DB is slow/down
+          const safetyTimer = setTimeout(() => {
+            setLoading(false);
+            console.warn('⏱️ [TIMEOUT] Database took too long — showing page with default content');
+          }, 5000);
+
+          const dbStart = performance.now();
           try {
-            // Parallel fetch all tables at once for faster loading
-            const [cd, cs, rg, pr, cu, av, ch, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, gr] = await Promise.all([
+            // Phase 1: Core tables for Dashboard, Counselors, Parents, Campers, Registrations (7 tables)
+            const [cd, cs, rg, pr, ad, cp, cpl] = await Promise.all([
               storage.get('camp_content'),
               storage.get('camp_counselors'),
               storage.get('camp_registrations'),
               storage.get('camp_parents'),
+              storage.get('camp_admins'),
+              storage.get('camp_campers'),
+              storage.get('camp_camper_parent_links'),
+            ]);
+            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
+            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
+            if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
+            if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
+            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
+            if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
+            if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
+          } catch (e) { console.error('Phase 1 load error:', e); }
+          clearTimeout(safetyTimer);
+          console.log('⏱️ [ADMIN STEP 4] Phase 1 loaded (7 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms (DB took ' + (performance.now() - dbStart).toFixed(0) + 'ms)');
+          setLoading(false);
+
+          // Phase 2: Remaining 13 tables loaded in background
+          const phase2Start = performance.now();
+          try {
+            const [cu, av, ch, as2, fp, sp, ec, op, acr, pcr, bs, csch, gr] = await Promise.all([
               storage.get('camp_counselor_users'),
               storage.get('camp_counselor_availability'),
               storage.get('camp_change_history'),
-              storage.get('camp_admins'),
               storage.get('camp_assignments'),
-              storage.get('camp_campers'),
-              storage.get('camp_camper_parent_links'),
               storage.get('camp_food_photos'),
               storage.get('camp_site_photos'),
               storage.get('camp_emergency_contacts'),
@@ -6212,17 +6239,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_counselor_schedule'),
               storage.get('camp_gym_rentals'),
             ]);
-            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
-            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
-            if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
             if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             if (av?.[0]?.data) setAvailability(av[0].data);
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
-            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
             if (as2?.[0]?.data) setAssignments(as2[0].data);
-            if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
-            if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
@@ -6232,8 +6252,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
             if (gr?.[0]?.data) setGymRentals(typeof gr[0].data === 'object' && !Array.isArray(gr[0].data) ? gr[0].data : {});
-          } catch (e) { console.error('Load error:', e); }
-          setLoading(false);
+          } catch (e) { console.error('Phase 2 load error:', e); }
+          console.log('⏱️ [ADMIN STEP 5] Phase 2 loaded (13 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms (DB took ' + (performance.now() - phase2Start).toFixed(0) + 'ms) — all data ready');
         };
         load();
       }, []);

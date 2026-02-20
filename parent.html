@@ -27,9 +27,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.166";
+    const VERSION = "13.170";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-18T23:30:00");
+    const BUILD_DATE = new Date("2026-02-19T23:12:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -2627,6 +2627,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       useEffect(() => {
         const load = async () => {
           setLoading(true);
+          // Safety timeout — show page with defaults if DB takes too long
+          const safetyTimer = setTimeout(() => {
+            setLoading(false);
+            console.warn('⏱️ [TIMEOUT] Database took too long — showing page with default content');
+          }, 5000);
           try {
             // Parallel fetch all tables at once for faster loading
             const [cd, cs, rg, pr, cu, av, ch, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, campDatesData, gr, cecl] = await Promise.all([
@@ -2694,6 +2699,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               }
             }
           } catch (e) { console.error('Load error:', e); }
+          clearTimeout(safetyTimer);
           setLoading(false);
         };
         load();
