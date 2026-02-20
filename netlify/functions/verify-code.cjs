@@ -1,4 +1,4 @@
-const { sanitizeString } = require('./utils/validation');
+const { sanitizeString } = require('./utils/validation.cjs');
 
 const ALLOWED_ORIGINS = [
   'https://rhsbasketballdaycamp.com',

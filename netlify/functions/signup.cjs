@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { sanitizeString, isValidEmail } = require('./utils/validation');
+const { sanitizeString, isValidEmail } = require('./utils/validation.cjs');
 
 const ALLOWED_ORIGINS = [
   'https://rhsbasketballdaycamp.com',

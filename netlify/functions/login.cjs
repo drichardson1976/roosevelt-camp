@@ -1,6 +1,6 @@
 const bcrypt = require('bcryptjs');
-const { checkRateLimit, getClientIp } = require('./utils/rate-limiter');
-const { sanitizeString, isValidEmail } = require('./utils/validation');
+const { checkRateLimit, getClientIp } = require('./utils/rate-limiter.cjs');
+const { sanitizeString, isValidEmail } = require('./utils/validation.cjs');
 
 const ALLOWED_ORIGINS = [
   'https://rhsbasketballdaycamp.com',

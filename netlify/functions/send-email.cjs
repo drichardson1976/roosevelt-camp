@@ -1,4 +1,4 @@
-const { sanitizeString, isValidEmail } = require('./utils/validation');
+const { sanitizeString, isValidEmail } = require('./utils/validation.cjs');
 
 const CAMP_EMAIL = 'rhsdaycamp@gmail.com';
 

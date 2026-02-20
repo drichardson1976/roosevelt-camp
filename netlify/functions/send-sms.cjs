@@ -1,4 +1,4 @@
-const { sanitizeString, isValidPhone } = require('./utils/validation');
+const { sanitizeString, isValidPhone } = require('./utils/validation.cjs');
 
 const ALLOWED_ORIGINS = [
   'https://rhsbasketballdaycamp.com',

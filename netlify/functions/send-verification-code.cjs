@@ -1,5 +1,5 @@
-const { checkRateLimit, getClientIp } = require('./utils/rate-limiter');
-const { isValidPhone } = require('./utils/validation');
+const { checkRateLimit, getClientIp } = require('./utils/rate-limiter.cjs');
+const { isValidPhone } = require('./utils/validation.cjs');
 
 const ALLOWED_ORIGINS = [
   'https://rhsbasketballdaycamp.com',
