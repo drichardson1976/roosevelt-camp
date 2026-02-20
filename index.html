@@ -2614,10 +2614,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_food_photos'),
             ]);
             if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
-            if (cs?.[0]?.data) {
-              const counselorData = Array.isArray(cs[0].data) ? cs[0].data : [];
-              setCounselors(counselorData.filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
-            }
+            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Phase 1 load error:', e); }
@@ -3401,8 +3398,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
-                    src={mapsEmbedUrl}
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2685.4!2d-122.3149!3d47.6776!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x54901456b6563b6b%3A0xec8758cec9df5e58!2sRoosevelt%20High%20School!5e0!3m2!1sen!2sus"
                     allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    loading="lazy"
                   />
                 </div>
 
