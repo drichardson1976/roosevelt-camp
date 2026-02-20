@@ -39,9 +39,9 @@
     const { useState, useEffect, useRef, useCallback } = React;
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.166";
+    const VERSION = "13.167";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-18T23:30:00");
+    const BUILD_DATE = new Date("2026-02-19T21:28:00");
 
     // Camp runs specific weeks in July and August 2026:
     // Week 1: July 13-17, 2026
@@ -2614,7 +2614,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_food_photos'),
             ]);
             if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
-            if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
+            if (cs?.[0]?.data) {
+              const counselorData = Array.isArray(cs[0].data) ? cs[0].data : [];
+              setCounselors(counselorData.filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
+            }
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Phase 1 load error:', e); }
@@ -3398,7 +3401,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(content.locationName + ' ' + fullAddress)}&output=embed`}
+                    src={mapsEmbedUrl}
                     allowFullScreen
                   />
                 </div>
