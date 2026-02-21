@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.166";
-    const BUILD_DATE = new Date("2026-02-18T23:30:00");
+    const VERSION = "13.173";
+    const BUILD_DATE = new Date("2026-02-20T16:47:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -297,13 +297,13 @@
           { name: 'Maya Johnson', birthdate: '2018-09-03', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Karen Johnson', phone: '(206) 555-1002', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'mike@msn.com', name: 'Mike Chen', phone: '(206) 555-2001', password: 'camp',
         campers: [{ name: 'Ethan Chen', birthdate: '2015-01-22', grade: '6', phone: '(206) 555-2003' }],
         emergencyContacts: [{ name: 'David Chen', phone: '(206) 555-2002', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK2], sessions: ['morning'] },
+        registration: { weeks: [WEEK2], sessions: ['morning'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'lisa@msn.com', name: 'Lisa Williams', phone: '(206) 555-3001', password: 'camp',
@@ -316,7 +316,7 @@
           { name: 'Amy Martinez', phone: '(206) 555-3002', relationship: 'Other', otherRelationship: 'Neighbor' },
           { name: 'Robert Williams', phone: '(206) 555-3003', relationship: 'Grandparent' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'maria@msn.com', name: 'Maria Garcia', phone: '(206) 555-4001', password: 'camp',
@@ -325,13 +325,13 @@
           { name: 'Lucas Garcia', birthdate: '2018-02-14', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Rosa Garcia', phone: '(206) 555-4002', relationship: 'Other', otherRelationship: 'Aunt' }],
-        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'jennifer@msn.com', name: 'Jennifer Park', phone: '(206) 555-5001', password: 'camp',
         campers: [{ name: 'Ryan Park', birthdate: '2015-12-01', grade: '6', phone: '(206) 555-5003' }],
         emergencyContacts: [{ name: 'James Park', phone: '(206) 555-5002', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK1], sessions: ['afternoon'], status: 'cancelled', paymentStatus: 'unpaid' },
       },
       {
         email: 'derek.richardson@gmail.com', name: 'Derek Richardson', phone: '(206) 555-6001', password: 'camp',
@@ -339,14 +339,14 @@
           { name: 'Dylan Richardson', birthdate: '2014-09-15', grade: '7', phone: '(206) 555-6002' },
         ],
         emergencyContacts: [{ name: 'Sarah Richardson', phone: '(206) 555-6003', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       // --- Parents 7-50 (auto-generated test data) ---
       {
         email: 'amanda@msn.com', name: 'Amanda Thompson', phone: '(206) 555-7001', password: 'camp',
         campers: [{ name: 'Chloe Thompson', birthdate: '2016-03-14', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Bill Thompson', phone: '(206) 555-7002', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'brian@msn.com', name: 'Brian Davis', phone: '(206) 555-7003', password: 'camp',
@@ -355,13 +355,13 @@
           { name: 'Emma Davis', birthdate: '2017-11-08', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Nancy Davis', phone: '(206) 555-7004', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1], sessions: ['morning'] },
+        registration: { weeks: [WEEK1], sessions: ['morning'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'christina@msn.com', name: 'Christina Brown', phone: '(206) 555-7005', password: 'camp',
         campers: [{ name: 'Olivia Brown', birthdate: '2018-01-30', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'Tom Brown', phone: '(206) 555-7006', relationship: 'Parent' }],
-        registration: { weeks: [WEEK2, WEEK3], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'daniel@msn.com', name: 'Daniel Wilson', phone: '(206) 555-7007', password: 'camp',
@@ -374,13 +374,13 @@
           { name: 'Helen Wilson', phone: '(206) 555-7008', relationship: 'Grandparent' },
           { name: 'Steve Wilson', phone: '(206) 555-7010', relationship: 'Other', otherRelationship: 'Uncle' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'emily@msn.com', name: 'Emily Martinez', phone: '(206) 555-7011', password: 'camp',
         campers: [{ name: 'Sebastian Martinez', birthdate: '2015-10-03', grade: '6', phone: '' }],
         emergencyContacts: [{ name: 'Carlos Martinez', phone: '(206) 555-7012', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'frank@msn.com', name: 'Frank Anderson', phone: '(206) 555-7013', password: 'camp',
@@ -389,13 +389,13 @@
           { name: 'Zoe Anderson', birthdate: '2018-06-19', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Linda Anderson', phone: '(206) 555-7014', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK4], sessions: ['morning'] },
+        registration: { weeks: [WEEK4], sessions: ['morning'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'grace@msn.com', name: 'Grace Taylor', phone: '(206) 555-7015', password: 'camp',
         campers: [{ name: 'Aiden Taylor', birthdate: '2017-04-23', grade: '4', phone: '' }],
         emergencyContacts: [{ name: 'Robert Taylor', phone: '(206) 555-7016', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'henry@msn.com', name: 'Henry Lee', phone: '(206) 555-7017', password: 'camp',
@@ -404,13 +404,13 @@
           { name: 'Sophia Lee', birthdate: '2018-03-02', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Mary Lee', phone: '(206) 555-7018', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'isabelle@msn.com', name: 'Isabelle Harris', phone: '(206) 555-7020', password: 'camp',
         campers: [{ name: 'Ella Harris', birthdate: '2016-06-11', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Janet Harris', phone: '(206) 555-7021', relationship: 'Other', otherRelationship: 'Aunt' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'jason@msn.com', name: 'Jason Clark', phone: '(206) 555-7022', password: 'camp',
@@ -419,13 +419,13 @@
           { name: 'Lily Clark', birthdate: '2017-07-16', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Patricia Clark', phone: '(206) 555-7023', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK4], sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'karen@msn.com', name: 'Karen Lewis', phone: '(206) 555-7024', password: 'camp',
         campers: [{ name: 'Owen Lewis', birthdate: '2018-09-05', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'George Lewis', phone: '(206) 555-7025', relationship: 'Parent' }],
-        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'larry@msn.com', name: 'Larry Robinson', phone: '(206) 555-7026', password: 'camp',
@@ -438,13 +438,13 @@
           { name: 'Diane Robinson', phone: '(206) 555-7027', relationship: 'Grandparent' },
           { name: 'Mark Robinson', phone: '(206) 555-7028', relationship: 'Other', otherRelationship: 'Neighbor' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'michelle@msn.com', name: 'Michelle Walker', phone: '(206) 555-7029', password: 'camp',
         campers: [{ name: 'Leo Walker', birthdate: '2016-01-09', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Paul Walker', phone: '(206) 555-7030', relationship: 'Parent' }],
-        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning'] },
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning'], status: 'cancelled', paymentStatus: 'unpaid' },
       },
       {
         email: 'nathan@msn.com', name: 'Nathan Hall', phone: '(206) 555-7031', password: 'camp',
@@ -453,13 +453,13 @@
           { name: 'Aria Hall', birthdate: '2016-04-17', grade: '5', phone: '' },
         ],
         emergencyContacts: [{ name: 'Ruth Hall', phone: '(206) 555-7032', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK2], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'olivia@msn.com', name: 'Olivia Young', phone: '(206) 555-7034', password: 'camp',
         campers: [{ name: 'Logan Young', birthdate: '2017-12-03', grade: '4', phone: '' }],
         emergencyContacts: [{ name: 'Betty Young', phone: '(206) 555-7035', relationship: 'Other', otherRelationship: 'Aunt' }],
-        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'peter@msn.com', name: 'Peter King', phone: '(206) 555-7036', password: 'camp',
@@ -468,13 +468,13 @@
           { name: 'Nora King', birthdate: '2018-11-15', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Dorothy King', phone: '(206) 555-7037', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'rachel@msn.com', name: 'Rachel Wright', phone: '(206) 555-7038', password: 'camp',
         campers: [{ name: 'Isaac Wright', birthdate: '2016-10-21', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Sam Wright', phone: '(206) 555-7039', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'steve@msn.com', name: 'Steve Lopez', phone: '(206) 555-7040', password: 'camp',
@@ -483,13 +483,13 @@
           { name: 'Camila Lopez', birthdate: '2017-09-14', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Rosa Lopez', phone: '(206) 555-7041', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning'] },
+        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'tina@msn.com', name: 'Tina Scott', phone: '(206) 555-7042', password: 'camp',
         campers: [{ name: 'Hannah Scott', birthdate: '2018-05-26', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'Kevin Scott', phone: '(206) 555-7043', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'victor@msn.com', name: 'Victor Green', phone: '(206) 555-7044', password: 'camp',
@@ -502,13 +502,13 @@
           { name: 'Barbara Green', phone: '(206) 555-7045', relationship: 'Grandparent' },
           { name: 'Tim Green', phone: '(206) 555-7047', relationship: 'Other', otherRelationship: 'Neighbor' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'wendy@msn.com', name: 'Wendy Adams', phone: '(206) 555-7048', password: 'camp',
         campers: [{ name: 'Violet Adams', birthdate: '2016-07-13', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Charles Adams', phone: '(206) 555-7049', relationship: 'Parent' }],
-        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK3], sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'xavier@msn.com', name: 'Xavier Nelson', phone: '(206) 555-7050', password: 'camp',
@@ -517,13 +517,13 @@
           { name: 'Iris Nelson', birthdate: '2017-02-22', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Gloria Nelson', phone: '(206) 555-7051', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'yvonne@msn.com', name: 'Yvonne Carter', phone: '(206) 555-7052', password: 'camp',
         campers: [{ name: 'Miles Carter', birthdate: '2015-04-16', grade: '6', phone: '' }],
         emergencyContacts: [{ name: 'Frank Carter', phone: '(206) 555-7053', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning'] },
+        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'zach@msn.com', name: 'Zach Mitchell', phone: '(206) 555-7054', password: 'camp',
@@ -532,13 +532,13 @@
           { name: 'Piper Mitchell', birthdate: '2018-08-10', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Sandra Mitchell', phone: '(206) 555-7055', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK4], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK1, WEEK4], sessions: ['afternoon'], status: 'cancelled', paymentStatus: 'unpaid' },
       },
       {
         email: 'angela@msn.com', name: 'Angela Perez', phone: '(206) 555-7056', password: 'camp',
         campers: [{ name: 'Mateo Perez', birthdate: '2017-01-18', grade: '4', phone: '' }],
         emergencyContacts: [{ name: 'Carmen Perez', phone: '(206) 555-7057', relationship: 'Other', otherRelationship: 'Aunt' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'brett@msn.com', name: 'Brett Roberts', phone: '(206) 555-7058', password: 'camp',
@@ -547,13 +547,13 @@
           { name: 'Scarlett Roberts', birthdate: '2016-02-28', grade: '5', phone: '' },
         ],
         emergencyContacts: [{ name: 'Donna Roberts', phone: '(206) 555-7059', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'catherine@msn.com', name: 'Catherine Turner', phone: '(206) 555-7061', password: 'camp',
         campers: [{ name: 'Stella Turner', birthdate: '2018-04-05', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'Edward Turner', phone: '(206) 555-7062', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1], sessions: ['morning'] },
+        registration: { weeks: [WEEK1], sessions: ['morning'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'dennis@msn.com', name: 'Dennis Phillips', phone: '(206) 555-7063', password: 'camp',
@@ -566,13 +566,13 @@
           { name: 'Sharon Phillips', phone: '(206) 555-7064', relationship: 'Grandparent' },
           { name: 'Wayne Phillips', phone: '(206) 555-7065', relationship: 'Other', otherRelationship: 'Neighbor' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'erica@msn.com', name: 'Erica Campbell', phone: '(206) 555-7066', password: 'camp',
         campers: [{ name: 'Paisley Campbell', birthdate: '2016-08-21', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Howard Campbell', phone: '(206) 555-7067', relationship: 'Parent' }],
-        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK2], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'fred@msn.com', name: 'Fred Parker', phone: '(206) 555-7068', password: 'camp',
@@ -581,13 +581,13 @@
           { name: 'Hazel Parker', birthdate: '2017-08-19', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Joan Parker', phone: '(206) 555-7069', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK3], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'gina@msn.com', name: 'Gina Evans', phone: '(206) 555-7070', password: 'camp',
         campers: [{ name: 'Everett Evans', birthdate: '2018-10-16', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'Roy Evans', phone: '(206) 555-7071', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'harold@msn.com', name: 'Harold Edwards', phone: '(206) 555-7072', password: 'camp',
@@ -596,13 +596,13 @@
           { name: 'Willow Edwards', birthdate: '2018-01-14', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Martha Edwards', phone: '(206) 555-7073', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning'] },
+        registration: { weeks: [WEEK2, WEEK3], sessions: ['morning'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'irene@msn.com', name: 'Irene Collins', phone: '(206) 555-7074', password: 'camp',
         campers: [{ name: 'Emery Collins', birthdate: '2016-03-08', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Albert Collins', phone: '(206) 555-7075', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'jeff@msn.com', name: 'Jeff Stewart', phone: '(206) 555-7076', password: 'camp',
@@ -611,13 +611,13 @@
           { name: 'Penelope Stewart', birthdate: '2016-06-10', grade: '5', phone: '' },
         ],
         emergencyContacts: [{ name: 'Carol Stewart', phone: '(206) 555-7077', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK3, WEEK4], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK3, WEEK4], sessions: ['afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'kelly@msn.com', name: 'Kelly Sanchez', phone: '(206) 555-7079', password: 'camp',
         campers: [{ name: 'Ezra Sanchez', birthdate: '2017-11-07', grade: '4', phone: '' }],
         emergencyContacts: [{ name: 'Miguel Sanchez', phone: '(206) 555-7080', relationship: 'Other', otherRelationship: 'Uncle' }],
-        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning'] },
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'laura@msn.com', name: 'Laura Morris', phone: '(206) 555-7081', password: 'camp',
@@ -626,13 +626,13 @@
           { name: 'Nova Morris', birthdate: '2017-07-31', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Virginia Morris', phone: '(206) 555-7082', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'marcus@msn.com', name: 'Marcus Rogers', phone: '(206) 555-7083', password: 'camp',
         campers: [{ name: 'Kai Rogers', birthdate: '2016-05-14', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Evelyn Rogers', phone: '(206) 555-7084', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK3], sessions: ['morning', 'afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'nicole@msn.com', name: 'Nicole Reed', phone: '(206) 555-7085', password: 'camp',
@@ -645,13 +645,13 @@
           { name: 'Shirley Reed', phone: '(206) 555-7086', relationship: 'Grandparent' },
           { name: 'Dave Reed', phone: '(206) 555-7087', relationship: 'Other', otherRelationship: 'Uncle' },
         ],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'oscar@msn.com', name: 'Oscar Cook', phone: '(206) 555-7088', password: 'camp',
         campers: [{ name: 'Felix Cook', birthdate: '2017-09-09', grade: '4', phone: '' }],
         emergencyContacts: [{ name: 'Lois Cook', phone: '(206) 555-7089', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK4], sessions: ['morning'] },
+        registration: { weeks: [WEEK4], sessions: ['morning'], status: 'cancelled', paymentStatus: 'unpaid' },
       },
       {
         email: 'paula@msn.com', name: 'Paula Morgan', phone: '(206) 555-7090', password: 'camp',
@@ -660,13 +660,13 @@
           { name: 'Clara Morgan', birthdate: '2018-07-03', grade: '3', phone: '' },
         ],
         emergencyContacts: [{ name: 'Judy Morgan', phone: '(206) 555-7091', relationship: 'Other', otherRelationship: 'Aunt' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2, WEEK3], sessions: ['afternoon'], status: 'approved', paymentStatus: 'sent' },
       },
       {
         email: 'quincy@msn.com', name: 'Quincy Bell', phone: '(206) 555-7093', password: 'camp',
         campers: [{ name: 'Beckett Bell', birthdate: '2016-02-10', grade: '5', phone: '' }],
         emergencyContacts: [{ name: 'Norma Bell', phone: '(206) 555-7094', relationship: 'Parent' }],
-        registration: { weeks: [WEEK2, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK2, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
       {
         email: 'rosa@msn.com', name: 'Rosa Murphy', phone: '(206) 555-7095', password: 'camp',
@@ -675,13 +675,13 @@
           { name: 'Athena Murphy', birthdate: '2017-03-15', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Joe Murphy', phone: '(206) 555-7096', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'unpaid' },
       },
       {
         email: 'scott@msn.com', name: 'Scott Bailey', phone: '(206) 555-7097', password: 'camp',
         campers: [{ name: 'Jasper Bailey', birthdate: '2018-12-28', grade: '3', phone: '' }],
         emergencyContacts: [{ name: 'Faye Bailey', phone: '(206) 555-7098', relationship: 'Other', otherRelationship: 'Neighbor' }],
-        registration: { weeks: [WEEK3], sessions: ['afternoon'] },
+        registration: { weeks: [WEEK3], sessions: ['afternoon'], status: 'pending', paymentStatus: 'unpaid' },
       },
       {
         email: 'teresa@msn.com', name: 'Teresa Rivera', phone: '(206) 555-7099', password: 'camp',
@@ -690,7 +690,7 @@
           { name: 'Jade Rivera', birthdate: '2017-12-22', grade: '4', phone: '' },
         ],
         emergencyContacts: [{ name: 'Antonio Rivera', phone: '(206) 555-7100', relationship: 'Grandparent' }],
-        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'] },
+        registration: { weeks: [WEEK1, WEEK2], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
       },
     ];
 
@@ -900,10 +900,12 @@
 
       // 4. Register campers for sessions (if specified)
       if (profile.registration) {
+        const regStatus = profile.registration.status || 'pending';
+        const regPayment = profile.registration.paymentStatus || 'unpaid';
         let rc = 0; const oid = `order_seed_${ts}`;
         for (const camper of newCampers) for (const date of profile.registration.weeks.flat()) {
           const rid = `reg_seed_${ts}_${rc++}`;
-          await storage.set('camp_registrations', rid, { id: rid, orderId: oid, childId: camper.id, childName: camper.name, parentEmail: profile.email, parentName: profile.name, date, sessions: profile.registration.sessions, status: 'pending', paymentStatus: 'unpaid', venmoCode: 'SEED000', baseAmount: profile.registration.sessions.length * 60, discountAmount: 0, discountPercent: 0, totalAmount: profile.registration.sessions.length * 60, registeredAt: now });
+          await storage.set('camp_registrations', rid, { id: rid, orderId: oid, childId: camper.id, childName: camper.name, parentEmail: profile.email, parentName: profile.name, date, sessions: profile.registration.sessions, status: regStatus, paymentStatus: regPayment, venmoCode: 'SEED000', baseAmount: profile.registration.sessions.length * 60, discountAmount: 0, discountPercent: 0, totalAmount: profile.registration.sessions.length * 60, registeredAt: now });
         }
       }
 
@@ -2088,29 +2090,43 @@
         } catch (e) { showSeedMsg(`Error: ${e.message}`, 'error'); }
         setSeedLoading(prev => ({ ...prev, [profile.email]: false }));
       };
-      const addAllSeeds = async () => {
-        setSeedLoading({ __all: true });
+      const addAllParents = async () => {
+        setSeedLoading({ __allParents: true });
         let added = 0;
         for (const p of PARENT_PROFILES) {
           if (!parentStatus[p.email]) { try { await seedAddParent(p); added++; } catch (e) { console.error(e); } }
         }
-        for (const c of COUNSELOR_PROFILES) {
-          if (!counselorStatus[c.email]) { try { await seedAddCounselor(c); added++; } catch (e) { console.error(e); } }
-        }
-        showSeedMsg(`Added ${added} user(s)`);
+        showSeedMsg(`Added ${added} parent(s)`);
         await checkSeedStatus();
         setSeedLoading({});
       };
-      const removeAllSeeds = async () => {
-        setSeedLoading({ __all: true });
+      const removeAllParents = async () => {
+        setSeedLoading({ __allParents: true });
         let removed = 0;
         for (const p of PARENT_PROFILES) {
           if (parentStatus[p.email]) { try { await seedRemoveParent(p); removed++; } catch (e) { console.error(e); } }
         }
+        showSeedMsg(`Removed ${removed} parent(s)`);
+        await checkSeedStatus();
+        setSeedLoading({});
+      };
+      const addAllCounselors = async () => {
+        setSeedLoading({ __allCounselors: true });
+        let added = 0;
+        for (const c of COUNSELOR_PROFILES) {
+          if (!counselorStatus[c.email]) { try { await seedAddCounselor(c); added++; } catch (e) { console.error(e); } }
+        }
+        showSeedMsg(`Added ${added} counselor(s)`);
+        await checkSeedStatus();
+        setSeedLoading({});
+      };
+      const removeAllCounselors = async () => {
+        setSeedLoading({ __allCounselors: true });
+        let removed = 0;
         for (const c of COUNSELOR_PROFILES) {
           if (counselorStatus[c.email]) { try { await seedRemoveCounselor(c); removed++; } catch (e) { console.error(e); } }
         }
-        showSeedMsg(`Removed ${removed} user(s)`);
+        showSeedMsg(`Removed ${removed} counselor(s)`);
         await checkSeedStatus();
         setSeedLoading({});
       };
@@ -2164,9 +2180,9 @@
       // Seed stats
       const totalParentsIn = Object.values(parentStatus).filter(Boolean).length;
       const totalCounselorsIn = Object.values(counselorStatus).filter(Boolean).length;
-      const totalSeedIn = totalParentsIn + totalCounselorsIn;
-      const totalSeedUsers = PARENT_PROFILES.length + COUNSELOR_PROFILES.length;
-      const isSeedAllLoading = seedLoading.__all;
+      const isParentsLoading = !!seedLoading.__allParents;
+      const isCounselorsLoading = !!seedLoading.__allCounselors;
+      const isSeedAllLoading = isParentsLoading || isCounselorsLoading;
 
       if (isBlocked) {
         return (
@@ -2194,7 +2210,7 @@
 
           {/* Header */}
           <div className="bg-green-900 text-white py-6 px-6">
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
               <div>
                 <h1 className="font-display text-4xl tracking-wide">Roosevelt Camp Test Suite</h1>
                 <p className="text-green-300 text-sm mt-1">Tests, flow validation, and seed user management</p>
@@ -2207,7 +2223,7 @@
 
           {/* Summary bar */}
           <div className={`py-3 px-6 border-b ${allDone ? (allPassed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200') : 'bg-white border-gray-200'}`}>
-            <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="max-w-7xl mx-auto flex items-center justify-between">
               <div className="flex items-center gap-6">
                 <div className="text-sm">
                   <span className="font-bold text-gray-800">{totalTests}</span> <span className="text-gray-500">total tests</span>
@@ -2269,211 +2285,224 @@
             </div>
           </div>
 
-          {/* ==================== SEED USERS ==================== */}
-          <div className="max-w-4xl mx-auto px-6 pt-6">
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">Seed Users</h2>
-              <p className="text-sm text-gray-500 mb-3">Pre-built parent and counselor profiles. Click Add to populate the dev database.</p>
+          {/* ==================== SEED USERS (Side-by-Side) ==================== */}
+          <div className="max-w-7xl mx-auto px-6 pt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Seed Users</h2>
+                <p className="text-sm text-gray-500">Pre-built parent and counselor profiles. Click Add to populate the dev database.</p>
+              </div>
+              <button onClick={checkSeedStatus} disabled={isSeedAllLoading}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+                {seedChecking ? 'Checking...' : 'Refresh All'}
+              </button>
             </div>
 
-            <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between px-5 py-3 bg-gray-50 border-b">
-                <div className="text-sm text-gray-600">
-                  <span className="font-bold text-gray-800">{totalSeedIn}/{totalSeedUsers}</span> users in database
-                  {seedChecking && <span className="text-gray-400 ml-2">(checking...)</span>}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* ===== LEFT PANEL: Parents ===== */}
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col">
+                <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-gray-50 border-b">
+                  <div className="text-sm text-gray-600">
+                    <span className="text-base mr-1">{'\ud83d\udc6a'}</span>
+                    <span className="font-bold text-gray-800">Parents</span>
+                    <span className="ml-2 text-gray-500">{totalParentsIn}/{PARENT_PROFILES.length} in DB</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={addAllParents} disabled={isParentsLoading || totalParentsIn === PARENT_PROFILES.length}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${totalParentsIn === PARENT_PROFILES.length || isParentsLoading ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                      {isParentsLoading ? 'Working...' : 'Add All'}</button>
+                    <button onClick={removeAllParents} disabled={isParentsLoading || totalParentsIn === 0}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${totalParentsIn === 0 || isParentsLoading ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                      Remove All</button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={checkSeedStatus} disabled={isSeedAllLoading}
-                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Refresh</button>
-                  <button onClick={addAllSeeds} disabled={isSeedAllLoading || totalSeedIn === totalSeedUsers}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${totalSeedIn === totalSeedUsers || isSeedAllLoading ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                    {isSeedAllLoading ? 'Working...' : 'Add All'}</button>
-                  <button onClick={removeAllSeeds} disabled={isSeedAllLoading || totalSeedIn === 0}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${totalSeedIn === 0 || isSeedAllLoading ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
-                    Remove All</button>
+                <div className="overflow-y-auto" style={{ maxHeight: '600px' }}>
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b bg-gray-50 text-left">
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs">Name</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs">Email</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs text-center">DB</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs text-right">Action</th>
+                    </tr></thead>
+                    <tbody>
+                      {PARENT_PROFILES.map(p => {
+                        const exists = parentStatus[p.email];
+                        const busy = !!seedLoading[p.email] || isParentsLoading;
+                        const isExpanded = expandedSeed[p.email];
+                        const regStatusLabel = p.registration ? `${p.registration.status || 'pending'}/${p.registration.paymentStatus || 'unpaid'}` : '';
+                        const regStatusColor = !p.registration ? 'text-gray-400' :
+                          p.registration.status === 'cancelled' ? 'text-red-600' :
+                          p.registration.paymentStatus === 'paid' ? 'text-green-600' :
+                          p.registration.paymentStatus === 'sent' ? 'text-blue-600' :
+                          p.registration.status === 'approved' ? 'text-amber-600' : 'text-gray-500';
+                        return (
+                          <React.Fragment key={p.email}>
+                          <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
+                            onClick={() => setExpandedSeed(prev => ({...prev, [p.email]: !prev[p.email]}))}>
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-gray-800 text-xs">
+                                <span className={`inline-block mr-1 text-[10px] transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>{'\u25b6'}</span>
+                                {p.name}
+                              </div>
+                              <div className={`text-[10px] ${regStatusColor}`}>{p.campers.length} camper{p.campers.length !== 1 ? 's' : ''} {'\u00b7'} {regStatusLabel}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="text-gray-500 font-mono text-[10px]">{p.email}</div>
+                            </td>
+                            <td className="px-3 py-2 text-center"><StatusBadge exists={exists} /></td>
+                            <td className="px-3 py-2 text-right" onClick={e => e.stopPropagation()}>
+                              {!exists ? (
+                                <button onClick={() => handleSeedAdd('parent', p)} disabled={busy}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                                  {busy ? '...' : 'Add'}</button>
+                              ) : (
+                                <button onClick={() => handleSeedRemove('parent', p)} disabled={busy}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                                  {busy ? '...' : 'Remove'}</button>
+                              )}
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
+                              <td colSpan="4" className="px-3 py-2">
+                                <div className="ml-4 space-y-1.5 text-xs">
+                                  <div><span className="font-semibold text-gray-700">Phone:</span> <span className="text-gray-600">{p.phone}</span></div>
+                                  <div>
+                                    <span className="font-semibold text-gray-700">Campers:</span>
+                                    <div className="ml-3 mt-0.5 space-y-0.5">
+                                      {p.campers.map((c, i) => (
+                                        <div key={i} className="text-gray-600">{c.name} — Grade {c.grade}{c.phone ? ` — ${c.phone}` : ''}</div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="font-semibold text-gray-700">Emergency:</span>
+                                    <div className="ml-3 mt-0.5 space-y-0.5">
+                                      {p.emergencyContacts.map((ec, i) => (
+                                        <div key={i} className="text-gray-600">{ec.name} — {ec.phone} ({ec.relationship})</div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  {p.registration && (
+                                    <div>
+                                      <span className="font-semibold text-gray-700">Registration:</span>
+                                      <span className="ml-1 text-gray-600">
+                                        {p.registration.weeks.length} wk {'\u00b7'} {p.registration.sessions.join(' + ')} {'\u00b7'} </span>
+                                      <span className={`font-medium ${regStatusColor}`}>{regStatusLabel}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-gray-50 text-left">
-                  <th className="px-5 py-2 text-gray-500 font-medium w-10"></th>
-                  <th className="px-5 py-2 text-gray-500 font-medium">Name</th>
-                  <th className="px-5 py-2 text-gray-500 font-medium hidden sm:table-cell">Email / Password</th>
-                  <th className="px-5 py-2 text-gray-500 font-medium hidden md:table-cell">Details</th>
-                  <th className="px-5 py-2 text-gray-500 font-medium text-center">Status</th>
-                  <th className="px-5 py-2 text-gray-500 font-medium text-right">Action</th>
-                </tr></thead>
-                <tbody>
-                  {PARENT_PROFILES.map(p => {
-                    const exists = parentStatus[p.email];
-                    const busy = !!seedLoading[p.email] || isSeedAllLoading;
-                    const isExpanded = expandedSeed[p.email];
-                    return (
-                      <React.Fragment key={p.email}>
-                      <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
-                        onClick={() => setExpandedSeed(prev => ({...prev, [p.email]: !prev[p.email]}))}>
-                        <td className="px-5 py-2.5 text-lg">{'\ud83d\udc6a'}</td>
-                        <td className="px-5 py-2.5">
-                          <div className="font-medium text-gray-800">
-                            <span className={`inline-block mr-1 text-xs transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>▶</span>
-                            {p.name}
-                          </div>
-                        </td>
-                        <td className="px-5 py-2.5 hidden sm:table-cell">
-                          <div className="text-gray-600 font-mono text-xs">{p.email}</div>
-                          <div className="text-gray-400 font-mono text-xs">{p.password}</div>
-                        </td>
-                        <td className="px-5 py-2.5 text-gray-500 text-xs hidden md:table-cell">
-                          {p.campers.length} camper{p.campers.length > 1 ? 's' : ''}, {p.registration?.weeks?.length || 0} wk
-                        </td>
-                        <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
-                        <td className="px-5 py-2.5 text-right" onClick={e => e.stopPropagation()}>
-                          {!exists ? (
-                            <button onClick={() => handleSeedAdd('parent', p)} disabled={busy}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                              {busy ? '...' : 'Add'}</button>
-                          ) : (
-                            <button onClick={() => handleSeedRemove('parent', p)} disabled={busy}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
-                              {busy ? '...' : 'Remove'}</button>
-                          )}
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
-                          <td colSpan="6" className="px-5 py-3">
-                            <div className="ml-6 space-y-2 text-xs">
-                              <div>
-                                <span className="font-semibold text-gray-700">Phone:</span>
-                                <span className="ml-2 text-gray-600">{p.phone}</span>
+
+              {/* ===== RIGHT PANEL: Counselors ===== */}
+              <div className="bg-white rounded-xl border shadow-sm overflow-hidden flex flex-col">
+                <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-gray-50 border-b">
+                  <div className="text-sm text-gray-600">
+                    <span className="text-base mr-1">{'\ud83c\udfc0'}</span>
+                    <span className="font-bold text-gray-800">Counselors</span>
+                    <span className="ml-2 text-gray-500">{totalCounselorsIn}/{COUNSELOR_PROFILES.length} in DB</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <button onClick={addAllCounselors} disabled={isCounselorsLoading || totalCounselorsIn === COUNSELOR_PROFILES.length}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${totalCounselorsIn === COUNSELOR_PROFILES.length || isCounselorsLoading ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                      {isCounselorsLoading ? 'Working...' : 'Add All'}</button>
+                    <button onClick={removeAllCounselors} disabled={isCounselorsLoading || totalCounselorsIn === 0}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${totalCounselorsIn === 0 || isCounselorsLoading ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                      Remove All</button>
+                  </div>
+                </div>
+                <div className="overflow-y-auto" style={{ maxHeight: '600px' }}>
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b bg-gray-50 text-left">
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs">Name</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs">Email</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs text-center">DB</th>
+                      <th className="px-3 py-1.5 text-gray-500 font-medium text-xs text-right">Action</th>
+                    </tr></thead>
+                    <tbody>
+                      {COUNSELOR_PROFILES.map(c => {
+                        const exists = counselorStatus[c.email];
+                        const busy = !!seedLoading[c.email] || isCounselorsLoading;
+                        const photoSrc = COUNSELOR_PHOTOS[c.id] || null;
+                        const isExpanded = expandedSeed[c.email];
+                        const availDays = c.availability ? Object.keys(c.availability).length : 0;
+                        return (
+                          <React.Fragment key={c.email}>
+                          <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
+                            onClick={() => setExpandedSeed(prev => ({...prev, [c.email]: !prev[c.email]}))}>
+                            <td className="px-3 py-2">
+                              <div className="font-medium text-gray-800 text-xs flex items-center gap-1.5">
+                                <span className={`inline-block text-[10px] transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>{'\u25b6'}</span>
+                                {photoSrc ? <img src={photoSrc} className="w-5 h-5 rounded-full object-cover" /> : null}
+                                {c.name}
                               </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Campers:</span>
-                                <div className="ml-4 mt-1 space-y-1">
-                                  {p.campers.map((c, i) => (
-                                    <div key={i} className="flex gap-4 text-gray-600">
-                                      <span className="font-medium">{c.name}</span>
-                                      <span>Grade {c.grade}</span>
-                                      <span>DOB: {c.birthdate}</span>
-                                      <span>{c.phone}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Emergency Contacts:</span>
-                                <div className="ml-4 mt-1 space-y-1">
-                                  {p.emergencyContacts.map((ec, i) => (
-                                    <div key={i} className="text-gray-600">
-                                      {ec.name} — {ec.phone} ({ec.relationship})
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              {p.registration && (
-                                <div>
-                                  <span className="font-semibold text-gray-700">Registration:</span>
-                                  <span className="ml-2 text-gray-600">
-                                    {p.registration.weeks.length} week{p.registration.weeks.length > 1 ? 's' : ''} • {p.registration.sessions.join(' + ')}
-                                  </span>
-                                </div>
+                              <div className="text-[10px] text-gray-400 ml-3">{c.position} {'\u00b7'} {c.year}</div>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="text-gray-500 font-mono text-[10px]">{c.email}</div>
+                            </td>
+                            <td className="px-3 py-2 text-center"><StatusBadge exists={exists} /></td>
+                            <td className="px-3 py-2 text-right" onClick={e => e.stopPropagation()}>
+                              {!exists ? (
+                                <button onClick={() => handleSeedAdd('counselor', c)} disabled={busy}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+                                  {busy ? '...' : 'Add'}</button>
+                              ) : (
+                                <button onClick={() => handleSeedRemove('counselor', c)} disabled={busy}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
+                                  {busy ? '...' : 'Remove'}</button>
                               )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      </React.Fragment>
-                    );
-                  })}
-                  <tr className="border-b bg-gray-50"><td colSpan="6" className="px-5 py-1"></td></tr>
-                  {COUNSELOR_PROFILES.map(c => {
-                    const exists = counselorStatus[c.email];
-                    const busy = !!seedLoading[c.email] || isSeedAllLoading;
-                    const photoSrc = COUNSELOR_PHOTOS[c.id] || null;
-                    const isExpanded = expandedSeed[c.email];
-                    const availDays = c.availability ? Object.keys(c.availability).length : 0;
-                    return (
-                      <React.Fragment key={c.email}>
-                      <tr className={`border-b hover:bg-gray-50 cursor-pointer ${exists ? 'bg-green-50/40' : ''}`}
-                        onClick={() => setExpandedSeed(prev => ({...prev, [c.email]: !prev[c.email]}))}>
-                        <td className="px-5 py-2.5">{photoSrc ? <img src={photoSrc} className="w-7 h-7 rounded-full object-cover" /> : <span className="text-lg">{'\ud83c\udfc0'}</span>}</td>
-                        <td className="px-5 py-2.5">
-                          <div className="font-medium text-gray-800">
-                            <span className={`inline-block mr-1 text-xs transition-transform ${isExpanded ? 'transform rotate-90' : ''}`}>▶</span>
-                            {c.name}
-                          </div>
-                        </td>
-                        <td className="px-5 py-2.5 hidden sm:table-cell">
-                          <div className="text-gray-600 font-mono text-xs">{c.email}</div>
-                          <div className="text-gray-400 font-mono text-xs">{c.password}</div>
-                        </td>
-                        <td className="px-5 py-2.5 text-gray-500 text-xs hidden md:table-cell">
-                          {c.position}, {c.year}
-                        </td>
-                        <td className="px-5 py-2.5 text-center"><StatusBadge exists={exists} /></td>
-                        <td className="px-5 py-2.5 text-right" onClick={e => e.stopPropagation()}>
-                          {!exists ? (
-                            <button onClick={() => handleSeedAdd('counselor', c)} disabled={busy}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-green-600 text-white hover:bg-green-700'}`}>
-                              {busy ? '...' : 'Add'}</button>
-                          ) : (
-                            <button onClick={() => handleSeedRemove('counselor', c)} disabled={busy}
-                              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${busy ? 'bg-gray-200 text-gray-400' : 'bg-red-500 text-white hover:bg-red-600'}`}>
-                              {busy ? '...' : 'Remove'}</button>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
+                              <td colSpan="4" className="px-3 py-2">
+                                <div className="ml-4 space-y-1.5 text-xs">
+                                  <div><span className="font-semibold text-gray-700">Phone:</span> <span className="text-gray-600">{c.phone}</span></div>
+                                  <div><span className="font-semibold text-gray-700">Position:</span> <span className="text-gray-600">{c.position}</span></div>
+                                  <div><span className="font-semibold text-gray-700">Year:</span> <span className="text-gray-600">{c.year}</span></div>
+                                  {c.bio && <div><span className="font-semibold text-gray-700">Bio:</span> <span className="text-gray-600">{c.bio}</span></div>}
+                                  <div>
+                                    <span className="font-semibold text-gray-700">Availability:</span>
+                                    <span className="ml-1 text-gray-600">{availDays} days</span>
+                                    <div className="ml-3 mt-1 flex flex-wrap gap-1">
+                                      {Object.entries(c.availability || {}).map(([date, slots]) => (
+                                        <span key={date} className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                                          slots[0] && slots[1] ? 'bg-green-100 text-green-700' :
+                                          slots[0] || slots[1] ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-red-100 text-red-700'
+                                        }`}>
+                                          {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'})}
+                                          {slots[0] && slots[1] ? ' \u2713' : slots[0] ? ' AM' : slots[1] ? ' PM' : ' \u2717'}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </tr>
-                      {isExpanded && (
-                        <tr className={`border-b ${exists ? 'bg-green-50/20' : 'bg-gray-50/50'}`}>
-                          <td colSpan="6" className="px-5 py-3">
-                            <div className="ml-6 space-y-2 text-xs">
-                              <div>
-                                <span className="font-semibold text-gray-700">Phone:</span>
-                                <span className="ml-2 text-gray-600">{c.phone}</span>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Position:</span>
-                                <span className="ml-2 text-gray-600">{c.position}</span>
-                              </div>
-                              <div>
-                                <span className="font-semibold text-gray-700">Year:</span>
-                                <span className="ml-2 text-gray-600">{c.year}</span>
-                              </div>
-                              {c.bio && (
-                                <div>
-                                  <span className="font-semibold text-gray-700">Bio:</span>
-                                  <span className="ml-2 text-gray-600">{c.bio}</span>
-                                </div>
-                              )}
-                              <div>
-                                <span className="font-semibold text-gray-700">Availability:</span>
-                                <span className="ml-2 text-gray-600">{availDays} days set</span>
-                                <div className="ml-4 mt-1 flex flex-wrap gap-1">
-                                  {Object.entries(c.availability || {}).map(([date, slots]) => (
-                                    <span key={date} className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                                      slots[0] && slots[1] ? 'bg-green-100 text-green-700' :
-                                      slots[0] || slots[1] ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-red-100 text-red-700'
-                                    }`}>
-                                      {new Date(date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'})}
-                                      {slots[0] && slots[1] ? ' ✓' : slots[0] ? ' AM' : slots[1] ? ' PM' : ' ✗'}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Test suites grouped by section */}
-          <div className="max-w-4xl mx-auto px-6 py-6 space-y-4">
+          <div className="max-w-7xl mx-auto px-6 py-6 space-y-4">
             {ALL_SUITES.map((suite, i) => {
               const prevSection = i > 0 ? ALL_SUITES[i - 1].section : null;
               const showHeader = suite.section !== prevSection && SECTIONS[suite.section];
