@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.173";
-    const BUILD_DATE = new Date("2026-02-20T16:47:00");
+    const VERSION = "13.174";
+    const BUILD_DATE = new Date("2026-02-20T16:55:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -333,15 +333,7 @@
         emergencyContacts: [{ name: 'James Park', phone: '(206) 555-5002', relationship: 'Parent' }],
         registration: { weeks: [WEEK1], sessions: ['afternoon'], status: 'cancelled', paymentStatus: 'unpaid' },
       },
-      {
-        email: 'derek.richardson@gmail.com', name: 'Derek Richardson', phone: '(206) 555-6001', password: 'camp',
-        campers: [
-          { name: 'Dylan Richardson', birthdate: '2014-09-15', grade: '7', phone: '(206) 555-6002' },
-        ],
-        emergencyContacts: [{ name: 'Sarah Richardson', phone: '(206) 555-6003', relationship: 'Parent' }],
-        registration: { weeks: [WEEK1, WEEK2, WEEK3, WEEK4], sessions: ['morning', 'afternoon'], status: 'approved', paymentStatus: 'paid' },
-      },
-      // --- Parents 7-50 (auto-generated test data) ---
+      // --- Parents 6-49 (auto-generated test data) ---
       {
         email: 'amanda@msn.com', name: 'Amanda Thompson', phone: '(206) 555-7001', password: 'camp',
         campers: [{ name: 'Chloe Thompson', birthdate: '2016-03-14', grade: '5', phone: '' }],
