@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.174";
-    const BUILD_DATE = new Date("2026-02-20T16:55:00");
+    const VERSION = "13.176";
+    const BUILD_DATE = new Date("2026-02-21T10:03:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -690,25 +690,25 @@
       {
         id: 'c1', email: 'audrey@msn.com', name: 'Audrey Richardson',
         phone: '(555) 555-2234', password: 'camp', position: 'Point Guard', year: 'Senior',
-        bio: 'Team captain with 3 years varsity experience.', order: 0,
+        bio: 'Team captain with 3 years varsity experience.', order: 0, approved: true,
         availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[false,false],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[false,false],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
       },
       {
         id: 'c4', email: 'emma@msn.com', name: 'Emma Curtis',
         phone: '(555) 555-5555', password: 'camp', position: 'Shooting Guard / Small Forward', year: 'Senior',
-        bio: '3 year starter entering her senior year at Roosevelt.  ', order: 1,
+        bio: '3 year starter entering her senior year at Roosevelt.  ', order: 1, approved: true,
         availability: { '2026-07-13':[true,true],'2026-07-14':[true,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[false,false],'2026-08-25':[false,false],'2026-08-26':[false,false],'2026-08-27':[false,false],'2026-08-28':[false,false] },
       },
       {
         id: 'c2', email: 'julia@msn.com', name: 'Julia Gilbertson',
         phone: '(555) 123-1232', password: 'camp', position: 'Shooting Guard', year: 'Junior',
-        bio: 'Power forward with 2 years varsity experience.', order: 2,
+        bio: 'Power forward with 2 years varsity experience.', order: 2, approved: true,
         availability: { '2026-07-13':[true,false],'2026-07-14':[true,false],'2026-07-15':[true,false],'2026-07-16':[true,false],'2026-07-17':[true,false],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[true,true],'2026-08-19':[true,true],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
       },
       {
         id: 'c3', email: 'molly@msn.com', name: 'Molly Kirkland',
         phone: '(555) 123-4243', password: 'camp', position: 'Center', year: 'Sophomore',
-        bio: 'Versatile player known for rebounding and blocking opponents shots.  ', order: 3,
+        bio: 'Versatile player known for rebounding and blocking opponents shots.  ', order: 3, approved: true,
         availability: { '2026-07-13':[false,true],'2026-07-14':[false,true],'2026-07-15':[true,true],'2026-07-16':[true,true],'2026-07-17':[true,true],'2026-08-10':[true,true],'2026-08-11':[true,true],'2026-08-12':[true,true],'2026-08-13':[true,true],'2026-08-14':[true,true],'2026-08-17':[true,true],'2026-08-18':[false,false],'2026-08-19':[false,false],'2026-08-20':[true,true],'2026-08-21':[true,true],'2026-08-24':[true,true],'2026-08-25':[true,true],'2026-08-26':[true,true],'2026-08-27':[true,true],'2026-08-28':[true,true] },
       },
       {
@@ -940,11 +940,12 @@
       };
       await storage.set('camp_counselor_users', 'main', [...users, newUser]);
 
-      // 2. Create counselor profile (visible:false, approvedByAdmin:false — pending admin approval, same as real flow)
+      // 2. Create counselor profile (approved flag on profile controls visibility — first 4 are pre-approved)
+      const isApproved = !!profile.approved;
       const newCounselor = {
         id: profile.id, name: profile.name, email: profile.email, phone: profile.phone,
         position: profile.position, year: profile.year, bio: profile.bio, photo,
-        visible: false, approvedByAdmin: false,
+        visible: isApproved, approvedByAdmin: isApproved,
         responsibilitiesAcknowledged: true, payDisclosureAcknowledged: true,
         createdAt: now, order: profile.order || 0,
       };
