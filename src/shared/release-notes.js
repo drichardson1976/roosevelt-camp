@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.177", date: "2026-02-21", time: "11:50 AM", author: "Derek Richardson", changes: ["Tests: Password shown in plain text below email for all seed users (parents and counselors) for easier debugging"] },
   { version: "13.176", date: "2026-02-21", time: "10:03 AM", author: "Derek Richardson", changes: ["Tests: First 4 seed counselors (Audrey, Emma, Julia, Molly) are now approved and visible on the public site when added"] },
   { version: "13.175", date: "2026-02-20", time: "5:34 PM", author: "Derek Richardson", changes: ["Admin: Fixed scroll-to-top bug — page no longer jumps to top when background data finishes loading", "Admin: Extracted InvoicesSubTab into standalone component to fix React hooks lifecycle issue", "Admin: Lifted Admin component state to parent scope to prevent component remounting on re-renders"] },
   { version: "13.174", date: "2026-02-20", time: "4:55 PM", author: "Derek Richardson", changes: ["Tests: Removed Derek Richardson from seed parent profiles (49 parents now instead of 50)"] },

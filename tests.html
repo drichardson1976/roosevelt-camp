@@ -47,8 +47,8 @@
     });
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.176";
-    const BUILD_DATE = new Date("2026-02-21T10:03:00");
+    const VERSION = "13.177";
+    const BUILD_DATE = new Date("2026-02-21T11:50:00");
 
     // Lazy-create public schema client (only when schema comparison tests need it)
     let _pubClient = null;
@@ -2341,6 +2341,7 @@
                             </td>
                             <td className="px-3 py-2">
                               <div className="text-gray-500 font-mono text-[10px]">{p.email}</div>
+                              <div className="text-gray-400 font-mono text-[10px]">pw: {p.password}</div>
                             </td>
                             <td className="px-3 py-2 text-center"><StatusBadge exists={exists} /></td>
                             <td className="px-3 py-2 text-right" onClick={e => e.stopPropagation()}>
@@ -2442,6 +2443,7 @@
                             </td>
                             <td className="px-3 py-2">
                               <div className="text-gray-500 font-mono text-[10px]">{c.email}</div>
+                              <div className="text-gray-400 font-mono text-[10px]">pw: {c.password}</div>
                             </td>
                             <td className="px-3 py-2 text-center"><StatusBadge exists={exists} /></td>
                             <td className="px-3 py-2 text-right" onClick={e => e.stopPropagation()}>
