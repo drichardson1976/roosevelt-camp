@@ -751,6 +751,14 @@ var RELEASE_NOTES = [
     "Removed lunch restaurant options from public page",
     "Removed payment section from pricing page"
   ]},
+  { version: "12.108", date: "2026-02-01", author: "Derek Richardson", changes: [
+    "Admin: Removed Children tab from admin dashboard",
+    "Admin: Simplified Parents tab header to just 'Parents'",
+    "Admin: Reordered tabs — Campers now follows Parents",
+    "Admin: Redesigned Assignments tab with pod-based layout",
+    "Admin: Counselors split into Eligible/Not Eligible groups",
+    "Admin: Added ability to permanently delete registrations"
+  ]},
   { version: "12.107", date: "2026-02-01", author: "Derek Richardson", changes: [
     "Registrations tab: Added ability to permanently delete registrations",
     "Delete confirmation modal prevents accidental deletions"
@@ -887,6 +895,17 @@ var RELEASE_NOTES = [
     "Improved JPEG quality from 90% to 95% for uploaded images"
   ]},
   { version: "12.084", date: "2026-01-30", changes: ["Version bump for dev build"] },
+  { version: "12.083", date: "2026-01-30", author: "Derek Richardson", changes: [
+    "Admin: Moved Content tab to second position (after Dashboard) for easier access"
+  ]},
+  { version: "12.082", date: "2026-01-30", author: "Derek Richardson", changes: [
+    "Parent: Added optional credit card step (step 4) with visual card preview",
+    "Parent: Payment step is skippable (future Stripe integration)",
+    "Parent: Added photo upload with cropping in account setup",
+    "Parent: Added photo upload for emergency contacts",
+    "Parent: Display contact photos in emergency contacts list",
+    "Parent: Updated onboarding from 5 to 6 steps"
+  ]},
   { version: "12.081", date: "2026-01-30", changes: [
     "Fixed input focus issue in onboarding flows - text fields now maintain focus",
     "Refactored ParentOnboarding to use inline JSX instead of inner components",
@@ -1035,7 +1054,18 @@ var RELEASE_NOTES = [
     "Auto-save for all content changes",
     "Added change history with timestamps"
   ]},
+  { version: "12.062", date: "2026-01-29", changes: [
+    "Admin: Full content editing for all camp sections (schedule, activities, policies, etc.)",
+    "Admin: Image management — upload, crop, and delete section images",
+    "Admin: Auto-save on all content changes with visual confirmation",
+    "Admin: Change history log with timestamps for audit trail"
+  ]},
   { version: "12.061", date: "2026-01-29", changes: ["Fresh rebuild with all features", "Merged v12.042 features with Supabase schema separation", "Payment tracking, cancellation/refund system", "Collapsible calendar, scholarship requests"] },
+  { version: "12.060", date: "2026-01-29", changes: ["Merged v12.042 feature set with Supabase schema separation architecture", "Reconciled feature branches after schema isolation refactor"] },
   { version: "12.056", date: "2026-01-29", changes: ["Fixed counselor editing, photo cropper, phone formatting"] },
-  { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] }
+  { version: "12.055", date: "2026-01-29", changes: ["Restored all features after schema separation rebuild"] },
+  { version: "12.054", date: "2026-01-29", changes: ["Fixed Supabase schema connection"] },
+  { version: "12.053", date: "2026-01-29", changes: ["Separated dev and public Supabase schemas for data isolation — dev changes no longer affect production data"] },
+  { version: "12.052", date: "2026-01-29", changes: ["Added dev/production environment banners to distinguish environments", "Added release notes system for tracking changes"] },
+  { version: "12.051", date: "2026-01-29", changes: ["Fixed input focus bug — text fields no longer lose focus while typing"] }
 ];
