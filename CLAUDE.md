@@ -371,6 +371,33 @@ const getFoodPhoto = (key) => {
 
 ---
 
+## ⚡ BUILD SYSTEM (Vite)
+
+### Overview
+The 4 main HTML pages (index, admin, parent, counselor) are built with **Vite** — React/JSX is pre-compiled at build time instead of in the browser. This replaced the old CDN-based Babel approach and made pages load ~3 seconds faster.
+
+### Key Files
+- **vite.config.js** — Vite configuration: build inputs, static file copying, dev server CSP headers
+- **netlify.toml** — Netlify configuration: build command, dev proxy, production CSP headers
+- **package.json** — npm dependencies (React, Vite, Tailwind, Supabase — all bundled)
+
+### How It Works
+- `npm run build` → Vite compiles the 4 main HTML files into `/dist` with bundled JS/CSS
+- `netlify dev` → Runs Vite dev server on port 5173, proxied through Netlify on port 8000
+- Static files (tests.html, prd.html, etc.) are copied to `/dist` as-is by a Vite plugin
+
+### CSP (Content Security Policy) — Two Locations
+- **`vite.config.js` → `server.headers`** — CSP for local development. `netlify dev` doesn't reliably apply netlify.toml headers when proxying Vite, so the dev CSP lives here.
+- **`netlify.toml` → `[[headers]]`** — CSP for production (Netlify deployment). This is what browsers see on the live site.
+- **Both must be kept in sync** — if you add a new external domain, update BOTH files.
+
+### tests.html & prd.html — NOT Bundled
+- `tests.html` and `prd.html` still use CDN scripts (React, Babel, Tailwind, Supabase loaded from URLs)
+- They are NOT processed by Vite — they're copied as-is to `/dist`
+- The CSP in both locations includes CDN domains (`cdn.tailwindcss.com`, `unpkg.com`, `cdn.jsdelivr.net`) and `'unsafe-eval'` (for Babel) to support these pages
+
+---
+
 ## 📁 FILE STRUCTURE
 
 ### HTML Files (4 main + 1 backup)
@@ -379,6 +406,11 @@ const getFoodPhoto = (key) => {
 - **counselor.html** - Counselor dashboard (availability, profile, schedule)
 - **admin.html** - Admin dashboard (all management functions)
 - **index-backup-v12.142.html** - Backup snapshot
+
+### Build & Config Files
+- **vite.config.js** - Vite build config + dev server CSP headers
+- **netlify.toml** - Netlify build/deploy config + production CSP headers
+- **package.json** - npm dependencies and build scripts
 
 ### Netlify Functions (/netlify/functions/)
 - **send-email.js** - Send emails via Resend API
@@ -491,8 +523,8 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 **Fix:** Already fixed in current version
 
 ### Browser cache issues
-**Cause:** Babel transpiles in-browser, cache persists
-**Fix:** Empty Cache and Hard Reload (DevTools → Right-click refresh)
+**Cause:** Browser caches old CSP headers or bundled files
+**Fix:** Hard refresh (`Cmd + Shift + R`) or Empty Cache and Hard Reload (DevTools → Right-click refresh)
 
 ### history.slice is not a function
 **Cause:** Used wrong variable name (`history` instead of `changeHistory`)

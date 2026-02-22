@@ -2505,6 +2505,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
     export function RooseveltCamp() {
+      const _mountLogged = useRef(false);
+      if (!_mountLogged.current) {
+        console.log('⏱️ [INDEX] Step 4: React component mounting: ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms');
+        _mountLogged.current = true;
+      }
       const getInitialPage = () => {
         // If there's a reset token in URL, go straight to login
         const urlParams = new URLSearchParams(window.location.search);
@@ -2562,6 +2567,18 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const showToast = useCallback((msg, type = 'success') => setToast({ msg, type }), []);
       const sessionCost = getSessionCost(content);
 
+      // Performance: log once when page becomes interactive (loading finished)
+      const _paintLogged = useRef(false);
+      useEffect(() => {
+        if (!loading && !_paintLogged.current) {
+          _paintLogged.current = true;
+          requestAnimationFrame(() => {
+            console.log('⏱️ [INDEX] Step 7: First paint complete: ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms');
+            console.log('⏱️ [INDEX] ====== TOTAL TIME TO INTERACTIVE: ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms ======');
+          });
+        }
+      }, [loading]);
+
       // Scroll to top on page navigation so red ribbon is visible
       useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2589,7 +2606,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
           } catch (e) { console.error('Phase 1 load error:', e); }
           clearTimeout(safetyTimer);
-          console.log('⏱️ [STEP 4] Phase 1 DB loaded (4 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms');
+          console.log('⏱️ [INDEX] Step 5: Phase 1 DB loaded (4 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms');
           setLoading(false);
 
           // Phase 2: Load remaining 16 tables in background (needed for login, onboarding, admin)
@@ -2629,7 +2646,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
           } catch (e) { console.error('Phase 2 load error:', e); }
-          console.log('⏱️ [STEP 5] Phase 2 DB loaded (16 tables): ' + (performance.now() - window.__t0).toFixed(0) + 'ms — all data ready');
+          console.log('⏱️ [INDEX] Step 6: Phase 2 DB loaded (16 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms — all data ready');
           setBackgroundLoaded(true);
         };
         load();
