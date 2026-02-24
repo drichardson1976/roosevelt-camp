@@ -10,13 +10,13 @@ import { ScrollableTabs } from '../shared/components/ScrollableTabs';
 import { ImageCropper, ImageUpload } from '../shared/components/ImageCropper';
 import { PhotoUploadModal } from '../shared/components/PhotoUploadModal';
 import { generateCampDates, CAMP_DATES, getCampDateRange, CAMP_DATE_RANGE, getWeeks, CAMP_WEEKS, generateDatesFromGymRentals } from '../shared/campDates';
-import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/defaults';
+import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.172";
+    const VERSION = "13.179";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-20T08:27:00");
+    const BUILD_DATE = new Date("2026-02-23T21:05:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1411,404 +1411,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       );
     };
 
-    // ==================== FOOD PHOTOS MANAGER ====================
-    const FoodPhotosManager = ({ foodPhotos, getFoodPhoto, onSave }) => {
-      const [editingPhoto, setEditingPhoto] = useState(null); // { key, label }
-      const [showCropper, setShowCropper] = useState(false);
-      const [cropImage, setCropImage] = useState(null);
-      const inputRef = useRef(null);
-
-      const FOOD_ITEMS = {
-        snacks: [
-          { key: 'snack_fruit', label: 'Fresh Fruit' },
-          { key: 'snack_granola', label: 'Granola Bars' },
-          { key: 'snack_cheese', label: 'Cheese & Crackers' },
-          { key: 'snack_veggie', label: 'Veggie Sticks' }
-        ],
-        drinks: [
-          { key: 'drink_water', label: 'Water' },
-          { key: 'drink_gatorade', label: 'Gatorade' },
-          { key: 'drink_orange', label: 'Orange Juice' },
-          { key: 'drink_apple', label: 'Apple Juice' }
-        ]
-      };
-
-      const handleUploadClick = () => {
-        inputRef.current?.click();
-      };
-
-      const handleFileSelect = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setCropImage(reader.result);
-            setShowCropper(true);
-          };
-          reader.readAsDataURL(file);
-        }
-        e.target.value = '';
-      };
-
-      const handleEditClick = () => {
-        setCropImage(getFoodPhoto(editingPhoto.key));
-        setShowCropper(true);
-      };
-
-      const handleCropSave = (croppedImage) => {
-        onSave({ ...foodPhotos, [editingPhoto.key]: croppedImage });
-        setShowCropper(false);
-        setCropImage(null);
-        setEditingPhoto(null);
-      };
-
-      const handleDelete = () => {
-        const updated = { ...foodPhotos };
-        delete updated[editingPhoto.key];
-        onSave(updated);
-        setEditingPhoto(null);
-      };
-
-      const renderPhotoGrid = (items, title, colorClass) => (
-        <div className={title === 'Snacks' ? 'mb-6' : ''}>
-          <h4 className={`font-medium ${colorClass} mb-3`}>{title}</h4>
-          <div className="grid grid-cols-4 gap-4">
-            {items.map(item => (
-              <div key={item.key} className="text-center">
-                <div
-                  className="relative group cursor-pointer"
-                  onClick={() => setEditingPhoto(item)}
-                >
-                  <img
-                    src={getFoodPhoto(item.key)}
-                    alt={item.label}
-                    className="w-full aspect-square object-cover rounded-xl mb-1 shadow-sm"
-                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/150x150/gray/white?text=No+Image'; }}
-                  />
-                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center">
-                    <span className="text-white font-medium text-sm">Edit</span>
-                  </div>
-                  {foodPhotos[item.key] && (
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-green-500 rounded-full" title="Custom photo" />
-                  )}
-                </div>
-                <span className="text-xs text-gray-600 block">{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-
-      return (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="font-bold mb-4">🍎 Snacks & Drinks Photos</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            Click any photo to edit. Green dot indicates a custom uploaded photo.
-          </p>
-          {renderPhotoGrid(FOOD_ITEMS.snacks, 'Snacks', 'text-green-700')}
-          {renderPhotoGrid(FOOD_ITEMS.drinks, 'Beverages', 'text-blue-700')}
-
-          {/* Photo Edit Modal */}
-          {editingPhoto && !showCropper && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-sm w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
-                  <h2 className="font-display text-lg">Edit: {editingPhoto.label}</h2>
-                  <button onClick={() => setEditingPhoto(null)} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
-                </div>
-                <div className="p-6">
-                  <div className="mb-4">
-                    <p className="text-xs text-gray-500 mb-2 text-center">Preview (exactly as shown on website)</p>
-                    <img
-                      src={getFoodPhoto(editingPhoto.key)}
-                      alt={editingPhoto.label}
-                      className="w-full aspect-square object-cover rounded-xl shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/gray/white?text=No+Image'; }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <button
-                      onClick={handleUploadClick}
-                      className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2"
-                    >
-                      📷 Upload New Photo
-                    </button>
-                    <button
-                      onClick={handleEditClick}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-                    >
-                      ✂️ Adjust Position, Zoom & Rotate
-                    </button>
-                    {foodPhotos[editingPhoto.key] && (
-                      <button
-                        onClick={handleDelete}
-                        className="w-full py-3 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 flex items-center justify-center gap-2"
-                      >
-                        🗑️ Reset to Default
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setEditingPhoto(null)}
-                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </div>
-          )}
-
-          {/* Image Cropper Modal */}
-          {showCropper && cropImage && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-md w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
-                  <h2 className="font-display text-lg">Adjust: {editingPhoto.label}</h2>
-                  <button onClick={() => { setShowCropper(false); setCropImage(null); }} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
-                </div>
-                <div className="p-6">
-                  <ImageCropper
-                    image={cropImage}
-                    shape="square"
-                    onSave={handleCropSave}
-                    onCancel={() => { setShowCropper(false); setCropImage(null); }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
-
-    // ==================== SITE PHOTOS MANAGER ====================
-    const SitePhotosManager = ({ sitePhotos, onSave }) => {
-      const [editingPhoto, setEditingPhoto] = useState(null);
-      const [showCropper, setShowCropper] = useState(false);
-      const [cropImage, setCropImage] = useState(null);
-      const [cropTransform, setCropTransform] = useState(null);
-      const [isNewUpload, setIsNewUpload] = useState(false);
-      const inputRef = useRef(null);
-
-      const SITE_PHOTO_CONFIG = [
-        { key: 'hero', label: 'Hero Background', description: 'Large banner image behind the camp title', aspectRatio: 16/9 },
-        { key: 'dropoff', label: 'Drop-off Photo', description: 'Camper being dropped off at gym entrance', aspectRatio: 4/3 },
-        { key: 'layups', label: 'Skills Training Photo', description: 'Counselor working with kids on layups/drills', aspectRatio: 4/3 },
-        { key: 'lunch', label: 'Lunch Photo', description: 'Kids sitting together eating lunch', aspectRatio: 4/3 }
-      ];
-
-      // Helper to get cropped image (handles both old string format and new object format)
-      const getCroppedImage = (key) => {
-        const data = sitePhotos?.[key];
-        if (!data) return null;
-        return typeof data === 'string' ? data : data.cropped;
-      };
-
-      // Helper to get photo data for re-editing
-      const getPhotoData = (key) => {
-        const data = sitePhotos?.[key];
-        if (!data) return null;
-        if (typeof data === 'string') return { cropped: data, original: null, transform: null };
-        return data;
-      };
-
-      const handleFileSelect = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setCropImage(reader.result);
-            setCropTransform(null);
-            setIsNewUpload(true);
-            setShowCropper(true);
-          };
-          reader.readAsDataURL(file);
-        }
-        if (e.target) e.target.value = '';
-      };
-
-      const handleReEdit = () => {
-        const photoData = getPhotoData(editingPhoto.key);
-        if (photoData?.original) {
-          setCropImage(photoData.original);
-          setCropTransform(photoData.transform);
-        } else {
-          setCropImage(photoData?.cropped || getCroppedImage(editingPhoto.key));
-          setCropTransform(null);
-        }
-        setIsNewUpload(false);
-        setShowCropper(true);
-      };
-
-      const handleCropSave = (croppedImage, transform) => {
-        const photoData = {
-          cropped: croppedImage,
-          original: isNewUpload ? cropImage : (getPhotoData(editingPhoto.key)?.original || cropImage),
-          transform: transform
-        };
-        onSave({ ...sitePhotos, [editingPhoto.key]: photoData }, editingPhoto.label);
-        setShowCropper(false);
-        setCropImage(null);
-        setCropTransform(null);
-        setIsNewUpload(false);
-        setEditingPhoto(null);
-      };
-
-      const handleDelete = () => {
-        const updated = { ...sitePhotos };
-        delete updated[editingPhoto.key];
-        onSave(updated, editingPhoto.label);
-        setEditingPhoto(null);
-      };
-
-      return (
-        <div className="bg-white rounded-xl shadow p-6">
-          <h3 className="font-bold text-lg text-green-800 mb-2">📸 Site Photos</h3>
-          <p className="text-sm text-gray-500 mb-4">Upload photos that appear throughout the website. Photos will be displayed exactly as cropped.</p>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {SITE_PHOTO_CONFIG.map(photo => (
-              <div key={photo.key} className="border rounded-xl p-4 hover:border-green-400 transition-colors">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-medium text-gray-800">{photo.label}</h4>
-                    <p className="text-xs text-gray-500">{photo.description}</p>
-                  </div>
-                  {getCroppedImage(photo.key) && (
-                    <span className="w-3 h-3 bg-green-500 rounded-full" title="Custom photo uploaded" />
-                  )}
-                </div>
-
-                {getCroppedImage(photo.key) ? (
-                  <div
-                    className="relative group cursor-pointer rounded-xl overflow-hidden"
-                    style={{ aspectRatio: photo.aspectRatio }}
-                    onClick={() => setEditingPhoto(photo)}
-                  >
-                    <img
-                      src={getCroppedImage(photo.key)}
-                      alt={photo.label}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">Edit</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-200 transition-colors"
-                    style={{ aspectRatio: photo.aspectRatio }}
-                    onClick={() => {
-                      setEditingPhoto(photo);
-                      setTimeout(() => inputRef.current?.click(), 100);
-                    }}
-                  >
-                    <span className="text-4xl mb-2">📷</span>
-                    <span className="text-sm text-gray-500">Click to upload</span>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Edit Modal */}
-          {editingPhoto && !showCropper && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
-                  <h2 className="font-display text-lg">{editingPhoto.label}</h2>
-                  <button onClick={() => setEditingPhoto(null)} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
-                </div>
-                <div className="p-6">
-                  {getCroppedImage(editingPhoto.key) && (
-                    <div className="mb-4">
-                      <p className="text-sm text-gray-500 mb-2 font-medium">Preview (exactly as shown on website)</p>
-                      <img
-                        src={getCroppedImage(editingPhoto.key)}
-                        alt={editingPhoto.label}
-                        className="w-full object-cover rounded-xl shadow"
-                        style={{ aspectRatio: editingPhoto.aspectRatio }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => inputRef.current?.click()}
-                      className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium flex items-center justify-center gap-2"
-                    >
-                      <span>📤</span> {getCroppedImage(editingPhoto.key) ? 'Upload New Photo' : 'Upload Photo'}
-                    </button>
-
-                    {getCroppedImage(editingPhoto.key) && (
-                      <>
-                        <button
-                          onClick={handleReEdit}
-                          className="w-full py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium flex items-center justify-center gap-2"
-                        >
-                          <span>✂️</span> Adjust Position / Zoom
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          className="w-full py-3 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 font-medium flex items-center justify-center gap-2"
-                        >
-                          <span>🗑️</span> Remove Photo
-                        </button>
-                      </>
-                    )}
-
-                    <button
-                      onClick={() => setEditingPhoto(null)}
-                      className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <input
-                ref={inputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileSelect}
-              />
-            </div>
-          )}
-
-          {/* Image Cropper Modal */}
-          {showCropper && cropImage && editingPhoto && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-xl max-w-lg w-full overflow-hidden" onClick={e => e.stopPropagation()}>
-                <div className="bg-green-600 text-white px-6 py-4 flex justify-between items-center">
-                  <h2 className="font-display text-lg">Adjust: {editingPhoto.label}</h2>
-                  <button onClick={() => { setShowCropper(false); setCropImage(null); setCropTransform(null); }} className="text-2xl hover:bg-green-500 rounded px-2">×</button>
-                </div>
-                <div className="p-6">
-                  <p className="text-sm text-gray-500 mb-4 text-center">The preview below shows exactly how the photo will appear on the website.</p>
-                  <ImageCropper
-                    image={cropImage}
-                    shape="rectangle"
-                    aspectRatio={editingPhoto.aspectRatio}
-                    initialTransform={cropTransform}
-                    onSave={handleCropSave}
-                    onCancel={() => { setShowCropper(false); setCropImage(null); setCropTransform(null); }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    };
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -1823,10 +1425,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
       const [registrations, setRegistrations] = useState([]);
       const [parents, setParents] = useState([]);
-      const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
-      const [admins, setAdmins] = useState(DEFAULT_ADMINS);
       const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
       const [campers, setCampers] = useState([]); // Standalone campers collection
       const [camperParentLinks, setCamperParentLinks] = useState([]); // { camperId, parentEmail } associations
@@ -1835,10 +1435,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       // New state for onboarding system
       const [emergencyContacts, setEmergencyContacts] = useState([]); // Emergency contact records
-      const [onboardingProgress, setOnboardingProgress] = useState({}); // { email: { step, complete, ... } }
       const [pendingCounselors, setPendingCounselors] = useState([]); // Counselors awaiting admin approval
-      const [availabilityChangeRequests, setAvailabilityChangeRequests] = useState([]); // Counselor availability change requests
-      const [profileChangeRequests, setProfileChangeRequests] = useState([]); // Counselor profile change requests
       const [blockedSessions, setBlockedSessions] = useState({}); // { date: { morning: bool, afternoon: bool } }
       const [counselorSchedule, setCounselorSchedule] = useState({}); // { counselorId: { date: { morning: bool, afternoon: bool } } }
       const [campDates, setCampDates] = useState([]); // Array of { date: "YYYY-MM-DD", sessions: ["morning", "afternoon"] }
@@ -1888,24 +1485,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           }, 5000);
           try {
             // Parallel fetch all tables at once for faster loading
-            const [cd, cs, rg, pr, cu, av, ch, ad, as2, cp, cpl, fp, sp, ec, op, acr, pcr, bs, csch, campDatesData, gr, cecl] = await Promise.all([
+            const [cd, cs, rg, pr, av, ch, as2, cp, cpl, fp, sp, ec, bs, csch, campDatesData, gr, cecl] = await Promise.all([
               storage.get('camp_content'),
               storage.get('camp_counselors'),
               storage.get('camp_registrations'),
               storage.get('camp_parents'),
-              storage.get('camp_counselor_users'),
               storage.get('camp_counselor_availability'),
               storage.get('camp_change_history'),
-              storage.get('camp_admins'),
               storage.get('camp_assignments'),
               storage.get('camp_campers'),
               storage.get('camp_camper_parent_links'),
               storage.get('camp_food_photos'),
               storage.get('camp_site_photos'),
               storage.get('camp_emergency_contacts'),
-              storage.get('camp_onboarding_progress'),
-              storage.get('camp_availability_change_requests'),
-              storage.get('camp_profile_change_requests'),
               storage.get('camp_blocked_sessions'),
               storage.get('camp_counselor_schedule'),
               storage.get('camp_dates'),
@@ -1916,19 +1508,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
             if (pr?.[0]?.data) setParents(Array.isArray(pr[0].data) ? pr[0].data : []);
-            if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
             if (av?.[0]?.data) setAvailability(av[0].data);
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
-            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
             if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (ec?.[0]?.data) setEmergencyContacts(Array.isArray(ec[0].data) ? ec[0].data : []);
-            if (op?.[0]?.data) setOnboardingProgress(op[0].data || {});
-            if (acr?.[0]?.data) setAvailabilityChangeRequests(Array.isArray(acr[0].data) ? acr[0].data : []);
-            if (pcr?.[0]?.data) setProfileChangeRequests(Array.isArray(pcr[0].data) ? pcr[0].data : []);
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
             if (campDatesData?.[0]?.data) setCampDates(Array.isArray(campDatesData[0].data) ? campDatesData[0].data : []);
@@ -1983,45 +1570,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         showToast('Saved!');
       };
 
-      const saveCounselors = async (cs, action = null) => {
-        // Upload any new base64 counselor photos to Storage CDN
-        for (const c of cs) {
-          if (c.photo && !photoStorage.isUrl(c.photo)) {
-            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
-            if (url) c.photo = url;
-          }
-        }
-        setCounselors(cs);
-        for (const c of cs) await storage.set('camp_counselors', c.id, c);
-        if (action) addToHistory('Counselor', action);
-        showToast('Saved!');
-      };
-
-      const deleteCounselor = async (counselorId, counselorName) => {
-        // Remove from state
-        const updated = counselors.filter(c => c.id !== counselorId).map((c, i) => ({ ...c, order: i }));
-        setCounselors(updated);
-        // Remove from database
-        try {
-          await supabase.from('camp_counselors').delete().eq('id', counselorId);
-        } catch (e) { console.error('Error deleting counselor:', e); }
-        // Clean up assignments that reference this counselor
-        const cleanedAssignments = { ...assignments };
-        Object.keys(cleanedAssignments).forEach(key => {
-          if (cleanedAssignments[key][counselorId]) {
-            delete cleanedAssignments[key][counselorId];
-          }
-        });
-        await saveAssignments(cleanedAssignments);
-        // Clean up availability
-        const cleanedAvail = { ...availability };
-        if (cleanedAvail[counselorId]) {
-          delete cleanedAvail[counselorId];
-          await saveAvail(cleanedAvail);
-        }
-        addToHistory('Counselor', `Deleted counselor ${counselorName}`);
-        showToast('Counselor deleted');
-      };
 
       const saveReg = async (r, action = null) => {
         setRegistrations(prevRegs => {
@@ -2060,36 +1608,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Parent', action);
       };
 
-      const saveCounselorUsers = async (cu, action = null) => {
-        setCounselorUsers(cu);
-        await storage.set('camp_counselor_users', 'main', cu);
-        if (action) addToHistory('Counselor User', action);
-      };
 
-      const deleteParent = async (parentEmail, parentName) => {
-        // Remove from parents state
-        const updatedParents = parents.filter(p => p.email !== parentEmail);
-        setParents(updatedParents);
-        await storage.set('camp_parents', 'main', updatedParents);
-        // Remove camper-parent links for this parent
-        const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
-        setCamperParentLinks(updatedLinks);
-        await storage.set('camp_camper_parent_links', 'main', updatedLinks);
-        // Note: We don't delete registrations - they're historical records
-        addToHistory('Parent', `Deleted parent ${parentName}`);
-        showToast('Parent deleted');
-      };
-      const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
-      const saveAdmins = async (a, action = null) => {
-        setAdmins(a);
-        await storage.set('camp_admins', 'main', a);
-        if (action) addToHistory('Admin', action);
-      };
-      const saveAssignments = async (a, action = null) => {
-        setAssignments(a);
-        await storage.set('camp_assignments', 'main', a);
-        if (action) addToHistory('Assignment', action);
-      };
       const saveCampers = async (c, action = null) => {
         // Upload any new base64 camper photos to Storage CDN
         for (const camper of c) {
@@ -2102,19 +1621,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         await storage.set('camp_campers', 'main', c);
         if (action) addToHistory('Camper', action);
       };
-      const saveFoodPhotos = async (photos) => {
-        setFoodPhotos(photos);
-        await storage.set('camp_food_photos', 'main', photos);
-        addToHistory('Content', 'Updated food photos');
-        showToast('Photo updated!');
-      };
 
-      const saveSitePhotos = async (photos, photoName = null) => {
-        setSitePhotos(photos);
-        await storage.set('camp_site_photos', 'main', photos);
-        if (photoName) addToHistory('Content', `Updated ${photoName} photo`);
-        showToast('Photo updated!');
-      };
 
       const deleteCamper = async (camperId, camperName) => {
         // Remove from campers state
@@ -2144,27 +1651,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         await storage.set('camp_camper_parent_links', 'main', links);
       };
 
-      const saveCampDates = async (dates) => {
-        setCampDates(dates);
-        await storage.set('camp_dates', 'main', dates);
-      };
 
       const saveCamperEmergencyContactLinks = async (links) => {
         setCamperEmergencyContactLinks(links);
         await storage.set('camp_camper_emergency_contact_links', 'main', links);
       };
 
-      const saveBlockedSessions = async (sessions, action = null) => {
-        setBlockedSessions(sessions);
-        await storage.set('camp_blocked_sessions', 'main', sessions);
-        if (action) addToHistory('Sessions', action);
-      };
-
-      const saveCounselorSchedule = async (schedule, action = null) => {
-        setCounselorSchedule(schedule);
-        await storage.set('camp_counselor_schedule', 'main', schedule);
-        if (action) addToHistory('Counselor Schedule', action);
-      };
 
       // Helper to check if a counselor is scheduled to work a session
       const isCounselorScheduled = (counselorId, date, session) => {
@@ -2204,22 +1696,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (action) addToHistory('Emergency Contacts', action);
       };
 
-      const saveOnboardingProgress = async (progress) => {
-        setOnboardingProgress(progress);
-        await storage.set('camp_onboarding_progress', 'main', progress);
-      };
-
-      const saveAvailabilityChangeRequests = async (requests, action = null) => {
-        setAvailabilityChangeRequests(requests);
-        await storage.set('camp_availability_change_requests', 'main', requests);
-        if (action) addToHistory('Availability', action);
-      };
-
-      const saveProfileChangeRequests = async (requests, action = null) => {
-        setProfileChangeRequests(requests);
-        await storage.set('camp_profile_change_requests', 'main', requests);
-        if (action) addToHistory('Profile', action);
-      };
 
       const getPending = () => registrations.filter(r => r.status === 'pending').length;
       const getApproved = () => registrations.filter(r => r.status === 'approved').length;
