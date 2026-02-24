@@ -29,13 +29,9 @@
     const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
 
-    const getEnvironment = () => {
-      const hostname = window.location.hostname;
-      return (hostname.includes('dev') || hostname.includes('localhost') || hostname.includes('127.0.0.1') || hostname.includes('--dev') || hostname.includes('github.io')) ? 'development' : 'production';
-    };
-
-    const ENV = getEnvironment();
-    const SCHEMA = ENV === 'development' ? 'dev' : 'public';
+    // Tests always run against dev schema — safe to use from any URL
+    const ENV = 'development';
+    const SCHEMA = 'dev';
 
     // Save reference to library BEFORE creating clients — Babel transforms
     // "const supabase = ..." to "var supabase = ..." which overwrites window.supabase
