@@ -1,32 +1,12 @@
 const bcrypt = require('bcryptjs');
 const { sanitizeString, isValidEmail } = require('./utils/validation.cjs');
 
-const ALLOWED_ORIGINS = [
-  'https://rhsbasketballdaycamp.com',
-  'https://www.rhsbasketballdaycamp.com',
-  'http://localhost:8000',
-  'http://localhost:8888',
-  'http://localhost:3000',
-  'http://127.0.0.1:8000',
-];
-
-function getCorsHeaders(event) {
-  const origin = event?.headers?.origin || '';
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  };
-}
+const { getCorsHeaders, handlePreflight } = require('./utils/cors.cjs');
+const { getSchema } = require('./utils/schema.cjs');
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: getCorsHeaders(event), body: '' };
-  }
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
+  const preflight = handlePreflight(event);
+  if (preflight) return preflight;
 
   try {
     const { table, userData } = JSON.parse(event.body);
@@ -58,13 +38,9 @@ exports.handler = async (event) => {
       return { statusCode: 400, headers: getCorsHeaders(event), body: JSON.stringify({ error: 'Name is required' }) };
     }
 
-    const SUPABASE_URL = process.env.SUPABASE_URL;
-    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const { isDev, schema, SUPABASE_URL, SUPABASE_KEY } = getSchema(event);
 
-    // Determine schema based on origin header
-    const origin = event.headers.origin || event.headers.referer || '';
-    const isDev = origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('github.io');
-    const schema = isDev ? 'dev' : 'public';
+
 
     // Sanitize user data before processing
     const processedUser = { ...userData };
