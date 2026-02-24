@@ -1214,7 +1214,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             const rg = await storage.get('camp_registrations');
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
-            const us = await storage.get('camp_registered_users');
+            const us = await storage.get('camp_counselor_users');
             if (us?.[0]?.data) setUsers(Array.isArray(us[0].data) ? us[0].data : []);
             const av = await storage.get('camp_counselor_availability');
             if (av?.[0]?.data) setAvailability(av[0].data);
@@ -1340,7 +1340,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
 
       const saveUsers = async (u, action = null) => {
         setUsers(u);
-        await storage.set('camp_registered_users', 'main', u);
+        await storage.set('camp_counselor_users', 'main', u);
         if (action) addToHistory('Parent', action);
       };
 
@@ -1348,7 +1348,7 @@ Please sign in your child with the counselor on duty at the main gym entrance.
         // Remove from users state
         const updatedUsers = users.filter(u => u.email !== parentEmail);
         setUsers(updatedUsers);
-        await storage.set('camp_registered_users', 'main', updatedUsers);
+        await storage.set('camp_counselor_users', 'main', updatedUsers);
         // Remove camper-parent links for this parent
         const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
         setCamperParentLinks(updatedLinks);
