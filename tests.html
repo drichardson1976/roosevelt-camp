@@ -238,6 +238,50 @@
       };
     };
 
+    // ==================== PHOTO HELPERS (copied from utils.js for testing) ====================
+    const getDisplayPhoto = (photo) => {
+      if (!photo) return null;
+      return typeof photo === 'string' ? photo : (photo.cropped || null);
+    };
+
+    const photoStorage = {
+      isUrl: (value) => {
+        if (!value) return false;
+        if (typeof value === 'string') return value.startsWith('http');
+        if (value.cropped) return value.cropped.startsWith('http');
+        return false;
+      },
+      upload: async (folder, filename, base64) => {
+        if (!base64) return null;
+        if (base64.startsWith('http')) return base64;
+        try {
+          const match = base64.match(/^data:image\/(.*?);base64,(.*)$/);
+          if (!match) return null;
+          const ext = match[1] === 'jpeg' ? 'jpg' : match[1];
+          const raw = atob(match[2]);
+          const arr = new Uint8Array(raw.length);
+          for (let j = 0; j < raw.length; j++) arr[j] = raw.charCodeAt(j);
+          const blob = new Blob([arr], { type: 'image/' + match[1] });
+          const path = SCHEMA + '/' + folder + '/' + filename + '.' + ext;
+          const result = await supabase.storage.from('camp-photos').upload(path, blob, { contentType: 'image/' + match[1], upsert: true });
+          if (result.error) throw result.error;
+          const urlResult = supabase.storage.from('camp-photos').getPublicUrl(path);
+          return urlResult.data.publicUrl;
+        } catch (e) {
+          console.error('Photo upload failed:', e);
+          return null;
+        }
+      },
+      uploadPhoto: async (folder, filename, photo) => {
+        if (!photo) return null;
+        if (typeof photo === 'string' && photo.startsWith('http')) return photo;
+        const cropped = typeof photo === 'string' ? photo : photo.cropped;
+        if (!cropped) return null;
+        if (cropped.startsWith('http')) return cropped;
+        return await photoStorage.upload(folder, filename, cropped);
+      }
+    };
+
     // ==================== TEST FRAMEWORK ====================
     const assert = {
       ok(val, msg) { if (!val) throw new Error(msg || `Expected truthy, got ${JSON.stringify(val)}`); },
