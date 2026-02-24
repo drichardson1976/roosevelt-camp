@@ -1,8 +1,8 @@
 **IMPORTANT: Read this entire file carefully — do not skim. Every section contains instructions you must follow.**
 
 # CLAUDE CODE REFERENCE DOCUMENT
-**Version:** 13.039
-**Last Updated:** 2026-02-19
+**Version:** 13.040
+**Last Updated:** 2026-02-23
 **Purpose:** Critical information that must NEVER be lost during conversation compaction
 
 ---
@@ -353,7 +353,7 @@ When adding tables to Danger Zone in admin.html:
 - **Objects:** Use `Object.entries()`, `Object.keys().length`
 - **Always:** Add null safety: `(array || [])` or `(object || {})`
 
-### Helper Functions (admin.html ~line 6317)
+### Helper Functions (defined inline in admin/App.jsx, index/App.jsx, and admin/components/)
 ```javascript
 // Get cropped image from photo objects
 const getCroppedImage = (photo) => {
@@ -400,12 +400,40 @@ The 4 main HTML pages (index, admin, parent, counselor) are built with **Vite** 
 
 ## 📁 FILE STRUCTURE
 
-### HTML Files (4 main + 1 backup)
-- **index.html** - Login page, user role detection
-- **parent.html** - Parent dashboard (campers, registrations, emergency contacts)
-- **counselor.html** - Counselor dashboard (availability, profile, schedule)
-- **admin.html** - Admin dashboard (all management functions)
-- **index-backup-v12.142.html** - Backup snapshot
+### HTML Entry Points (4 main, built by Vite)
+- **index.html** → `src/index/App.jsx` - Login page, user role detection, public site
+- **parent.html** → `src/parent/App.jsx` - Parent dashboard (campers, registrations, emergency contacts)
+- **counselor.html** → `src/counselor/App.jsx` - Counselor dashboard (availability, profile, schedule)
+- **admin.html** → `src/admin/App.jsx` - Admin dashboard shell (tabs load from src/admin/tabs/)
+
+### Source Code (/src/)
+- **src/shared/config.js** - Supabase client, environment detection, schema selection
+- **src/shared/utils.js** - Storage helpers, phone formatting, photo utilities
+- **src/shared/release-notes.js** - Release notes (ES module, for Vite-built pages)
+- **src/shared/campDates.js** - Camp date generation, weeks, date ranges
+- **src/shared/defaults.js** - DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS
+- **src/shared/pricing.js** - calculateDiscountedTotal()
+- **src/shared/constants.js** - GRADE_OPTIONS, RELATIONSHIP_OPTIONS, PICKUP/DROPOFF policies
+- **src/shared/components/** - Shared UI components used across pages:
+  - `StableInput.jsx` - Input/Textarea that doesn't lose focus on parent re-render
+  - `VersionBanner.jsx` - Dev/prod ribbon with version, DB status, build time
+  - `Toast.jsx` - Auto-dismissing notification popup
+  - `Modal.jsx` - Generic modal wrapper with backdrop click-to-close
+  - `ImageCropper.jsx` - Canvas-based image crop/zoom/pan tool
+  - `PhotoUploadModal.jsx` - Photo upload flow with cropper integration
+  - `ScrollableTabs.jsx` - Draggable horizontal tab bar with scroll indicators
+- **src/admin/tabs/** - Admin tab components (one per tab):
+  - `DashboardTab.jsx`, `CounselorsTab.jsx`, `ParentsTab.jsx`, `CampersTab.jsx`
+  - `RegistrationsTab.jsx`, `AssignmentsTab.jsx`, `SessionsTab.jsx`
+  - `ContentTab.jsx`, `HistoryTab.jsx`, `DangerZoneTab.jsx`, `ApprovalTab.jsx`
+- **src/admin/components/** - Admin-specific reusable components:
+  - `DangerZoneTable.jsx` - Generic table viewer for Danger Zone
+  - `InvoicesSubTab.jsx` - Invoice generation sub-component
+
+### Non-Vite Pages (CDN-loaded, copied to dist/ as-is)
+- **prd.html** - Product requirements document
+- **tests.html** - Test suite page
+- **release-notes.js** - Release notes (var, for CDN/Babel pages)
 
 ### Build & Config Files
 - **vite.config.js** - Vite build config + dev server CSP headers
@@ -413,14 +441,17 @@ The 4 main HTML pages (index, admin, parent, counselor) are built with **Vite** 
 - **package.json** - npm dependencies and build scripts
 
 ### Netlify Functions (/netlify/functions/)
-- **send-email.js** - Send emails via Resend API
-- **request-password-reset.js** - Generate token, store in Supabase, send reset email
-- **reset-password.js** - Validate token, update password in Supabase
-- **send-sms.js** - Send SMS via Twilio API
-- **send-verification-code.js** - Look up user by phone, generate 6-digit code, store in Supabase, send via Twilio
-- **verify-code.js** - Validate SMS verification code, return user's login info
+- **send-email.cjs** - Send emails via Resend API
+- **request-password-reset.cjs** - Generate token, store in Supabase, send reset email
+- **reset-password.cjs** - Validate token, update password in Supabase
+- **send-sms.cjs** - Send SMS via Twilio API
+- **send-verification-code.cjs** - Look up user by phone, generate 6-digit code, store in Supabase, send via Twilio
+- **verify-code.cjs** - Validate SMS verification code, return user's login info
+- **utils/cors.cjs** - Shared CORS headers and preflight handling
+- **utils/schema.cjs** - Schema detection (dev vs public) from request origin
+- **utils/supabase.cjs** - Supabase client factory with fetchTable/upsertRow helpers
 
-### Migration Scripts (/migrations folder)
+### Migration Scripts (/migrations/)
 - **00_diagnose_structure.sql** - Check table structure
 - **01_create_new_tables_CORRECT.sql** - Create camp_parents and camp_counselor_users
 - **02_migrate_data_CORRECT.sql** - Split registered_users into new tables
