@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../shared/config';
-import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost } from '../shared/utils';
+import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost, photoStorage } from '../shared/utils';
 import { VersionBanner } from '../shared/components/VersionBanner';
 import { Toast } from '../shared/components/Toast';
 import { ScrollableTabs } from '../shared/components/ScrollableTabs';
@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.182";
+    const VERSION = "13.183";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T21:10:00");
+    const BUILD_DATE = new Date("2026-02-28T21:15:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -406,6 +406,20 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
       };
 
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
+
+      const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
+        setCounselors(cs);
+        for (const c of cs) await storage.set('camp_counselors', c.id, c);
+        if (action) addToHistory('Counselor', action);
+      };
+
       const saveCampers = async (c, action = null) => {
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
@@ -524,13 +538,19 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
           const handleSave = async () => {
             if (!myCounselor) return;
             setSaving(true);
-            const updatedCounselors = counselors.map(c =>
-              c.id === myCounselor.id ? { ...c, bio, photo } : c
-            );
-            await saveCounselors(updatedCounselors, `${myCounselor.name} updated profile`);
-            setSaving(false);
-            setShowProfileEdit(false);
-            showToast('Profile updated!');
+            try {
+              const updatedCounselors = counselors.map(c =>
+                c.id === myCounselor.id ? { ...c, bio, photo } : c
+              );
+              await saveCounselors(updatedCounselors, `${myCounselor.name} updated profile`);
+              setShowProfileEdit(false);
+              showToast('Profile updated!');
+            } catch (err) {
+              console.error('Error saving profile:', err);
+              showToast('Error saving profile. Please try again.', 'error');
+            } finally {
+              setSaving(false);
+            }
           };
 
           return (
