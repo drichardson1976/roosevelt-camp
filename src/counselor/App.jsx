@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.185";
+    const VERSION = "13.187";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T21:44:00");
+    const BUILD_DATE = new Date("2026-02-28T22:10:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -161,8 +161,10 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
         const camper = (campers || []).find(c => c.id === camperId);
         const photo = camper ? getDisplayPhoto(camper.photo) : null;
         const age = camper?.birthdate ? calculateAge(camper.birthdate) : null;
-        const name = camper ? `${camper.firstName || ''} ${camper.lastName || ''}`.trim() : 'Unknown Camper';
-        const initials = camper ? `${(camper.firstName || '?')[0]}${(camper.lastName || '?')[0]}`.toUpperCase() : '??';
+        // Support both name formats: single "name" field or "firstName"/"lastName" fields
+        const name = camper ? (camper.name || `${camper.firstName || ''} ${camper.lastName || ''}`.trim()) : 'Unknown Camper';
+        const nameParts = name.split(' ');
+        const initials = nameParts.length >= 2 ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase() : (name[0] || '?').toUpperCase();
 
         return (
           <div key={camperId} className="flex items-center gap-3 py-2">
@@ -227,8 +229,10 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                   <div className="space-y-4">
                     {otherCounselors.map(({ counselor, camperIds }) => {
                       const cPhoto = counselor ? getDisplayPhoto(counselor.photo) : null;
-                      const cName = counselor ? `${counselor.firstName || ''} ${counselor.lastName || ''}`.trim() : 'Unknown';
-                      const cInitials = counselor ? `${(counselor.firstName || '?')[0]}${(counselor.lastName || '?')[0]}`.toUpperCase() : '??';
+                      // Support both name formats: single "name" field or "firstName"/"lastName" fields
+                      const cName = counselor ? (counselor.name || `${counselor.firstName || ''} ${counselor.lastName || ''}`.trim()) : 'Unknown';
+                      const cNameParts = cName.split(' ');
+                      const cInitials = cNameParts.length >= 2 ? `${cNameParts[0][0]}${cNameParts[cNameParts.length - 1][0]}`.toUpperCase() : (cName[0] || '?').toUpperCase();
                       return (
                         <div key={counselor?.id || cName} className="bg-gray-50 rounded-lg p-3">
                           <div className="flex items-center gap-3 mb-2">
@@ -1224,8 +1228,10 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                                         {camperIds.map(camperId => {
                                           const camper = (campers || []).find(c => c.id === camperId);
                                           const photo = camper ? getDisplayPhoto(camper.photo) : null;
-                                          const name = camper ? `${camper.firstName || ''} ${camper.lastName || ''}`.trim() : 'Unknown Camper';
-                                          const initials = camper ? `${(camper.firstName || '?')[0]}${(camper.lastName || '?')[0]}`.toUpperCase() : '??';
+                                          // Support both name formats: single "name" field or "firstName"/"lastName" fields
+                                          const name = camper ? (camper.name || `${camper.firstName || ''} ${camper.lastName || ''}`.trim()) : 'Unknown Camper';
+                                          const nameParts = name.split(' ');
+                                          const initials = nameParts.length >= 2 ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase() : (name[0] || '?').toUpperCase();
                                           const age = camper?.birthdate ? calculateAge(camper.birthdate) : null;
 
                                           return (
