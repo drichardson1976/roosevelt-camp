@@ -44,6 +44,10 @@ exports.handler = async (event) => {
 
     const lowerEmail = email;
 
+    // Check ALL tables to collect roles (multi-role support)
+    const roles = [];
+    let userInfo = null;
+
     // 1. Check admins
     const admins = await fetchTable('camp_admins');
     const admin = admins.find(a => (a.username || a.email || '').toLowerCase() === lowerEmail);
@@ -52,14 +56,8 @@ exports.handler = async (event) => {
         ? await bcrypt.compare(password, admin.passwordHash)
         : (admin.password === password); // Legacy plaintext fallback
       if (match) {
-        return {
-          statusCode: 200,
-          headers: getCorsHeaders(event),
-          body: JSON.stringify({
-            success: true,
-            user: { name: admin.name, role: 'admin', adminId: admin.id, loginType: 'Email/Password' }
-          })
-        };
+        roles.push('admin');
+        userInfo = { name: admin.name, adminId: admin.id, loginType: 'Email/Password' };
       }
     }
 
@@ -71,6 +69,7 @@ exports.handler = async (event) => {
         ? await bcrypt.compare(password, parent.passwordHash)
         : (parent.password === password); // Legacy plaintext fallback
       if (match) {
+        roles.push('parent');
         // Track login method (fire-and-forget)
         const now = new Date().toISOString();
         const updatedParents = parents.map(p => {
@@ -88,16 +87,10 @@ exports.handler = async (event) => {
           body: JSON.stringify({ data: updatedParents })
         }).catch(() => {}); // fire-and-forget
 
-        // Return user info (never send password or passwordHash to client)
-        const { password: _pw, passwordHash: _ph, ...safeParent } = parent;
-        return {
-          statusCode: 200,
-          headers: getCorsHeaders(event),
-          body: JSON.stringify({
-            success: true,
-            user: { ...safeParent, role: 'parent', loginType: 'Email/Password' }
-          })
-        };
+        if (!userInfo) {
+          const { password: _pw, passwordHash: _ph, ...safeParent } = parent;
+          userInfo = { ...safeParent, loginType: 'Email/Password' };
+        }
       }
     }
 
@@ -109,6 +102,7 @@ exports.handler = async (event) => {
         ? await bcrypt.compare(password, counselorUser.passwordHash)
         : (counselorUser.password === password); // Legacy plaintext fallback
       if (match) {
+        roles.push('counselor');
         // Track login method (fire-and-forget)
         const now = new Date().toISOString();
         const updatedCounselors = counselorUsers.map(cu => {
@@ -126,17 +120,23 @@ exports.handler = async (event) => {
           body: JSON.stringify({ data: updatedCounselors })
         }).catch(() => {}); // fire-and-forget
 
-        // Return user info (never send password or passwordHash to client)
-        const { password: _pw, passwordHash: _ph, ...safeCounselor } = counselorUser;
-        return {
-          statusCode: 200,
-          headers: getCorsHeaders(event),
-          body: JSON.stringify({
-            success: true,
-            user: { ...safeCounselor, role: 'counselor', loginType: 'Email/Password' }
-          })
-        };
+        if (!userInfo) {
+          const { password: _pw, passwordHash: _ph, ...safeCounselor } = counselorUser;
+          userInfo = { ...safeCounselor, loginType: 'Email/Password' };
+        }
       }
+    }
+
+    // Return result
+    if (roles.length > 0) {
+      return {
+        statusCode: 200,
+        headers: getCorsHeaders(event),
+        body: JSON.stringify({
+          success: true,
+          user: { ...userInfo, role: roles[0], roles }
+        })
+      };
     }
 
     // No match found

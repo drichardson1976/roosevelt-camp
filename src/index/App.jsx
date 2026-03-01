@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.180";
+    const VERSION = "13.181";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-23T21:22:00");
+    const BUILD_DATE = new Date("2026-02-28T20:56:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3411,7 +3411,8 @@ As a 1099 contractor, you are responsible for:
         const urlParams = new URLSearchParams(window.location.search);
         const resetToken = urlParams.get('reset');
 
-        const [mode, setMode] = useState(resetToken ? 'resetPassword' : 'login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor' | 'forgotLogin' | 'forgotPassword' | 'resetPassword'
+        const [mode, setMode] = useState(resetToken ? 'resetPassword' : 'login'); // 'login' | 'selectRole' | 'onboardParent' | 'onboardCounselor' | 'forgotLogin' | 'forgotPassword' | 'resetPassword' | 'pickRole'
+        const [pendingRoles, setPendingRoles] = useState(null); // { roles: [...], user: {...} } for multi-role picker
         const [forgotLoginSending, setForgotLoginSending] = useState(false);
         const [forgotLoginStep, setForgotLoginStep] = useState('phone'); // 'phone' | 'code' | 'result'
         const [verificationCode, setVerificationCode] = useState('');
@@ -3463,12 +3464,19 @@ As a 1099 contractor, you are responsible for:
             const data = await res.json();
             console.log('⏱️ [LOGIN] API call took: ' + (performance.now() - loginStart).toFixed(0) + 'ms');
             if (res.ok && data.success) {
-              sessionStorage.setItem('user', JSON.stringify(data.user));
-              const role = data.user.role;
-              if (role === 'admin') window.location.href = '/admin.html';
-              else if (role === 'parent') window.location.href = '/parent.html';
-              else if (role === 'counselor') window.location.href = '/counselor.html';
-              else window.location.href = '/parent.html';
+              const userRoles = data.user.roles || [data.user.role];
+              if (userRoles.length > 1) {
+                // Multiple roles — show role picker
+                setPendingRoles({ roles: userRoles, user: data.user });
+                setMode('pickRole');
+              } else {
+                sessionStorage.setItem('user', JSON.stringify(data.user));
+                const role = userRoles[0];
+                if (role === 'admin') window.location.href = '/admin.html';
+                else if (role === 'parent') window.location.href = '/parent.html';
+                else if (role === 'counselor') window.location.href = '/counselor.html';
+                else window.location.href = '/parent.html';
+              }
             } else {
               setError(data.error || 'Incorrect email or password. Please try again.');
             }
@@ -3485,48 +3493,68 @@ As a 1099 contractor, you are responsible for:
             setError('Still loading account data. Please try again in a moment.');
             return;
           }
+
+          // Collect ALL roles for this email (multi-role support)
+          const roles = [];
+          let userInfo = null;
+
           // Check admins
           const admin = admins.find(a => a.username?.toLowerCase() === googleEmail || a.email?.toLowerCase() === googleEmail);
           if (admin) {
-            const user = { name: admin.name, role: 'admin', adminId: admin.id, loginType: 'Google' };
-            sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/admin.html';
-            return;
+            roles.push('admin');
+            userInfo = { name: admin.name, adminId: admin.id, loginType: 'Google' };
           }
 
           // Check parents
           const parent = parents.find(p => p.email?.toLowerCase() === googleEmail);
           if (parent) {
+            roles.push('parent');
             trackLoginMethod('camp_parents', parent.email, 'Google');
-            const user = { ...parent, loginType: 'Google' };
-            sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/parent.html';
-            return;
+            if (!userInfo) {
+              const { password: _pw, passwordHash: _ph, ...safeParent } = parent;
+              userInfo = { ...safeParent, loginType: 'Google' };
+            }
           }
 
           // Check counselor users
           const counselorUser = counselorUsers.find(cu => cu.email?.toLowerCase() === googleEmail);
           if (counselorUser) {
+            roles.push('counselor');
             trackLoginMethod('camp_counselor_users', counselorUser.email, 'Google');
-            const user = { ...counselorUser, loginType: 'Google' };
-            sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/counselor.html';
+            if (!userInfo) {
+              const { password: _pw, passwordHash: _ph, ...safeCounselor } = counselorUser;
+              userInfo = { ...safeCounselor, loginType: 'Google' };
+            }
+          } else {
+            // Legacy: Check counselor profiles
+            const c = counselors.find(x => x.email?.toLowerCase() === googleEmail);
+            if (c) {
+              roles.push('counselor');
+              if (!userInfo) userInfo = { ...c, loginType: 'Google' };
+            }
+          }
+
+          if (roles.length === 0) {
+            // No existing account — start account creation with Google info pre-filled
+            setGoogleUser({ email: googleEmail, name: googleName });
+            setError('');
+            setMode('selectRole');
             return;
           }
 
-          // Legacy: Check counselor profiles
-          const c = counselors.find(x => x.email?.toLowerCase() === googleEmail);
-          if (c) {
-            const user = { ...c, role: 'counselor', loginType: 'Google' };
+          if (roles.length === 1) {
+            // Single role — navigate directly
+            const user = { ...userInfo, role: roles[0], roles };
             sessionStorage.setItem('user', JSON.stringify(user));
-            window.location.href = '/counselor.html';
+            if (roles[0] === 'admin') window.location.href = '/admin.html';
+            else if (roles[0] === 'parent') window.location.href = '/parent.html';
+            else if (roles[0] === 'counselor') window.location.href = '/counselor.html';
             return;
           }
 
-          // No existing account — start account creation with Google info pre-filled
-          setGoogleUser({ email: googleEmail, name: googleName });
-          setError('');
-          setMode('selectRole');
+          // Multiple roles — show role picker
+          setPendingRoles({ roles, user: { ...userInfo, roles } });
+          setMode('pickRole');
         };
 
         // Initialize Google OAuth2 token client for custom button
@@ -3567,6 +3595,39 @@ As a 1099 contractor, you are responsible for:
             setError('Google sign-in is loading. Please try again in a moment.');
           }
         };
+
+        // Show role picker for multi-role users
+        if (mode === 'pickRole' && pendingRoles) {
+          const roleLabels = { admin: 'Admin Dashboard', parent: 'Parent Dashboard', counselor: 'Counselor Dashboard' };
+          const roleColors = { admin: 'bg-purple-600 hover:bg-purple-700', parent: 'bg-blue-600 hover:bg-blue-700', counselor: 'bg-green-600 hover:bg-green-700' };
+          const roleIcons = { admin: '\u{1F6E0}\u{FE0F}', parent: '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}', counselor: '\u{1F3C0}' };
+          return (
+            <div className="min-h-screen bg-green-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 max-w-sm w-full text-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Welcome, {pendingRoles.user.name}!</h2>
+                <p className="text-gray-500 mb-6">Choose your dashboard:</p>
+                <div className="space-y-3">
+                  {pendingRoles.roles.map(role => (
+                    <button
+                      key={role}
+                      onClick={() => {
+                        const user = { ...pendingRoles.user, role, roles: pendingRoles.roles };
+                        sessionStorage.setItem('user', JSON.stringify(user));
+                        if (role === 'admin') window.location.href = '/admin.html';
+                        else if (role === 'parent') window.location.href = '/parent.html';
+                        else if (role === 'counselor') window.location.href = '/counselor.html';
+                      }}
+                      className={`w-full ${roleColors[role]} text-white font-bold py-3 px-4 rounded-lg text-lg transition-colors`}
+                    >
+                      {roleIcons[role]} {roleLabels[role]}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => { setPendingRoles(null); setMode('login'); }} className="mt-4 text-sm text-gray-400 hover:text-gray-600">Back to Login</button>
+              </div>
+            </div>
+          );
+        }
 
         // Show role selector
         if (mode === 'selectRole') {

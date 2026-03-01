@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.180";
+    const VERSION = "13.181";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-23T21:22:00");
+    const BUILD_DATE = new Date("2026-02-28T20:56:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -498,6 +498,13 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
               </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                 <span className="text-green-300 text-xs sm:text-sm px-2 py-1">{user?.name || 'Counselor'}</span>
+                {(user?.roles || []).includes('admin') && (
+                  <button onClick={() => {
+                    const updated = { ...user, role: 'admin' };
+                    sessionStorage.setItem('user', JSON.stringify(updated));
+                    window.location.href = '/admin.html';
+                  }} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm sm:text-base min-h-[44px]">Admin View</button>
+                )}
                 <button onClick={handleLogout} className="px-3 sm:px-4 py-2.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded text-sm sm:text-base min-h-[44px]">Logout</button>
               </div>
             </div>
@@ -1080,7 +1087,8 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
           return;
         }
         const sessionUser = JSON.parse(userJson);
-        if (sessionUser.role !== 'counselor') {
+        const userRoles = sessionUser.roles || [sessionUser.role];
+        if (sessionUser.role !== 'counselor' && !userRoles.includes('counselor')) {
           window.location.href = '/index.html';
           return;
         }

@@ -22,8 +22,8 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const VERSION = "13.180";
-    const BUILD_DATE = new Date("2026-02-23T21:22:00");
+    const VERSION = "13.181";
+    const BUILD_DATE = new Date("2026-02-28T20:56:00");
     const getEnvironment = () => {
       const h = window.location.hostname;
       return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
@@ -169,6 +169,7 @@
         { name: "Counselor profiles page", done: true },
         { name: "Email/password login", done: true },
         { name: "Google sign-in", done: true },
+        { name: "Multi-role login — users with multiple roles see a role picker", done: true },
         { name: "Apple sign-in", done: false },
         { name: "Forgot password (email reset)", done: true },
         { name: "Forgot login (SMS code to phone)", done: true },
@@ -211,6 +212,8 @@
         { name: "Full history/audit log", done: true },
         { name: "Reorganize tabs into groups", done: false },
         { name: "Photo migration tool in Danger Zone (move base64 to CDN)", done: true },
+        { name: "Google-login admin accounts (Audrey + Derek)", done: true },
+        { name: "Dashboard switch button for dual-role users (admin/counselor)", done: true },
       ]},
       { area: "Performance", items: [
         { name: "Photos stored on Supabase Storage CDN instead of database", done: true },
