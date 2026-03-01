@@ -291,7 +291,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
-      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [counselorDashMonth, setCounselorDashMonth] = useState(7); // Persist selected month in Counselor Dashboard (7 = August)
       // showProfileEditModal removed — profile editing is now admin-only
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
@@ -908,9 +908,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
                   {/* Month Tabs + Bulk Actions */}
                   <div className="flex flex-wrap gap-2">
-                    {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
-                      <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
-                    ))}
+                    <button className="px-6 py-2 rounded-lg font-medium bg-green-600 text-white">August</button>
                     <div className="flex-1" />
                     <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
                       Mark All Available

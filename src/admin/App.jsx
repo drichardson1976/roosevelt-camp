@@ -667,7 +667,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
         const [profileData, setProfileData] = useState({ position: 'Point Guard', year: 'Freshman', bio: '', photo: null });
         const [availData, setAvailData] = useState({});
         const [unavailData, setUnavailData] = useState({});
-        const [selectedMonth, setSelectedMonth] = useState(6); // 6=July, 7=August
+        const [selectedMonth, setSelectedMonth] = useState(7); // 7=August (camp runs Aug 17-28 only)
         const [responsibilitiesAcked, setResponsibilitiesAcked] = useState(false);
         const [payAcked, setPayAcked] = useState(false);
         const [error, setError] = useState('');
@@ -1041,9 +1041,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
                     {/* Month Tabs */}
                     <div className="flex flex-wrap gap-2 mb-4">
-                      {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
-                        <button key={m} onClick={() => setSelectedMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (selectedMonth === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
-                      ))}
+                      <button className="px-6 py-2 rounded-lg font-medium bg-green-600 text-white">August</button>
                       <div className="flex-1" />
                       <button onClick={selectAllSessions} className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200">Mark All Available</button>
                       <button onClick={clearAllSessions} className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">Clear All</button>
