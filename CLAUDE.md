@@ -69,6 +69,7 @@ This is primarily an HTML/Markdown project with multiple standalone HTML app pag
 
 ### General Principles
 - When asked to do something (e.g., 'push all files'), just do it with sensible defaults. Don't pause to ask clarifying questions about minor details like .DS_Store files — use a .gitignore or make a reasonable choice and move on.
+- **Avoid code duplication** — If a requested change would require duplicating code that already exists (e.g., copying a function into multiple files, repeating logic across pages), STOP and recommend a better approach to Derek or Audrey. Suggest extracting shared code into `src/shared/` or creating a reusable component/utility instead. Explain why duplication is bad (harder to maintain, bugs need fixing in multiple places) and offer a cleaner alternative.
 
 ### Pre-Work Checklist (EVERY task)
 Before starting ANY work, complete this checklist:
