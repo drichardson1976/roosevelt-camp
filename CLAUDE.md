@@ -398,23 +398,24 @@ The 4 main HTML pages (index, admin, parent, counselor) are built with **Vite** 
 
 ---
 
-## 📁 FILE STRUCTURE
+## 📁 FILE STRUCTURE (122 files on main)
 
-### HTML Entry Points (4 main, built by Vite)
+### HTML Entry Points (4 main pages, built by Vite)
 - **index.html** → `src/index/App.jsx` - Login page, user role detection, public site
 - **parent.html** → `src/parent/App.jsx` - Parent dashboard (campers, registrations, emergency contacts)
 - **counselor.html** → `src/counselor/App.jsx` - Counselor dashboard (availability, profile, schedule)
 - **admin.html** → `src/admin/App.jsx` - Admin dashboard shell (tabs load from src/admin/tabs/)
 
 ### Source Code (/src/)
-- **src/shared/config.js** - Supabase client, environment detection, schema selection
-- **src/shared/utils.js** - Storage helpers, phone formatting, photo utilities
-- **src/shared/release-notes.js** - Release notes (ES module, for Vite-built pages)
-- **src/shared/campDates.js** - Camp date generation, weeks, date ranges
-- **src/shared/defaults.js** - DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS
-- **src/shared/pricing.js** - calculateDiscountedTotal()
-- **src/shared/constants.js** - GRADE_OPTIONS, RELATIONSHIP_OPTIONS, PICKUP/DROPOFF policies
-- **src/shared/components/** - Shared UI components used across pages:
+- **src/shared/** - Shared modules used across all 4 main pages:
+  - `config.js` - Supabase client, environment detection, schema selection
+  - `utils.js` - Storage helpers, phone formatting, photo utilities
+  - `release-notes.js` - Release notes (ES module, for Vite-built pages)
+  - `campDates.js` - Camp date generation, weeks, date ranges
+  - `defaults.js` - DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS
+  - `pricing.js` - calculateDiscountedTotal()
+  - `styles.css` - Shared Tailwind/global styles
+- **src/shared/components/** - Shared UI components:
   - `StableInput.jsx` - Input/Textarea that doesn't lose focus on parent re-render
   - `VersionBanner.jsx` - Dev/prod ribbon with version, DB status, build time
   - `Toast.jsx` - Auto-dismissing notification popup
@@ -422,44 +423,111 @@ The 4 main HTML pages (index, admin, parent, counselor) are built with **Vite** 
   - `ImageCropper.jsx` - Canvas-based image crop/zoom/pan tool
   - `PhotoUploadModal.jsx` - Photo upload flow with cropper integration
   - `ScrollableTabs.jsx` - Draggable horizontal tab bar with scroll indicators
+- **src/admin/** - Admin page source:
+  - `App.jsx` - Main admin app component
+  - `main.jsx` - Vite entry point
 - **src/admin/tabs/** - Admin tab components (one per tab):
-  - `DashboardTab.jsx`, `CounselorsTab.jsx`, `ParentsTab.jsx`, `CampersTab.jsx`
-  - `RegistrationsTab.jsx`, `AssignmentsTab.jsx`, `SessionsTab.jsx`
-  - `ContentTab.jsx`, `HistoryTab.jsx`, `DangerZoneTab.jsx`, `ApprovalTab.jsx`
+  - `AdminsTab.jsx`, `ParentsTab.jsx`, `CampersTab.jsx`, `ChildrenTab.jsx`
+  - `AssignmentsTab.jsx`, `SessionsTab.jsx`, `GymRentalDaysTab.jsx`
+  - `InvoicesSubTab.jsx`
 - **src/admin/components/** - Admin-specific reusable components:
-  - `DangerZoneTable.jsx` - Generic table viewer for Danger Zone
-  - `InvoicesSubTab.jsx` - Invoice generation sub-component
+  - `CounselorEditForm.jsx` - Counselor profile editing form
+  - `FoodPhotosManager.jsx` - Food photo gallery management
+  - `SitePhotosManager.jsx` - Site photo gallery management
+  - `ParentOnboardingWizard.jsx` - Parent onboarding flow
+- **src/index/** - Public/login page source:
+  - `App.jsx` - Main index app component
+  - `main.jsx` - Vite entry point
+- **src/parent/** - Parent dashboard source:
+  - `App.jsx` - Main parent app component
+  - `main.jsx` - Vite entry point
+- **src/counselor/** - Counselor dashboard source:
+  - `App.jsx` - Main counselor app component
+  - `main.jsx` - Vite entry point
 
 ### Non-Vite Pages (CDN-loaded, copied to dist/ as-is)
 - **prd.html** - Product requirements document
 - **tests.html** - Test suite page
-- **release-notes.js** - Release notes (var, for CDN/Babel pages)
+- **privacy-policy.html** - Privacy policy page
+- **presentation.html** - Technical project presentation
+- **presentation-nontechnical.html** - Non-technical project presentation
+- **presentation/index.html** - Alternate presentation page
+- **release-notes.js** - Release notes (var-based, for CDN/Babel pages)
+- **config.js** - Legacy Supabase config (var-based, for CDN/Babel pages)
+- **utils.js** - Legacy storage/utility helpers (var-based, for CDN/Babel pages)
 
 ### Build & Config Files
 - **vite.config.js** - Vite build config + dev server CSP headers
 - **netlify.toml** - Netlify build/deploy config + production CSP headers
 - **package.json** - npm dependencies and build scripts
+- **package-lock.json** - Locked dependency versions
+- **tailwind.config.js** - Tailwind CSS configuration
+- **postcss.config.js** - PostCSS configuration (used by Tailwind)
+- **.gitignore** - Git ignore rules (node_modules, dist, etc.)
+
+### IDE & Editor Config
+- **.vscode/settings.json** - VS Code workspace settings
+- **.vscode/tasks.json** - VS Code task definitions
 
 ### Netlify Functions (/netlify/functions/)
+- **login.cjs** - User authentication (email/password login)
+- **signup.cjs** - New user account creation
+- **hash-password.cjs** - Password hashing utility
 - **send-email.cjs** - Send emails via Resend API
 - **request-password-reset.cjs** - Generate token, store in Supabase, send reset email
 - **reset-password.cjs** - Validate token, update password in Supabase
 - **send-sms.cjs** - Send SMS via Twilio API
-- **send-verification-code.cjs** - Look up user by phone, generate 6-digit code, store in Supabase, send via Twilio
+- **send-verification-code.cjs** - Look up user by phone, generate 6-digit code, send via Twilio
 - **verify-code.cjs** - Validate SMS verification code, return user's login info
 - **utils/cors.cjs** - Shared CORS headers and preflight handling
 - **utils/schema.cjs** - Schema detection (dev vs public) from request origin
 - **utils/supabase.cjs** - Supabase client factory with fetchTable/upsertRow helpers
+- **utils/rate-limiter.cjs** - Rate limiting for password resets and login attempts
+- **utils/validation.cjs** - Input validation helpers
+- **utils/SETUP.md** - Setup documentation for Netlify functions
 
 ### Migration Scripts (/migrations/)
 - **00_diagnose_structure.sql** - Check table structure
+- **01_create_new_tables.sql** - Initial table creation (superseded by CORRECT version)
 - **01_create_new_tables_CORRECT.sql** - Create camp_parents and camp_counselor_users
+- **01_create_new_tables_v2.sql** - Alternate table creation attempt
+- **02_migrate_data.sql** - Initial data migration (superseded by CORRECT version)
 - **02_migrate_data_CORRECT.sql** - Split registered_users into new tables
 - **03_verify_both_schemas.sql** - Verify migration success
 - **04_list_all_tables.sql** - List all tables in both schemas
 - **05_delete_unused_tables.sql** - Delete legacy/unused tables (2026-02-08)
 - **06_create_ec_links_dev.sql** - Create camp_camper_emergency_contact_links in dev schema
 - **07_create_storage_bucket.sql** - Create camp-photos storage bucket + policies (2026-02-19)
+- **MIGRATION_INSTRUCTIONS.md** - How to run migrations
+
+### Photos & Assets
+- **favicon.svg** - Site favicon
+- **seed-photos.json** - Photo seed data for development
+- **RHS DayCamp Website/** - Original source photos (17 images):
+  - Counselor headshots: Audrey, Emma, Julia, Molly, Sloane, Derek
+  - Camp activity photos: Coach girl, Girl Layup, Girls dribbling, Girls Lunch, Dropoff
+  - Food photos: Cheese sticks, Gatorade, Granola bars, Veggie Snacks, fruits, apple juice, orange juice, water bottles
+
+### Documentation & Planning
+- **CLAUDE.md** - This file (Claude Code reference document)
+- **DEVELOPER_GUIDE.md** - Developer onboarding guide
+- **DATABASE_CLEANUP_ANALYSIS.md** - Database cleanup analysis notes
+- **SPLIT_IMPLEMENTATION.md** - User table split implementation plan
+- **UPGRADE-PLAN.md** - Vite upgrade planning notes
+- **WORKFLOWS.md** - User workflow documentation
+- **WORKFLOWS-MERMAID.md** - Workflow diagrams in Mermaid format
+- **SESSION-SUMMARY-2026-02-15.md** - Session summary notes
+- **vscode-claude-diagnostics-BEFORE-REINSTALL.md** - VS Code diagnostics notes
+
+### Backup & Legacy Files
+- **admin-prebuild.html** - Admin page before Vite migration
+- **counselor-prebuild.html** - Counselor page before Vite migration
+- **index-prebuild.html** - Index page before Vite migration
+- **parent-prebuild.html** - Parent page before Vite migration
+- **admin.html.backup** - Admin page backup
+- **index-backup-v12.142.html** - Index page backup at v12.142
+- **counselor-backup.json** - Counselor data backup
+- **typescript** - Empty file (can be deleted)
 
 ---
 
