@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.184";
+    const VERSION = "13.185";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T21:00:00");
+    const BUILD_DATE = new Date("2026-02-28T21:44:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1146,23 +1146,23 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                               const headerBg = hasBoth ? 'bg-green-200' : hasAny ? 'bg-yellow-100' : 'bg-gray-100';
 
                               return (
-                                <div key={date} className={'rounded-lg border-2 overflow-hidden transition-shadow ' + cardBorder + (hasAny ? ' hover:shadow-md' : '')}>
+                                <div key={date} className={'rounded-lg border-2 overflow-hidden transition-shadow ' + cardBorder}>
                                   <div className={'p-2 text-center font-medium ' + headerBg}>
                                     <div className="text-xs text-gray-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1]}</div>
                                     <div className="text-sm">{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
                                   </div>
                                   <div className="p-2 space-y-1">
                                     {hasAm ? (
-                                      <button onClick={() => setPodModal({ date, session: 'morning' })} className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                      <div className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center">
                                         ☀️ AM · {amCampers.length} camper{amCampers.length !== 1 ? 's' : ''}
-                                      </button>
+                                      </div>
                                     ) : (
                                       <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
                                     )}
                                     {hasPm ? (
-                                      <button onClick={() => setPodModal({ date, session: 'afternoon' })} className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white hover:bg-green-600 transition-colors">
+                                      <div className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center">
                                         🌙 PM · {pmCampers.length} camper{pmCampers.length !== 1 ? 's' : ''}
-                                      </button>
+                                      </div>
                                     ) : (
                                       <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
                                     )}
@@ -1172,6 +1172,86 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                             })}
                           </div>
                         )}
+
+                        {/* My Pod - Campers Section */}
+                        {(() => {
+                          // Get all sessions for this month with campers
+                          const monthDates = getMonthDates(month);
+                          const sessionsWithCampers = [];
+                          monthDates.forEach(date => {
+                            const amCampers = myAssignmentMap[date]?.morning || [];
+                            const pmCampers = myAssignmentMap[date]?.afternoon || [];
+                            if (amCampers.length > 0) {
+                              sessionsWithCampers.push({ date, session: 'morning', camperIds: amCampers });
+                            }
+                            if (pmCampers.length > 0) {
+                              sessionsWithCampers.push({ date, session: 'afternoon', camperIds: pmCampers });
+                            }
+                          });
+
+                          if (sessionsWithCampers.length === 0) {
+                            return (
+                              <div className="bg-white rounded-xl shadow p-6 text-center">
+                                <div className="text-4xl mb-3">📋</div>
+                                <p className="text-gray-500">No campers assigned to you yet for this month.</p>
+                                <p className="text-gray-400 text-sm mt-2">Check back after the admin assigns pods.</p>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div className="bg-white rounded-xl shadow overflow-hidden">
+                              <div className="bg-green-600 text-white px-4 py-3">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                  <span>🏀</span> My Campers
+                                </h3>
+                              </div>
+                              <div className="divide-y divide-gray-100">
+                                {sessionsWithCampers.map(({ date, session, camperIds }) => {
+                                  const d = new Date(date + 'T12:00:00');
+                                  const dayName = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][d.getDay() - 1];
+                                  const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                  const sessionLabel = session === 'morning' ? '☀️ AM' : '🌙 PM';
+
+                                  return (
+                                    <div key={`${date}_${session}`} className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <span className="font-bold text-green-700">{dayName}, {dateStr}</span>
+                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded text-sm font-medium">{sessionLabel}</span>
+                                        <span className="text-gray-500 text-sm">({camperIds.length} camper{camperIds.length !== 1 ? 's' : ''})</span>
+                                      </div>
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                        {camperIds.map(camperId => {
+                                          const camper = (campers || []).find(c => c.id === camperId);
+                                          const photo = camper ? getDisplayPhoto(camper.photo) : null;
+                                          const name = camper ? `${camper.firstName || ''} ${camper.lastName || ''}`.trim() : 'Unknown Camper';
+                                          const initials = camper ? `${(camper.firstName || '?')[0]}${(camper.lastName || '?')[0]}`.toUpperCase() : '??';
+                                          const age = camper?.birthdate ? calculateAge(camper.birthdate) : null;
+
+                                          return (
+                                            <div key={camperId} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                                              {photo ? (
+                                                <img src={photo} className="w-12 h-12 rounded-full object-cover border-2 border-green-300" alt={name} />
+                                              ) : (
+                                                <div className="w-12 h-12 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center text-green-700 font-bold">{initials}</div>
+                                              )}
+                                              <div>
+                                                <div className="font-medium text-gray-800">{name}</div>
+                                                <div className="text-sm text-gray-500">
+                                                  {camper?.grade ? `Grade ${camper.grade}` : ''}{camper?.grade && age != null ? ' · ' : ''}{age != null ? `Age ${age}` : ''}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </>
                     );
                   })()}
