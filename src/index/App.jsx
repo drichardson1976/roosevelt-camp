@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.184";
+    const VERSION = "13.186";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T21:00:00");
+    const BUILD_DATE = new Date("2026-02-28T22:00:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1830,6 +1830,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [showBanner, setShowBanner] = useState(false);
       const [transitioning, setTransitioning] = useState(false); // Global transition state for login/registration
       const [backgroundLoaded, setBackgroundLoaded] = useState(false); // Phase 2 data loaded
+      const [pendingGoogleLogin, setPendingGoogleLogin] = useState(null); // { email, name } waiting for background data
       
       const [content, setContent] = useState(DEFAULT_CONTENT);
       const [counselors, setCounselors] = useState(DEFAULT_COUNSELORS);
@@ -3488,7 +3489,8 @@ As a 1099 contractor, you are responsible for:
         const handleGoogleCredential = (googleEmail, googleName) => {
           // Guard: Phase 2 data (admins, parents, counselorUsers) must be loaded for Google login
           if (!backgroundLoaded) {
-            setError('Still loading account data. Please try again in a moment.');
+            // Store credentials and wait for background data to load
+            setPendingGoogleLogin({ email: googleEmail, name: googleName });
             return;
           }
 
@@ -3560,6 +3562,15 @@ As a 1099 contractor, you are responsible for:
         // (avoids stale closure where backgroundLoaded/admins are from initial render)
         const handleGoogleCredentialRef = useRef(handleGoogleCredential);
         handleGoogleCredentialRef.current = handleGoogleCredential;
+
+        // Process pending Google login when background data finishes loading
+        useEffect(() => {
+          if (backgroundLoaded && pendingGoogleLogin) {
+            const { email, name } = pendingGoogleLogin;
+            setPendingGoogleLogin(null); // Clear pending state
+            handleGoogleCredentialRef.current(email, name);
+          }
+        }, [backgroundLoaded, pendingGoogleLogin]);
 
         const googleClientRef = useRef(null);
         useEffect(() => {
@@ -4049,15 +4060,25 @@ As a 1099 contractor, you are responsible for:
                 <button
                   type="button"
                   onClick={handleGoogleClick}
-                  className="w-full flex items-center justify-center gap-3 px-4 py-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  disabled={!!pendingGoogleLogin}
+                  className={`w-full flex items-center justify-center gap-3 px-4 py-3 border-2 rounded-lg transition-colors ${pendingGoogleLogin ? 'bg-gray-100 cursor-wait' : 'hover:bg-gray-50'}`}
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                  <span className="font-medium text-gray-700">Continue with Google</span>
+                  {pendingGoogleLogin ? (
+                    <>
+                      <span className="animate-spin text-xl">🏀</span>
+                      <span className="font-medium text-gray-500">Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                      </svg>
+                      <span className="font-medium text-gray-700">Continue with Google</span>
+                    </>
+                  )}
                 </button>
 
                 <button onClick={() => { setMode('selectRole'); setError(''); }} className="w-full mt-6 text-green-600 hover:underline font-medium">
