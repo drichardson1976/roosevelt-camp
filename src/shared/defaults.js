@@ -13,7 +13,7 @@ export const DEFAULT_CONTENT = {
   sessionMorning: "9:00 AM - 12:00 PM",
   sessionAfternoon: "12:00 PM - 3:00 PM",
   sessionCost: "$60",
-  campDates: "Weekdays from July 13-17 & August 10-28, 2026",
+  campDates: "Weekdays August 17-21 & August 24-28, 2026",
   ageRange: "Completed 3rd - 8th Grade",
   locationName: "Roosevelt High School",
   locationAddress: "1410 NE 66th St",

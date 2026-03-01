@@ -22,8 +22,8 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    const VERSION = "13.180";
-    const BUILD_DATE = new Date("2026-02-23T21:22:00");
+    const VERSION = "13.181";
+    const BUILD_DATE = new Date("2026-02-28T20:50:00");
     const getEnvironment = () => {
       const h = window.location.hostname;
       return (h.includes('localhost') || h.includes('127.0.0.1') || h.includes('github.io')) ? 'development' : 'production';
@@ -38,7 +38,7 @@
       title: "Roosevelt Girls Basketball Day Camp",
       tagline: "How Our Camp Website Works",
       summary: "Our website lets parents sign up their kids for basketball camp, lets high school counselors apply to work at camp, and lets the camp director (admin) manage everything. Here's how it all fits together.",
-      campDates: "July 13-17 & August 10-28, 2026",
+      campDates: "August 17-21 & August 24-28, 2026",
       location: "Roosevelt High School, Seattle WA",
       sessions: "Morning (9 AM - 12 PM) and Afternoon (12 - 3 PM)",
       cost: "$60 per session",
@@ -134,7 +134,7 @@
           { name: "Registrations", what: "Which kid, which date, morning or afternoon, paid or not, status", example: "Lily Smith, July 14, Morning, Pending, Not paid yet" },
           { name: "Pod Assignments", what: "For each session: which counselor is with which campers", example: "July 14 Morning: Sarah Mitchell with Lily, Emma, Maya" },
           { name: "Gym Rental Days", what: "Which dates the gym is booked, morning and/or afternoon", example: "July 14: morning=booked, afternoon=booked" },
-          { name: "Camp Dates", what: "All the dates camp is running", example: "July 13-17, August 10-28 (weekdays)" }
+          { name: "Camp Dates", what: "All the dates camp is running", example: "August 17-21, August 24-28 (weekdays)" }
         ]
       },
       {
