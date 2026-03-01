@@ -2968,7 +2968,7 @@ As a 1099 contractor, you are responsible for:
                 return false;
               }
             }
-            if ((counselorUsers || []).some(u => u.email.toLowerCase() === userData.email.trim().toLowerCase()) || (counselors || []).some(c => c.email.toLowerCase() === userData.email.trim().toLowerCase())) {
+            if ((counselorUsers || []).some(u => u.email?.toLowerCase() === userData.email.trim().toLowerCase()) || (counselors || []).some(c => c.email?.toLowerCase() === userData.email.trim().toLowerCase())) {
               setError('An account with this email already exists. Please use a different email or log in instead.');
               return false;
             }
