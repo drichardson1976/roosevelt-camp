@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.181";
+    const VERSION = "13.182";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T20:50:00");
+    const BUILD_DATE = new Date("2026-02-28T21:10:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -510,8 +510,99 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
         const setMonth = setCounselorDashMonth;
         const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
         const [podModal, setPodModal] = useState(null); // { date, session } for PodDetailModal
+        const [showProfileEdit, setShowProfileEdit] = useState(false); // Profile edit modal
         const myAvail = availability[user?.email] || {};
         const myCounselor = counselors.find(c => c.email === user?.email);
+
+        // Profile Edit Modal Component
+        const ProfileEditModal = () => {
+          const [bio, setBio] = useState(myCounselor?.bio || '');
+          const [photo, setPhoto] = useState(myCounselor?.photo || null);
+          const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+          const [saving, setSaving] = useState(false);
+
+          const handleSave = async () => {
+            if (!myCounselor) return;
+            setSaving(true);
+            const updatedCounselors = counselors.map(c =>
+              c.id === myCounselor.id ? { ...c, bio, photo } : c
+            );
+            await saveCounselors(updatedCounselors, `${myCounselor.name} updated profile`);
+            setSaving(false);
+            setShowProfileEdit(false);
+            showToast('Profile updated!');
+          };
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <h2 className="font-display text-2xl text-green-800 mb-4">Edit Profile</h2>
+
+                {/* Photo Section */}
+                <div className="flex items-center gap-4 mb-6">
+                  {getDisplayPhoto(photo) ? (
+                    <img
+                      src={getDisplayPhoto(photo)}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-green-600 cursor-pointer hover:opacity-80"
+                      onClick={() => setShowPhotoUpload(true)}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => setShowPhotoUpload(true)}
+                      className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 border-4 border-dashed border-gray-400"
+                    >
+                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="text-xs text-gray-500 font-medium">Add Photo</span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600">{getDisplayPhoto(photo) ? 'Click photo to change' : 'Add a profile photo'}</p>
+                    <p className="text-xs text-gray-400 mt-1">This will be visible on the public website</p>
+                  </div>
+                </div>
+
+                {showPhotoUpload && (
+                  <PhotoUploadModal
+                    currentPhoto={photo}
+                    onSave={(img) => { setPhoto(img); setShowPhotoUpload(false); }}
+                    onCancel={() => setShowPhotoUpload(false)}
+                  />
+                )}
+
+                {/* Bio Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none h-32 resize-none"
+                    placeholder="Tell campers and parents about yourself..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">{bio.length} characters</p>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowProfileEdit(false)}
+                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        };
 
         const getMonthDates = (m) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === m);
 
@@ -688,20 +779,24 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
             completed: !!isApproved
           });
 
-          // Step 2: Profile photo (read-only — admin manages profiles)
+          // Step 2: Profile photo
           const hasPhoto = myCounselor && getDisplayPhoto(myCounselor.photo);
           hints.push({
             icon: hasPhoto ? '📸' : '📸',
-            text: hasPhoto ? 'Profile photo added' : 'Profile photo not set — contact the Camp Director to update your profile',
+            text: hasPhoto ? 'Profile photo added' : 'Profile photo not set',
+            action: () => setShowProfileEdit(true),
+            actionText: hasPhoto ? 'Change Photo' : 'Add Photo',
             priority: 2,
             completed: !!hasPhoto
           });
 
-          // Step 3: Bio (read-only — admin manages profiles)
+          // Step 3: Bio
           const hasBio = myCounselor && myCounselor.bio && myCounselor.bio.trim().length > 0;
           hints.push({
             icon: hasBio ? '✏️' : '✏️',
-            text: hasBio ? 'Bio completed' : 'Bio not set — contact the Camp Director to update your profile',
+            text: hasBio ? 'Bio completed' : 'Bio not set',
+            action: () => setShowProfileEdit(true),
+            actionText: hasBio ? 'Edit Bio' : 'Add Bio',
             priority: 3,
             completed: !!hasBio
           });
@@ -761,6 +856,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
         return (
           <div className="min-h-screen bg-amber-50">
+            {/* Profile Edit Modal */}
+            {showProfileEdit && <ProfileEditModal />}
+
             <div className="bg-green-800 text-white py-4">
               <div className="max-w-6xl mx-auto px-4">
                 <h1 className="font-display text-3xl">Counselor Dashboard</h1>
