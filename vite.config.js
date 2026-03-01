@@ -48,7 +48,7 @@ export default defineConfig({
   // but netlify dev doesn't reliably apply those headers when proxying Vite
   server: {
     headers: {
-      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.resend.com https://accounts.google.com https://cdn.jsdelivr.net https://unpkg.com https://localhost:* ws://localhost:*; frame-src https://accounts.google.com https://www.google.com; frame-ancestors 'none';",
+      'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://cdn.tailwindcss.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co https://api.resend.com https://accounts.google.com https://www.googleapis.com https://cdn.jsdelivr.net https://unpkg.com https://localhost:* ws://localhost:*; frame-src https://accounts.google.com https://www.google.com; frame-ancestors 'none';",
     },
   },
   build: {
