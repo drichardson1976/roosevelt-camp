@@ -12,10 +12,10 @@ import { calculateDiscountedTotal } from '../../shared/pricing';
 
 // ==================== GYM RENTAL DAYS TAB ====================
 export const GymRentalDaysTab = ({ gymRentals, allDates, onSaveGymRentals, showToast, selectedMonth, setSelectedMonth }) => {
-  // Generate all weekdays (Mon-Fri) in July and August 2026
+  // Generate all weekdays (Mon-Fri) in August 2026 (camp runs Aug 17-28 only)
   const getAllWeekdays = () => {
     const weekdays = [];
-    const months = [6, 7]; // July (6) and August (7) - 0-indexed
+    const months = [7]; // August (7) - 0-indexed
     const year = 2026;
 
     months.forEach(month => {
@@ -38,14 +38,13 @@ export const GymRentalDaysTab = ({ gymRentals, allDates, onSaveGymRentals, showT
   // Initialize selected month if not set
   React.useEffect(() => {
     if (!selectedMonth) {
-      setSelectedMonth('2026-07'); // Default to July 2026
+      setSelectedMonth('2026-08'); // Default to August 2026
     }
   }, [selectedMonth, setSelectedMonth]);
 
-  // Get months (July and August 2026)
+  // Get months (August 2026 only - camp runs Aug 17-28)
   const getMonths = () => {
     return [
-      { key: '2026-07', name: 'July 2026', year: 2026, month: 6 },
       { key: '2026-08', name: 'August 2026', year: 2026, month: 7 }
     ];
   };

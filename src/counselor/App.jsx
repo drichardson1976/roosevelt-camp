@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../shared/config';
-import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost } from '../shared/utils';
+import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost, photoStorage } from '../shared/utils';
 import { VersionBanner } from '../shared/components/VersionBanner';
 import { Toast } from '../shared/components/Toast';
 import { ScrollableTabs } from '../shared/components/ScrollableTabs';
@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.181";
+    const VERSION = "13.184";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T20:56:00");
+    const BUILD_DATE = new Date("2026-02-28T21:00:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -291,7 +291,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
-      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [counselorDashMonth, setCounselorDashMonth] = useState(7); // Persist selected month in Counselor Dashboard (7 = August)
       // showProfileEditModal removed — profile editing is now admin-only
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
@@ -406,6 +406,20 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
       };
 
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
+
+      const saveCounselors = async (cs, action = null) => {
+        // Upload any new base64 counselor photos to Storage CDN
+        for (const c of cs) {
+          if (c.photo && !photoStorage.isUrl(c.photo)) {
+            const url = await photoStorage.uploadPhoto('counselors', c.id, c.photo);
+            if (url) c.photo = url;
+          }
+        }
+        setCounselors(cs);
+        for (const c of cs) await storage.set('camp_counselors', c.id, c);
+        if (action) addToHistory('Counselor', action);
+      };
+
       const saveCampers = async (c, action = null) => {
         setCampers(c);
         await storage.set('camp_campers', 'main', c);
@@ -517,8 +531,105 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
         const setMonth = setCounselorDashMonth;
         const [viewMode, setViewMode] = useState('calendar'); // 'calendar' or 'summary'
         const [podModal, setPodModal] = useState(null); // { date, session } for PodDetailModal
+        const [showProfileEdit, setShowProfileEdit] = useState(false); // Profile edit modal
         const myAvail = availability[user?.email] || {};
         const myCounselor = counselors.find(c => c.email === user?.email);
+
+        // Profile Edit Modal Component
+        const ProfileEditModal = () => {
+          const [bio, setBio] = useState(myCounselor?.bio || '');
+          const [photo, setPhoto] = useState(myCounselor?.photo || null);
+          const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+          const [saving, setSaving] = useState(false);
+
+          const handleSave = async () => {
+            if (!myCounselor) return;
+            setSaving(true);
+            try {
+              const updatedCounselors = counselors.map(c =>
+                c.id === myCounselor.id ? { ...c, bio, photo } : c
+              );
+              await saveCounselors(updatedCounselors, `${myCounselor.name} updated profile`);
+              setShowProfileEdit(false);
+              showToast('Profile updated!');
+            } catch (err) {
+              console.error('Error saving profile:', err);
+              showToast('Error saving profile. Please try again.', 'error');
+            } finally {
+              setSaving(false);
+            }
+          };
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+                <h2 className="font-display text-2xl text-green-800 mb-4">Edit Profile</h2>
+
+                {/* Photo Section */}
+                <div className="flex items-center gap-4 mb-6">
+                  {getDisplayPhoto(photo) ? (
+                    <img
+                      src={getDisplayPhoto(photo)}
+                      className="w-24 h-24 rounded-full object-cover border-4 border-green-600 cursor-pointer hover:opacity-80"
+                      onClick={() => setShowPhotoUpload(true)}
+                    />
+                  ) : (
+                    <div
+                      onClick={() => setShowPhotoUpload(true)}
+                      className="w-24 h-24 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300 border-4 border-dashed border-gray-400"
+                    >
+                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="text-xs text-gray-500 font-medium">Add Photo</span>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600">{getDisplayPhoto(photo) ? 'Click photo to change' : 'Add a profile photo'}</p>
+                    <p className="text-xs text-gray-400 mt-1">This will be visible on the public website</p>
+                  </div>
+                </div>
+
+                {showPhotoUpload && (
+                  <PhotoUploadModal
+                    currentPhoto={photo}
+                    onSave={(img) => { setPhoto(img); setShowPhotoUpload(false); }}
+                    onCancel={() => setShowPhotoUpload(false)}
+                  />
+                )}
+
+                {/* Bio Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    className="w-full px-4 py-3 border-2 rounded-lg focus:border-green-500 focus:outline-none h-32 resize-none"
+                    placeholder="Tell campers and parents about yourself..."
+                  />
+                  <p className="text-xs text-gray-400 mt-1">{bio.length} characters</p>
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowProfileEdit(false)}
+                    className="flex-1 py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium disabled:opacity-50"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        };
 
         const getMonthDates = (m) => CAMP_DATES.filter(d => new Date(d + 'T12:00:00').getMonth() === m);
 
@@ -695,20 +806,24 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
             completed: !!isApproved
           });
 
-          // Step 2: Profile photo (read-only — admin manages profiles)
+          // Step 2: Profile photo
           const hasPhoto = myCounselor && getDisplayPhoto(myCounselor.photo);
           hints.push({
             icon: hasPhoto ? '📸' : '📸',
-            text: hasPhoto ? 'Profile photo added' : 'Profile photo not set — contact the Camp Director to update your profile',
+            text: hasPhoto ? 'Profile photo added' : 'Profile photo not set',
+            action: () => setShowProfileEdit(true),
+            actionText: hasPhoto ? 'Change Photo' : 'Add Photo',
             priority: 2,
             completed: !!hasPhoto
           });
 
-          // Step 3: Bio (read-only — admin manages profiles)
+          // Step 3: Bio
           const hasBio = myCounselor && myCounselor.bio && myCounselor.bio.trim().length > 0;
           hints.push({
             icon: hasBio ? '✏️' : '✏️',
-            text: hasBio ? 'Bio completed' : 'Bio not set — contact the Camp Director to update your profile',
+            text: hasBio ? 'Bio completed' : 'Bio not set',
+            action: () => setShowProfileEdit(true),
+            actionText: hasBio ? 'Edit Bio' : 'Add Bio',
             priority: 3,
             completed: !!hasBio
           });
@@ -768,6 +883,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
         return (
           <div className="min-h-screen bg-amber-50">
+            {/* Profile Edit Modal */}
+            {showProfileEdit && <ProfileEditModal />}
+
             <div className="bg-green-800 text-white py-4">
               <div className="max-w-6xl mx-auto px-4">
                 <h1 className="font-display text-3xl">Counselor Dashboard</h1>
@@ -915,9 +1033,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
                   {/* Month Tabs + Bulk Actions */}
                   <div className="flex flex-wrap gap-2">
-                    {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
-                      <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
-                    ))}
+                    <button className="px-6 py-2 rounded-lg font-medium bg-green-600 text-white">August</button>
                     <div className="flex-1" />
                     <button onClick={() => markMonthAvailable(month)} className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm">
                       Mark All Available
