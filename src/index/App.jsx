@@ -3558,6 +3558,11 @@ As a 1099 contractor, you are responsible for:
         };
 
         // Initialize Google OAuth2 token client for custom button
+        // Use a ref to always call the latest version of handleGoogleCredential
+        // (avoids stale closure where backgroundLoaded/admins are from initial render)
+        const handleGoogleCredentialRef = useRef(handleGoogleCredential);
+        handleGoogleCredentialRef.current = handleGoogleCredential;
+
         const googleClientRef = useRef(null);
         useEffect(() => {
           if (mode === 'login' && window.google?.accounts?.oauth2) {
@@ -3578,7 +3583,7 @@ As a 1099 contractor, you are responsible for:
                     setError('Could not get email from Google. Please try again.');
                     return;
                   }
-                  handleGoogleCredential(userInfo.email.toLowerCase(), userInfo.name || '');
+                  handleGoogleCredentialRef.current(userInfo.email.toLowerCase(), userInfo.name || '');
                 } catch (err) {
                   console.error('Google login error:', err);
                   setError('Google sign-in failed. Please try again.');
