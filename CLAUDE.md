@@ -616,7 +616,7 @@ MCP servers are configured per-project in `.mcp.json` so Claude only talks to th
 
 ### Development (localhost)
 ```bash
-cd /Users/derek/Documents/roosevelt-camp
+cd /Users/derek/Documents/Claude/roosevelt-camp
 netlify dev --port 8000
 # Opens on http://localhost:8000
 # Uses DEV schema
