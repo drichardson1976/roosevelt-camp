@@ -39,7 +39,6 @@ export const DEFAULT_COUNSELORS = [
 ];
 
 export const DEFAULT_ADMINS = [
-  { id: 'admin_1', username: 'admin', password: 'admin', name: 'Camp Director', email: 'director@rooseveltcamp.com', createdAt: new Date().toISOString() },
   { id: 'admin_derek', name: 'Derek Richardson', email: 'derek.richardson@gmail.com', loginType: 'google', createdAt: '2026-02-28T00:00:00.000Z' },
   { id: 'admin_camp', name: 'Camp Director (Gmail)', email: 'rhsdaycamp@gmail.com', loginType: 'google', createdAt: '2026-02-28T00:00:00.000Z' }
 ];
