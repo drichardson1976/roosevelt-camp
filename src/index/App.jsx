@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.193";
+    const VERSION = "13.194";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T12:14:00");
+    const BUILD_DATE = new Date("2026-03-02T12:37:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3036,7 +3036,13 @@ As a 1099 contractor, you are responsible for:
               };
             });
             const newAvail = { ...availability, [newCounselor.email]: combinedAvail };
-            await saveAvailability(newAvail);
+            try {
+              await saveAvailability(newAvail);
+              console.log('✅ Counselor availability saved:', newCounselor.email);
+            } catch (err) {
+              console.error('❌ Failed to save availability:', err);
+              // Continue anyway - availability can be added later
+            }
 
             // Also save to counselorSchedule so admin dashboard shows availability immediately
             // Save both available (true) and unavailable (false) sessions
@@ -3055,7 +3061,13 @@ As a 1099 contractor, you are responsible for:
                 else if (unavail.includes('afternoon')) newSchedule[newCounselor.id][date].afternoon = false;
               }
             });
-            await saveCounselorSchedule(newSchedule, `${newCounselor.name} registered with availability`);
+            try {
+              await saveCounselorSchedule(newSchedule, `${newCounselor.name} registered with availability`);
+              console.log('✅ Counselor schedule saved:', newCounselor.email);
+            } catch (err) {
+              console.error('❌ Failed to save schedule:', err);
+              // Continue anyway - schedule can be set later
+            }
 
             // Send welcome email (fire and forget — don't block onboarding)
             try {
