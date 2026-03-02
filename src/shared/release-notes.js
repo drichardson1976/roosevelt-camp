@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.197", date: "2026-03-02", time: "1:21 PM", author: "Audrey Richardson", changes: ["Login: Wrong password/email now shows popup error message that fades after 4 seconds", "Login: Error popup appears for both incorrect credentials and missing email/password"] },
   { version: "13.196", date: "2026-03-02", time: "1:15 PM", author: "Audrey Richardson", changes: ["Counselor Dashboard: 'Scheduled to Work' date cards are now clickable — click any assigned session to see pod details", "Counselor Dashboard: Pod detail modal shows camper photos, names, grades, ages, and other counselors working the same session"] },
   { version: "13.195", date: "2026-03-02", time: "1:11 PM", author: "Audrey Richardson", changes: ["Counselor Dashboard: Added error handling to all availability saves", "Counselor Dashboard: Availability changes now reliably sync to admin dashboard", "Counselor Dashboard: Console logs confirm successful saves and syncs", "Counselor Dashboard: Shows toast error if save fails"] },
   { version: "13.194", date: "2026-03-02", time: "12:37 PM", author: "Audrey Richardson", changes: ["Counselor Signup: Added error handling to availability and schedule saving", "Counselor Signup: All data (login, profile, availability, schedule) now has try-catch protection", "Counselor Signup: Console logs confirm each save step for debugging"] },

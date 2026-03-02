@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.194";
+    const VERSION = "13.197";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T12:37:00");
+    const BUILD_DATE = new Date("2026-03-02T13:21:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3440,11 +3440,12 @@ As a 1099 contractor, you are responsible for:
 
         const handleLogin = async () => {
           if (!email || !password) {
-            setError('Please enter your email and password.');
+            showLoginError('Please enter your email and password.');
             return;
           }
           setLoginLoading(true);
           setError('');
+          setErrorVisible(false);
           try {
             const loginStart = performance.now();
             const res = await fetch('/.netlify/functions/login', {
@@ -3469,10 +3470,10 @@ As a 1099 contractor, you are responsible for:
                 else window.location.href = '/parent.html';
               }
             } else {
-              setError(data.error || 'Incorrect email or password. Please try again.');
+              showLoginError(data.error || 'Incorrect email or password. Please try again.');
             }
           } catch (err) {
-            setError('Login failed. Please try again.');
+            showLoginError('Login failed. Please try again.');
           }
           setLoginLoading(false);
         };
