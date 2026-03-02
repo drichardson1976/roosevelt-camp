@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.191";
+    const VERSION = "13.192";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T09:28:00");
+    const BUILD_DATE = new Date("2026-03-02T09:33:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1954,16 +1954,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (av?.[0]?.data) setAvailability(av[0].data);
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
             if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
-            // Merge database admins with DEFAULT_ADMINS to ensure core admin accounts always exist
-            if (ad?.[0]?.data) {
-              const dbAdmins = Array.isArray(ad[0].data) ? ad[0].data : [];
-              const defaultEmails = DEFAULT_ADMINS.map(a => a.email?.toLowerCase());
-              const merged = [...DEFAULT_ADMINS];
-              for (const a of dbAdmins) {
-                if (!defaultEmails.includes(a.email?.toLowerCase())) merged.push(a);
-              }
-              setAdmins(merged);
-            }
+            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
             if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
@@ -3460,14 +3451,9 @@ As a 1099 contractor, you are responsible for:
 
         // Handle Google Sign-In — look up the Google email in existing accounts
         const handleGoogleCredential = (googleEmail, googleName) => {
-          console.log('🔐 [Google Login] handleGoogleCredential called with:', googleEmail);
-          console.log('🔐 [Google Login] backgroundLoaded:', backgroundLoaded);
-          console.log('🔐 [Google Login] admins array:', admins);
-
           // Guard: Phase 2 data (admins, parents, counselorUsers) must be loaded for Google login
           if (!backgroundLoaded) {
             // Store credentials and wait for background data to load
-            console.log('🔐 [Google Login] Background not loaded, storing pending login');
             setPendingGoogleLogin({ email: googleEmail, name: googleName });
             return;
           }
@@ -3477,14 +3463,7 @@ As a 1099 contractor, you are responsible for:
           let userInfo = null;
 
           // Check admins
-          console.log('🔐 [Google Login] Checking admins for email:', googleEmail);
-          const admin = admins.find(a => {
-            const usernameMatch = a.username?.toLowerCase() === googleEmail;
-            const emailMatch = a.email?.toLowerCase() === googleEmail;
-            console.log('🔐 [Google Login] Admin check:', a.email, '-> emailMatch:', emailMatch, 'usernameMatch:', usernameMatch);
-            return usernameMatch || emailMatch;
-          });
-          console.log('🔐 [Google Login] Admin found:', admin);
+          const admin = admins.find(a => a.username?.toLowerCase() === googleEmail || a.email?.toLowerCase() === googleEmail);
           if (admin) {
             roles.push('admin');
             userInfo = { name: admin.name, adminId: admin.id, loginType: 'Google' };
@@ -3519,11 +3498,8 @@ As a 1099 contractor, you are responsible for:
             }
           }
 
-          console.log('🔐 [Google Login] Final roles:', roles, 'userInfo:', userInfo);
-
           if (roles.length === 0) {
             // No existing account — start account creation with Google info pre-filled
-            console.log('🔐 [Google Login] No roles found, going to selectRole mode');
             setGoogleUser({ email: googleEmail, name: googleName });
             setError('');
             setMode('selectRole');

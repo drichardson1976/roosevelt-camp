@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.192", date: "2026-03-02", time: "9:33 AM", author: "Audrey Richardson", changes: ["Login: Reverted admin loading and Google login code to match main branch exactly", "Login: Removed debug logging — code now identical to working main branch"] },
   { version: "13.191", date: "2026-03-02", time: "9:28 AM", author: "Audrey Richardson", changes: ["Schedule: Removed Extra Food and Beverages sections — kept only 'Bring Your Own' note", "Location: Force Magnuson Community Center address from defaults (database had old Roosevelt HS data)", "Login: Added debug logging for Google admin login troubleshooting (check browser console)"] },
   { version: "13.190", date: "2026-03-02", time: "9:22 AM", author: "Audrey Richardson", changes: ["Location: Fixed Google Maps embed to show Magnuson Community Center (was still showing Roosevelt High School)", "Footer: Changed from 'Roosevelt High School Girls Basketball' to 'Roosevelt Girls Basketball Day Camp'", "Login: Fixed Google admin login — DEFAULT_ADMINS (including rhsdaycamp@gmail.com) now always included even when database has other admins"] },
   { version: "13.189", date: "2026-03-02", time: "9:17 AM", author: "Audrey Richardson", changes: ["Public: Updated lunch/snack info — 'Bring your own snacks and lunches, extra food available if needed'", "Public: Updated both home page and schedule page Lunch & Snack sections"] },
