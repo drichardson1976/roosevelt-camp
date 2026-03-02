@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.192";
+    const VERSION = "13.193";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T09:33:00");
+    const BUILD_DATE = new Date("2026-03-02T12:14:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2988,7 +2988,17 @@ As a 1099 contractor, you are responsible for:
                 if (hashRes.ok) newUser.passwordHash = hashData.passwordHash;
               } catch (e) { /* Continue without hash — login function handles both */ }
             }
-            await saveCounselorUsers([...(counselorUsers || []), newUser]);
+            // Save counselor login credentials FIRST with error handling
+            try {
+              const updatedCounselorUsers = [...(counselorUsers || []), newUser];
+              await saveCounselorUsers(updatedCounselorUsers);
+              console.log('✅ Counselor user saved:', newUser.email);
+            } catch (err) {
+              console.error('❌ Failed to save counselor user:', err);
+              setError('Failed to save your account. Please try again.');
+              setSubmitting(false);
+              return; // Don't continue if login account wasn't saved
+            }
 
             // Create counselor profile (pending approval)
             const newCounselor = {
@@ -3007,7 +3017,13 @@ As a 1099 contractor, you are responsible for:
               createdAt: new Date().toISOString(),
               order: counselors.length
             };
-            await saveCounselors([...counselors, newCounselor]);
+            try {
+              await saveCounselors([...counselors, newCounselor]);
+              console.log('✅ Counselor profile saved:', newCounselor.email);
+            } catch (err) {
+              console.error('❌ Failed to save counselor profile:', err);
+              // Login account was saved, so they can still login — just warn
+            }
 
             // Save availability in object format with both available and unavailable arrays
             // This format is required for counselor dashboard to show both green and red sessions
