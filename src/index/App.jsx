@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.186";
+    const VERSION = "13.188";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T22:00:00");
+    const BUILD_DATE = new Date("2026-03-02T09:14:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2374,7 +2374,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </div>
                   <div>
                     <h2 className="font-display text-3xl text-green-800 mb-4">Easy Pick-up & Drop-off</h2>
-                    <p className="text-gray-700 text-lg mb-4">Our convenient location at Roosevelt High School makes drop-off and pick-up a breeze. Counselors greet every camper at the gym entrance.</p>
+                    <p className="text-gray-700 text-lg mb-4">Our convenient location at Magnuson Community Center makes drop-off and pick-up a breeze. Counselors greet every camper at the gym entrance.</p>
                     <ul className="space-y-2 text-gray-600">
                       <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Morning drop-off: 8:45 - 9:00 AM</li>
                       <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Afternoon drop-off: 11:45 AM - 12:00 PM</li>
@@ -2701,13 +2701,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                 {/* Details */}
                 <div className="p-6">
-                  <h2 className="font-display text-3xl text-green-800 mb-2">{content.locationName || 'Roosevelt High School'}</h2>
+                  <h2 className="font-display text-3xl text-green-800 mb-2">{content.locationName || 'Magnuson Community Center'}</h2>
 
                   <div className="space-y-3 mb-6">
                     <div className="flex items-start gap-3">
                       <span className="text-2xl">🏫</span>
                       <div>
-                        <p className="font-medium">{content.locationAddress || '1410 NE 66th St'}</p>
+                        <p className="font-medium">{content.locationAddress || '7110 62nd Ave NE'}</p>
                         <p className="text-gray-600">{content.locationCity || 'Seattle'}, {content.locationState || 'WA'} {content.locationZip || '98115'}</p>
                       </div>
                     </div>
@@ -2716,6 +2716,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       <div className="flex items-start gap-3">
                         <span className="text-2xl">ℹ️</span>
                         <p className="text-gray-700">{content.locationDetails}</p>
+                      </div>
+                    )}
+
+                    {content.locationDirections && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">🚗</span>
+                        <p className="text-gray-700">{content.locationDirections}</p>
                       </div>
                     )}
                   </div>
@@ -2752,8 +2759,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               <div className="bg-white rounded-xl shadow-lg p-6">
                 <h2 className="font-bold text-xl text-green-800 mb-4">🚗 Parking & Drop-off</h2>
                 <div className="space-y-3 text-gray-700">
-                  <p>• <strong>Parking:</strong> Free parking is available in the school parking lot off NE 66th St.</p>
-                  <p>• <strong>Drop-off:</strong> Please drop off campers at the main gymnasium entrance on the east side of the building.</p>
+                  <p>• <strong>Parking:</strong> Free parking is available in the Magnuson Community Center parking lot.</p>
+                  <p>• <strong>Drop-off:</strong> Please drop off campers at the main entrance facing the parking lot. The gym is on the first floor.</p>
                   <p>• <strong>Pick-up:</strong> Campers should be picked up at the same location promptly at the end of their session.</p>
                 </div>
               </div>
