@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.188";
+    const VERSION = "13.189";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T09:14:00");
+    const BUILD_DATE = new Date("2026-03-02T09:17:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2436,10 +2436,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </div>
                   <div>
                     <h2 className="font-display text-3xl text-green-800 mb-4">Lunch & Snack Time</h2>
-                    <p className="text-gray-700 text-lg mb-4">Campers enjoy healthy snacks and lunch breaks together, building friendships on and off the court.</p>
+                    <p className="text-gray-700 text-lg mb-4">Please bring your own snacks and lunches. If you can't, don't worry — we'll have extra food available for campers who need it!</p>
                     <ul className="space-y-2 text-gray-600">
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Healthy snacks provided</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Water and sports drinks available</li>
+                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Bring your own snacks & lunch</li>
+                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Extra food available if needed</li>
+                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Water provided</li>
                     </ul>
                   </div>
                 </div>
@@ -2528,19 +2529,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
               <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🍎 Lunch & Snacks</h2>
 
-              {/* Lunch Info */}
-              <div className="p-4 bg-orange-50 rounded-lg border border-orange-200 mb-6">
-                <h3 className="font-bold text-orange-800 mb-2">🍽️ Bring Your Own Lunch</h3>
+              {/* Bring Your Own */}
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">
+                <h3 className="font-bold text-blue-800 mb-2">🎒 Bring Your Own Snacks & Lunch</h3>
                 <p className="text-gray-700">
-                  Campers attending both morning and afternoon sessions should bring their own lunch. We have a supervised lunch break between sessions where kids can eat together.
+                  Please pack snacks and lunch for your camper. If you can't, don't worry — we'll have extra food available for campers who need it!
                 </p>
               </div>
 
-              {/* Snacks Provided */}
+              {/* Extra Food Available */}
               <div className="mb-6">
-                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Snacks Provided</h3>
+                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Extra Food Available</h3>
                 <p className="text-gray-700 mb-4">
-                  We provide healthy snacks to keep campers energized! If your child needs extra snacks, we're happy to help.
+                  We keep extra snacks on hand for campers who need them. No camper will go hungry!
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div className="text-center">
