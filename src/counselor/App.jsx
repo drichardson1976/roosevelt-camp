@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.195";
+    const VERSION = "13.196";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T13:11:00");
+    const BUILD_DATE = new Date("2026-03-02T13:15:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1189,16 +1189,22 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                                   </div>
                                   <div className="p-2 space-y-1">
                                     {hasAm ? (
-                                      <div className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center">
+                                      <button
+                                        onClick={() => setPodModal({ date, session: 'morning' })}
+                                        className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center hover:bg-green-600 transition-colors cursor-pointer"
+                                      >
                                         ☀️ AM · {amCampers.length} camper{amCampers.length !== 1 ? 's' : ''}
-                                      </div>
+                                      </button>
                                     ) : (
                                       <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM</div>
                                     )}
                                     {hasPm ? (
-                                      <div className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center">
+                                      <button
+                                        onClick={() => setPodModal({ date, session: 'afternoon' })}
+                                        className="w-full p-1.5 rounded text-xs font-medium bg-green-500 text-white text-center hover:bg-green-600 transition-colors cursor-pointer"
+                                      >
                                         🌙 PM · {pmCampers.length} camper{pmCampers.length !== 1 ? 's' : ''}
-                                      </div>
+                                      </button>
                                     ) : (
                                       <div className="w-full p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM</div>
                                     )}
