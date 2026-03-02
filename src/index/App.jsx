@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.189";
+    const VERSION = "13.190";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T09:17:00");
+    const BUILD_DATE = new Date("2026-03-02T09:22:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1941,7 +1941,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             if (av?.[0]?.data) setAvailability(av[0].data);
             if (ch?.[0]?.data) setChangeHistory(Array.isArray(ch[0].data) ? ch[0].data : []);
             if (ms?.length) setMessages(ms.map(m => m.data).filter(Boolean));
-            if (ad?.[0]?.data) setAdmins(Array.isArray(ad[0].data) ? ad[0].data : DEFAULT_ADMINS);
+            // Merge database admins with DEFAULT_ADMINS to ensure core admin accounts always exist
+            if (ad?.[0]?.data) {
+              const dbAdmins = Array.isArray(ad[0].data) ? ad[0].data : [];
+              const defaultEmails = DEFAULT_ADMINS.map(a => a.email?.toLowerCase());
+              const merged = [...DEFAULT_ADMINS];
+              for (const a of dbAdmins) {
+                if (!defaultEmails.includes(a.email?.toLowerCase())) merged.push(a);
+              }
+              setAdmins(merged);
+            }
             if (as2?.[0]?.data) setAssignments(as2[0].data);
             if (cp?.[0]?.data) setCampers(Array.isArray(cp[0].data) ? cp[0].data : []);
             if (cpl?.[0]?.data) setCamperParentLinks(Array.isArray(cpl[0].data) ? cpl[0].data : []);
@@ -2693,7 +2702,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     height="100%"
                     frameBorder="0"
                     style={{ border: 0 }}
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2685.4!2d-122.3149!3d47.6776!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x54901456b6563b6b%3A0xec8758cec9df5e58!2sRoosevelt%20High%20School!5e0!3m2!1sen!2sus"
+                    src={mapsEmbedUrl}
                     allowFullScreen
                     referrerPolicy="no-referrer-when-downgrade"
                     loading="lazy"
@@ -4134,7 +4143,7 @@ As a 1099 contractor, you are responsible for:
           {page === 'location' && <Location />}
           {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
-          <footer className="bg-gray-800 text-white py-6 text-center">© 2026 Roosevelt High School Girls Basketball</footer>
+          <footer className="bg-gray-800 text-white py-6 text-center">© 2026 Roosevelt Girls Basketball Day Camp</footer>
         </div>
       );
     }
