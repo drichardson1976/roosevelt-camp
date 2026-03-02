@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.187";
+    const VERSION = "13.195";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T22:10:00");
+    const BUILD_DATE = new Date("2026-03-02T13:11:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -649,23 +649,31 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
         // Sync availability data to counselorSchedule so admin dashboard sees it
         // Saves both available (true) and unavailable (false) sessions
         const syncSchedule = async (newAvail) => {
-          if (!myCounselor) return;
-          const newSchedule = { ...counselorSchedule };
-          newSchedule[myCounselor.id] = {};
-          Object.entries(newAvail).forEach(([date, data]) => {
-            const avail = Array.isArray(data) ? data : (data.available || []);
-            const unavail = Array.isArray(data) ? [] : (data.unavailable || []);
-            // Only add date entry if there's any data
-            if (avail.length > 0 || unavail.length > 0) {
-              newSchedule[myCounselor.id][date] = {};
-              // Set true for available, false for unavailable
-              if (avail.includes('morning')) newSchedule[myCounselor.id][date].morning = true;
-              else if (unavail.includes('morning')) newSchedule[myCounselor.id][date].morning = false;
-              if (avail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = true;
-              else if (unavail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = false;
-            }
-          });
-          await saveCounselorSchedule(newSchedule, `${myCounselor.name} updated availability`);
+          if (!myCounselor) {
+            console.error('❌ Cannot sync schedule: myCounselor not found');
+            return;
+          }
+          try {
+            const newSchedule = { ...counselorSchedule };
+            newSchedule[myCounselor.id] = {};
+            Object.entries(newAvail).forEach(([date, data]) => {
+              const avail = Array.isArray(data) ? data : (data.available || []);
+              const unavail = Array.isArray(data) ? [] : (data.unavailable || []);
+              // Only add date entry if there's any data
+              if (avail.length > 0 || unavail.length > 0) {
+                newSchedule[myCounselor.id][date] = {};
+                // Set true for available, false for unavailable
+                if (avail.includes('morning')) newSchedule[myCounselor.id][date].morning = true;
+                else if (unavail.includes('morning')) newSchedule[myCounselor.id][date].morning = false;
+                if (avail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = true;
+                else if (unavail.includes('afternoon')) newSchedule[myCounselor.id][date].afternoon = false;
+              }
+            });
+            await saveCounselorSchedule(newSchedule, `${myCounselor.name} updated availability`);
+            console.log('✅ Schedule synced to admin dashboard for:', myCounselor.name);
+          } catch (err) {
+            console.error('❌ Failed to sync schedule to admin:', err);
+          }
         };
 
         // Check if counselor has campers assigned for a specific date/session
@@ -705,9 +713,15 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
           if (!newAvail[date].available?.length && !newAvail[date].unavailable?.length) delete newAvail[date];
 
-          await saveAvail({ ...availability, [user?.email]: newAvail });
-          await syncSchedule(newAvail);
-          showToast('Availability updated!');
+          try {
+            await saveAvail({ ...availability, [user?.email]: newAvail });
+            console.log('✅ Availability saved for:', user?.email);
+            await syncSchedule(newAvail);
+            showToast('Availability updated!');
+          } catch (err) {
+            console.error('❌ Failed to save availability:', err);
+            showToast('Failed to save. Please try again.');
+          }
         };
 
         // Bulk actions
@@ -717,9 +731,15 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
           monthDates.forEach(date => {
             newAvail[date] = { available: ['morning', 'afternoon'], unavailable: [] };
           });
-          await saveAvail({ ...availability, [user?.email]: newAvail });
-          await syncSchedule(newAvail);
-          showToast('Month marked as available!');
+          try {
+            await saveAvail({ ...availability, [user?.email]: newAvail });
+            console.log('✅ Month availability saved for:', user?.email);
+            await syncSchedule(newAvail);
+            showToast('Month marked as available!');
+          } catch (err) {
+            console.error('❌ Failed to save month availability:', err);
+            showToast('Failed to save. Please try again.');
+          }
         };
 
         const clearMonth = async (monthNum) => {
@@ -739,9 +759,15 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
           monthDates.forEach(date => {
             delete newAvail[date];
           });
-          await saveAvail({ ...availability, [user?.email]: newAvail });
-          await syncSchedule(newAvail);
-          showToast('Month cleared!');
+          try {
+            await saveAvail({ ...availability, [user?.email]: newAvail });
+            console.log('✅ Month cleared for:', user?.email);
+            await syncSchedule(newAvail);
+            showToast('Month cleared!');
+          } catch (err) {
+            console.error('❌ Failed to clear month:', err);
+            showToast('Failed to save. Please try again.');
+          }
         };
 
         // Calculate stats
@@ -793,8 +819,14 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
             delete newAvail[date];
           }
 
-          await saveAvail({ ...availability, [user?.email]: newAvail });
-          await syncSchedule(newAvail);
+          try {
+            await saveAvail({ ...availability, [user?.email]: newAvail });
+            console.log('✅ Day availability saved for:', user?.email);
+            await syncSchedule(newAvail);
+          } catch (err) {
+            console.error('❌ Failed to save day availability:', err);
+            showToast('Failed to save. Please try again.');
+          }
         };
 
         // Get counselor next steps hints (modeled after parent dashboard)

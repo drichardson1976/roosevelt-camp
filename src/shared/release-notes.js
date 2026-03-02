@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.195", date: "2026-03-02", time: "1:11 PM", author: "Audrey Richardson", changes: ["Counselor Dashboard: Added error handling to all availability saves", "Counselor Dashboard: Availability changes now reliably sync to admin dashboard", "Counselor Dashboard: Console logs confirm successful saves and syncs", "Counselor Dashboard: Shows toast error if save fails"] },
   { version: "13.194", date: "2026-03-02", time: "12:37 PM", author: "Audrey Richardson", changes: ["Counselor Signup: Added error handling to availability and schedule saving", "Counselor Signup: All data (login, profile, availability, schedule) now has try-catch protection", "Counselor Signup: Console logs confirm each save step for debugging"] },
   { version: "13.193", date: "2026-03-02", time: "12:14 PM", author: "Audrey Richardson", changes: ["Counselor Signup: Added error handling to ensure login account is saved before profile", "Counselor Signup: If login account fails to save, shows error and stops signup (prevents orphaned profiles)", "Counselor Signup: Added console logging to help diagnose save issues"] },
   { version: "13.192", date: "2026-03-02", time: "9:33 AM", author: "Audrey Richardson", changes: ["Login: Reverted admin loading and Google login code to match main branch exactly", "Login: Removed debug logging — code now identical to working main branch"] },
