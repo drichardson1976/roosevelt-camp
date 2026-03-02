@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.190";
+    const VERSION = "13.191";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T09:22:00");
+    const BUILD_DATE = new Date("2026-03-02T09:28:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1906,7 +1906,20 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               storage.get('camp_site_photos'),
               storage.get('camp_food_photos'),
             ]);
-            if (cd?.[0]?.data) setContent({ ...DEFAULT_CONTENT, ...cd[0].data });
+            if (cd?.[0]?.data) {
+              // Force location fields from DEFAULT_CONTENT (database may have old Roosevelt HS data)
+              setContent({
+                ...DEFAULT_CONTENT,
+                ...cd[0].data,
+                locationName: DEFAULT_CONTENT.locationName,
+                locationAddress: DEFAULT_CONTENT.locationAddress,
+                locationCity: DEFAULT_CONTENT.locationCity,
+                locationState: DEFAULT_CONTENT.locationState,
+                locationZip: DEFAULT_CONTENT.locationZip,
+                locationDetails: DEFAULT_CONTENT.locationDetails,
+                locationDirections: DEFAULT_CONTENT.locationDirections,
+              });
+            }
             if (cs?.length) setCounselors(cs.map(c => c.data).filter(Boolean).sort((a, b) => (a.order || 0) - (b.order || 0)));
             if (sp?.[0]?.data) setSitePhotos(sp[0].data);
             if (fp?.[0]?.data) setFoodPhotos(fp[0].data);
@@ -2539,68 +2552,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">🍎 Lunch & Snacks</h2>
 
               {/* Bring Your Own */}
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200 mb-6">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
                 <h3 className="font-bold text-blue-800 mb-2">🎒 Bring Your Own Snacks & Lunch</h3>
                 <p className="text-gray-700">
                   Please pack snacks and lunch for your camper. If you can't, don't worry — we'll have extra food available for campers who need it!
                 </p>
-              </div>
-
-              {/* Extra Food Available */}
-              <div className="mb-6">
-                <h3 className="font-bold text-lg text-green-700 mb-3">✨ Extra Food Available</h3>
-                <p className="text-gray-700 mb-4">
-                  We keep extra snacks on hand for campers who need them. No camper will go hungry!
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_fruit')} alt="Fresh fruits" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=🍎'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Fresh Fruit</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_granola')} alt="Granola bars" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f59e0b/white?text=🥜'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Granola Bars</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_cheese')} alt="Cheese and crackers" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/fbbf24/white?text=🧀'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Cheese & Crackers</span>
-                  </div>
-                  <div className="text-center">
-                    <img src={getFoodPhoto('snack_veggie')} alt="Veggie sticks" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/84cc16/white?text=🥕'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Veggie Sticks</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Drinks */}
-              <div>
-                <h3 className="font-bold text-lg text-blue-700 mb-3">🥤 Beverages</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-                  <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_water')} alt="Water bottles" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/3b82f6/white?text=💧'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Water</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-green-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_gatorade')} alt="Gatorade" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/22c55e/white?text=⚡'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Gatorade</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_orange')} alt="Orange juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/f97316/white?text=🍊'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Orange Juice</span>
-                  </div>
-                  <div className="text-center p-3 sm:p-4 bg-red-50 rounded-xl">
-                    <img src={getFoodPhoto('drink_apple')} alt="Apple juice" className="w-full aspect-square object-cover rounded-xl mb-2 shadow-md"
-                      onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/300x300/ef4444/white?text=🍎'; }} />
-                    <span className="text-xs sm:text-sm font-medium text-gray-700">Apple Juice</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -3504,9 +3460,14 @@ As a 1099 contractor, you are responsible for:
 
         // Handle Google Sign-In — look up the Google email in existing accounts
         const handleGoogleCredential = (googleEmail, googleName) => {
+          console.log('🔐 [Google Login] handleGoogleCredential called with:', googleEmail);
+          console.log('🔐 [Google Login] backgroundLoaded:', backgroundLoaded);
+          console.log('🔐 [Google Login] admins array:', admins);
+
           // Guard: Phase 2 data (admins, parents, counselorUsers) must be loaded for Google login
           if (!backgroundLoaded) {
             // Store credentials and wait for background data to load
+            console.log('🔐 [Google Login] Background not loaded, storing pending login');
             setPendingGoogleLogin({ email: googleEmail, name: googleName });
             return;
           }
@@ -3516,7 +3477,14 @@ As a 1099 contractor, you are responsible for:
           let userInfo = null;
 
           // Check admins
-          const admin = admins.find(a => a.username?.toLowerCase() === googleEmail || a.email?.toLowerCase() === googleEmail);
+          console.log('🔐 [Google Login] Checking admins for email:', googleEmail);
+          const admin = admins.find(a => {
+            const usernameMatch = a.username?.toLowerCase() === googleEmail;
+            const emailMatch = a.email?.toLowerCase() === googleEmail;
+            console.log('🔐 [Google Login] Admin check:', a.email, '-> emailMatch:', emailMatch, 'usernameMatch:', usernameMatch);
+            return usernameMatch || emailMatch;
+          });
+          console.log('🔐 [Google Login] Admin found:', admin);
           if (admin) {
             roles.push('admin');
             userInfo = { name: admin.name, adminId: admin.id, loginType: 'Google' };
@@ -3551,8 +3519,11 @@ As a 1099 contractor, you are responsible for:
             }
           }
 
+          console.log('🔐 [Google Login] Final roles:', roles, 'userInfo:', userInfo);
+
           if (roles.length === 0) {
             // No existing account — start account creation with Google info pre-filled
+            console.log('🔐 [Google Login] No roles found, going to selectRole mode');
             setGoogleUser({ email: googleEmail, name: googleName });
             setError('');
             setMode('selectRole');
