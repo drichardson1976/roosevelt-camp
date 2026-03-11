@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.181";
+    const VERSION = "13.198";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T20:50:00");
+    const BUILD_DATE = new Date("2026-03-10T21:51:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1444,6 +1444,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
+      const [paymentMethodModal, setPaymentMethodModal] = useState(null);
       const [paymentVenmoModal, setPaymentVenmoModal] = useState(null);
       const [venmoScreenshot, setVenmoScreenshot] = useState(null);
       const [venmoScreenshotRaw, setVenmoScreenshotRaw] = useState(null);
@@ -2516,8 +2517,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 regs.forEach(r => { const n = r.childName || r.camperName || 'Unknown'; if (!byCamper[n]) byCamper[n] = []; byCamper[n].push(r); });
                 const camperNames = Object.keys(byCamper);
                 const title = camperNames.length === 1 ? `${camperNames[0]}'s Registration` : `${camperNames.join(' and ')} Registration`;
-                setVenmoScreenshot(null); setVenmoScreenshotRaw(null);
-                setPaymentVenmoModal({ orderKey: firstOrderKey, regs, totalAmount, venmoCode: orderVenmoCode, title });
+                setPaymentMethodModal({ orderKey: firstOrderKey, regs, totalAmount, venmoCode: orderVenmoCode, title });
               },
               actionText: 'Pay Now',
               priority: 6
@@ -3326,7 +3326,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   <span className="text-blue-600 font-medium text-sm">Payment sent — awaiting confirmation</span>
                                 ) : (
                                   <button
-                                    onClick={() => { setVenmoScreenshot(null); setVenmoScreenshotRaw(null); setPaymentVenmoModal({ orderKey, regs, totalAmount, venmoCode: orderVenmoCode, title }); }}
+                                    onClick={() => { setPaymentMethodModal({ orderKey, regs, totalAmount, venmoCode: orderVenmoCode, title }); }}
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
                                   >
                                     Pay Now
@@ -3441,6 +3441,68 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       }}
                       onCancel={() => setShowECAddModal(false)}
                     />
+                  )}
+
+                  {/* Payment Method Selection Modal */}
+                  {paymentMethodModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPaymentMethodModal(null)}>
+                      <div className="bg-white rounded-xl max-w-sm w-full p-6" onClick={e => e.stopPropagation()}>
+                        <h3 className="font-bold text-xl text-center mb-1">Choose Payment Method</h3>
+                        <p className="text-gray-500 text-center text-sm mb-6">
+                          How would you like to pay <span className="font-bold text-green-700">${paymentMethodModal.totalAmount.toFixed(2)}</span>?
+                        </p>
+                        <div className="space-y-3">
+                          {/* Venmo */}
+                          <button
+                            onClick={() => {
+                              const data = paymentMethodModal;
+                              setPaymentMethodModal(null);
+                              setVenmoScreenshot(null);
+                              setVenmoScreenshotRaw(null);
+                              setPaymentVenmoModal(data);
+                            }}
+                            className="w-full flex items-center gap-4 p-4 border-2 border-blue-300 bg-blue-50 rounded-xl hover:bg-blue-100 transition-colors text-left"
+                          >
+                            <span className="text-3xl">💙</span>
+                            <div className="flex-1">
+                              <p className="font-bold text-blue-800 text-lg">Venmo</p>
+                              <p className="text-sm text-blue-600">Pay via {content?.venmoUsername || '@RHSDayCamp'}</p>
+                            </div>
+                            <span className="text-blue-400 text-lg">→</span>
+                          </button>
+                          {/* Credit Card */}
+                          <button
+                            disabled
+                            className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 bg-gray-50 rounded-xl cursor-not-allowed opacity-60 text-left"
+                          >
+                            <span className="text-3xl">💳</span>
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-600 text-lg">Credit Card</p>
+                              <p className="text-sm text-gray-400">Coming soon</p>
+                            </div>
+                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">Soon</span>
+                          </button>
+                          {/* PayPal */}
+                          <button
+                            disabled
+                            className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 bg-gray-50 rounded-xl cursor-not-allowed opacity-60 text-left"
+                          >
+                            <span className="text-3xl">🅿️</span>
+                            <div className="flex-1">
+                              <p className="font-bold text-gray-600 text-lg">PayPal</p>
+                              <p className="text-sm text-gray-400">Coming soon</p>
+                            </div>
+                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">Soon</span>
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => setPaymentMethodModal(null)}
+                          className="w-full mt-4 py-2 text-gray-500 hover:text-gray-700 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   )}
 
                   {/* Venmo Payment Modal — top level so it renders from any tab */}
