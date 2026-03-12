@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.184";
+    const VERSION = "13.201";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-02-28T21:00:00");
+    const BUILD_DATE = new Date("2026-03-12T15:01:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {

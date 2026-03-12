@@ -154,7 +154,7 @@ export const ParentsTab = ({ parents, registrations, onUpdateParents, onDeletePa
                           <span className="font-bold text-gray-800">{parent.name}</span>
                           {(() => {
                             const hasGoogle = parent.googleLinked || parent.lastLoginMethod === 'Google';
-                            const hasPassword = !!parent.password;
+                            const hasPassword = !!parent.passwordHash;
                             if (hasGoogle && hasPassword) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">🔑 Google + Email/Password</span>;
                             if (hasGoogle) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">G Google</span>;
                             if (hasPassword) return <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700">🔑 Email/Password</span>;
@@ -220,7 +220,7 @@ export const ParentsTab = ({ parents, registrations, onUpdateParents, onDeletePa
                           onClick={async () => {
                             try {
                               const hasGoogle = parent.googleLinked || parent.lastLoginMethod === 'Google';
-                              const hasPassword = !!parent.password;
+                              const hasPassword = !!parent.passwordHash;
                               let methodHtml = '';
                               if (hasGoogle && hasPassword) {
                                 methodHtml = '<p><strong>Login methods:</strong></p><ul><li>Sign in with Google (using your Google account)</li><li>Email &amp; Password (using your email and password)</li></ul><p>If you\'ve forgotten your password, you can reset it from the login page by clicking "Forgot Password?"</p>';
