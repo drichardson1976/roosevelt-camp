@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.199";
+    const VERSION = "13.200";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-11T20:28:00");
+    const BUILD_DATE = new Date("2026-03-12T14:52:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3569,21 +3569,30 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             <span className="font-bold text-blue-800 text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span>
                           </div>
                         </div>
+                        {/* Venmo QR Code */}
+                        <div className="bg-white border-2 border-blue-200 rounded-xl p-4 mb-4 text-center">
+                          <p className="text-sm font-medium text-gray-700 mb-3">Scan to pay with Venmo</p>
+                          <a href="https://account.venmo.com/u/RHSDayCamp" target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://account.venmo.com/u/RHSDayCamp')}
+                              alt="Venmo QR Code for @RHSDayCamp"
+                              className="mx-auto w-48 h-48 rounded-lg"
+                            />
+                          </a>
+                          <p className="text-xs text-gray-400 mt-2">Or tap the code to open Venmo directly</p>
+                        </div>
+
                         <div className="space-y-4">
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 1</div>
-                            <div><p className="font-medium text-gray-800">Open Venmo and tap "Pay or Request"</p></div>
+                            <div><p className="font-medium text-gray-800">Scan the QR code above, or open Venmo and search for <span className="text-blue-700 font-bold">{content?.venmoUsername || '@RHSDayCamp'}</span></p></div>
                           </div>
                           <div className="flex items-start gap-3">
                             <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 2</div>
-                            <div><p className="font-medium text-gray-800">Search for <span className="text-blue-700 font-bold">{content?.venmoUsername || '@RHSDayCamp'}</span></p></div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 3</div>
                             <div><p className="font-medium text-gray-800">Enter the amount: <span className="text-green-700 font-bold text-lg">${paymentVenmoModal.totalAmount.toFixed(2)}</span></p></div>
                           </div>
                           <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 4</div>
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 3</div>
                             <div>
                               <p className="font-medium text-gray-800">In the "What's it for?" section, add this unique registration code</p>
                               <div className="bg-blue-50 rounded-lg p-3 border-2 border-blue-300 mt-1">
@@ -3593,7 +3602,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             </div>
                           </div>
                           <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 5</div>
+                            <div className="flex-shrink-0 w-14 h-7 bg-blue-600 text-white flex items-center justify-center text-xs font-bold rounded-full">Step 4</div>
                             <div>
                               <p className="font-medium text-gray-800">Take a screenshot of your Venmo payment <span className="text-gray-400 font-normal">(optional)</span></p>
                               <div className="mt-2">
