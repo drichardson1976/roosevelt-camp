@@ -3523,18 +3523,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             </div>
                             <span className="text-green-400 text-lg">→</span>
                           </button>
-                          {/* PayPal */}
-                          <button
-                            disabled
-                            className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 bg-gray-50 rounded-xl cursor-not-allowed opacity-60 text-left"
-                          >
-                            <span className="text-3xl">🅿️</span>
-                            <div className="flex-1">
-                              <p className="font-bold text-gray-600 text-lg">PayPal</p>
-                              <p className="text-sm text-gray-400">Coming soon</p>
-                            </div>
-                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">Soon</span>
-                          </button>
                         </div>
                         <button
                           onClick={() => setPaymentMethodModal(null)}
