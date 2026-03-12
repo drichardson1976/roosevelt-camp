@@ -5,7 +5,16 @@ exports.handler = async (event) => {
   if (preflight) return preflight;
 
   try {
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey) {
+      console.error('STRIPE_SECRET_KEY is not set');
+      return {
+        statusCode: 500,
+        headers: getCorsHeaders(event),
+        body: JSON.stringify({ error: 'Stripe is not configured. Please contact the camp director.' })
+      };
+    }
+    const stripe = require('stripe')(secretKey);
     const { amount, orderKey, venmoCode, parentEmail, parentName } = JSON.parse(event.body);
 
     if (!amount || amount < 100) {
@@ -20,6 +29,7 @@ exports.handler = async (event) => {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount), // amount in cents
       currency: 'usd',
+      payment_method_types: ['card'],
       metadata: {
         orderKey: orderKey || '',
         venmoCode: venmoCode || '',
@@ -37,11 +47,11 @@ exports.handler = async (event) => {
       })
     };
   } catch (err) {
-    console.error('Create payment intent error:', err);
+    console.error('Create payment intent error:', err.message, err.type || '');
     return {
       statusCode: 500,
       headers: getCorsHeaders(event),
-      body: JSON.stringify({ error: 'Failed to create payment' })
+      body: JSON.stringify({ error: err.message || 'Failed to create payment' })
     };
   }
 };

@@ -16,5 +16,8 @@ node_modules/
 # Lock files
 deno.lock
 
+# Environment variables (secrets - never commit)
+.env
+
 # Build output
 dist/
