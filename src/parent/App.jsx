@@ -12,11 +12,12 @@ import { PhotoUploadModal } from '../shared/components/PhotoUploadModal';
 import { generateCampDates, CAMP_DATES, getCampDateRange, CAMP_DATE_RANGE, getWeeks, CAMP_WEEKS, generateDatesFromGymRentals } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 import { calculateDiscountedTotal } from '../shared/pricing';
+import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.198";
+    const VERSION = "13.199";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-10T21:51:00");
+    const BUILD_DATE = new Date("2026-03-11T20:28:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1445,6 +1446,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [adminTab, setAdminTab] = useState('dashboard');
       const [parentTab, setParentTab] = useState('dashboard');
       const [paymentMethodModal, setPaymentMethodModal] = useState(null);
+      const [paymentCreditCardModal, setPaymentCreditCardModal] = useState(null);
       const [paymentVenmoModal, setPaymentVenmoModal] = useState(null);
       const [venmoScreenshot, setVenmoScreenshot] = useState(null);
       const [venmoScreenshotRaw, setVenmoScreenshotRaw] = useState(null);
@@ -3443,6 +3445,41 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     />
                   )}
 
+                  {/* Credit Card Payment Modal */}
+                  {paymentCreditCardModal && (
+                    <CreditCardModal
+                      orderKey={paymentCreditCardModal.orderKey}
+                      regs={paymentCreditCardModal.regs}
+                      totalAmount={paymentCreditCardModal.totalAmount}
+                      venmoCode={paymentCreditCardModal.venmoCode}
+                      title={paymentCreditCardModal.title}
+                      parentEmail={user?.email}
+                      parentName={user?.name}
+                      onSuccess={async (paymentIntentId) => {
+                        try {
+                          const modalData = paymentCreditCardModal;
+                          setPaymentCreditCardModal(null);
+                          const paidAt = new Date().toISOString();
+                          for (const reg of modalData.regs) {
+                            await saveReg({
+                              ...reg,
+                              paymentStatus: 'paid',
+                              paymentMethod: 'credit_card',
+                              paymentConfirmedAt: paidAt,
+                              stripePaymentIntentId: paymentIntentId
+                            });
+                          }
+                          addToHistory('Credit Card Payment', `${modalData.title} — $${modalData.totalAmount.toFixed(2)} paid via credit card`);
+                          showToast('Payment successful!', 'success');
+                        } catch (err) {
+                          console.error('Post-payment update error:', err);
+                          showToast('Payment processed! Dashboard will update shortly.', 'success');
+                        }
+                      }}
+                      onClose={() => setPaymentCreditCardModal(null)}
+                    />
+                  )}
+
                   {/* Payment Method Selection Modal */}
                   {paymentMethodModal && (
                     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setPaymentMethodModal(null)}>
@@ -3472,15 +3509,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           </button>
                           {/* Credit Card */}
                           <button
-                            disabled
-                            className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 bg-gray-50 rounded-xl cursor-not-allowed opacity-60 text-left"
+                            onClick={() => {
+                              const data = paymentMethodModal;
+                              setPaymentMethodModal(null);
+                              setPaymentCreditCardModal(data);
+                            }}
+                            className="w-full flex items-center gap-4 p-4 border-2 border-green-300 bg-green-50 rounded-xl hover:bg-green-100 transition-colors text-left"
                           >
                             <span className="text-3xl">💳</span>
                             <div className="flex-1">
-                              <p className="font-bold text-gray-600 text-lg">Credit Card</p>
-                              <p className="text-sm text-gray-400">Coming soon</p>
+                              <p className="font-bold text-green-800 text-lg">Credit Card</p>
+                              <p className="text-sm text-green-600">Pay securely with any card</p>
                             </div>
-                            <span className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded-full">Soon</span>
+                            <span className="text-green-400 text-lg">→</span>
                           </button>
                           {/* PayPal */}
                           <button
