@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.196";
+    const VERSION = "13.202";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T13:15:00");
+    const BUILD_DATE = new Date("2026-03-12T15:28:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -147,6 +147,134 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
       );
     };
 
+
+    // ==================== CHANGE PASSWORD FORM ====================
+    // Standalone component to prevent focus loss (per CLAUDE.md rules)
+    const ChangePasswordForm = ({ userEmail, onSuccess, onError }) => {
+      const [currentPassword, setCurrentPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
+      const [confirmPassword, setConfirmPassword] = useState('');
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState('');
+      const [showCurrent, setShowCurrent] = useState(false);
+      const [showNew, setShowNew] = useState(false);
+      const [showConfirm, setShowConfirm] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          setError('All fields are required.');
+          return;
+        }
+        if (newPassword.length < 6) {
+          setError('New password must be at least 6 characters.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setError('New passwords do not match.');
+          return;
+        }
+        if (currentPassword === newPassword) {
+          setError('New password must be different from current password.');
+          return;
+        }
+
+        setSaving(true);
+        try {
+          // 1. Verify current password via login endpoint
+          const loginRes = await fetch('/.netlify/functions/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, password: currentPassword })
+          });
+          if (!loginRes.ok) {
+            const loginData = await loginRes.json();
+            setError(loginData.error || 'Current password is incorrect.');
+            setSaving(false);
+            return;
+          }
+
+          // 2. Hash the new password
+          const hashRes = await fetch('/.netlify/functions/hash-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: newPassword })
+          });
+          if (!hashRes.ok) {
+            setError('Failed to process new password. Please try again.');
+            setSaving(false);
+            return;
+          }
+          const { passwordHash } = await hashRes.json();
+
+          // 3. Update camp_counselor_users with new hash (preserve all other data)
+          const usersData = await storage.get('camp_counselor_users');
+          const allUsers = usersData?.[0]?.data || [];
+          const updatedUsers = allUsers.map(u => {
+            if ((u.email || '').toLowerCase() === userEmail.toLowerCase()) {
+              return { ...u, passwordHash, passwordChangedAt: new Date().toISOString() };
+            }
+            return u;
+          });
+          await storage.set('camp_counselor_users', 'main', updatedUsers);
+
+          // Clear form
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          onSuccess();
+        } catch (err) {
+          console.error('Password change error:', err);
+          setError('Something went wrong. Please try again.');
+        }
+        setSaving(false);
+      };
+
+      return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email (cannot be changed)</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-600 border border-gray-200">{userEmail}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <div className="relative">
+              <input type={showCurrent ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Enter your current password" />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showCurrent ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <div className="relative">
+              <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Enter your new password (min 6 characters)" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showNew ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <div className="relative">
+              <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Re-enter your new password" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showConfirm ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={saving} className={'w-full py-3 rounded-lg font-medium text-white transition-colors ' + (saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700')}>
+            {saving ? 'Changing Password...' : 'Change Password'}
+          </button>
+        </form>
+      );
+    };
 
       // ==================== LOGIN ====================
     // ==================== POD DETAIL MODAL ====================
@@ -932,9 +1060,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs persistKey="counselor-tabs">
-                  {['nextsteps', 'availability', 'schedule'].map(t => (
+                  {['nextsteps', 'availability', 'schedule', 'login'].map(t => (
                     <button key={t} onClick={() => setCounselorTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (counselorTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'nextsteps' ? '📊 Dashboard' : t === 'availability' ? '📅 Availability' : t === 'schedule' ? '📋 Scheduled to Work' : t}
+                      {t === 'nextsteps' ? '📊 Dashboard' : t === 'availability' ? '📅 Availability' : t === 'schedule' ? '📋 Scheduled to Work' : t === 'login' ? '🔑 Edit Login' : t}
                     </button>
                   ))}
                 </ScrollableTabs>
@@ -1117,6 +1245,27 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-500 rounded" /><span>Available ✓</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-500 rounded" /><span>Unavailable ✗</span></div>
                     <div className="flex items-center gap-2"><div className="w-4 h-4 bg-white border rounded" /><span>Not Set</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== EDIT LOGIN TAB ===== */}
+              {counselorTab === 'login' && (
+                <div className="max-w-md mx-auto">
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="bg-green-600 text-white px-6 py-4">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <span>🔑</span> Edit Login
+                      </h3>
+                      <p className="text-green-100 text-sm mt-1">Change your password below. Your email cannot be changed.</p>
+                    </div>
+                    <div className="p-6">
+                      <ChangePasswordForm
+                        userEmail={user?.email}
+                        onSuccess={() => showToast('Password changed successfully!')}
+                        onError={(msg) => showToast(msg, 'error')}
+                      />
+                    </div>
                   </div>
                 </div>
               )}
