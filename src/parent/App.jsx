@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.200";
+    const VERSION = "13.204";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-12T14:52:00");
+    const BUILD_DATE = new Date("2026-03-16T21:44:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3463,6 +3463,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           for (const reg of modalData.regs) {
                             await saveReg({
                               ...reg,
+                              status: 'approved',
                               paymentStatus: 'paid',
                               paymentMethod: 'credit_card',
                               paymentConfirmedAt: paidAt,

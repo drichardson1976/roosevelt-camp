@@ -38,6 +38,7 @@ exports.handler = async (event) => {
             if ((reg.orderId === orderKey || reg.id === orderKey) && reg.parentEmail === parentEmail) {
               return {
                 ...reg,
+                status: 'approved',
                 paymentStatus: 'paid',
                 paymentMethod: 'credit_card',
                 paymentConfirmedAt: new Date().toISOString(),
