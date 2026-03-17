@@ -2328,6 +2328,14 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           </div>
 
+          {/* About Section */}
+          <div className="bg-gray-50 py-12">
+            <div className="max-w-4xl mx-auto px-4 text-center">
+              <h2 className="font-display text-4xl text-green-800 mb-6">About Our Camp</h2>
+              <p className="text-gray-700 text-lg">{content.aboutText}</p>
+            </div>
+          </div>
+
           {/* Info Cards */}
           <div className="max-w-6xl mx-auto px-4 py-8 sm:py-12 grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-green-600">
@@ -2344,7 +2352,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 border-t-4 border-orange-500">
               <div className="text-3xl sm:text-4xl mb-2">👧</div>
-              <h3 className="font-bold text-lg sm:text-xl text-green-800">Ages</h3>
+              <h3 className="font-bold text-lg sm:text-xl text-green-800">Ages — Girls Only</h3>
               <p className="text-sm sm:text-base text-gray-700">{content.ageRange}</p>
             </div>
           </div>
@@ -2399,14 +2407,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           )}
 
-          {/* About Section */}
-          <div className="bg-gray-50 py-12">
-            <div className="max-w-4xl mx-auto px-4 text-center">
-              <h2 className="font-display text-4xl text-green-800 mb-6">About Our Camp</h2>
-              <p className="text-gray-700 text-lg">{content.aboutText}</p>
-            </div>
-          </div>
-
           {/* Skills Training Photo Section */}
           {getSitePhoto('layups') && (
             <div className="py-12">
@@ -2434,11 +2434,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             </div>
           )}
 
-          {/* Lunch Photo Section */}
-          {getSitePhoto('lunch') && (
-            <div className="bg-amber-50 py-12">
-              <div className="max-w-6xl mx-auto px-4">
-                <div className="grid md:grid-cols-2 gap-8 items-center">
+          {/* What to Bring Section */}
+          <div className="bg-amber-50 py-12">
+            <div className="max-w-6xl mx-auto px-4">
+              <div className="grid md:grid-cols-2 gap-8 items-center">
+                {getSitePhoto('lunch') && (
                   <div>
                     <img
                       src={getSitePhoto('lunch')}
@@ -2447,19 +2447,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       style={{ aspectRatio: '4/3' }}
                     />
                   </div>
-                  <div>
-                    <h2 className="font-display text-3xl text-green-800 mb-4">Lunch & Snack Time</h2>
-                    <p className="text-gray-700 text-lg mb-4">Please bring your own snacks and lunches. If you can't, don't worry — we'll have extra food available for campers who need it!</p>
-                    <ul className="space-y-2 text-gray-600">
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Bring your own snacks & lunch</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Extra food available if needed</li>
-                      <li className="flex items-center gap-2"><span className="text-green-600">✓</span> Water provided</li>
-                    </ul>
-                  </div>
+                )}
+                <div className={getSitePhoto('lunch') ? '' : 'md:col-span-2 max-w-lg mx-auto'}>
+                  <h2 className="font-display text-3xl text-green-800 mb-4">What to Bring</h2>
+                  <ul className="space-y-3 text-gray-700 text-lg">
+                    <li className="flex items-start gap-3"><span className="text-green-600 text-xl">✓</span> <span>Lunch and snacks <span className="text-gray-500 text-base">(extra food available if needed)</span></span></li>
+                    <li className="flex items-start gap-3"><span className="text-green-600 text-xl">✓</span> Water bottle</li>
+                    <li className="flex items-start gap-3"><span className="text-green-600 text-xl">✓</span> Appropriate gym shoes and clothing</li>
+                    <li className="flex items-start gap-3"><span className="text-green-600 text-xl">✓</span> A basketball</li>
+                  </ul>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Contact Footer */}
           <div className="bg-green-900 text-white py-8 sm:py-12 text-center px-4">
