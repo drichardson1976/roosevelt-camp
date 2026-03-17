@@ -2767,35 +2767,51 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
           // Calculate discount info for the entire order
           const pricing = getPricingBreakdown();
-          const orderId = `order_${Date.now()}`;
-          const orderVenmoCode = generateVenmoCode(user?.name, orderId);
 
-          // Calculate proportional discount per session
+          // Check if there's an existing unpaid order for this child — merge into it
+          const childId = selectedChildren[0];
+          const child = myChildren.find(c => c.id === childId);
+          const existingUnpaidRegs = myRegs.filter(r =>
+            r.childId === childId &&
+            r.status !== 'cancelled' &&
+            (!r.paymentStatus || r.paymentStatus === 'unpaid')
+          );
+          const existingOrderId = existingUnpaidRegs.length > 0 ? existingUnpaidRegs[0].orderId : null;
+          const existingVenmoCode = existingUnpaidRegs.length > 0 ? existingUnpaidRegs[0].venmoCode : null;
+
+          const orderId = existingOrderId || `order_${Date.now()}`;
+          const orderVenmoCode = existingVenmoCode || generateVenmoCode(user?.name, orderId);
+
+          // If merging into existing order, recalculate discount across ALL sessions in the order
+          const existingDates = existingUnpaidRegs.map(r => [r.date, r.sessions]);
+          const allDatesForDiscount = [...existingDates, ...dates];
+          // Count total sessions across existing + new for discount calculation
+          const totalSessionCount = allDatesForDiscount.reduce((sum, [, s]) => sum + s.length, 0);
+          const totalOriginal = totalSessionCount * sessionCost;
+          // Recalculate discount for the combined order
+          const combinedDiscount = totalOriginal > 0 ? (totalOriginal - pricing.finalTotal - existingUnpaidRegs.reduce((sum, r) => sum + (r.totalAmount || 0), 0)) : 0;
           const discountRatio = pricing.originalTotal > 0 ? pricing.discount / pricing.originalTotal : 0;
 
           let regCounter = 0;
-          for (const childId of selectedChildren) {
-            const child = myChildren.find(c => c.id === childId);
-            for (const [date, sessions] of dates) {
-              const baseAmount = sessions.length * sessionCost;
-              const discountAmount = Math.round(baseAmount * discountRatio * 100) / 100;
-              const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
+          for (const [date, sessions] of dates) {
+            const baseAmount = sessions.length * sessionCost;
+            const discountAmount = Math.round(baseAmount * discountRatio * 100) / 100;
+            const finalAmount = Math.round((baseAmount - discountAmount) * 100) / 100;
 
-              await saveReg({
-                id: `reg_${Date.now()}_${regCounter++}_${childId}_${date}`,
-                orderId, // Group registrations from same order
-                childId, childName: child?.name,
-                parentEmail: user?.email, parentName: user?.name,
-                date, sessions,
-                status: 'pending', paymentStatus: 'unpaid',
-                venmoCode: orderVenmoCode, // Unique per order for Venmo payment matching
-                baseAmount, // Original price before discount
-                discountAmount, // How much was discounted
-                discountPercent: pricing.discountPercent,
-                totalAmount: finalAmount, // Final price to pay
-                registeredAt: new Date().toISOString()
-              });
-            }
+            await saveReg({
+              id: `reg_${Date.now()}_${regCounter++}_${childId}_${date}`,
+              orderId, // Same orderId if merging into existing unpaid order
+              childId, childName: child?.name,
+              parentEmail: user?.email, parentName: user?.name,
+              date, sessions,
+              status: 'pending', paymentStatus: 'unpaid',
+              venmoCode: orderVenmoCode, // Same venmoCode if merging
+              baseAmount,
+              discountAmount,
+              discountPercent: pricing.discountPercent,
+              totalAmount: finalAmount,
+              registeredAt: new Date().toISOString()
+            });
           }
 
           // Log registration to history
