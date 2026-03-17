@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-const CARD_STYLE = {
+const ELEMENT_STYLE = {
   style: {
     base: {
       fontSize: '16px',
@@ -14,12 +14,13 @@ const CARD_STYLE = {
   },
 };
 
-// Inner form component — card-only, no bank/Link/wallets
+// Inner form component — card-only with vertical stacked fields
 const CheckoutForm = ({ amount, clientSecret, onSuccess, onCancel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState(null);
+  const [zip, setZip] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,9 +29,12 @@ const CheckoutForm = ({ amount, clientSecret, onSuccess, onCancel }) => {
     setPaying(true);
     setError(null);
 
-    const cardElement = elements.getElement(CardElement);
+    const cardNumber = elements.getElement(CardNumberElement);
     const result = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardElement }
+      payment_method: {
+        card: cardNumber,
+        billing_details: { address: { postal_code: zip } }
+      }
     });
 
     if (result.error) {
@@ -45,16 +49,48 @@ const CheckoutForm = ({ amount, clientSecret, onSuccess, onCancel }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div className="border border-gray-300 rounded-lg p-4 bg-white">
-        <CardElement options={CARD_STYLE} />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Card number</label>
+        <div className="border border-gray-300 rounded-lg px-4 py-3 bg-white">
+          <CardNumberElement options={ELEMENT_STYLE} />
+        </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Expiration</label>
+          <div className="border border-gray-300 rounded-lg px-4 py-3 bg-white">
+            <CardExpiryElement options={ELEMENT_STYLE} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">CVC</label>
+          <div className="border border-gray-300 rounded-lg px-4 py-3 bg-white">
+            <CardCvcElement options={ELEMENT_STYLE} />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">ZIP code</label>
+        <input
+          type="text"
+          value={zip}
+          onChange={e => setZip(e.target.value)}
+          placeholder="12345"
+          maxLength={10}
+          className="w-full border border-gray-300 rounded-lg px-4 py-3 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+        />
+      </div>
+
       {error && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
         </div>
       )}
-      <div className="space-y-2 mt-6">
+
+      <div className="space-y-2 pt-2">
         <button
           type="submit"
           disabled={!stripe || paying}
