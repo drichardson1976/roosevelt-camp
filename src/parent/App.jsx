@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.206";
+    const VERSION = "13.207";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T10:21:00");
+    const BUILD_DATE = new Date("2026-03-17T10:36:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2208,6 +2208,28 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         }, [myChildren.length]);
         const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
 
+        // ==================== SESSION CAPACITY ====================
+        const MAX_CAMPERS_PER_SESSION = 30;
+
+        // Count how many unique campers are registered for a given date+session (across ALL parents)
+        const getSessionSpotsTaken = (date, session) => {
+          const childIds = new Set();
+          registrations.forEach(r => {
+            if (r.date === date && r.status !== 'cancelled' && (r.sessions || []).includes(session)) {
+              if (r.childId) childIds.add(r.childId);
+            }
+          });
+          return childIds.size;
+        };
+
+        const getSpotsRemaining = (date, session) => {
+          return Math.max(0, MAX_CAMPERS_PER_SESSION - getSessionSpotsTaken(date, session));
+        };
+
+        const isSessionFull = (date, session) => {
+          return getSessionSpotsTaken(date, session) >= MAX_CAMPERS_PER_SESSION;
+        };
+
         // Use gym rental booked dates as primary source, fall back to camp_dates, then hardcoded
         const gymRentalDates = generateDatesFromGymRentals(gymRentals);
         const activeCampDates = gymRentalDates.length > 0
@@ -2429,6 +2451,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
         const toggleDate = (date, session) => {
           if (isAlreadyRegistered(date, session)) return; // Don't toggle already-registered sessions
+          if (isSessionFull(date, session)) {
+            showToast(`This session is full (${MAX_CAMPERS_PER_SESSION}/${MAX_CAMPERS_PER_SESSION} campers)`, 'error');
+            return;
+          }
           setSelectedDates(p => {
             const cur = p[date] || [];
             return { ...p, [date]: cur.includes(session) ? cur.filter(s => s !== session) : [...cur, session] };
@@ -2443,8 +2469,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             const pmBlocked = isSessionBlocked(date, 'afternoon') || !isSessionAvailableFromGym(date, 'afternoon');
             const amReg = isAlreadyRegistered(date, 'morning');
             const pmReg = isAlreadyRegistered(date, 'afternoon');
-            const amAvail = !amBlocked && !amReg;
-            const pmAvail = !pmBlocked && !pmReg;
+            const amFull = isSessionFull(date, 'morning');
+            const pmFull = isSessionFull(date, 'afternoon');
+            const amAvail = !amBlocked && !amReg && !amFull;
+            const pmAvail = !pmBlocked && !pmReg && !pmFull;
             const amSelected = cur.includes('morning');
             const pmSelected = cur.includes('afternoon');
 
@@ -2719,6 +2747,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           if (!selectedChildren.length) { showToast('Select children', 'error'); return; }
           const dates = Object.entries(selectedDates).filter(([, s]) => s.length);
           if (!dates.length) { showToast('Select sessions', 'error'); return; }
+
+          // Check capacity before submitting — make sure no session would exceed the limit
+          for (const [date, sessions] of dates) {
+            for (const session of sessions) {
+              const currentCount = getSessionSpotsTaken(date, session);
+              const newCampers = selectedChildren.length;
+              if (currentCount + newCampers > MAX_CAMPERS_PER_SESSION) {
+                const sessionLabel = session === 'morning' ? 'AM' : 'PM';
+                const d = new Date(date + 'T12:00:00');
+                const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const remaining = MAX_CAMPERS_PER_SESSION - currentCount;
+                showToast(`${dateLabel} ${sessionLabel} only has ${remaining} spot${remaining !== 1 ? 's' : ''} left — can't register ${newCampers} camper${newCampers !== 1 ? 's' : ''}`, 'error');
+                return;
+              }
+            }
+          }
 
           // Calculate discount info for the entire order
           const pricing = getPricingBreakdown();
@@ -3879,7 +3923,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     </div>
 
                     <p className="text-sm text-gray-500 mb-4">
-                      Camp runs weekdays only (Mon-Fri). Click AM or PM to select individual sessions. Selected sessions will be highlighted in green.
+                      Camp runs weekdays only (Mon-Fri). Each session is limited to {MAX_CAMPERS_PER_SESSION} campers. Click AM or PM to select individual sessions — selected sessions will be highlighted in green.
                     </p>
 
                     {/* Date Grid — grouped by month */}
@@ -3921,6 +3965,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                           const pmRegistered = isAlreadyRegistered(date, 'afternoon');
                           const bothRegistered = amRegistered && pmRegistered;
 
+                          // Check capacity
+                          const amFull = isSessionFull(date, 'morning');
+                          const pmFull = isSessionFull(date, 'afternoon');
+                          const amRemaining = getSpotsRemaining(date, 'morning');
+                          const pmRemaining = getSpotsRemaining(date, 'afternoon');
+
                           return (
                             <div key={date} className={`rounded-lg border-2 overflow-hidden ${
                               fullyBlocked ? 'border-gray-200 bg-gray-50' :
@@ -3943,18 +3993,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                     <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ AM Registered</div>
                                   ) : amBlocked ? (
                                     <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">☀️ AM 🚫</div>
+                                  ) : amFull ? (
+                                    <div className="w-full p-1.5 rounded text-xs bg-red-100 text-red-600 text-center font-medium">☀️ AM — FULL</div>
                                   ) : (
                                     <button onClick={() => toggleDate(date, 'morning')} className={`w-full p-1.5 rounded text-xs transition-colors ${amSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
-                                      ☀️ AM {amSelected ? '✓' : ''}
+                                      ☀️ AM {amSelected ? '✓' : ''}<span className={`block text-[10px] ${amSelected ? 'text-green-100' : amRemaining <= 5 ? 'text-orange-500 font-medium' : 'text-gray-400'}`}>{amRemaining} spot{amRemaining !== 1 ? 's' : ''} left</span>
                                     </button>
                                   )}
                                   {pmRegistered ? (
                                     <div className="w-full p-1.5 rounded text-xs bg-green-100 text-green-700 text-center">✓ PM Registered</div>
                                   ) : pmBlocked ? (
                                     <div className="p-1.5 rounded text-xs bg-gray-100 text-gray-400 text-center">🌙 PM 🚫</div>
+                                  ) : pmFull ? (
+                                    <div className="w-full p-1.5 rounded text-xs bg-red-100 text-red-600 text-center font-medium">🌙 PM — FULL</div>
                                   ) : (
                                     <button onClick={() => toggleDate(date, 'afternoon')} className={`w-full p-1.5 rounded text-xs transition-colors ${pmSelected ? 'bg-green-500 text-white' : 'bg-white hover:bg-gray-50 border'}`}>
-                                      🌙 PM {pmSelected ? '✓' : ''}
+                                      🌙 PM {pmSelected ? '✓' : ''}<span className={`block text-[10px] ${pmSelected ? 'text-green-100' : pmRemaining <= 5 ? 'text-orange-500 font-medium' : 'text-gray-400'}`}>{pmRemaining} spot{pmRemaining !== 1 ? 's' : ''} left</span>
                                     </button>
                                   )}
                                 </div>

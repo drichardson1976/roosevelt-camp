@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.205";
+    const VERSION = "13.207";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-16T21:48:00");
+    const BUILD_DATE = new Date("2026-03-17T10:36:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -601,7 +601,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
                   </div>
                   <div className="p-3 sm:p-4 text-center">
                     <h3 className="font-bold text-base sm:text-xl text-green-800">{c.name}</h3>
-                    <p className="text-green-600 text-xs sm:text-base">{c.position} • {c.year}</p>
+                    <p className="text-green-600 text-xs sm:text-base">{[c.position, c.year].filter(Boolean).join(' • ')}</p>
                     <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">{c.bio}</p>
                   </div>
                 </div>
@@ -1467,7 +1467,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
                           {/* Info */}
                           <div className="flex-1">
                             <div className="font-bold">{c.name}</div>
-                            <div className="text-sm text-gray-600">{c.position} • {c.year}</div>
+                            <div className="text-sm text-gray-600">{[c.position, c.year].filter(Boolean).join(' • ')}</div>
                             <div className="flex gap-2 mt-1 flex-wrap">
                               {eligibleCount > 0 && (
                                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">

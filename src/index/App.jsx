@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.197";
+    const VERSION = "13.207";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-02T13:21:00");
+    const BUILD_DATE = new Date("2026-03-17T10:36:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2740,7 +2740,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                   </div>
                   <div className="p-3 sm:p-4 text-center">
                     <h3 className="font-bold text-base sm:text-xl text-green-800">{c.name}</h3>
-                    <p className="text-green-600 text-xs sm:text-base">{c.position} • {c.year}</p>
+                    <p className="text-green-600 text-xs sm:text-base">{[c.position, c.year].filter(Boolean).join(' • ')}</p>
                     <p className="text-gray-600 text-xs sm:text-sm mt-1 sm:mt-2">{c.bio}</p>
                   </div>
                 </div>
