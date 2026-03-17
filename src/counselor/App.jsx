@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.202";
+    const VERSION = "13.205";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-12T15:28:00");
+    const BUILD_DATE = new Date("2026-03-16T21:48:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1309,7 +1309,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
                         {/* Month Tabs */}
                         <div className="flex flex-wrap gap-2">
-                          {[{ m: 6, n: 'July' }, { m: 7, n: 'August' }].map(({ m, n }) => (
+                          {[{ m: 7, n: 'August' }].map(({ m, n }) => (
                             <button key={m} onClick={() => setMonth(m)} className={'px-6 py-2 rounded-lg font-medium ' + (month === m ? 'bg-green-600 text-white' : 'bg-white border border-green-600 text-green-700')}>{n}</button>
                           ))}
                         </div>

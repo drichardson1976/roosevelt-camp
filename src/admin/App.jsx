@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.201";
+    const VERSION = "13.205";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-12T15:01:00");
+    const BUILD_DATE = new Date("2026-03-16T21:48:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -92,7 +92,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being edited (availability modal)
       const [counselorScheduleMonths, setCounselorScheduleMonths] = useState([]); // Months selected in availability modal (array for multi-select)
       const [counselorAvailDraft, setCounselorAvailDraft] = useState(null); // Draft copy of availability for Save/Cancel
-      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [counselorDashMonth, setCounselorDashMonth] = useState(7); // Persist selected month in Counselor Dashboard (7 = August)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
@@ -4758,9 +4758,8 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
       const displayRegs = getRegistrationsForDisplay();
 
-      // Generate calendar for July, August 2026
+      // Generate calendar for August 2026 (camp runs Aug 17-21 and Aug 24-28)
       const months = [
-        { name: 'July', year: 2026, month: 6 },
         { name: 'August', year: 2026, month: 7 }
       ];
 

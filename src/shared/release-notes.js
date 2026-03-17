@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.205", date: "2026-03-16", time: "9:48 PM", author: "Audrey Richardson", changes: ["All: Removed July from calendars — camp only runs August 17-21 and August 24-28", "All: Default month now August across all dashboards (admin, counselor, parent)", "Parent: Session calendar now shows only August"] },
   { version: "13.204", date: "2026-03-16", time: "9:44 PM", author: "Audrey Richardson", changes: ["Payments: Credit card payments now auto-approve registrations — no admin action needed", "Payments: Card payments go straight to the 'Paid' tab in the admin dashboard", "Payments: Stripe webhook also auto-approves if browser closes during payment"] },
   { version: "13.203", date: "2026-03-16", time: "9:08 PM", author: "Audrey Richardson", changes: ["Payments: Stripe now auto-switches between test and live mode — localhost uses test keys, production uses live keys", "Payments: No more manually swapping Stripe keys in Netlify — just add test keys once and it works forever"] },
   { version: "13.202", date: "2026-03-12", time: "3:28 PM", author: "Audrey Richardson", changes: ["Counselor Dashboard: Added 'Edit Login' tab — counselors can now change their password from the dashboard", "Counselor Dashboard: Password change verifies current password before allowing update", "Counselor Dashboard: Email displayed as read-only (cannot be changed)", "Counselor Dashboard: New password is securely hashed — all existing data preserved"] },

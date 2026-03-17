@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.204";
+    const VERSION = "13.205";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-16T21:44:00");
+    const BUILD_DATE = new Date("2026-03-16T21:48:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1455,7 +1455,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [assignmentsTabMonth, setAssignmentsTabMonth] = useState(null); // Persist selected month in Assignments tab
       const [counselorScheduleModal, setCounselorScheduleModal] = useState(null); // Counselor being scheduled
       const [counselorScheduleMonth, setCounselorScheduleMonth] = useState(null); // Month selected in schedule modal
-      const [counselorDashMonth, setCounselorDashMonth] = useState(6); // Persist selected month in Counselor Dashboard (6 = July)
+      const [counselorDashMonth, setCounselorDashMonth] = useState(7); // Persist selected month in Counselor Dashboard (7 = August)
       const [bulkRegModal, setBulkRegModal] = useState(null); // Bulk registration creation: { parentEmail, camperIds, selectedDates: { date: ['morning','afternoon'] } }
       const [bulkRegMonth, setBulkRegMonth] = useState(null); // Selected month for bulk registration
       const [viewRegModal, setViewRegModal] = useState(null); // Registration details view/edit modal
@@ -5780,9 +5780,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         return registrations.filter(r => r.childId === childId);
       };
 
-      // Generate calendar for July, August 2026
+      // Generate calendar for August 2026 (camp runs Aug 17-21 and Aug 24-28)
       const months = [
-        { name: 'July', year: 2026, month: 6 },
         { name: 'August', year: 2026, month: 7 }
       ];
 
