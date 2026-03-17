@@ -1,9 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
-// Inner form component — handles the actual Stripe Payment Element
-const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
+const CARD_STYLE = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#1f2937',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      '::placeholder': { color: '#9ca3af' },
+    },
+    invalid: { color: '#dc2626' },
+  },
+};
+
+// Inner form component — card-only, no bank/Link/wallets
+const CheckoutForm = ({ amount, clientSecret, onSuccess, onCancel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -16,9 +28,9 @@ const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
     setPaying(true);
     setError(null);
 
-    const result = await stripe.confirmPayment({
-      elements,
-      redirect: 'if_required'
+    const cardElement = elements.getElement(CardElement);
+    const result = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: { card: cardElement }
     });
 
     if (result.error) {
@@ -34,7 +46,9 @@ const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement options={{ layout: 'tabs', paymentMethodOrder: ['card'] }} />
+      <div className="border border-gray-300 rounded-lg p-4 bg-white">
+        <CardElement options={CARD_STYLE} />
+      </div>
       {error && (
         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
@@ -163,9 +177,10 @@ const CreditCardModal = ({ orderKey, regs, totalAmount, venmoCode, title, parent
         )}
 
         {!loading && !error && clientSecret && stripePromise && (
-          <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: 'stripe' } }}>
+          <Elements stripe={stripePromise} options={{ appearance: { theme: 'stripe' } }}>
             <CheckoutForm
               amount={Math.round(totalAmount * 100)}
+              clientSecret={clientSecret}
               onSuccess={handleSuccess}
               onCancel={onClose}
             />
