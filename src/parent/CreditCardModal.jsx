@@ -34,7 +34,7 @@ const CheckoutForm = ({ amount, onSuccess, onCancel }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <PaymentElement />
+      <PaymentElement options={{ layout: 'tabs', paymentMethodOrder: ['card'] }} />
       {error && (
         <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
           {error}
