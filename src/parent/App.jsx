@@ -2195,15 +2195,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           .map(link => link.camperId);
         const myChildren = (campers || []).filter(c => myChildrenIds.includes(c.id));
 
-        // Auto-select campers that already have registrations
+        // Auto-select single camper for registration modal (not calendar — calendar has its own state)
         useEffect(() => {
-          if (myChildren.length > 0 && selectedChildren.length === 0) {
-            const childrenWithRegs = myChildren.filter(c =>
-              registrations.some(r => r.childId === c.id && r.parentEmail === user?.email && r.status !== 'cancelled')
-            ).map(c => c.id);
-            if (childrenWithRegs.length > 0) {
-              setSelectedChildren(childrenWithRegs);
-            }
+          if (myChildren.length === 1 && selectedChildren.length === 0) {
+            setSelectedChildren([myChildren[0].id]);
           }
         }, [myChildren.length]);
         const myRegs = registrations.filter(r => r.parentEmail === user?.email && r.status !== 'cancelled');
@@ -3047,10 +3042,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     ) : (
                       <div className="space-y-3">
                         {(() => {
-                          // Group: all unpaid regs → one combined box; paid regs → grouped by orderId
+                          // Group by child: each child gets one unpaid box, paid grouped by orderId
                           const unpaidRegs = myRegs.filter(r => !r.paymentStatus || r.paymentStatus === 'unpaid');
                           const paidRegs = myRegs.filter(r => r.paymentStatus && r.paymentStatus !== 'unpaid');
 
+                          // Unpaid: group by childId — each child gets their own box
+                          const unpaidByChild = {};
+                          unpaidRegs.forEach(reg => {
+                            const key = reg.childId || reg.childName || 'unknown';
+                            if (!unpaidByChild[key]) unpaidByChild[key] = [];
+                            unpaidByChild[key].push(reg);
+                          });
+
+                          // Paid: group by orderId
                           const paidByOrder = {};
                           paidRegs.forEach(reg => {
                             const orderKey = reg.orderId || reg.id;
@@ -3058,11 +3062,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             paidByOrder[orderKey].push(reg);
                           });
 
-                          // Build display groups: unpaid first (if any), then paid orders sorted by date
+                          // Build display groups: unpaid per-child first, then paid orders
                           const sortedOrders = [];
-                          if (unpaidRegs.length > 0) {
-                            sortedOrders.push(['_unpaid_combined', unpaidRegs]);
-                          }
+                          Object.entries(unpaidByChild).forEach(([childKey, regs]) => {
+                            sortedOrders.push([`_unpaid_${childKey}`, regs]);
+                          });
                           Object.entries(paidByOrder).sort((a, b) => {
                             const aDate = a[1][0]?.createdAt || a[1][0]?.date || '';
                             const bDate = b[1][0]?.createdAt || b[1][0]?.date || '';
@@ -3099,8 +3103,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                           return sortedOrders.map(([orderKey, regs]) => {
                             const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                            const isUnpaidCombined = orderKey === '_unpaid_combined';
-                            const paymentStatus = isUnpaidCombined ? 'unpaid' : (sortedRegs[0].paymentStatus || 'unpaid');
+                            const isUnpaidGroup = orderKey.startsWith('_unpaid_');
+                            const paymentStatus = isUnpaidGroup ? 'unpaid' : (sortedRegs[0].paymentStatus || 'unpaid');
                             const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
                             const isSent = paymentStatus === 'sent';
                             const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
@@ -6008,10 +6012,11 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     // ==================== REGISTRATION CALENDAR VIEW ====================
     const RegistrationCalendarView = ({ myChildren, registrations, activeCampDates, campDates, gymRentals, campers, saveCampers }) => {
       const [selectedChildren, setSelectedChildren] = useState(() => {
+        // Auto-select only if 1-3 children, otherwise start empty and let user pick
         const childrenWithRegs = myChildren.filter(c =>
           registrations.some(r => r.childId === c.id && r.status !== 'cancelled')
         ).map(c => c.id);
-        return childrenWithRegs;
+        return childrenWithRegs.length <= 3 ? childrenWithRegs : [];
       });
       const [showCalendarPhotoModal, setShowCalendarPhotoModal] = useState(false);
       const [calendarPhotoChildId, setCalendarPhotoChildId] = useState(null);
