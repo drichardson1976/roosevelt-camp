@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.206", date: "2026-03-17", time: "10:21 AM", author: "Audrey Richardson", changes: ["Parent Dashboard: Added 'Edit Login' tab — parents can now change their password from the dashboard", "Parent Dashboard: Password change verifies current password before allowing update", "Parent Dashboard: Email displayed as read-only (cannot be changed)", "Parent Dashboard: New password is securely hashed — all existing data preserved"] },
   { version: "13.205", date: "2026-03-16", time: "9:48 PM", author: "Audrey Richardson", changes: ["All: Removed July from calendars — camp only runs August 17-21 and August 24-28", "All: Default month now August across all dashboards (admin, counselor, parent)", "Parent: Session calendar now shows only August"] },
   { version: "13.204", date: "2026-03-16", time: "9:44 PM", author: "Audrey Richardson", changes: ["Payments: Credit card payments now auto-approve registrations — no admin action needed", "Payments: Card payments go straight to the 'Paid' tab in the admin dashboard", "Payments: Stripe webhook also auto-approves if browser closes during payment"] },
   { version: "13.203", date: "2026-03-16", time: "9:08 PM", author: "Audrey Richardson", changes: ["Payments: Stripe now auto-switches between test and live mode — localhost uses test keys, production uses live keys", "Payments: No more manually swapping Stripe keys in Netlify — just add test keys once and it works forever"] },

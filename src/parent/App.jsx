@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.205";
+    const VERSION = "13.206";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-16T21:48:00");
+    const BUILD_DATE = new Date("2026-03-17T10:21:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -148,6 +148,133 @@ import CreditCardModal from './CreditCardModal';
             </div>
           )}
         </div>
+      );
+    };
+
+    // ==================== PARENT CHANGE PASSWORD FORM ====================
+    const ParentChangePasswordForm = ({ userEmail, onSuccess, onError }) => {
+      const [currentPassword, setCurrentPassword] = useState('');
+      const [newPassword, setNewPassword] = useState('');
+      const [confirmPassword, setConfirmPassword] = useState('');
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState('');
+      const [showCurrent, setShowCurrent] = useState(false);
+      const [showNew, setShowNew] = useState(false);
+      const [showConfirm, setShowConfirm] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!currentPassword || !newPassword || !confirmPassword) {
+          setError('All fields are required.');
+          return;
+        }
+        if (newPassword.length < 6) {
+          setError('New password must be at least 6 characters.');
+          return;
+        }
+        if (newPassword !== confirmPassword) {
+          setError('New passwords do not match.');
+          return;
+        }
+        if (currentPassword === newPassword) {
+          setError('New password must be different from current password.');
+          return;
+        }
+
+        setSaving(true);
+        try {
+          // 1. Verify current password via login endpoint
+          const loginRes = await fetch('/.netlify/functions/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: userEmail, password: currentPassword })
+          });
+          if (!loginRes.ok) {
+            const loginData = await loginRes.json();
+            setError(loginData.error || 'Current password is incorrect.');
+            setSaving(false);
+            return;
+          }
+
+          // 2. Hash the new password
+          const hashRes = await fetch('/.netlify/functions/hash-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: newPassword })
+          });
+          if (!hashRes.ok) {
+            setError('Failed to process new password. Please try again.');
+            setSaving(false);
+            return;
+          }
+          const { passwordHash } = await hashRes.json();
+
+          // 3. Update camp_parents with new hash (preserve all other data)
+          const usersData = await storage.get('camp_parents');
+          const allUsers = usersData?.[0]?.data || [];
+          const updatedUsers = allUsers.map(u => {
+            if ((u.email || '').toLowerCase() === userEmail.toLowerCase()) {
+              return { ...u, passwordHash, passwordChangedAt: new Date().toISOString() };
+            }
+            return u;
+          });
+          await storage.set('camp_parents', 'main', updatedUsers);
+
+          // Clear form
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          onSuccess();
+        } catch (err) {
+          console.error('Password change error:', err);
+          setError('Something went wrong. Please try again.');
+        }
+        setSaving(false);
+      };
+
+      return (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email (cannot be changed)</label>
+            <div className="px-4 py-3 bg-gray-100 rounded-lg text-gray-600 border border-gray-200">{userEmail}</div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
+            <div className="relative">
+              <input type={showCurrent ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Enter your current password" />
+              <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showCurrent ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+            <div className="relative">
+              <input type={showNew ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Enter your new password (min 6 characters)" />
+              <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showNew ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
+            <div className="relative">
+              <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 pr-12" placeholder="Re-enter your new password" />
+              <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm">{showConfirm ? 'Hide' : 'Show'}</button>
+            </div>
+          </div>
+
+          <button type="submit" disabled={saving} className={'w-full py-3 rounded-lg font-medium text-white transition-colors ' + (saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700')}>
+            {saving ? 'Changing Password...' : 'Change Password'}
+          </button>
+        </form>
       );
     };
 
@@ -2713,9 +2840,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <div className="bg-white shadow">
               <div className="max-w-6xl mx-auto px-2 sm:px-4">
                 <ScrollableTabs persistKey="parent-tabs">
-                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'payments', 'contact', 'history'].map(t => (
+                  {['dashboard', 'parents', 'campers', 'emergency', 'register', 'payments', 'login', 'contact', 'history'].map(t => (
                     <button key={t} onClick={() => setParentTab(t)} className={'px-2 sm:px-4 py-2 sm:py-3 border-b-2 whitespace-nowrap select-none text-xs sm:text-sm ' + (parentTab === t ? 'border-green-600 text-green-700 bg-green-50' : 'border-transparent text-gray-500')}>
-                      {t === 'contact' ? '📞 Contact Us' : t === 'campers' ? '🏀 Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'payments' ? '💰 Payments' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'history' ? '📜 History' : t}
+                      {t === 'contact' ? '📞 Contact Us' : t === 'campers' ? '🏀 Campers' : t === 'emergency' ? '🚨 Emergency Contacts' : t === 'register' ? '📝 Session Registration' : t === 'payments' ? '💰 Payments' : t === 'dashboard' ? '📊 Dashboard' : t === 'parents' ? '👨‍👩‍👧 Parents' : t === 'login' ? '🔑 Edit Login' : t === 'history' ? '📜 History' : t}
                     </button>
                   ))}
                 </ScrollableTabs>
@@ -3370,6 +3497,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     })()}
                   </div>
 
+                </div>
+              )}
+
+              {/* ===== EDIT LOGIN TAB ===== */}
+              {parentTab === 'login' && (
+                <div className="max-w-md mx-auto">
+                  <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="bg-green-600 text-white px-6 py-4">
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                        <span>🔑</span> Edit Login
+                      </h3>
+                      <p className="text-green-100 text-sm mt-1">Change your password below. Your email cannot be changed.</p>
+                    </div>
+                    <div className="p-6">
+                      <ParentChangePasswordForm
+                        userEmail={user?.email}
+                        onSuccess={() => showToast('Password changed successfully!')}
+                        onError={(msg) => showToast(msg, 'error')}
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 
