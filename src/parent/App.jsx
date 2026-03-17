@@ -2498,7 +2498,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           if (hasDraft) {
             // Filter out stale camper IDs that no longer exist
             const currentChildIds = myChildren.map(c => c.id);
-            setSelectedChildren(draftRegistration.selectedChildren.filter(id => currentChildIds.includes(id)));
+            const validDraftChildren = draftRegistration.selectedChildren.filter(id => currentChildIds.includes(id));
+            setSelectedChildren(validDraftChildren.length > 0 ? [validDraftChildren[0]] : []);
             setSelectedDates(draftRegistration.selectedDates);
             if (draftRegistration.selectedMonths) {
               setSelectedRegistrationMonths(draftRegistration.selectedMonths);
@@ -3111,7 +3112,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                               if (!dateMap[r.date].includes(s)) dateMap[r.date].push(s);
                                             });
                                           });
-                                          setSelectedChildren(childIds);
+                                          setSelectedChildren(childIds.length > 0 ? [childIds[0]] : []);
                                           setSelectedDates(dateMap);
                                           setEditingOrderId(orderKey);
                                           setShowRegistrationModal(true);
@@ -3866,10 +3867,10 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         <div className="p-6 space-y-6">
                           {/* Step 1: Select Campers */}
                           <div className={'bg-white rounded-xl border-2 border-gray-200 p-6 ' + (!selectedChildren.length && Object.values(selectedDates).flat().length > 0 ? 'ring-2 ring-yellow-400' : '')}>
-                            <h3 className="font-bold text-lg mb-2">Step 1: Select Camper(s) to Register</h3>
+                            <h3 className="font-bold text-lg mb-2">Step 1: Select Camper to Register</h3>
                     {myChildren.length === 0 ? <p className="text-gray-500">Add campers in the "Campers" tab first</p> : (
                       <div className="flex flex-wrap gap-3">{myChildren.map(c => (
-                        <button key={c.id} onClick={() => setSelectedChildren(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])} className={'flex flex-col items-center gap-1 px-4 py-3 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50 font-bold' : 'border-gray-200')}>
+                        <button key={c.id} onClick={() => setSelectedChildren(selectedChildren.includes(c.id) ? [] : [c.id])} className={'flex flex-col items-center gap-1 px-4 py-3 rounded-lg border-2 ' + (selectedChildren.includes(c.id) ? 'border-green-600 bg-green-50 font-bold' : 'border-gray-200')}>
                           {getDisplayPhoto(c.photo) ? (
                             <img src={getDisplayPhoto(c.photo)} className="w-10 h-10 rounded-full object-cover border-2 border-green-500" />
                           ) : (
@@ -3881,7 +3882,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                         </button>
                       ))}</div>
                     )}
-                            {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {selectedChildren.length} camper{selectedChildren.length > 1 ? 's' : ''} selected</p>}
+                            {selectedChildren.length > 0 && <p className="text-green-600 text-sm mt-2 font-medium">✓ {myChildren.find(c => c.id === selectedChildren[0])?.name} selected</p>}
                           </div>
 
                           {/* Step 2: Select Dates & Sessions */}
@@ -4083,7 +4084,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             {!selectedChildren.length && Object.values(selectedDates).flat().length > 0 && (
                               <div className="mt-4 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-center">
                                 <span className="text-yellow-700 font-bold text-lg">⚠️ Please select a camper above before registering!</span>
-                                <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Camper(s) to Register" and click on your camper's name.</p>
+                                <p className="text-yellow-600 text-sm mt-1">Scroll up to "Select Camper to Register" and click on your camper's name.</p>
                               </div>
                             )}
                           </div>
