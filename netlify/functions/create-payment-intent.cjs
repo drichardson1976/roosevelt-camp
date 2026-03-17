@@ -1,11 +1,20 @@
 const { getCorsHeaders, handlePreflight } = require('./utils/cors.cjs');
+const { getSchema } = require('./utils/schema.cjs');
 
 exports.handler = async (event) => {
   const preflight = handlePreflight(event);
   if (preflight) return preflight;
 
   try {
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    // Auto-detect environment: localhost → test keys, production → live keys
+    const { isDev } = getSchema(event);
+    const secretKey = isDev
+      ? (process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY)
+      : process.env.STRIPE_SECRET_KEY;
+    const publishableKey = isDev
+      ? (process.env.STRIPE_TEST_PUBLISHABLE_KEY || process.env.STRIPE_PUBLISHABLE_KEY)
+      : process.env.STRIPE_PUBLISHABLE_KEY;
+
     if (!secretKey) {
       console.error('STRIPE_SECRET_KEY is not set');
       return {
@@ -43,7 +52,7 @@ exports.handler = async (event) => {
       headers: getCorsHeaders(event),
       body: JSON.stringify({
         clientSecret: paymentIntent.client_secret,
-        publishableKey: process.env.STRIPE_PUBLISHABLE_KEY
+        publishableKey
       })
     };
   } catch (err) {

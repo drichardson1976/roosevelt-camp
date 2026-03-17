@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.203", date: "2026-03-16", time: "9:08 PM", author: "Audrey Richardson", changes: ["Payments: Stripe now auto-switches between test and live mode — localhost uses test keys, production uses live keys", "Payments: No more manually swapping Stripe keys in Netlify — just add test keys once and it works forever"] },
   { version: "13.202", date: "2026-03-12", time: "3:28 PM", author: "Audrey Richardson", changes: ["Counselor Dashboard: Added 'Edit Login' tab — counselors can now change their password from the dashboard", "Counselor Dashboard: Password change verifies current password before allowing update", "Counselor Dashboard: Email displayed as read-only (cannot be changed)", "Counselor Dashboard: New password is securely hashed — all existing data preserved"] },
   { version: "13.201", date: "2026-03-12", time: "3:01 PM", author: "Audrey Richardson", changes: ["Admin: Fixed 'No Login' badge incorrectly showing for parents who have email/password accounts — was checking wrong field (password instead of passwordHash)"] },
   { version: "13.200", date: "2026-03-12", time: "2:52 PM", author: "Audrey Richardson", changes: ["Parent Payments: Added Venmo QR code to payment modal — parents can scan to pay instantly", "Parent Payments: QR code links to venmo.com/u/RHSDayCamp — tapping opens Venmo directly", "Parent Payments: Simplified Venmo steps from 5 to 4 — scan QR replaces manual search"] },
