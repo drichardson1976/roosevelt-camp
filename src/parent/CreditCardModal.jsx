@@ -3,6 +3,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardNumberElement, CardExpiryElement, CardCvcElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const ELEMENT_STYLE = {
+  disableLink: true,
   style: {
     base: {
       fontSize: '16px',
