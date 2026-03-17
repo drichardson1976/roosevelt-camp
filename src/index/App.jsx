@@ -2564,7 +2564,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             {/* Session Pricing */}
             <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6">
               <h2 className="font-bold text-lg sm:text-xl text-green-800 mb-4">Session Pricing</h2>
-              <p className="text-gray-600 mb-4">Sign up for as many or as few sessions as you'd like — there are no commitments. Pick the days and times that work for your schedule. It's completely flexible!</p>
+              <p className="text-gray-600 mb-4">Choose the sessions that fit your schedule — sign up for a single morning, a full week, or anything in between. You only pay for the sessions you pick!</p>
               <div className="grid sm:grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
                   <h3 className="font-bold text-yellow-700">🌅 Morning Session</h3>
