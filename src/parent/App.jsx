@@ -6057,7 +6057,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
             <h3 className="font-bold text-xl mb-2">📅 Session Calendar</h3>
 
             {/* Child Selector */}
-            <div className="flex gap-3 flex-wrap mb-4">
+            <div className="flex gap-3 flex-wrap mb-3">
               {myChildren.map(child => (
                 <button
                   key={child.id}
@@ -6085,6 +6085,22 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                 </button>
               ))}
             </div>
+            {myChildren.length > 1 && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedChildren(myChildren.map(c => c.id))}
+                  className="text-sm px-3 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={() => setSelectedChildren([])}
+                  className="text-sm px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium"
+                >
+                  Deselect All
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Display message if no campers selected */}
