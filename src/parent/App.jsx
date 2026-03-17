@@ -2492,7 +2492,12 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         };
 
         // ==================== REGISTRATION MODAL HELPERS ====================
+        // Save calendar selection before opening modal, restore on close
+        const savedCalendarSelection = useRef([]);
+
         const openRegistrationModal = () => {
+          // Save current calendar child selection so we can restore it after modal closes
+          savedCalendarSelection.current = [...selectedChildren];
           // Load draft if exists
           const hasDraft = draftRegistration.selectedChildren.length > 0 || Object.keys(draftRegistration.selectedDates).length > 0;
           if (hasDraft) {
@@ -2522,6 +2527,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           };
           localStorage.setItem('registration_draft', JSON.stringify(draft));
           setDraftRegistration(draft);
+          // Restore calendar child selection
+          setSelectedChildren(savedCalendarSelection.current.length > 0 ? savedCalendarSelection.current : selectedChildren);
           setShowRegistrationModal(false);
           setEditingOrderId(null);
           if (returnTabAfterRegistration) {
@@ -2534,7 +2541,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Clear draft and reset selections
           localStorage.removeItem('registration_draft');
           setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonths: [] });
-          setSelectedChildren([]);
+          // Restore calendar child selection
+          setSelectedChildren(savedCalendarSelection.current.length > 0 ? savedCalendarSelection.current : []);
           setSelectedDates({});
           setShowRegistrationModal(false);
           setEditingOrderId(null);
@@ -2559,6 +2567,9 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Clear draft after successful submission
           localStorage.removeItem('registration_draft');
           setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonths: [] });
+          // Restore calendar child selection (include the just-registered child)
+          const restored = [...new Set([...savedCalendarSelection.current, ...selectedChildren])];
+          setSelectedChildren(restored.length > 0 ? restored : selectedChildren);
           setShowRegistrationModal(false);
           setEditingOrderId(null);
           if (returnTabAfterRegistration) {
@@ -2768,28 +2779,19 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Calculate discount info for the entire order
           const pricing = getPricingBreakdown();
 
-          // Check if there's an existing unpaid order for this child — merge into it
+          // Check if there are ANY existing unpaid registrations — merge into same venmo code
           const childId = selectedChildren[0];
           const child = myChildren.find(c => c.id === childId);
-          const existingUnpaidRegs = myRegs.filter(r =>
-            r.childId === childId &&
+          const allUnpaidRegs = myRegs.filter(r =>
             r.status !== 'cancelled' &&
             (!r.paymentStatus || r.paymentStatus === 'unpaid')
           );
-          const existingOrderId = existingUnpaidRegs.length > 0 ? existingUnpaidRegs[0].orderId : null;
-          const existingVenmoCode = existingUnpaidRegs.length > 0 ? existingUnpaidRegs[0].venmoCode : null;
+          const existingVenmoCode = allUnpaidRegs.length > 0 ? allUnpaidRegs[0].venmoCode : null;
 
-          const orderId = existingOrderId || `order_${Date.now()}`;
+          const orderId = `order_${Date.now()}`;
           const orderVenmoCode = existingVenmoCode || generateVenmoCode(user?.name, orderId);
 
-          // If merging into existing order, recalculate discount across ALL sessions in the order
-          const existingDates = existingUnpaidRegs.map(r => [r.date, r.sessions]);
-          const allDatesForDiscount = [...existingDates, ...dates];
-          // Count total sessions across existing + new for discount calculation
-          const totalSessionCount = allDatesForDiscount.reduce((sum, [, s]) => sum + s.length, 0);
-          const totalOriginal = totalSessionCount * sessionCost;
-          // Recalculate discount for the combined order
-          const combinedDiscount = totalOriginal > 0 ? (totalOriginal - pricing.finalTotal - existingUnpaidRegs.reduce((sum, r) => sum + (r.totalAmount || 0), 0)) : 0;
+          // Calculate proportional discount per session
           const discountRatio = pricing.originalTotal > 0 ? pricing.discount / pricing.originalTotal : 0;
 
           let regCounter = 0;
@@ -3045,20 +3047,27 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                     ) : (
                       <div className="space-y-3">
                         {(() => {
-                          // Group registrations by orderId — each order is one registration request
-                          const regsByOrder = {};
-                          myRegs.forEach(reg => {
+                          // Group: all unpaid regs → one combined box; paid regs → grouped by orderId
+                          const unpaidRegs = myRegs.filter(r => !r.paymentStatus || r.paymentStatus === 'unpaid');
+                          const paidRegs = myRegs.filter(r => r.paymentStatus && r.paymentStatus !== 'unpaid');
+
+                          const paidByOrder = {};
+                          paidRegs.forEach(reg => {
                             const orderKey = reg.orderId || reg.id;
-                            if (!regsByOrder[orderKey]) regsByOrder[orderKey] = [];
-                            regsByOrder[orderKey].push(reg);
+                            if (!paidByOrder[orderKey]) paidByOrder[orderKey] = [];
+                            paidByOrder[orderKey].push(reg);
                           });
 
-                          // Sort orders by creation order (first created at top, newest at bottom)
-                          const sortedOrders = Object.entries(regsByOrder).sort((a, b) => {
+                          // Build display groups: unpaid first (if any), then paid orders sorted by date
+                          const sortedOrders = [];
+                          if (unpaidRegs.length > 0) {
+                            sortedOrders.push(['_unpaid_combined', unpaidRegs]);
+                          }
+                          Object.entries(paidByOrder).sort((a, b) => {
                             const aDate = a[1][0]?.createdAt || a[1][0]?.date || '';
                             const bDate = b[1][0]?.createdAt || b[1][0]?.date || '';
                             return new Date(aDate) - new Date(bDate);
-                          });
+                          }).forEach(entry => sortedOrders.push(entry));
 
                           // Shared date range formatter with contiguous detection
                           const formatDateRange = (dates) => {
@@ -3090,7 +3099,8 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
 
                           return sortedOrders.map(([orderKey, regs]) => {
                             const sortedRegs = regs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                            const paymentStatus = sortedRegs[0].paymentStatus || 'unpaid';
+                            const isUnpaidCombined = orderKey === '_unpaid_combined';
+                            const paymentStatus = isUnpaidCombined ? 'unpaid' : (sortedRegs[0].paymentStatus || 'unpaid');
                             const isPaid = ['paid', 'confirmed'].includes(paymentStatus);
                             const isSent = paymentStatus === 'sent';
                             const totalAmount = sortedRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
@@ -3106,7 +3116,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                             const camperNames = Object.keys(byCamper);
                             const title = camperNames.length === 1
                               ? `${camperNames[0]}'s Registration`
-                              : `${camperNames.join(' and ')} Registration`;
+                              : `${camperNames.join(' & ')} Registration`;
 
                             return (
                               <div key={orderKey} className={`rounded-lg p-4 ${
@@ -3151,22 +3161,34 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 <div className="space-y-2 mb-3">
                                   {Object.entries(byCamper).map(([camperName, camperRegs]) => {
                                     const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                                    const dates = sortedCamperRegs.map(r => r.date);
+                                    // Group by date ranges with same session type
+                                    const dateGroups = {};
+                                    sortedCamperRegs.forEach(r => {
+                                      const sessKey = [...(r.sessions || [])].sort().join('+');
+                                      if (!dateGroups[sessKey]) dateGroups[sessKey] = [];
+                                      dateGroups[sessKey].push(r);
+                                    });
                                     const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
-                                    const sessions = sortedCamperRegs.flatMap(r => r.sessions || []);
-                                    const hasAM = sessions.includes('morning');
-                                    const hasPM = sessions.includes('afternoon');
-                                    const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
                                     return (
                                       <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : 'bg-blue-100'}`}>
                                         <div className="flex justify-between items-center">
-                                          <div>
-                                            <span className="font-medium">{camperName}</span>
-                                            <span className="text-sm text-gray-500 ml-2">({sessionLabel})</span>
-                                          </div>
+                                          <span className="font-bold">{camperName}</span>
                                           <span className="font-medium">${camperTotal.toFixed(2)}</span>
                                         </div>
-                                        <div className="text-sm text-gray-600 mt-1">{dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</div>
+                                        {Object.entries(dateGroups).map(([sessKey, groupRegs]) => {
+                                          const dates = groupRegs.map(r => r.date);
+                                          const groupTotal = groupRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                                          const sessions = groupRegs[0].sessions || [];
+                                          const hasAM = sessions.includes('morning');
+                                          const hasPM = sessions.includes('afternoon');
+                                          const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                                          return (
+                                            <div key={sessKey} className="text-sm text-gray-600 mt-1 flex justify-between">
+                                              <span>{sessionLabel} — {dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</span>
+                                              {Object.keys(dateGroups).length > 1 && <span className="text-gray-500">${groupTotal.toFixed(2)}</span>}
+                                            </div>
+                                          );
+                                        })}
                                       </div>
                                     );
                                   })}
