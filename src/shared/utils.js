@@ -133,7 +133,7 @@ export var photoStorage = {
       if (result.error) throw result.error;
 
       var urlResult = supabase.storage.from('camp-photos').getPublicUrl(path);
-      return urlResult.data.publicUrl;
+      return urlResult.data.publicUrl + '?v=' + Date.now();
     } catch (e) {
       console.error('Photo upload failed:', e);
       return null;
