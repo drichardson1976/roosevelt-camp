@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.207";
+    const VERSION = "13.208";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T10:36:00");
+    const BUILD_DATE = new Date("2026-03-17T20:10:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1540,6 +1540,280 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
     };
 
 
+    // ==================== REGISTRATION CALENDAR VIEW ====================
+    // NOTE: Defined outside RooseveltCamp to maintain a stable component reference.
+    // If defined inside, React re-creates the function on every render, causing unmount/remount
+    // which resets the selectedChildren state. DO NOT move back inside RooseveltCamp.
+    const RegistrationCalendarView = ({ myChildren, registrations, activeCampDates, campDates, gymRentals, campers, saveCampers, showToast: showToastProp }) => {
+      const [selectedChildren, setSelectedChildren] = useState(() => {
+        // Auto-select only if 1-3 children, otherwise start empty and let user pick
+        const childrenWithRegs = myChildren.filter(c =>
+          registrations.some(r => r.childId === c.id && r.status !== 'cancelled')
+        ).map(c => c.id);
+        return childrenWithRegs.length <= 3 ? childrenWithRegs : [];
+      });
+      const [showCalendarPhotoModal, setShowCalendarPhotoModal] = useState(false);
+      const [calendarPhotoChildId, setCalendarPhotoChildId] = useState(null);
+
+      // Get all registration dates for a specific child
+      const getRegistrationsForChild = (childId) => {
+        return registrations.filter(r => r.childId === childId);
+      };
+
+      // Generate calendar for August 2026 (camp runs Aug 17-21 and Aug 24-28)
+      const months = [
+        { name: 'August', year: 2026, month: 7 }
+      ];
+
+      const getDaysInMonth = (year, month) => {
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
+
+        const days = [];
+        // Add empty cells for days before month starts
+        for (let i = 0; i < startDayOfWeek; i++) {
+          days.push(null);
+        }
+        // Add days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+          days.push(day);
+        }
+        return days;
+      };
+
+      const getRegistrationForDate = (year, month, day) => {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        return registrations.filter(r => r.date === dateStr);
+      };
+
+      const getStatusColor = (status) => {
+        if (status === 'approved') return 'bg-green-500';
+        if (status === 'pending') return 'bg-yellow-500';
+        if (status === 'rejected') return 'bg-red-500';
+        return 'bg-gray-300';
+      };
+
+      const getStatusText = (status) => {
+        if (status === 'approved') return 'Approved';
+        if (status === 'pending') return 'Pending';
+        if (status === 'rejected') return 'Rejected';
+        return '';
+      };
+
+      if (myChildren.length === 0) {
+        return (
+          <div className="bg-white rounded-xl shadow p-8 text-center">
+            <div className="text-6xl mb-4">📅</div>
+            <h3 className="font-bold text-lg text-gray-800 mb-2">No Campers Yet</h3>
+            <p className="text-gray-500">Add campers to see their registration calendar</p>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-white rounded-xl shadow p-6">
+          <div className="mb-6">
+            <h3 className="font-bold text-xl mb-2">📅 Session Calendar</h3>
+
+            {/* Child Selector */}
+            <div className="flex gap-3 flex-wrap mb-3">
+              {myChildren.map(child => (
+                <button
+                  key={child.id}
+                  onClick={() => {
+                    setSelectedChildren(prev =>
+                      prev.includes(child.id)
+                        ? prev.filter(id => id !== child.id)
+                        : [...prev, child.id]
+                    );
+                  }}
+                  className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg font-medium ${
+                    selectedChildren.includes(child.id)
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {getDisplayPhoto(child.photo) ? (
+                    <img src={getDisplayPhoto(child.photo)} className={`w-10 h-10 rounded-full object-cover border-2 ${selectedChildren.includes(child.id) ? 'border-white' : 'border-green-500'}`} />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                  )}
+                  <span className="text-sm">{selectedChildren.includes(child.id) ? '✓ ' : ''}{child.name}</span>
+                </button>
+              ))}
+            </div>
+            {myChildren.length > 1 && (
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setSelectedChildren(myChildren.map(c => c.id))}
+                  className="text-sm px-3 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={() => setSelectedChildren([])}
+                  className="text-sm px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium"
+                >
+                  Deselect All
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Display message if no campers selected */}
+          {selectedChildren.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              <p>Select one or more campers above to view their session calendars</p>
+            </div>
+          )}
+
+          {/* Calendar Grid - One per selected child */}
+          {selectedChildren.map(childId => {
+            const child = myChildren.find(c => c.id === childId);
+            if (!child) return null;
+
+            const childRegs = getRegistrationsForChild(childId);
+
+            const getRegistrationForDate = (year, month, day) => {
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return childRegs.filter(r => r.date === dateStr);
+            };
+
+            return (
+              <div key={childId} className="mb-8 last:mb-0">
+                <h4 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  {getDisplayPhoto(child.photo) ? (
+                    <img src={getDisplayPhoto(child.photo)} className="w-8 h-8 rounded-full object-cover border-2 border-green-500" />
+                  ) : (
+                    <div onClick={() => { setCalendarPhotoChildId(childId); setShowCalendarPhotoModal(true); }} className="w-8 h-8 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
+                      <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+                      <span className="text-[6px] text-gray-500 font-medium">add photo</span>
+                    </div>
+                  )}
+                  {child.name}'s Session Calendar
+                  {showCalendarPhotoModal && calendarPhotoChildId === childId && (
+                    <PhotoUploadModal
+                      currentPhoto={child.photo}
+                      onSave={(img) => {
+                        if (saveCampers && campers) {
+                          saveCampers(campers.map(c => c.id === childId ? { ...c, photo: img } : c), `Updated photo for ${child.name}`);
+                        }
+                        setShowCalendarPhotoModal(false);
+                        setCalendarPhotoChildId(null);
+                      }}
+                      onCancel={() => { setShowCalendarPhotoModal(false); setCalendarPhotoChildId(null); }}
+                    />
+                  )}
+                </h4>
+
+                <div className="grid md:grid-cols-3 gap-6">
+                  {months.map(({ name, year, month }) => {
+                    const days = getDaysInMonth(year, month);
+                    return (
+                      <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
+                        <div className="bg-green-700 text-white text-center py-2 font-bold">
+                          {name} {year}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1 p-2">
+                          {/* Day headers */}
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+                            <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
+                              {d}
+                            </div>
+                          ))}
+                          {/* Days */}
+                          {days.map((day, i) => {
+                            if (day === null) {
+                              return <div key={`empty-${i}`} className="aspect-square"></div>;
+                            }
+                            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                            const isValidCampDate = activeCampDates.includes(dateStr);
+                            const regs = getRegistrationForDate(year, month, day);
+                            const hasRegistrations = regs.length > 0;
+
+                            // If not a valid camp date, show X
+                            if (!isValidCampDate) {
+                              return (
+                                <div
+                                  key={day}
+                                  className="aspect-square flex flex-col items-center justify-center text-xs rounded relative bg-gray-100 border border-gray-300"
+                                >
+                                  <span className="text-gray-400 text-[10px] absolute top-0.5 left-1">{day}</span>
+                                  <span className="text-red-400 text-xl font-bold">×</span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={day}
+                                onClick={() => showToastProp('Calendar is view-only. Use the "+ New Registration" button above to register for sessions.', 'info')}
+                                className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-default ${
+                                  hasRegistrations
+                                    ? 'bg-green-100 border-2 border-green-500 font-bold'
+                                    : 'bg-blue-50 border border-blue-200'
+                                }`}
+                              >
+                                <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
+                                  {day}
+                                </span>
+                                {hasRegistrations && (
+                                  <>
+                                    <div className="text-[8px] leading-none mt-1">
+                                      {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
+                                    </div>
+                                    {/* Tooltip on hover */}
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
+                                      <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
+                                        {regs.map((reg, idx) => (
+                                          <div key={idx} className="mb-1 last:mb-0">
+                                            <div className="font-bold">{child.name}</div>
+                                            <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
+                                            <div className="text-xs text-green-300">Registered</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend for this camper's calendar */}
+                <div className="flex flex-wrap gap-4 text-sm mt-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-500 rounded"></div>
+                    <span>Registered</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-blue-200 border border-blue-300 rounded"></div>
+                    <span>Available for Registration</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
+                      <span className="text-red-400 text-lg font-bold leading-none">×</span>
+                    </div>
+                    <span>No Day Camp</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
       const [page, setPage] = useState('home');
@@ -2487,12 +2761,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         };
 
         // ==================== REGISTRATION MODAL HELPERS ====================
-        // Save calendar selection before opening modal, restore on close
-        const savedCalendarSelection = useRef([]);
-
         const openRegistrationModal = () => {
-          // Save current calendar child selection so we can restore it after modal closes
-          savedCalendarSelection.current = [...selectedChildren];
           // Load draft if exists
           const hasDraft = draftRegistration.selectedChildren.length > 0 || Object.keys(draftRegistration.selectedDates).length > 0;
           if (hasDraft) {
@@ -2522,8 +2791,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           };
           localStorage.setItem('registration_draft', JSON.stringify(draft));
           setDraftRegistration(draft);
-          // Restore calendar child selection
-          setSelectedChildren(savedCalendarSelection.current.length > 0 ? savedCalendarSelection.current : selectedChildren);
+          setSelectedChildren([]);
           setShowRegistrationModal(false);
           setEditingOrderId(null);
           if (returnTabAfterRegistration) {
@@ -2536,8 +2804,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Clear draft and reset selections
           localStorage.removeItem('registration_draft');
           setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonths: [] });
-          // Restore calendar child selection
-          setSelectedChildren(savedCalendarSelection.current.length > 0 ? savedCalendarSelection.current : []);
+          setSelectedChildren([]);
           setSelectedDates({});
           setShowRegistrationModal(false);
           setEditingOrderId(null);
@@ -2562,9 +2829,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           // Clear draft after successful submission
           localStorage.removeItem('registration_draft');
           setDraftRegistration({ selectedChildren: [], selectedDates: {}, selectedMonths: [] });
-          // Restore calendar child selection (include the just-registered child)
-          const restored = [...new Set([...savedCalendarSelection.current, ...selectedChildren])];
-          setSelectedChildren(restored.length > 0 ? restored : selectedChildren);
+          setSelectedChildren([]);
           setShowRegistrationModal(false);
           setEditingOrderId(null);
           if (returnTabAfterRegistration) {
@@ -3023,6 +3288,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                       gymRentals={gymRentals}
                       campers={campers}
                       saveCampers={saveCampers}
+                      showToast={showToast}
                     />
                   ) : myChildren.length > 0 ? (
                     <div className="bg-white rounded-xl shadow p-6 text-center">
@@ -3165,13 +3431,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                 <div className="space-y-2 mb-3">
                                   {Object.entries(byCamper).map(([camperName, camperRegs]) => {
                                     const sortedCamperRegs = camperRegs.sort((a, b) => new Date(a.date) - new Date(b.date));
-                                    // Group by date ranges with same session type
-                                    const dateGroups = {};
-                                    sortedCamperRegs.forEach(r => {
-                                      const sessKey = [...(r.sessions || [])].sort().join('+');
-                                      if (!dateGroups[sessKey]) dateGroups[sessKey] = [];
-                                      dateGroups[sessKey].push(r);
-                                    });
                                     const camperTotal = sortedCamperRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
                                     return (
                                       <div key={camperName} className={`rounded-lg p-3 ${isPaid ? 'bg-green-100' : 'bg-blue-100'}`}>
@@ -3179,17 +3438,16 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                           <span className="font-bold">{camperName}</span>
                                           <span className="font-medium">${camperTotal.toFixed(2)}</span>
                                         </div>
-                                        {Object.entries(dateGroups).map(([sessKey, groupRegs]) => {
-                                          const dates = groupRegs.map(r => r.date);
-                                          const groupTotal = groupRegs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
-                                          const sessions = groupRegs[0].sessions || [];
+                                        {sortedCamperRegs.map((reg, idx) => {
+                                          const sessions = reg.sessions || [];
                                           const hasAM = sessions.includes('morning');
                                           const hasPM = sessions.includes('afternoon');
                                           const sessionLabel = hasAM && hasPM ? 'AM + PM' : hasAM ? 'AM only' : 'PM only';
+                                          const regAmount = parseFloat(reg.totalAmount) || 0;
                                           return (
-                                            <div key={sessKey} className="text-sm text-gray-600 mt-1 flex justify-between">
-                                              <span>{sessionLabel} — {dates.length} day{dates.length > 1 ? 's' : ''} • {formatDateRange(dates)}</span>
-                                              {Object.keys(dateGroups).length > 1 && <span className="text-gray-500">${groupTotal.toFixed(2)}</span>}
+                                            <div key={`${reg.date}-${idx}`} className="text-sm text-gray-600 mt-1 flex justify-between">
+                                              <span>{sessionLabel} — {formatDateRange([reg.date])}</span>
+                                              {sortedCamperRegs.length > 1 && <span className="text-gray-500">${regAmount.toFixed(2)}</span>}
                                             </div>
                                           );
                                         })}
@@ -6005,276 +6263,6 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
               </div>
             </div>
           )}
-        </div>
-      );
-    };
-
-    // ==================== REGISTRATION CALENDAR VIEW ====================
-    const RegistrationCalendarView = ({ myChildren, registrations, activeCampDates, campDates, gymRentals, campers, saveCampers }) => {
-      const [selectedChildren, setSelectedChildren] = useState(() => {
-        // Auto-select only if 1-3 children, otherwise start empty and let user pick
-        const childrenWithRegs = myChildren.filter(c =>
-          registrations.some(r => r.childId === c.id && r.status !== 'cancelled')
-        ).map(c => c.id);
-        return childrenWithRegs.length <= 3 ? childrenWithRegs : [];
-      });
-      const [showCalendarPhotoModal, setShowCalendarPhotoModal] = useState(false);
-      const [calendarPhotoChildId, setCalendarPhotoChildId] = useState(null);
-
-      // Get all registration dates for a specific child
-      const getRegistrationsForChild = (childId) => {
-        return registrations.filter(r => r.childId === childId);
-      };
-
-      // Generate calendar for August 2026 (camp runs Aug 17-21 and Aug 24-28)
-      const months = [
-        { name: 'August', year: 2026, month: 7 }
-      ];
-
-      const getDaysInMonth = (year, month) => {
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const daysInMonth = lastDay.getDate();
-        const startDayOfWeek = firstDay.getDay(); // 0 = Sunday
-
-        const days = [];
-        // Add empty cells for days before month starts
-        for (let i = 0; i < startDayOfWeek; i++) {
-          days.push(null);
-        }
-        // Add days of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-          days.push(day);
-        }
-        return days;
-      };
-
-      const getRegistrationForDate = (year, month, day) => {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return registrations.filter(r => r.date === dateStr);
-      };
-
-      const getStatusColor = (status) => {
-        if (status === 'approved') return 'bg-green-500';
-        if (status === 'pending') return 'bg-yellow-500';
-        if (status === 'rejected') return 'bg-red-500';
-        return 'bg-gray-300';
-      };
-
-      const getStatusText = (status) => {
-        if (status === 'approved') return 'Approved';
-        if (status === 'pending') return 'Pending';
-        if (status === 'rejected') return 'Rejected';
-        return '';
-      };
-
-      if (myChildren.length === 0) {
-        return (
-          <div className="bg-white rounded-xl shadow p-8 text-center">
-            <div className="text-6xl mb-4">📅</div>
-            <h3 className="font-bold text-lg text-gray-800 mb-2">No Campers Yet</h3>
-            <p className="text-gray-500">Add campers to see their registration calendar</p>
-          </div>
-        );
-      }
-
-      return (
-        <div className="bg-white rounded-xl shadow p-6">
-          <div className="mb-6">
-            <h3 className="font-bold text-xl mb-2">📅 Session Calendar</h3>
-
-            {/* Child Selector */}
-            <div className="flex gap-3 flex-wrap mb-3">
-              {myChildren.map(child => (
-                <button
-                  key={child.id}
-                  onClick={() => {
-                    setSelectedChildren(prev =>
-                      prev.includes(child.id)
-                        ? prev.filter(id => id !== child.id)
-                        : [...prev, child.id]
-                    );
-                  }}
-                  className={`flex flex-col items-center gap-1 px-4 py-3 rounded-lg font-medium ${
-                    selectedChildren.includes(child.id)
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {getDisplayPhoto(child.photo) ? (
-                    <img src={getDisplayPhoto(child.photo)} className={`w-10 h-10 rounded-full object-cover border-2 ${selectedChildren.includes(child.id) ? 'border-white' : 'border-green-500'}`} />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-                      <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-                    </div>
-                  )}
-                  <span className="text-sm">{selectedChildren.includes(child.id) ? '✓ ' : ''}{child.name}</span>
-                </button>
-              ))}
-            </div>
-            {myChildren.length > 1 && (
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setSelectedChildren(myChildren.map(c => c.id))}
-                  className="text-sm px-3 py-1 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 font-medium"
-                >
-                  Select All
-                </button>
-                <button
-                  onClick={() => setSelectedChildren([])}
-                  className="text-sm px-3 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium"
-                >
-                  Deselect All
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Display message if no campers selected */}
-          {selectedChildren.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <p>Select one or more campers above to view their session calendars</p>
-            </div>
-          )}
-
-          {/* Calendar Grid - One per selected child */}
-          {selectedChildren.map(childId => {
-            const child = myChildren.find(c => c.id === childId);
-            if (!child) return null;
-
-            const childRegs = getRegistrationsForChild(childId);
-
-            const getRegistrationForDate = (year, month, day) => {
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              return childRegs.filter(r => r.date === dateStr);
-            };
-
-            return (
-              <div key={childId} className="mb-8 last:mb-0">
-                <h4 className="font-bold text-lg mb-3 flex items-center gap-2">
-                  {getDisplayPhoto(child.photo) ? (
-                    <img src={getDisplayPhoto(child.photo)} className="w-8 h-8 rounded-full object-cover border-2 border-green-500" />
-                  ) : (
-                    <div onClick={() => { setCalendarPhotoChildId(childId); setShowCalendarPhotoModal(true); }} className="w-8 h-8 rounded-full bg-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-300">
-                      <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-                      <span className="text-[6px] text-gray-500 font-medium">add photo</span>
-                    </div>
-                  )}
-                  {child.name}'s Session Calendar
-                  {showCalendarPhotoModal && calendarPhotoChildId === childId && (
-                    <PhotoUploadModal
-                      currentPhoto={child.photo}
-                      onSave={(img) => {
-                        if (saveCampers && campers) {
-                          saveCampers(campers.map(c => c.id === childId ? { ...c, photo: img } : c), `Updated photo for ${child.name}`);
-                        }
-                        setShowCalendarPhotoModal(false);
-                        setCalendarPhotoChildId(null);
-                      }}
-                      onCancel={() => { setShowCalendarPhotoModal(false); setCalendarPhotoChildId(null); }}
-                    />
-                  )}
-                </h4>
-
-                <div className="grid md:grid-cols-3 gap-6">
-                  {months.map(({ name, year, month }) => {
-                    const days = getDaysInMonth(year, month);
-                    return (
-                      <div key={`${year}-${month}`} className="border rounded-lg overflow-hidden">
-                        <div className="bg-green-700 text-white text-center py-2 font-bold">
-                          {name} {year}
-                        </div>
-                        <div className="grid grid-cols-7 gap-1 p-2">
-                          {/* Day headers */}
-                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                            <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
-                              {d}
-                            </div>
-                          ))}
-                          {/* Days */}
-                          {days.map((day, i) => {
-                            if (day === null) {
-                              return <div key={`empty-${i}`} className="aspect-square"></div>;
-                            }
-                            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                            const isValidCampDate = activeCampDates.includes(dateStr);
-                            const regs = getRegistrationForDate(year, month, day);
-                            const hasRegistrations = regs.length > 0;
-
-                            // If not a valid camp date, show X
-                            if (!isValidCampDate) {
-                              return (
-                                <div
-                                  key={day}
-                                  className="aspect-square flex flex-col items-center justify-center text-xs rounded relative bg-gray-100 border border-gray-300"
-                                >
-                                  <span className="text-gray-400 text-[10px] absolute top-0.5 left-1">{day}</span>
-                                  <span className="text-red-400 text-xl font-bold">×</span>
-                                </div>
-                              );
-                            }
-
-                            return (
-                              <div
-                                key={day}
-                                onClick={() => showToast('Calendar is view-only. Use the "+ New Registration" button above to register for sessions.', 'info')}
-                                className={`aspect-square flex flex-col items-center justify-center text-xs rounded relative group cursor-default ${
-                                  hasRegistrations
-                                    ? 'bg-green-100 border-2 border-green-500 font-bold'
-                                    : 'bg-blue-50 border border-blue-200'
-                                }`}
-                              >
-                                <span className={hasRegistrations ? 'text-gray-800' : 'text-gray-500'}>
-                                  {day}
-                                </span>
-                                {hasRegistrations && (
-                                  <>
-                                    <div className="text-[8px] leading-none mt-1">
-                                      {regs.flatMap(r => r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' ')}
-                                    </div>
-                                    {/* Tooltip on hover */}
-                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-10 w-48">
-                                      <div className="bg-gray-900 text-white text-xs rounded-lg p-2 shadow-lg">
-                                        {regs.map((reg, idx) => (
-                                          <div key={idx} className="mb-1 last:mb-0">
-                                            <div className="font-bold">{child.name}</div>
-                                            <div>{reg.sessions?.map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</div>
-                                            <div className="text-xs text-green-300">Registered</div>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Legend for this camper's calendar */}
-                <div className="flex flex-wrap gap-4 text-sm mt-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span>Registered</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-blue-200 border border-blue-300 rounded"></div>
-                    <span>Available for Registration</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
-                      <span className="text-red-400 text-lg font-bold leading-none">×</span>
-                    </div>
-                    <span>No Day Camp</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
       );
     };
