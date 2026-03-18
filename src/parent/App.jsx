@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.208";
+    const VERSION = "13.209";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T20:10:00");
+    const BUILD_DATE = new Date("2026-03-17T20:20:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -2045,8 +2045,13 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         });
         setAssignments(cleanedAssignments);
         await storage.set('camp_assignments', 'main', cleanedAssignments);
-        // Note: We don't delete registrations - they're historical records
-        addToHistory('Camper', `Deleted camper ${camperName}`);
+        // Delete all registrations for this camper
+        const camperRegs = registrations.filter(r => r.childId === camperId);
+        for (const reg of camperRegs) {
+          await supabase.from('camp_registrations').delete().eq('id', reg.id);
+        }
+        setRegistrations(prev => prev.filter(r => r.childId !== camperId));
+        addToHistory('Camper', `Deleted camper ${camperName} and ${camperRegs.length} registration(s)`);
         showToast('Camper deleted');
       };
 

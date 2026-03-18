@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.207";
+    const VERSION = "13.209";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T10:36:00");
+    const BUILD_DATE = new Date("2026-03-17T20:20:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -324,8 +324,13 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
         const updatedLinks = camperParentLinks.filter(l => l.parentEmail !== parentEmail);
         setCamperParentLinks(updatedLinks);
         await storage.set('camp_camper_parent_links', 'main', updatedLinks);
-        // Note: We don't delete registrations - they're historical records
-        addToHistory('Parent', `Deleted parent ${parentName}`);
+        // Delete all registrations for this parent
+        const parentRegs = registrations.filter(r => r.parentEmail === parentEmail);
+        for (const reg of parentRegs) {
+          await supabase.from('camp_registrations').delete().eq('id', reg.id);
+        }
+        setRegistrations(prev => prev.filter(r => r.parentEmail !== parentEmail));
+        addToHistory('Parent', `Deleted parent ${parentName} and ${parentRegs.length} registration(s)`);
         showToast('Parent deleted');
       };
       const saveAvail = async (a) => { setAvailability(a); await storage.set('camp_counselor_availability', 'main', a); };
@@ -399,8 +404,13 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
         });
         setAssignments(cleanedAssignments);
         await storage.set('camp_assignments', 'main', cleanedAssignments);
-        // Note: We don't delete registrations - they're historical records
-        addToHistory('Camper', `Deleted camper ${camperName}`);
+        // Delete all registrations for this camper
+        const camperRegs = registrations.filter(r => r.childId === camperId);
+        for (const reg of camperRegs) {
+          await supabase.from('camp_registrations').delete().eq('id', reg.id);
+        }
+        setRegistrations(prev => prev.filter(r => r.childId !== camperId));
+        addToHistory('Camper', `Deleted camper ${camperName} and ${camperRegs.length} registration(s)`);
         showToast('Camper deleted');
       };
 
