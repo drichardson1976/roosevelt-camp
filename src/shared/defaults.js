@@ -32,12 +32,7 @@ export const DEFAULT_CONTENT = {
   pickupPolicyIdPhoto: null
 };
 
-export const DEFAULT_COUNSELORS = [
-  { id: 'c1', name: 'Sarah Mitchell', email: 'sarah.mitchell@roosevelt.edu', phone: '(206) 555-0101', position: 'Point Guard', year: 'Senior', bio: 'Team captain with 3 years varsity experience.', photo: null, visible: true, order: 0 },
-  { id: 'c2', name: 'Maya Johnson', email: 'maya.johnson@roosevelt.edu', phone: '(206) 555-0102', position: 'Shooting Guard', year: 'Senior', bio: 'Sharpshooter with excellent 3-point range.', photo: null, visible: true, order: 1 },
-  { id: 'c3', name: 'Emma Chen', email: 'emma.chen@roosevelt.edu', phone: '(206) 555-0103', position: 'Small Forward', year: 'Junior', bio: 'Versatile player known for lockdown defense.', photo: null, visible: true, order: 2 },
-  { id: 'c4', name: 'Jasmine Williams', email: 'jasmine.williams@roosevelt.edu', phone: '(206) 555-0104', position: 'Center', year: 'Junior', bio: 'Starting center with strong post moves.', photo: null, visible: true, order: 3 },
-];
+export const DEFAULT_COUNSELORS = [];
 
 export const DEFAULT_ADMINS = [
   { id: 'admin_derek', name: 'Derek Richardson', email: 'derek.richardson@gmail.com', loginType: 'google', createdAt: '2026-02-28T00:00:00.000Z' },
