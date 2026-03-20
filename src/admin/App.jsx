@@ -161,7 +161,6 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
           clearTimeout(safetyTimer);
           console.log('⏱️ [ADMIN] Step 5: Phase 1 DB loaded (6 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms (DB took ' + (performance.now() - dbStart).toFixed(0) + 'ms)');
           setLoading(false);
-          analytics.trackPageView('admin');
 
           // Phase 2: Remaining 14 tables loaded in background (includes camp_registrations — slow table)
           const phase2Start = performance.now();
