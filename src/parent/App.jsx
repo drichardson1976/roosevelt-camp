@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, SCHEMA } from '../shared/config';
-import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, formatTimestamp, generateVenmoCode, calculateAge, getDisplayPhoto, getSessionCost, photoStorage } from '../shared/utils';
+import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, formatTimestamp, generateVenmoCode, calculateAge, getDisplayPhoto, getSessionCost, photoStorage, analytics } from '../shared/utils';
 import { RELEASE_NOTES } from '../shared/release-notes';
 import { StableInput, StableTextarea } from '../shared/components/StableInput';
 import { VersionBanner } from '../shared/components/VersionBanner';
@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.209";
+    const VERSION = "13.210";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T20:20:00");
+    const BUILD_DATE = new Date("2026-03-19T17:35:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1946,6 +1946,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           } catch (e) { console.error('Load error:', e); }
           clearTimeout(safetyTimer);
           setLoading(false);
+          analytics.trackPageView('parent');
         };
         load();
       }, []);
@@ -3146,6 +3147,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           setSelectedDates({});
           setSelectedChildren([]);
           setJustRegistered(true);
+          analytics.trackEvent('registration');
         };
 
         const addChild = async (child) => {

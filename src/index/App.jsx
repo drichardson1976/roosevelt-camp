@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, SCHEMA, GOOGLE_CLIENT_ID } from '../shared/config';
-import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, calculateAge, getDisplayPhoto, getSessionCost, photoStorage } from '../shared/utils';
+import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, calculateAge, getDisplayPhoto, getSessionCost, photoStorage, analytics } from '../shared/utils';
 import { RELEASE_NOTES } from '../shared/release-notes';
 import { StableInput, StableTextarea } from '../shared/components/StableInput';
 import { VersionBanner } from '../shared/components/VersionBanner';
@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.207";
+    const VERSION = "13.210";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T10:36:00");
+    const BUILD_DATE = new Date("2026-03-19T17:35:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -680,6 +680,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         if (addToHistory) {
           const camperNames = campersData.map(c => c.name).join(', ');
           const ecNames = emergencyData.map(c => c.name).filter(Boolean).join(', ');
+          analytics.trackEvent('parent_signup');
           const inviteNames = pendingInvitations.map(inv => inv.name).join(', ');
           const details = [
             `Parent account created: ${userData.name} (${userData.email})`,
@@ -1927,6 +1928,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
           clearTimeout(safetyTimer);
           console.log('⏱️ [INDEX] Step 5: Phase 1 DB loaded (4 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms');
           setLoading(false);
+          analytics.trackPageView('home');
 
           // Phase 2: Load remaining 16 tables in background (needed for login, onboarding, admin)
           try {

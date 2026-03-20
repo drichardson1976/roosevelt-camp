@@ -151,6 +151,37 @@ export var photoStorage = {
   }
 };
 
+// ==================== ANALYTICS ====================
+export var analytics = {
+  track: async function(page, event) {
+    if (!supabase) return;
+    try {
+      var today = new Date().toISOString().split('T')[0];
+      var result = await supabase.from('camp_analytics').select('data').eq('id', 'main').single();
+      var data = result.data?.data || {};
+      if (!data[today]) data[today] = { visits: 0, pageViews: {}, events: {} };
+      // Track page view
+      if (page) {
+        data[today].pageViews[page] = (data[today].pageViews[page] || 0) + 1;
+      }
+      // Track unique visit (one per session)
+      if (page && !sessionStorage.getItem('_visited')) {
+        data[today].visits = (data[today].visits || 0) + 1;
+        sessionStorage.setItem('_visited', '1');
+      }
+      // Track event
+      if (event) {
+        data[today].events[event] = (data[today].events[event] || 0) + 1;
+      }
+      await supabase.from('camp_analytics').upsert({ id: 'main', data: data, updated_at: new Date().toISOString() });
+    } catch (e) {
+      // Silent fail — analytics should never break the app
+    }
+  },
+  trackPageView: function(page) { return analytics.track(page, null); },
+  trackEvent: function(event) { return analytics.track(null, event); }
+};
+
 // ==================== CONSTANTS ====================
 export var KIDS_PER_COUNSELOR = 5;
 

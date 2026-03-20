@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, SCHEMA } from '../shared/config';
-import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, formatTimestamp, calculateAge, getDisplayPhoto, getSessionCost, KIDS_PER_COUNSELOR, photoStorage } from '../shared/utils';
+import { storage, isDev, formatPhone, isValidPhone, formatBirthdate, formatTimestamp, calculateAge, getDisplayPhoto, getSessionCost, KIDS_PER_COUNSELOR, photoStorage, analytics } from '../shared/utils';
 import { RELEASE_NOTES } from '../shared/release-notes';
 import { StableInput, StableTextarea } from '../shared/components/StableInput';
 import { VersionBanner } from '../shared/components/VersionBanner';
@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.209";
+    const VERSION = "13.210";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-17T20:20:00");
+    const BUILD_DATE = new Date("2026-03-19T17:35:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -51,6 +51,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
       const [counselorUsers, setCounselorUsers] = useState([]);
       const [availability, setAvailability] = useState({});
       const [changeHistory, setChangeHistory] = useState([]);
+      const [analyticsData, setAnalyticsData] = useState({});
       const [admins, setAdmins] = useState(DEFAULT_ADMINS);
       const [assignments, setAssignments] = useState({}); // { "date_session": { counselorId: [childId, ...] } }
       const [campers, setCampers] = useState([]); // Standalone campers collection
@@ -160,11 +161,12 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
           clearTimeout(safetyTimer);
           console.log('⏱️ [ADMIN] Step 5: Phase 1 DB loaded (6 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms (DB took ' + (performance.now() - dbStart).toFixed(0) + 'ms)');
           setLoading(false);
+          analytics.trackPageView('admin');
 
           // Phase 2: Remaining 14 tables loaded in background (includes camp_registrations — slow table)
           const phase2Start = performance.now();
           try {
-            const [rg, cu, av, ch, as2, fp, sp, ec, op, acr, pcr, bs, csch, gr] = await Promise.all([
+            const [rg, cu, av, ch, as2, fp, sp, ec, op, acr, pcr, bs, csch, gr, an] = await Promise.all([
               storage.get('camp_registrations'),
               storage.get('camp_counselor_users'),
               storage.get('camp_counselor_availability'),
@@ -179,6 +181,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
               storage.get('camp_blocked_sessions'),
               storage.get('camp_counselor_schedule'),
               storage.get('camp_gym_rentals'),
+              storage.get('camp_analytics'),
             ]);
             if (rg?.length) setRegistrations(rg.map(r => r.data).filter(Boolean));
             if (cu?.[0]?.data) setCounselorUsers(Array.isArray(cu[0].data) ? cu[0].data : []);
@@ -194,6 +197,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
             if (bs?.[0]?.data) setBlockedSessions(typeof bs[0].data === 'object' && !Array.isArray(bs[0].data) ? bs[0].data : {});
             if (csch?.[0]?.data) setCounselorSchedule(typeof csch[0].data === 'object' && !Array.isArray(csch[0].data) ? csch[0].data : {});
             if (gr?.[0]?.data) setGymRentals(typeof gr[0].data === 'object' && !Array.isArray(gr[0].data) ? gr[0].data : {});
+            if (an?.[0]?.data) setAnalyticsData(typeof an[0].data === 'object' ? an[0].data : {});
           } catch (e) { console.error('Phase 2 load error:', e); }
           console.log('⏱️ [ADMIN] Step 6: Phase 2 DB loaded (14 tables): ' + (performance.now() - (window.__t0 || 0)).toFixed(0) + 'ms (DB took ' + (performance.now() - phase2Start).toFixed(0) + 'ms) — all data ready');
         };
@@ -495,6 +499,7 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
       // ==================== ADMIN TAB CONFIGURATION ====================
       const ADMIN_TAB_CONFIG = {
         'dashboard': { label: '📊 Dashboard', hasChildren: false },
+        'analytics': { label: '📈 Analytics', hasChildren: false },
         'family': {
           label: '👨‍👩‍👧 Family Setup',
           hasChildren: true,
@@ -1421,6 +1426,134 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
                   <p className="text-gray-500 max-w-md mx-auto">Dashboard content coming soon. Use the tabs above to manage camp operations.</p>
                 </div>
               )}
+
+              {adminParentTab === 'analytics' && (() => {
+                const days = Object.keys(analyticsData).sort().reverse();
+                const today = new Date().toISOString().split('T')[0];
+                const todayData = analyticsData[today] || { visits: 0, pageViews: {}, events: {} };
+                const last7 = days.filter(d => {
+                  const diff = (new Date(today) - new Date(d)) / 86400000;
+                  return diff >= 0 && diff < 7;
+                });
+                const totalVisits = days.reduce((sum, d) => sum + (analyticsData[d]?.visits || 0), 0);
+                const totalPageViews = days.reduce((sum, d) => {
+                  const pv = analyticsData[d]?.pageViews || {};
+                  return sum + Object.values(pv).reduce((s, v) => s + v, 0);
+                }, 0);
+                const totalSignups = days.reduce((sum, d) => sum + (analyticsData[d]?.events?.parent_signup || 0), 0);
+                const totalRegistrations = days.reduce((sum, d) => sum + (analyticsData[d]?.events?.registration || 0), 0);
+                const todayViews = Object.values(todayData.pageViews || {}).reduce((s, v) => s + v, 0);
+
+                return (
+                  <div className="space-y-6">
+                    <h2 className="text-2xl font-bold text-gray-800">📈 Website Analytics</h2>
+
+                    {/* Today's Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-white rounded-xl shadow p-4 text-center">
+                        <div className="text-3xl font-bold text-blue-600">{todayData.visits || 0}</div>
+                        <div className="text-sm text-gray-500 mt-1">Visitors Today</div>
+                      </div>
+                      <div className="bg-white rounded-xl shadow p-4 text-center">
+                        <div className="text-3xl font-bold text-green-600">{todayViews}</div>
+                        <div className="text-sm text-gray-500 mt-1">Page Views Today</div>
+                      </div>
+                      <div className="bg-white rounded-xl shadow p-4 text-center">
+                        <div className="text-3xl font-bold text-purple-600">{todayData.events?.parent_signup || 0}</div>
+                        <div className="text-sm text-gray-500 mt-1">Sign-ups Today</div>
+                      </div>
+                      <div className="bg-white rounded-xl shadow p-4 text-center">
+                        <div className="text-3xl font-bold text-orange-600">{todayData.events?.registration || 0}</div>
+                        <div className="text-sm text-gray-500 mt-1">Registrations Today</div>
+                      </div>
+                    </div>
+
+                    {/* All-Time Stats */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-700">{totalVisits}</div>
+                        <div className="text-sm text-gray-500 mt-1">Total Visitors</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-700">{totalPageViews}</div>
+                        <div className="text-sm text-gray-500 mt-1">Total Page Views</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-700">{totalSignups}</div>
+                        <div className="text-sm text-gray-500 mt-1">Total Sign-ups</div>
+                      </div>
+                      <div className="bg-gray-50 rounded-xl p-4 text-center">
+                        <div className="text-2xl font-bold text-gray-700">{totalRegistrations}</div>
+                        <div className="text-sm text-gray-500 mt-1">Total Registrations</div>
+                      </div>
+                    </div>
+
+                    {/* Last 7 Days Table */}
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <div className="px-6 py-4 border-b bg-gray-50">
+                        <h3 className="font-bold text-lg">Last 7 Days</h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-50 text-left text-sm text-gray-600">
+                              <th className="px-4 py-3">Date</th>
+                              <th className="px-4 py-3 text-center">Visitors</th>
+                              <th className="px-4 py-3 text-center">Home</th>
+                              <th className="px-4 py-3 text-center">Parent</th>
+                              <th className="px-4 py-3 text-center">Counselor</th>
+                              <th className="px-4 py-3 text-center">Admin</th>
+                              <th className="px-4 py-3 text-center">Sign-ups</th>
+                              <th className="px-4 py-3 text-center">Registrations</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {last7.length === 0 ? (
+                              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No data yet — analytics will appear as people visit your site</td></tr>
+                            ) : last7.map(day => {
+                              const d = analyticsData[day];
+                              const pv = d?.pageViews || {};
+                              const ev = d?.events || {};
+                              const dateLabel = new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                              return (
+                                <tr key={day} className={day === today ? 'bg-blue-50 font-medium' : 'hover:bg-gray-50'}>
+                                  <td className="px-4 py-3 text-sm">{dateLabel}{day === today && <span className="ml-2 text-xs text-blue-500">(today)</span>}</td>
+                                  <td className="px-4 py-3 text-center">{d?.visits || 0}</td>
+                                  <td className="px-4 py-3 text-center">{pv.home || 0}</td>
+                                  <td className="px-4 py-3 text-center">{pv.parent || 0}</td>
+                                  <td className="px-4 py-3 text-center">{pv.counselor || 0}</td>
+                                  <td className="px-4 py-3 text-center">{pv.admin || 0}</td>
+                                  <td className="px-4 py-3 text-center">{ev.parent_signup || 0}</td>
+                                  <td className="px-4 py-3 text-center">{ev.registration || 0}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Page Views Breakdown (Today) */}
+                    {todayViews > 0 && (
+                      <div className="bg-white rounded-xl shadow p-6">
+                        <h3 className="font-bold text-lg mb-4">Today's Page Views</h3>
+                        <div className="space-y-3">
+                          {Object.entries(todayData.pageViews || {}).sort((a, b) => b[1] - a[1]).map(([page, count]) => (
+                            <div key={page} className="flex items-center gap-3">
+                              <span className="text-sm font-medium w-24 capitalize">{page}</span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+                                <div className="bg-green-500 h-full rounded-full flex items-center justify-end pr-2" style={{ width: `${Math.max(10, (count / todayViews) * 100)}%` }}>
+                                  <span className="text-xs text-white font-bold">{count}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {adminParentTab === 'counselor' && getActiveChildTab('counselor') === 'counselors' && (
                 <div>

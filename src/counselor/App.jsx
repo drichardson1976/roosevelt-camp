@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../shared/config';
-import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost, photoStorage } from '../shared/utils';
+import { storage, isDev, formatPhone, calculateAge, getDisplayPhoto, getSessionCost, photoStorage, analytics } from '../shared/utils';
 import { VersionBanner } from '../shared/components/VersionBanner';
 import { Toast } from '../shared/components/Toast';
 import { ScrollableTabs } from '../shared/components/ScrollableTabs';
@@ -9,9 +9,9 @@ import { CAMP_DATES } from '../shared/campDates';
 import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.205";
+    const VERSION = "13.210";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-16T21:48:00");
+    const BUILD_DATE = new Date("2026-03-19T17:35:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -481,6 +481,7 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS } from '../shared/defaults';
           } catch (e) { console.error('Load error:', e); }
           clearTimeout(safetyTimer);
           setLoading(false);
+          analytics.trackPageView('counselor');
         };
         load();
       }, []);
