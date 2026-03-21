@@ -26,9 +26,9 @@ import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.210";
+    const VERSION = "13.211";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-19T17:35:00");
+    const BUILD_DATE = new Date("2026-03-21T08:27:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -2651,12 +2651,59 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
                         </div>
                       ) : (
                         <div className="space-y-4">
-                          {unpaidOrders.map(([orderId, regs]) => renderRegCard(orderId, regs, {
-                            borderClass: 'border-orange-300 bg-orange-50',
-                            actions: (
-                              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Awaiting Payment</span>
-                            )
-                          }))}
+                          {unpaidOrders.map(([orderId, regs]) => {
+                            const camperNames = [...new Set(regs.map(r => r.camperName || r.childName))];
+                            const totalAmount = regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+                            return renderRegCard(orderId, regs, {
+                              borderClass: 'border-orange-300 bg-orange-50',
+                              actions: (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Mark $${totalAmount.toFixed(2)} as paid for ${camperNames.join(', ')}?\n\nUse this if you already received the Venmo payment but the parent didn't mark it on their end.\n\nCamper(s) will become eligible for pod assignment.`)) return;
+                                      const now = new Date().toISOString();
+                                      const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`;
+                                      const updatedRegs = regs.map(reg => ({
+                                        ...reg,
+                                        status: 'approved',
+                                        paymentStatus: 'confirmed',
+                                        approvedAt: now,
+                                        approvedBy: user?.name,
+                                        paymentConfirmedAt: now,
+                                        paymentConfirmedBy: user?.name,
+                                        invoiceId
+                                      }));
+                                      setRegistrations(prev => prev.map(r => {
+                                        const updated = updatedRegs.find(u => u.id === r.id);
+                                        return updated || r;
+                                      }));
+                                      await Promise.all(updatedRegs.map(reg => storage.set('camp_registrations', reg.id, reg)));
+                                      addToHistory('Payment Confirmed (Admin)', `Admin confirmed payment of $${totalAmount.toFixed(2)} for ${camperNames.join(', ')} (${regs.length} sessions) — Invoice ${invoiceId}`, [regs[0].parentEmail]);
+                                      try {
+                                        const parent = users.find(u => u.email === regs[0].parentEmail);
+                                        const sortedRegs = [...regs].sort((a, b) => new Date(a.date) - new Date(b.date));
+                                        const sessionRows = sortedRegs.map(r => `<tr><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${r.camperName || r.childName}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${new Date(r.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;">${(r.sessions || []).map(s => s === 'morning' ? 'AM' : 'PM').join(' + ')}</td><td style="padding:4px 8px;border-bottom:1px solid #e5e7eb;text-align:right;">$${(parseFloat(r.totalAmount) || 0).toFixed(2)}</td></tr>`).join('');
+                                        fetch('/.netlify/functions/send-email', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({
+                                            to: regs[0].parentEmail,
+                                            subject: `Payment Confirmed — ${camperNames.join(', ')} (Invoice ${invoiceId})`,
+                                            html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"><h2 style="color:#15803d;">Payment Confirmed!</h2><p>Hi ${parent?.name || regs[0].parentName},</p><p>Your payment has been confirmed. Your camper(s) are now registered!</p><div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:16px;margin:16px 0;"><p style="margin:0 0 4px;font-size:13px;color:#666;">Invoice: <strong>${invoiceId}</strong></p><p style="margin:0 0 12px;font-size:13px;color:#666;">Date: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p><table style="width:100%;border-collapse:collapse;font-size:14px;"><thead><tr style="background:#dcfce7;"><th style="padding:6px 8px;text-align:left;">Camper</th><th style="padding:6px 8px;text-align:left;">Date</th><th style="padding:6px 8px;text-align:left;">Session</th><th style="padding:6px 8px;text-align:right;">Amount</th></tr></thead><tbody>${sessionRows}</tbody><tfoot><tr><td colspan="3" style="padding:8px;font-weight:bold;border-top:2px solid #15803d;">Total Paid</td><td style="padding:8px;font-weight:bold;text-align:right;border-top:2px solid #15803d;color:#15803d;font-size:18px;">$${totalAmount.toFixed(2)}</td></tr></tfoot></table></div><h3 style="color:#15803d;">What Happens Next</h3><ul style="line-height:1.8;"><li>Your camper(s) will be assigned to their pod before camp starts</li><li>Check your dashboard for pod assignments and schedule updates</li><li>Make sure emergency contacts and camper photos are up to date</li></ul><p><a href="https://rhsbasketballdaycamp.com/#login" style="display:inline-block;background-color:#15803d;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:bold;">Go to Dashboard</a></p><p style="color:#666;font-size:12px;margin-top:20px;">Keep this email for your records. Invoice ${invoiceId}</p></div>`
+                                          })
+                                        });
+                                      } catch (emailErr) { console.error('Payment email failed:', emailErr); }
+                                      showToast(`Payment confirmed for ${camperNames.join(', ')}! Moved to Paid tab.`);
+                                    }}
+                                    className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-sm whitespace-nowrap"
+                                  >
+                                    ✓ Mark as Paid
+                                  </button>
+                                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">Awaiting Payment</span>
+                                </div>
+                              )
+                            });
+                          })}
                         </div>
                       )}
                     </div>
