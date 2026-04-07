@@ -15,9 +15,9 @@ import { calculateDiscountedTotal } from '../shared/pricing';
 import CreditCardModal from './CreditCardModal';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.210";
+    const VERSION = "13.212";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-19T17:35:00");
+    const BUILD_DATE = new Date("2026-04-07T14:17:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -3405,25 +3405,41 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
                                   <div className="font-bold text-lg text-green-800">{title}</div>
                                   <div className="flex items-center gap-2">
                                     {paymentStatus === 'unpaid' && (
-                                      <button
-                                        onClick={() => {
-                                          const childIds = [...new Set(sortedRegs.map(r => r.childId))];
-                                          const dateMap = {};
-                                          sortedRegs.forEach(r => {
-                                            if (!dateMap[r.date]) dateMap[r.date] = [];
-                                            r.sessions?.forEach(s => {
-                                              if (!dateMap[r.date].includes(s)) dateMap[r.date].push(s);
+                                      <>
+                                        <button
+                                          onClick={() => {
+                                            const childIds = [...new Set(sortedRegs.map(r => r.childId))];
+                                            const dateMap = {};
+                                            sortedRegs.forEach(r => {
+                                              if (!dateMap[r.date]) dateMap[r.date] = [];
+                                              r.sessions?.forEach(s => {
+                                                if (!dateMap[r.date].includes(s)) dateMap[r.date].push(s);
+                                              });
                                             });
-                                          });
-                                          setSelectedChildren(childIds.length > 0 ? [childIds[0]] : []);
-                                          setSelectedDates(dateMap);
-                                          setEditingOrderId(orderKey);
-                                          setShowRegistrationModal(true);
-                                        }}
-                                        className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium"
-                                      >
-                                        Edit
-                                      </button>
+                                            setSelectedChildren(childIds.length > 0 ? [childIds[0]] : []);
+                                            setSelectedDates(dateMap);
+                                            setEditingOrderId(orderKey);
+                                            setShowRegistrationModal(true);
+                                          }}
+                                          className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-lg text-sm font-medium"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={async () => {
+                                            const camperNames = [...new Set(sortedRegs.map(r => r.childName || r.camperName))].join(', ');
+                                            if (!confirm(`Cancel registration for ${camperNames}? (${sortedRegs.length} session${sortedRegs.length > 1 ? 's' : ''})\n\nThis will free up the spots for other campers.`)) return;
+                                            const now = new Date().toISOString();
+                                            for (const reg of sortedRegs) {
+                                              await saveReg({ ...reg, status: 'cancelled', cancelledAt: now, cancelledBy: user?.name || user?.email }, `Cancelled registration for ${reg.childName || reg.camperName} on ${reg.date}`);
+                                            }
+                                            showToast('Registration cancelled');
+                                          }}
+                                          className="px-3 py-1 text-red-500 hover:bg-red-50 rounded-lg text-sm font-medium"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </>
                                     )}
                                     {isPaid ? (
                                       <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">✓ Registered & Paid</span>

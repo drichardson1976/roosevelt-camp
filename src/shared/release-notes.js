@@ -3,6 +3,7 @@
 
 // Shared release notes — loaded by all HTML files
 export const RELEASE_NOTES = [
+  { version: "13.212", date: "2026-04-07", time: "2:17 PM", author: "Audrey Richardson", changes: ["Parent: Added Cancel button for unpaid registrations — parents can cancel before paying", "Parent: Cancelled registrations free up spots for other campers and show as cancelled in admin"] },
   { version: "13.211", date: "2026-03-21", time: "8:27 AM", author: "Audrey Richardson", changes: ["Admin: Added 'Mark as Paid' button to New registrations tab — admin can confirm Venmo payment even if parent forgot to mark it", "Admin: Marking as paid generates invoice, sends confirmation email, and moves registration to Paid tab"] },
   { version: "13.210", date: "2026-03-19", time: "5:35 PM", author: "Audrey Richardson", changes: ["Admin: Added Analytics tab — see visitor counts, page views, sign-ups, and registrations by day", "All: Every page now tracks visits and page views automatically", "All: Parent sign-ups and session registrations are tracked as events"] },
   { version: "13.209", date: "2026-03-17", time: "8:20 PM", author: "Audrey Richardson", changes: ["Admin/Parent: Deleting a parent now also deletes all their registrations and payments", "Admin/Parent: Deleting a camper now also deletes all their registrations and payments", "Admin/Parent: No more orphaned registration records left behind after deletion"] },
