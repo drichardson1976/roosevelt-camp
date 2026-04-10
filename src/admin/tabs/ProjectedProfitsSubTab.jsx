@@ -345,7 +345,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   )}
                   {currentGrossProfit < 0 && (
                     <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 20} fontSize="11" fill="#9ca3af" dominantBaseline="middle">
-                      {fmt(Math.abs(currentGrossProfit))} to break even
+                      {milestones[0].sessions - currentSessions} more sessions to break even
                     </text>
                   )}
                 </g>
