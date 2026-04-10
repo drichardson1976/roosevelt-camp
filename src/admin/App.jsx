@@ -24,11 +24,12 @@ import { AssignmentsTab } from './tabs/AssignmentsTab';
 import { FoodPhotosManager } from './components/FoodPhotosManager';
 import { SitePhotosManager } from './components/SitePhotosManager';
 import { InvoicesSubTab } from './tabs/InvoicesSubTab';
+import { ProjectedProfitsSubTab } from './tabs/ProjectedProfitsSubTab';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.211";
+    const VERSION = "13.213";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-21T08:27:00");
+    const BUILD_DATE = new Date("2026-04-09T23:17:00");
 
     // ==================== MAIN APP ====================
     export function RooseveltCamp() {
@@ -528,7 +529,8 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
             'new': { label: 'New', badge: () => getUnpaid() },
             'pending': { label: 'Pending Approval', badge: () => getPending() },
             'paid': { label: 'Paid', badge: () => getApproved() },
-            'invoices': { label: 'Customer Invoices', badge: () => countOrders(registrations.filter(r => r.invoiceId)) }
+            'invoices': { label: 'Customer Invoices', badge: () => countOrders(registrations.filter(r => r.invoiceId)) },
+            'profits': { label: 'Projected Profits' }
           },
           defaultChild: 'new'
         },
@@ -2811,6 +2813,9 @@ import { InvoicesSubTab } from './tabs/InvoicesSubTab';
 
                   {/* Customer Invoices Sub-tab */}
                   {activeRegTab === 'invoices' && <InvoicesSubTab registrations={registrations} users={users} addToHistory={addToHistory} showToast={showToast} />}
+
+                  {/* Projected Profits Sub-tab */}
+                  {activeRegTab === 'profits' && <ProjectedProfitsSubTab registrations={registrations} counselors={counselors} counselorSchedule={counselorSchedule} gymRentals={gymRentals} content={content} sessionCost={sessionCost} />}
                 </div>
                 );
               })()}
