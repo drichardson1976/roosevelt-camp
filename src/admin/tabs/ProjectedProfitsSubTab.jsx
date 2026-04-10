@@ -183,9 +183,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
   const chartWidth = 960;
   const leftMargin = 110;
   const rightMargin = 240;
-  const currentBarHeight = 54; // 3× the milestone bar height
-  const currentBarGap = 16;
-  const topMargin = 40 + currentBarHeight + currentBarGap;
+  const topMargin = 40;
   const bottomMargin = 50;
   const barAreaWidth = chartWidth - leftMargin - rightMargin;
   const barHeight = 20;
@@ -298,78 +296,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
             {/* Background */}
             <rect x="0" y="0" width={chartWidth} height={adjustedChartHeight} fill="white" rx="8" />
 
-            {/* ====== CURRENT STATUS BAR (3× height) ====== */}
-            {(() => {
-              const cy = 30;
-              const currentRevenue = paidRevenue;
-              const currentSessions = paidSessions;
-              const currentCounselorCost = paidCounselorCost;
-              const currentFees = paidProcessingFees;
-              const currentGrossProfit = profitPaidOnly;
-              const currentDonation = Math.max(0, currentGrossProfit * DONATION_RATE);
-              const currentNetProfit = currentGrossProfit - currentDonation;
-              const totalBarW = currentSessions > 0 ? (currentSessions / MAX_CAPACITY) * barAreaWidth : 0;
-
-              // Segment widths — scale relative to total costs+profit to fit in bar
-              const totalSpend = GYM_RENTAL_TOTAL + currentCounselorCost + currentFees + currentDonation + Math.max(0, currentNetProfit);
-              const scale = totalSpend > 0 ? totalBarW / totalSpend : 0;
-              const gW = GYM_RENTAL_TOTAL * scale;
-              const cW = currentCounselorCost * scale;
-              const fW = currentFees * scale;
-              const dW = currentDonation * scale;
-              const pW = Math.max(0, currentNetProfit) * scale;
-
-              return (
-                <g>
-                  {/* Background for current bar area */}
-                  <rect x={leftMargin} y={cy} width={barAreaWidth} height={currentBarHeight} fill="#f0fdf4" rx="4" stroke="#86efac" strokeWidth="1" />
-
-                  {/* Label */}
-                  <text x={leftMargin - 8} y={cy + currentBarHeight / 2} textAnchor="end" fontSize="13" fill="#15803d" fontWeight="700" dominantBaseline="middle">
-                    Current
-                  </text>
-                  <text x={leftMargin - 8} y={cy + currentBarHeight / 2 + 14} textAnchor="end" fontSize="10" fill="#6b7280" dominantBaseline="middle">
-                    {currentSessions} paid
-                  </text>
-
-                  {/* Stacked segments */}
-                  {totalBarW > 0 && (
-                    <>
-                      <rect x={leftMargin} y={cy + 4} width={gW} height={currentBarHeight - 8} fill="#ef4444" rx="4" />
-                      <rect x={leftMargin + gW} y={cy + 4} width={cW} height={currentBarHeight - 8} fill="#f97316" />
-                      <rect x={leftMargin + gW + cW} y={cy + 4} width={fW} height={currentBarHeight - 8} fill="#6366f1" />
-                      {dW > 0 && <rect x={leftMargin + gW + cW + fW} y={cy + 4} width={dW} height={currentBarHeight - 8} fill="#ec4899" />}
-                      {pW > 0 && <rect x={leftMargin + gW + cW + fW + dW} y={cy + 4} width={pW} height={currentBarHeight - 8} fill="#22c55e" rx="4" />}
-                    </>
-                  )}
-
-                  {/* Profit/loss label — to the right of bar */}
-                  <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 - 8} fontSize="14" fill={currentGrossProfit >= 0 ? '#15803d' : '#dc2626'} fontWeight="700" dominantBaseline="middle">
-                    {currentGrossProfit >= 0 ? fmt(currentGrossProfit) + ' profit' : fmtAcct(currentGrossProfit) + ' loss'}
-                  </text>
-                  <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 6} fontSize="11" fill="#6b7280" dominantBaseline="middle">
-                    {fmtFull(paidRevenue)} revenue from {paidSessions} sessions
-                  </text>
-                  {currentDonation > 0 && (
-                    <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 20} fontSize="11" fill="#ec4899" fontWeight="600" dominantBaseline="middle">
-                      {fmt(currentDonation)} to RHS Girls Basketball
-                    </text>
-                  )}
-                  {currentGrossProfit < 0 && (
-                    <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 20} fontSize="11" fill="#9ca3af" dominantBaseline="middle">
-                      {milestones[0].sessions - currentSessions} more sessions to break even
-                    </text>
-                  )}
-                </g>
-              );
-            })()}
-
-            {/* Separator line */}
-            <line x1={leftMargin} y1={topMargin - currentBarGap / 2} x2={leftMargin + barAreaWidth} y2={topMargin - currentBarGap / 2} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4,4" />
-
             {/* Column header */}
-            <text x={leftMargin + barAreaWidth / 2} y={topMargin - 4} textAnchor="middle" fontSize="11" fill="#9ca3af" fontWeight="500">
-              Profit Goals
+            <text x={leftMargin + barAreaWidth / 2} y={topMargin - 16} textAnchor="middle" fontSize="12" fill="#6b7280" fontWeight="600">
+              Donation Goals by Session Count
             </text>
 
             {/* Milestone rows */}
