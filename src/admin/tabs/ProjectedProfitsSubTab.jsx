@@ -477,7 +477,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <th className="p-2 font-medium">Date</th>
                   <th className="p-2 font-medium text-center" colSpan="2">Morning (9 AM - 12 PM)</th>
                   <th className="p-2 font-medium text-center" colSpan="2">Afternoon (12 - 3 PM)</th>
-                  <th className="p-2 font-medium text-right">Day Cost</th>
+                  <th className="p-2 font-medium text-right">Gym Rental</th>
+                  <th className="p-2 font-medium text-right">Counselor Pay</th>
                   <th className="p-2 font-medium text-right">Day Revenue</th>
                 </tr>
                 <tr className="text-xs text-gray-400 border-b">
@@ -488,6 +489,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <th className="p-1 text-center font-normal">Counselors</th>
                   <th className="p-1"></th>
                   <th className="p-1"></th>
+                  <th className="p-1"></th>
                 </tr>
               </thead>
               <tbody>
@@ -495,10 +497,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   const d = dayBreakdown[date];
                   if (!d) return null;
                   const dayCounselorCost = (d.morning.counselors + d.afternoon.counselors) * COUNSELOR_PAY_PER_SESSION;
-                  const dayGymCost = GYM_DAILY_RATE;
-                  const dayTotalCost = dayCounselorCost + dayGymCost;
                   const dayRevenue = (d.morning.campers + d.afternoon.campers) * avgRevenuePerSession;
-                  const dayProfit = dayRevenue - dayTotalCost;
                   return (
                     <tr key={date} className="border-b hover:bg-gray-50">
                       <td className="p-2 font-medium">{formatDate(date)}</td>
@@ -506,8 +505,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                       <td className="p-2 text-center text-gray-500">{d.morning.counselors || <span className="text-gray-300">0</span>}</td>
                       <td className="p-2 text-center">{d.afternoon.campers || <span className="text-gray-300">0</span>}</td>
                       <td className="p-2 text-center text-gray-500">{d.afternoon.counselors || <span className="text-gray-300">0</span>}</td>
-                      <td className="p-2 text-right text-red-600">{fmt(dayTotalCost)}</td>
-                      <td className="p-2 text-right text-green-700">{fmt(dayRevenue)}</td>
+                      <td className="p-2 text-right text-red-600">{fmt(GYM_DAILY_RATE)}</td>
+                      <td className="p-2 text-right text-orange-600">{dayCounselorCost > 0 ? fmt(dayCounselorCost) : <span className="text-gray-300">$0</span>}</td>
+                      <td className="p-2 text-right text-green-700">{dayRevenue > 0 ? fmt(dayRevenue) : <span className="text-gray-300">$0</span>}</td>
                     </tr>
                   );
                 })}
@@ -519,7 +519,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <td className="p-2 text-center text-gray-500">{Object.values(dayBreakdown).reduce((s, d) => s + d.morning.counselors, 0)}</td>
                   <td className="p-2 text-center">{Object.values(dayBreakdown).reduce((s, d) => s + d.afternoon.campers, 0)}</td>
                   <td className="p-2 text-center text-gray-500">{Object.values(dayBreakdown).reduce((s, d) => s + d.afternoon.counselors, 0)}</td>
-                  <td className="p-2 text-right text-red-700">{fmt(totalCosts)}</td>
+                  <td className="p-2 text-right text-red-700">{fmt(GYM_DAILY_RATE * rentalDates.length)}</td>
+                  <td className="p-2 text-right text-orange-700">{fmt(Object.values(dayBreakdown).reduce((s, d) => s + (d.morning.counselors + d.afternoon.counselors) * COUNSELOR_PAY_PER_SESSION, 0))}</td>
                   <td className="p-2 text-right text-green-700">{fmt(totalRegisteredRevenue)}</td>
                 </tr>
               </tfoot>
