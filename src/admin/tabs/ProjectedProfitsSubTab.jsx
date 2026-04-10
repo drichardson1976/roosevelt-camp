@@ -137,7 +137,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       estimatedCounselorCost, totalFixedCosts, totalCosts: totalCostsWithFees,
       estimatedProcessingFees,
       profitIfAllPay: profitIfAllPayWithFees, profitPaidOnly: profitPaidOnlyWithFees,
-      milestones, maxSessions, maxRevenue,
+      milestones, reachableMilestones, maxSessions, maxRevenue,
       totalCounselorsNeeded, slotDetails, dayBreakdown, rentalDates
     };
   }, [registrations, counselors, counselorSchedule, gymRentals, content, sessionCost]);
@@ -149,7 +149,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
     estimatedCounselorCost, totalFixedCosts, totalCosts,
     estimatedProcessingFees,
     profitIfAllPay, profitPaidOnly,
-    milestones, maxSessions, maxRevenue,
+    milestones, reachableMilestones, maxSessions, maxRevenue,
     totalCounselorsNeeded, dayBreakdown, rentalDates
   } = analysis;
 
