@@ -77,7 +77,7 @@
         <div class="bg-gradient-to-b from-purple-900/30 to-gray-900 rounded-xl p-5 border border-purple-800 text-left">
           <div class="text-2xl mb-2">🏀</div>
           <p class="font-semibold text-purple-400 mb-1">Fund RHS Basketball</p>
-          <p class="text-sm text-gray-400">50% of profits go to the Roosevelt Varsity Girls Basketball program — helping cover food, travel, uniforms, and equipment.</p>
+          <p class="text-sm text-gray-400">Profits support the Roosevelt Varsity Girls Basketball program — helping cover food, travel, uniforms, and equipment.</p>
         </div>
         <div class="bg-gradient-to-b from-amber-900/30 to-gray-900 rounded-xl p-5 border border-amber-800 text-left">
           <div class="text-2xl mb-2">🎯</div>
@@ -103,7 +103,7 @@
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">The Business</p>
       <h2 class="text-4xl md:text-6xl font-bold mb-4">A real LLC, run by<br>a <span class="gradient-gold">high school junior</span></h2>
-      <p class="text-lg text-gray-500 mb-8 max-w-2xl">Every dollar of profit above costs is split — half to grow the business, half donated to the RHS Girls Varsity Basketball program.</p>
+      <p class="text-lg text-gray-500 mb-8 max-w-2xl">Profits are shared with the RHS Girls Varsity Basketball program to help fund the team.</p>
       <div class="max-w-4xl w-full">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left space-y-4">
@@ -179,7 +179,7 @@
           <p class="text-xs text-gray-600 mt-2">All on free tiers — custom-built website eliminates SaaS subscription costs</p>
         </div>
         <div class="bg-gradient-to-r from-green-900/20 to-gray-900 rounded-2xl p-6 border border-green-800 mt-4">
-          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> <span id="costBreakEven">~146</span> camper-sessions — after that, <strong class="text-pink-400">50% of every dollar of profit goes to RHS Girls Basketball</strong></p>
+          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> <span id="costBreakEven">~146</span> camper-sessions — after that, every session generates profit and a <strong class="text-pink-400">donation to RHS Girls Basketball</strong></p>
           <p class="text-sm text-gray-500 mt-1">With 20 session-slots over 10 days and up to 30 campers per session, the total addressable market is 600 camper-sessions</p>
         </div>
       </div>
@@ -410,7 +410,7 @@
       <div class="bg-pink-900/20 rounded-xl p-5 border border-pink-700 max-w-3xl w-full mt-4">
         <p class="text-sm text-pink-400 font-medium">Donation to RHS Girls Basketball</p>
         <p class="text-3xl font-bold text-pink-400" id="statDonation">—</p>
-        <p class="text-sm text-gray-400 mt-1" id="statDonationDetail">50% of profit after all costs — grows with every session booked</p>
+        <p class="text-sm text-gray-400 mt-1" id="statDonationDetail">Grows with every session booked</p>
       </div>
 
       <p class="text-gray-600 text-xs mt-4">Data pulled live from the camp database — numbers update as new families register</p>
@@ -422,7 +422,7 @@
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <p class="text-pink-400 font-semibold text-lg tracking-widest uppercase mb-6">Financial Projection</p>
       <h2 class="text-4xl md:text-6xl font-bold mb-4">Path to giving back</h2>
-      <p class="text-lg text-gray-500 mb-8 max-w-2xl">50% of every dollar of profit goes to the Roosevelt Girls Varsity Basketball program. Here's how many sessions it takes to reach each donation level.</p>
+      <p class="text-lg text-gray-500 mb-8 max-w-2xl">Profits are shared with the Roosevelt Girls Varsity Basketball program. Here's how many sessions it takes to reach each donation level.</p>
       <div class="max-w-3xl w-full">
         <!-- Thermometer-style progress bar -->
         <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mb-6">
@@ -453,7 +453,7 @@
               <div class="flex justify-between"><span class="text-gray-400">Revenue per session</span><span class="text-green-400 font-medium" id="econRevenue">—</span></div>
               <div class="flex justify-between"><span class="text-gray-400">Costs per session</span><span class="text-red-400 font-medium" id="econFees">—</span></div>
               <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net per session</span><span class="text-green-400 font-bold" id="econNet">—</span></div>
-              <div class="flex justify-between"><span class="text-gray-300 font-medium">50% donated to RHS</span><span class="text-pink-400 font-bold" id="econDonation">—</span></div>
+              <div class="flex justify-between"><span class="text-gray-300 font-medium">Donated to RHS</span><span class="text-pink-400 font-bold" id="econDonation">—</span></div>
             </div>
           </div>
           <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
@@ -565,7 +565,7 @@
             </div>
             <span class="text-gray-600 text-sm">rhsdaycamp@gmail.com</span>
           </div>
-          <p class="text-sm text-gray-600 mt-4 italic">50% of every dollar of profit is donated to the Roosevelt HS Girls Varsity Basketball program.</p>
+          <p class="text-sm text-gray-600 mt-4 italic">Profits are shared with the Roosevelt HS Girls Varsity Basketball program.</p>
         </div>
       </div>
     </div>
@@ -717,7 +717,7 @@
         if (donationEl) {
           if (projectedDonation > 0) {
             donationEl.textContent = fmt(projectedDonation) + ' projected';
-            if (donationDetail) donationDetail.textContent = '50% of profit after all costs — if all ' + totalSessions + ' registered sessions are paid';
+            if (donationDetail) donationDetail.textContent = 'Projected if all ' + totalSessions + ' registered sessions are paid';
           } else {
             const sessionsToBreakEven = breakEvenSessions - totalSessions;
             const sessionsToFirstDonation = sessionsToBreakEven + 1;
