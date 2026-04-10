@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roosevelt Girls Basketball Day Camp — Business Overview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    .slide { display: none; min-height: 100vh; }
+    .slide.active { display: flex; }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .gradient-text { background: linear-gradient(135deg, #15803d, #22c55e); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .gradient-gold { background: linear-gradient(135deg, #d97706, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .slide-counter { font-variant-numeric: tabular-nums; }
+    .stat-pulse { animation: statPulse 2s ease-in-out infinite; }
+    @keyframes statPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.2); } 50% { box-shadow: 0 0 0 8px rgba(34,197,94,0); } }
+    .waterfall-bar { transition: width 1s ease-out; }
+  </style>
+</head>
+<body class="bg-gray-950 text-white overflow-hidden">
+
+  <!-- Navigation -->
+  <div class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-gray-800/90 backdrop-blur-sm px-6 py-3 rounded-full shadow-2xl border border-gray-700">
+    <button onclick="prevSlide()" class="text-gray-400 hover:text-white transition-colors p-1">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <span class="text-gray-400 text-sm font-medium slide-counter" id="slideCounter">1 / 10</span>
+    <button onclick="nextSlide()" class="text-gray-400 hover:text-white transition-colors p-1">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="fixed top-0 left-0 w-full h-1 bg-gray-800 z-50">
+    <div id="progressBar" class="h-full bg-gradient-to-r from-green-600 to-green-400 transition-all duration-500" style="width: 10%"></div>
+  </div>
+
+  <!-- ==================== SLIDE 1: TITLE ==================== -->
+  <div class="slide active" data-slide="1">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <div class="text-7xl mb-6">🏀</div>
+      <h1 class="text-5xl md:text-7xl font-black mb-4 gradient-text leading-tight">Roosevelt Girls Basketball<br>Day Camp</h1>
+      <p class="text-xl md:text-2xl text-gray-400 font-light mb-8">A business built by a student, for the community</p>
+      <div class="flex flex-col items-center gap-3 text-lg text-gray-500">
+        <span class="font-semibold text-white text-xl">Audrey Richardson</span>
+        <span>Roosevelt High School, Class of 2028</span>
+        <span>Founder & Camp Director</span>
+      </div>
+      <div class="mt-10 bg-gray-900 rounded-xl px-6 py-3 border border-gray-800 text-sm text-gray-500">
+        <span class="text-green-400 font-medium">rhsbasketballdaycamp.com</span> — Summer 2026
+      </div>
+      <div class="mt-8 text-gray-600 text-sm">Press <kbd class="px-2 py-1 bg-gray-800 rounded border border-gray-700">→</kbd> or swipe to navigate</div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 2: THE VISION ==================== -->
+  <div class="slide" data-slide="2">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">The Vision</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10 leading-tight max-w-4xl">Every girl deserves a place<br>to <span class="gradient-text">love basketball</span></h2>
+      <div class="max-w-3xl w-full space-y-6">
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left">
+          <p class="text-xl text-gray-300 leading-relaxed mb-4">Roosevelt Girls Basketball Day Camp is a two-week summer camp for girls who have completed 3rd through 8th grade. We focus on fundamentals, teamwork, and confidence — not just winning.</p>
+          <p class="text-lg text-gray-500">The camp runs <strong class="text-gray-300">August 17–28, 2026</strong> at Magnuson Community Center in Seattle, with morning and afternoon sessions led by high school basketball players who serve as counselors and role models.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-center">
+            <div class="text-3xl mb-2">🎯</div>
+            <p class="font-semibold text-green-400">Skill Development</p>
+            <p class="text-sm text-gray-500 mt-1">Drills, scrimmages, and coaching from players who've been there</p>
+          </div>
+          <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-center">
+            <div class="text-3xl mb-2">🤝</div>
+            <p class="font-semibold text-green-400">Community</p>
+            <p class="text-sm text-gray-500 mt-1">Small pods (5:1 ratio) so every camper gets attention</p>
+          </div>
+          <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-center">
+            <div class="text-3xl mb-2">💪</div>
+            <p class="font-semibold text-green-400">Confidence</p>
+            <p class="text-sm text-gray-500 mt-1">Counselors who are role models — girls coaching girls</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 3: THE BUSINESS ==================== -->
+  <div class="slide" data-slide="3">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">The Business</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10">A real LLC, run by<br>a <span class="gradient-gold">high school junior</span></h2>
+      <div class="max-w-4xl w-full">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left space-y-4">
+            <h3 class="text-xl font-bold text-amber-400">Company Formation</h3>
+            <div class="space-y-3 text-gray-400">
+              <div class="flex justify-between"><span>Business Entity</span><span class="text-white font-medium">Roosevelt Girls Basketball LLC</span></div>
+              <div class="flex justify-between"><span>State Registration</span><span class="text-green-400">WA State — Active</span></div>
+              <div class="flex justify-between"><span>Federal EIN</span><span class="text-green-400">Obtained from IRS</span></div>
+              <div class="flex justify-between"><span>Venue Permit</span><span class="text-green-400">Approved — #R282920</span></div>
+            </div>
+          </div>
+          <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left space-y-4">
+            <h3 class="text-xl font-bold text-amber-400">Revenue Model</h3>
+            <div class="space-y-3 text-gray-400">
+              <div class="flex justify-between"><span>Session Price</span><span class="text-white font-medium">$60 per half-day</span></div>
+              <div class="flex justify-between"><span>Full-Week Discount</span><span class="text-white font-medium">10% off</span></div>
+              <div class="flex justify-between"><span>Multi-Week Discount</span><span class="text-white font-medium">15% off</span></div>
+              <div class="flex justify-between"><span>Sessions per Day</span><span class="text-white font-medium">2 (AM + PM)</span></div>
+              <div class="flex justify-between"><span>Camp Days</span><span class="text-white font-medium">10 weekdays</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 mt-6">
+          <p class="text-gray-500 text-sm">Camp capacity is 30 campers per session, with 1 counselor for every 5 campers. Counselors are paid $80 per session as independent contractors.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 4: COST STRUCTURE ==================== -->
+  <div class="slide" data-slide="4">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-red-400 font-semibold text-lg tracking-widest uppercase mb-6">Cost Structure</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10">Where the money goes</h2>
+      <div class="max-w-3xl w-full space-y-4">
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <p class="text-xl font-semibold">Gym Rental — Magnuson Community Center</p>
+              <p class="text-gray-500">10 days, 6 hours/day — City of Seattle Parks & Recreation</p>
+            </div>
+            <p class="text-2xl font-bold text-red-400">$5,929</p>
+          </div>
+          <div class="w-full bg-gray-800 rounded-full h-3">
+            <div class="bg-red-500 rounded-full h-3" style="width: 100%"></div>
+          </div>
+          <p class="text-xs text-gray-600 mt-2">This is the single biggest fixed cost — paid regardless of enrollment</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <p class="text-xl font-semibold">Counselor Pay</p>
+              <p class="text-gray-500">$80/session per counselor — scales with enrollment (1 per 5 campers)</p>
+            </div>
+            <p class="text-2xl font-bold text-orange-400">Variable</p>
+          </div>
+          <div class="w-full bg-gray-800 rounded-full h-3">
+            <div class="bg-orange-500 rounded-full h-3" style="width: 60%"></div>
+          </div>
+          <p class="text-xs text-gray-600 mt-2">$16 per camper-session (marginal cost) — only grows as enrollment grows</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <p class="text-xl font-semibold">Technology & Operations</p>
+              <p class="text-gray-500">Website hosting, database, email service, domain</p>
+            </div>
+            <p class="text-2xl font-bold text-blue-400">~$0</p>
+          </div>
+          <div class="w-full bg-gray-800 rounded-full h-3">
+            <div class="bg-blue-500 rounded-full h-3" style="width: 3%"></div>
+          </div>
+          <p class="text-xs text-gray-600 mt-2">All on free tiers — custom-built website eliminates SaaS subscription costs</p>
+        </div>
+        <div class="bg-gradient-to-r from-green-900/20 to-gray-900 rounded-2xl p-6 border border-green-800 mt-4">
+          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> ~135 camper-sessions — after that, every session sold is profit</p>
+          <p class="text-sm text-gray-500 mt-1">With 20 session-slots over 10 days and up to 30 campers per session, the total addressable market is 600 camper-sessions</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 5: THE TECHNOLOGY ==================== -->
+  <div class="slide" data-slide="5">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-blue-400 font-semibold text-lg tracking-widest uppercase mb-6">The Technology</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-6">We didn't just plan a camp<br>We <span class="gradient-text">built the software</span></h2>
+      <p class="text-xl text-gray-500 mb-10 max-w-2xl">Instead of paying for expensive registration platforms, we built a custom website using AI-assisted development — saving thousands in software costs.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl">
+        <div class="bg-gradient-to-b from-green-900/30 to-gray-900 rounded-2xl p-8 border border-green-800">
+          <div class="text-4xl mb-4">👨‍👩‍👧</div>
+          <p class="font-bold text-xl mb-3 text-green-400">Parent Portal</p>
+          <ul class="space-y-2 text-gray-400 text-left">
+            <li>Create account & add children</li>
+            <li>Pick sessions on a calendar</li>
+            <li>Pay via Venmo with tracking</li>
+            <li>Add emergency contacts</li>
+            <li>See pod assignments</li>
+          </ul>
+        </div>
+        <div class="bg-gradient-to-b from-blue-900/30 to-gray-900 rounded-2xl p-8 border border-blue-800">
+          <div class="text-4xl mb-4">🏀</div>
+          <p class="font-bold text-xl mb-3 text-blue-400">Counselor Portal</p>
+          <ul class="space-y-2 text-gray-400 text-left">
+            <li>Apply with profile & photo</li>
+            <li>Set day-by-day availability</li>
+            <li>View assigned campers</li>
+            <li>See weekly work schedule</li>
+            <li>Accept responsibilities & pay terms</li>
+          </ul>
+        </div>
+        <div class="bg-gradient-to-b from-purple-900/30 to-gray-900 rounded-2xl p-8 border border-purple-800">
+          <div class="text-4xl mb-4">⚙️</div>
+          <p class="font-bold text-xl mb-3 text-purple-400">Admin Dashboard</p>
+          <ul class="space-y-2 text-gray-400 text-left">
+            <li>Approve registrations & payments</li>
+            <li>Build daily pods (camper groups)</li>
+            <li>Track revenue & invoices</li>
+            <li>Manage counselor schedules</li>
+            <li>Financial projections & P&L</li>
+          </ul>
+        </div>
+      </div>
+      <p class="text-gray-600 text-sm mt-8 max-w-xl">Built with React, Supabase, Netlify, and Claude AI — automated emails, SMS verification, Google login, photo storage, and more</p>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 6: LIVE WEBSITE ==================== -->
+  <div class="slide" data-slide="6">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">See It Live</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-6">The website is <span class="gradient-text">live right now</span></h2>
+      <p class="text-xl text-gray-500 mb-10">Parents are already signing up, registering their kids, and paying for sessions.</p>
+      <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 max-w-2xl w-full">
+        <div class="flex items-center justify-center gap-3 mb-6">
+          <div class="w-3 h-3 bg-green-500 rounded-full stat-pulse"></div>
+          <p class="text-green-400 font-semibold text-lg">Live at rhsbasketballdaycamp.com</p>
+        </div>
+        <div class="space-y-3 text-left">
+          <div class="flex items-center gap-4 bg-gray-800 rounded-lg p-4">
+            <span class="text-2xl">🌐</span>
+            <div>
+              <p class="font-medium">Public Website</p>
+              <p class="text-sm text-gray-500">Camp info, schedule, pricing, counselor profiles, online registration</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 bg-gray-800 rounded-lg p-4">
+            <span class="text-2xl">📧</span>
+            <div>
+              <p class="font-medium">Automated Communications</p>
+              <p class="text-sm text-gray-500">Welcome emails, payment confirmations, invoice delivery, SMS login recovery</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 bg-gray-800 rounded-lg p-4">
+            <span class="text-2xl">💳</span>
+            <div>
+              <p class="font-medium">Payment Processing</p>
+              <p class="text-sm text-gray-500">Venmo integration with tracking, invoice generation, and revenue reporting</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 7: LIVE DATA ==================== -->
+  <div class="slide" data-slide="7">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">Current Progress</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-4">Where we stand <span class="gradient-text">today</span></h2>
+      <p class="text-gray-500 mb-10" id="dataTimestamp">Loading live data...</p>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl w-full mb-8">
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 stat-pulse">
+          <p class="text-4xl md:text-5xl font-black gradient-text" id="statFamilies">—</p>
+          <p class="text-gray-400 mt-2">Families<br>Registered</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 stat-pulse">
+          <p class="text-4xl md:text-5xl font-black gradient-text" id="statCampers">—</p>
+          <p class="text-gray-400 mt-2">Campers<br>Signed Up</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 stat-pulse">
+          <p class="text-4xl md:text-5xl font-black gradient-text" id="statCounselors">—</p>
+          <p class="text-gray-400 mt-2">Counselors<br>On Staff</p>
+        </div>
+        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 stat-pulse">
+          <p class="text-4xl md:text-5xl font-black gradient-text" id="statSessions">—</p>
+          <p class="text-gray-400 mt-2">Sessions<br>Booked</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl w-full">
+        <div class="bg-green-900/20 rounded-xl p-5 border border-green-800">
+          <p class="text-sm text-green-400 font-medium">Paid Revenue</p>
+          <p class="text-3xl font-bold text-green-400" id="statPaidRevenue">—</p>
+        </div>
+        <div class="bg-orange-900/20 rounded-xl p-5 border border-orange-800">
+          <p class="text-sm text-orange-400 font-medium">Registered (Awaiting Payment)</p>
+          <p class="text-3xl font-bold text-orange-400" id="statUnpaidRevenue">—</p>
+        </div>
+        <div class="bg-gray-900 rounded-xl p-5 border border-gray-700">
+          <p class="text-sm text-gray-400 font-medium">Total Pipeline</p>
+          <p class="text-3xl font-bold text-white" id="statTotalRevenue">—</p>
+        </div>
+      </div>
+
+      <p class="text-gray-600 text-xs mt-6">Data pulled live from the camp database — numbers update as new families register</p>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 8: PROFIT PROJECTION ==================== -->
+  <div class="slide" data-slide="8">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">Financial Projection</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10">Path to profitability</h2>
+      <div class="max-w-3xl w-full">
+        <!-- Thermometer-style progress bar -->
+        <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mb-6">
+          <div class="flex justify-between text-sm text-gray-500 mb-2">
+            <span>0 sessions</span>
+            <span id="thermLabel">Break-even: ~135 sessions</span>
+            <span>600 max</span>
+          </div>
+          <div class="w-full bg-gray-800 rounded-full h-8 relative overflow-hidden">
+            <!-- Break-even marker -->
+            <div class="absolute top-0 h-full w-0.5 bg-amber-500 z-10" id="breakEvenMarker" style="left: 22.5%"></div>
+            <!-- Paid fill -->
+            <div class="absolute top-0 left-0 h-full bg-green-500 rounded-l-full transition-all duration-1000" id="paidBar" style="width: 0%"></div>
+            <!-- Unpaid fill -->
+            <div class="absolute top-0 h-full bg-orange-500 transition-all duration-1000" id="unpaidBar" style="left: 0%; width: 0%"></div>
+          </div>
+          <div class="flex justify-between mt-2 text-xs">
+            <span class="text-green-400" id="paidLabel">Paid: 0</span>
+            <span class="text-orange-400" id="unpaidLabel">Registered: 0</span>
+            <span class="text-gray-500">Capacity: 600</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+            <p class="text-sm text-gray-500 mb-3">Unit Economics</p>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between"><span class="text-gray-400">Revenue per session</span><span class="text-green-400 font-medium">$60</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Counselor cost per session</span><span class="text-red-400 font-medium">-$16</span></div>
+              <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net contribution</span><span class="text-green-400 font-bold">$44</span></div>
+            </div>
+          </div>
+          <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+            <p class="text-sm text-gray-500 mb-3">Profit Milestones (sessions needed)</p>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between"><span class="text-gray-400">Break even</span><span class="text-amber-400 font-medium">~135 sessions</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">$5,000 profit</span><span class="text-green-400 font-medium">~249 sessions</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">$10,000 profit</span><span class="text-green-400 font-medium">~362 sessions</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">$20,000 profit</span><span class="text-green-400 font-medium">~590 sessions</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 9: WHAT I'VE LEARNED ==================== -->
+  <div class="slide" data-slide="9">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-purple-400 font-semibold text-lg tracking-widest uppercase mb-6">What I've Learned</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10">More than basketball</h2>
+      <div class="max-w-3xl w-full space-y-5">
+        <div class="flex items-start gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+          <div class="text-3xl flex-shrink-0 mt-1">📊</div>
+          <div>
+            <p class="text-xl font-semibold mb-1">Business Planning</p>
+            <p class="text-gray-400">Formed an LLC, obtained an EIN, negotiated a venue permit, created a pricing model, and built financial projections — real skills that apply to any business.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+          <div class="text-3xl flex-shrink-0 mt-1">💻</div>
+          <div>
+            <p class="text-xl font-semibold mb-1">Technology & Product Development</p>
+            <p class="text-gray-400">Designed and built a full web application with user accounts, payment processing, automated emails, and an admin dashboard — using AI as a development partner.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+          <div class="text-3xl flex-shrink-0 mt-1">👥</div>
+          <div>
+            <p class="text-xl font-semibold mb-1">People Management</p>
+            <p class="text-gray-400">Recruiting and managing a team of counselors, setting expectations, handling scheduling, and creating accountability — the hardest and most rewarding part.</p>
+          </div>
+        </div>
+        <div class="flex items-start gap-5 bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
+          <div class="text-3xl flex-shrink-0 mt-1">💰</div>
+          <div>
+            <p class="text-xl font-semibold mb-1">Financial Responsibility</p>
+            <p class="text-gray-400">Managing a real budget, tracking revenue and expenses, understanding profit margins, and making the kind of decisions that make or break a business.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 10: CLOSING ==================== -->
+  <div class="slide" data-slide="10">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <div class="text-7xl mb-8">🏀</div>
+      <h2 class="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-5xl">This summer, girls in our community<br>will <span class="gradient-text">fall in love with basketball</span></h2>
+      <p class="text-xl md:text-2xl text-gray-400 font-light mb-4 max-w-3xl">And they'll be coached by their peers — high school athletes who want to give back.</p>
+      <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 max-w-2xl mt-6">
+        <p class="text-lg text-gray-300 leading-relaxed mb-4">Roosevelt Girls Basketball Day Camp is more than a summer program. It's a student-run business that creates jobs for teen athletes, teaches younger girls to love the game, and proves that high schoolers can build something real.</p>
+        <div class="flex items-center justify-center gap-3 mt-6">
+          <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+          <a href="https://rhsbasketballdaycamp.com" class="text-green-400 font-semibold hover:underline text-lg" target="_blank">rhsbasketballdaycamp.com</a>
+        </div>
+      </div>
+      <div class="flex flex-col items-center gap-2 mt-10 text-gray-500">
+        <span class="font-semibold text-white text-lg">Audrey Richardson</span>
+        <span>Roosevelt High School, Class of 2028</span>
+        <span>Founder & Camp Director, Roosevelt Girls Basketball LLC</span>
+        <span class="text-sm text-gray-600 mt-2">rhsdaycamp@gmail.com</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== SLIDE NAVIGATION ====================
+    let current = 1;
+    const total = document.querySelectorAll('.slide').length;
+
+    function showSlide(n) {
+      if (n < 1 || n > total) return;
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const slide = document.querySelector(`[data-slide="${n}"]`);
+      slide.classList.add('active');
+      slide.querySelector('.fade-in')?.classList.remove('fade-in');
+      void slide.querySelector('div')?.offsetWidth;
+      slide.querySelector('div')?.classList.add('fade-in');
+      current = n;
+      document.getElementById('slideCounter').textContent = `${current} / ${total}`;
+      document.getElementById('progressBar').style.width = `${(current / total) * 100}%`;
+    }
+
+    function nextSlide() { showSlide(current + 1); }
+    function prevSlide() { showSlide(current - 1); }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+      if (e.key === 'Home') { e.preventDefault(); showSlide(1); }
+      if (e.key === 'End') { e.preventDefault(); showSlide(total); }
+    });
+
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => { touchStartX = e.changedTouches[0].screenX; });
+    document.addEventListener('touchend', e => {
+      const diff = touchStartX - e.changedTouches[0].screenX;
+      if (Math.abs(diff) > 50) { diff > 0 ? nextSlide() : prevSlide(); }
+    });
+
+    showSlide(1);
+
+    // ==================== LIVE DATA FROM SUPABASE ====================
+    (async function loadLiveData() {
+      try {
+        const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
+        const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          db: { schema: 'public' },
+          global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
+        });
+
+        const [parentsRes, campersRes, counselorsRes, regsRes] = await Promise.all([
+          sb.from('camp_parents').select('data').eq('id', 'main').single(),
+          sb.from('camp_campers').select('data').eq('id', 'main').single(),
+          sb.from('camp_counselors').select('data, id').neq('id', 'main'),
+          sb.from('camp_registrations').select('data').eq('id', 'main').single(),
+        ]);
+
+        const parents = parentsRes.data?.data || [];
+        const campers = campersRes.data?.data || [];
+        const counselors = counselorsRes.data || [];
+        const registrations = regsRes.data?.data || [];
+
+        // Count active registrations
+        const activeRegs = registrations.filter(r => r.status !== 'cancelled');
+        const paidRegs = activeRegs.filter(r => r.status === 'approved' && ['paid', 'confirmed'].includes(r.paymentStatus));
+        const unpaidRegs = activeRegs.filter(r => !(r.status === 'approved' && ['paid', 'confirmed'].includes(r.paymentStatus)));
+
+        const countSessions = (regs) => regs.reduce((sum, r) => sum + (r.sessions?.length || 0), 0);
+        const sumRevenue = (regs) => regs.reduce((sum, r) => sum + (parseFloat(r.totalAmount) || 0), 0);
+
+        const paidSessions = countSessions(paidRegs);
+        const unpaidSessions = countSessions(unpaidRegs);
+        const totalSessions = paidSessions + unpaidSessions;
+        const paidRevenue = sumRevenue(paidRegs);
+        const unpaidRevenue = sumRevenue(unpaidRegs);
+        const totalRevenue = paidRevenue + unpaidRevenue;
+
+        const approvedCounselors = counselors.filter(c => c.data?.approved !== false);
+
+        // Update slide 7 stats
+        const fmt = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        document.getElementById('statFamilies').textContent = parents.length;
+        document.getElementById('statCampers').textContent = campers.length;
+        document.getElementById('statCounselors').textContent = approvedCounselors.length;
+        document.getElementById('statSessions').textContent = totalSessions;
+        document.getElementById('statPaidRevenue').textContent = fmt(paidRevenue);
+        document.getElementById('statUnpaidRevenue').textContent = fmt(unpaidRevenue);
+        document.getElementById('statTotalRevenue').textContent = fmt(totalRevenue);
+        document.getElementById('dataTimestamp').textContent = 'Live data as of ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+        // Update slide 8 thermometer
+        const maxCapacity = 600;
+        const paidPct = (paidSessions / maxCapacity) * 100;
+        const unpaidPct = (unpaidSessions / maxCapacity) * 100;
+        document.getElementById('paidBar').style.width = paidPct + '%';
+        document.getElementById('unpaidBar').style.left = paidPct + '%';
+        document.getElementById('unpaidBar').style.width = unpaidPct + '%';
+        document.getElementById('paidLabel').textContent = 'Paid: ' + paidSessions + ' sessions';
+        document.getElementById('unpaidLabel').textContent = 'Registered: ' + (paidSessions + unpaidSessions) + ' sessions';
+
+      } catch (err) {
+        console.error('Failed to load live data:', err);
+        document.getElementById('dataTimestamp').textContent = 'Could not load live data — showing placeholder values';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -16,6 +16,7 @@ function copyStaticFiles() {
         'release-notes.js',
         'presentation.html',
         'presentation-nontechnical.html',
+        'business-overview.html',
         'privacy-policy.html',
         'favicon.svg',
       ];
