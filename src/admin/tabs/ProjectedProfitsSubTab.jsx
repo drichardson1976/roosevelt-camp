@@ -157,9 +157,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
   const fmtFull = (n) => '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // Chart dimensions
-  const chartWidth = 800;
+  const chartWidth = 960;
   const leftMargin = 110;
-  const rightMargin = 80;
+  const rightMargin = 240;
   const currentBarHeight = 54; // 3× the milestone bar height
   const currentBarGap = 16;
   const topMargin = 40 + currentBarHeight + currentBarGap;
@@ -327,18 +327,21 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                     </>
                   )}
 
-                  {/* Profit/loss label */}
-                  <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 - 6} fontSize="13" fill={currentGrossProfit >= 0 ? '#15803d' : '#dc2626'} fontWeight="700" dominantBaseline="middle">
+                  {/* Profit/loss label — to the right of bar */}
+                  <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 - 8} fontSize="14" fill={currentGrossProfit >= 0 ? '#15803d' : '#dc2626'} fontWeight="700" dominantBaseline="middle">
                     {currentGrossProfit < 0 ? '-' : ''}{fmt(currentGrossProfit)} {currentGrossProfit >= 0 ? 'profit' : 'loss'}
                   </text>
+                  <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 6} fontSize="11" fill="#6b7280" dominantBaseline="middle">
+                    {fmtFull(paidRevenue)} revenue from {paidSessions} sessions
+                  </text>
                   {currentDonation > 0 && (
-                    <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 + 10} fontSize="10" fill="#ec4899" fontWeight="600" dominantBaseline="middle">
-                      {fmt(currentDonation)} to RHS
+                    <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 20} fontSize="11" fill="#ec4899" fontWeight="600" dominantBaseline="middle">
+                      {fmt(currentDonation)} to RHS Girls Basketball
                     </text>
                   )}
                   {currentGrossProfit < 0 && (
-                    <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 + 10} fontSize="10" fill="#6b7280" dominantBaseline="middle">
-                      {fmt(Math.abs(currentGrossProfit))} more needed to break even
+                    <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 20} fontSize="11" fill="#9ca3af" dominantBaseline="middle">
+                      {fmt(Math.abs(currentGrossProfit))} to break even
                     </text>
                   )}
                 </g>
@@ -406,8 +409,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                     <rect x={profitX} y={y + 1} width={netProfitW} height={barHeight - 2} fill="#22c55e" rx="3" />
                   )}
 
-                  {/* Right label: profit amount */}
-                  <text x={leftMargin + totalBarW + 6} y={y + barHeight / 2 + 1} fontSize="11" fill={isBreakEven ? '#92400e' : '#15803d'} fontWeight="600" dominantBaseline="middle">
+                  {/* Right label: profit amount — fixed position right of bar area */}
+                  <text x={leftMargin + barAreaWidth + 8} y={y + barHeight / 2 + 1} fontSize="11" fill={isBreakEven ? '#92400e' : '#15803d'} fontWeight="600" dominantBaseline="middle">
                     {isBreakEven ? 'Break Even' : fmt(m.profit) + ' profit' + (m.donation > 0 ? ' (' + fmt(m.donation) + ' to RHS)' : '')}
                   </text>
                 </g>
