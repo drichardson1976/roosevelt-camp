@@ -431,7 +431,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
                   {/* Right label: profit amount — fixed position right of bar area */}
                   <text x={leftMargin + barAreaWidth + 8} y={y + barHeight / 2 + 1} fontSize="11" fill={isBreakEven ? '#92400e' : '#15803d'} fontWeight="600" dominantBaseline="middle">
-                    {isBreakEven ? 'Break Even' : fmt(m.profit) + ' profit' + (m.donation > 0 ? ' (' + fmt(m.donation) + ' to RHS)' : '')}
+                    {isBreakEven ? 'Break Even' : fmt(m.donation) + ' to RHS'}
                   </text>
                 </g>
               );
