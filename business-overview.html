@@ -408,9 +408,9 @@
       </div>
 
       <div class="bg-pink-900/20 rounded-xl p-5 border border-pink-700 max-w-3xl w-full mt-4">
-        <p class="text-sm text-pink-400 font-medium">Projected Donation to RHS Girls Basketball</p>
+        <p class="text-sm text-pink-400 font-medium">Donation to RHS Girls Basketball</p>
         <p class="text-3xl font-bold text-pink-400" id="statDonation">—</p>
-        <p class="text-xs text-gray-500">50% of profit after all costs — grows with every session booked</p>
+        <p class="text-sm text-gray-400 mt-1" id="statDonationDetail">50% of profit after all costs — grows with every session booked</p>
       </div>
 
       <p class="text-gray-600 text-xs mt-4">Data pulled live from the camp database — numbers update as new families register</p>
@@ -713,7 +713,18 @@
         const projectedProfit = totalRevenue - GYM_RENTAL_TOTAL - allCounselorCost - allFees;
         const projectedDonation = Math.max(0, projectedProfit * 0.5);
         const donationEl = document.getElementById('statDonation');
-        if (donationEl) donationEl.textContent = projectedDonation > 0 ? fmt(projectedDonation) : 'Need more sessions to break even';
+        const donationDetail = document.getElementById('statDonationDetail');
+        if (donationEl) {
+          if (projectedDonation > 0) {
+            donationEl.textContent = fmt(projectedDonation) + ' projected';
+            if (donationDetail) donationDetail.textContent = '50% of profit after all costs — if all ' + totalSessions + ' registered sessions are paid';
+          } else {
+            const sessionsToBreakEven = breakEvenSessions - totalSessions;
+            const sessionsToFirstDonation = sessionsToBreakEven + 1;
+            donationEl.textContent = sessionsToFirstDonation + ' more sessions needed';
+            if (donationDetail) donationDetail.textContent = 'We need ' + sessionsToBreakEven + ' more sessions to break even, then every session after that generates a donation to RHS';
+          }
+        }
         document.getElementById('dataTimestamp').textContent = 'Live data as of ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
         // --- Update slide 4: Break-even on cost structure ---

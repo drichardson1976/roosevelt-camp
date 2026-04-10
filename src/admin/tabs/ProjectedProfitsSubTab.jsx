@@ -2,9 +2,9 @@ import React, { useMemo } from 'react';
 
 // ==================== PROJECTED PROFITS SUB-TAB ====================
 // Financial constants from gym permit #R282920 (Magnuson CC, Aug 17-28 2026)
-const GYM_RENTAL_TOTAL = 5929; // $5,929 total permit fee
-const GYM_DAILY_RATE = 564;    // $94/hr × 6 hrs
+const GYM_RENTAL_TOTAL = 5929; // $5,929 total permit fee ($5,640 rental + $289 fees)
 const GYM_DAYS = 10;           // Aug 17-21 + Aug 24-28
+const GYM_DAILY_RATE = GYM_RENTAL_TOTAL / GYM_DAYS; // $592.90/day (total / days)
 const COUNSELOR_PAY_PER_SESSION = 80;  // $80/session (3 hrs)
 const KIDS_PER_COUNSELOR = 5;
 const PROFIT_MAX = 20000; // Chart goes up to $20K profit
@@ -156,7 +156,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       paidRevenue, unpaidRevenue, totalRegisteredRevenue,
       estimatedCounselorCost, totalFixedCosts, totalCosts: totalCostsWithFees,
       estimatedProcessingFees,
-      profitIfAllPay: profitIfAllPayWithFees, profitPaidOnly: profitPaidOnlyWithFees,
+      profitPaidOnly: profitPaidOnlyWithFees,
+      paidCounselorCost, paidCounselorsNeeded, paidProcessingFees,
       milestones, reachableMilestones, maxSessions, maxRevenue,
       totalCounselorsNeeded, slotDetails, dayBreakdown, rentalDates
     };
@@ -167,8 +168,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
     paidSessions, unpaidSessions, totalRegisteredSessions,
     paidRevenue, unpaidRevenue, totalRegisteredRevenue,
     estimatedCounselorCost, totalFixedCosts, totalCosts,
-    estimatedProcessingFees,
-    profitIfAllPay, profitPaidOnly,
+    paidCounselorCost, paidCounselorsNeeded, paidProcessingFees,
+    profitPaidOnly,
     milestones, reachableMilestones, maxSessions, maxRevenue,
     totalCounselorsNeeded, dayBreakdown, rentalDates
   } = analysis;
@@ -212,63 +213,61 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
         {/* Top-line profit/loss */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <div className="bg-green-50 border-2 border-green-300 rounded-xl p-4 text-center">
+            <p className="text-sm font-medium text-gray-600">Revenue Collected</p>
+            <p className="text-3xl font-bold text-green-700">{fmt(paidRevenue)}</p>
+            <p className="text-xs text-gray-500">{paidSessions} sessions paid</p>
+          </div>
+          <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4 text-center">
+            <p className="text-sm font-medium text-gray-600">Total Costs</p>
+            <p className="text-3xl font-bold text-red-700">{fmt(totalFixedCosts + paidCounselorCost + paidProcessingFees)}</p>
+            <p className="text-xs text-gray-500">gym + counselors + fees</p>
+          </div>
           <div className={`rounded-xl p-4 text-center border-2 ${profitPaidOnly >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
-            <p className="text-sm font-medium text-gray-600">{profitPaidOnly >= 0 ? 'Profit' : 'Loss'} (Paid Only)</p>
+            <p className="text-sm font-medium text-gray-600">{profitPaidOnly >= 0 ? 'Profit' : 'Loss'}</p>
             <p className={`text-3xl font-bold ${profitPaidOnly >= 0 ? 'text-green-700' : 'text-red-700'}`}>
               {fmtAcct(profitPaidOnly)}
             </p>
-            <p className="text-xs text-gray-500">{paidSessions} sessions collected</p>
-          </div>
-          <div className={`rounded-xl p-4 text-center border-2 border-dashed ${profitIfAllPay >= 0 ? 'bg-green-50 border-green-300' : 'bg-orange-50 border-orange-300'}`}>
-            <p className="text-sm font-medium text-gray-600">{profitIfAllPay >= 0 ? 'Profit' : 'Loss'} (If All Registered Pay)</p>
-            <p className={`text-3xl font-bold ${profitIfAllPay >= 0 ? 'text-green-700' : 'text-orange-700'}`}>
-              {fmtAcct(profitIfAllPay)}
-            </p>
-            <p className="text-xs text-gray-500">{totalRegisteredSessions} total sessions</p>
-          </div>
-          <div className="bg-orange-50 border-2 border-orange-400 rounded-xl p-4 text-center">
-            <p className="text-sm font-medium text-orange-700">Unpaid Gap — Chase the Money!</p>
-            <p className="text-3xl font-bold text-orange-700">{fmt(unpaidRevenue)}</p>
-            <p className="text-xs text-orange-600">{unpaidSessions} sessions registered but unpaid</p>
+            <p className="text-xs text-gray-500">{profitPaidOnly < 0 ? (milestones[0].sessions - paidSessions) + ' more sessions to break even' : 'after all costs'}</p>
           </div>
         </div>
       </div>
 
       {/* Cost & Revenue Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Costs */}
+        {/* Costs (paid sessions only) */}
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="font-bold text-lg text-red-700 mb-3">Costs</h3>
           <div className="space-y-3">
             <div className="flex justify-between items-center py-2 border-b">
               <div>
                 <p className="font-medium text-gray-800">Gym Rental</p>
-                <p className="text-xs text-gray-500">Magnuson CC — Permit #R282920 — {GYM_DAYS} days @ {fmt(GYM_DAILY_RATE)}/day + fees</p>
+                <p className="text-xs text-gray-500">Magnuson CC — Permit #R282920 — {GYM_DAYS} days</p>
               </div>
               <p className="font-bold text-red-700">{fmtFull(totalFixedCosts)}</p>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <div>
-                <p className="font-medium text-gray-800">Counselor Pay (estimated)</p>
-                <p className="text-xs text-gray-500">{totalCounselorsNeeded} counselor-sessions @ {fmt(COUNSELOR_PAY_PER_SESSION)}/session — based on {totalRegisteredSessions} registered camper-sessions</p>
+                <p className="font-medium text-gray-800">Counselor Pay</p>
+                <p className="text-xs text-gray-500">{paidCounselorsNeeded} counselor-sessions @ {fmt(COUNSELOR_PAY_PER_SESSION)}/session for {paidSessions} paid camper-sessions</p>
               </div>
-              <p className="font-bold text-red-700">{fmtFull(estimatedCounselorCost)}</p>
+              <p className="font-bold text-red-700">{fmtFull(paidCounselorCost)}</p>
             </div>
             <div className="flex justify-between items-center py-2 border-b">
               <div>
-                <p className="font-medium text-gray-800">Payment Processing Fees (estimated)</p>
-                <p className="text-xs text-gray-500">~2.9% + $0.30/transaction on {fmtFull(totalRegisteredRevenue)} registered revenue</p>
+                <p className="font-medium text-gray-800">Payment Processing Fees</p>
+                <p className="text-xs text-gray-500">~2.9% + $0.30/transaction on {fmtFull(paidRevenue)}</p>
               </div>
-              <p className="font-bold text-red-700">{fmtFull(estimatedProcessingFees)}</p>
+              <p className="font-bold text-red-700">{fmtFull(paidProcessingFees)}</p>
             </div>
             <div className="flex justify-between items-center py-2 bg-red-50 rounded-lg px-3">
-              <p className="font-bold text-gray-800">Total Estimated Costs</p>
-              <p className="font-bold text-red-700 text-lg">{fmtFull(totalCosts)}</p>
+              <p className="font-bold text-gray-800">Total Costs</p>
+              <p className="font-bold text-red-700 text-lg">{fmtFull(totalFixedCosts + paidCounselorCost + paidProcessingFees)}</p>
             </div>
           </div>
         </div>
 
-        {/* Revenue */}
+        {/* Revenue (paid only) */}
         <div className="bg-white rounded-xl shadow p-6">
           <h3 className="font-bold text-lg text-green-700 mb-3">Revenue</h3>
           <div className="space-y-3">
@@ -279,16 +278,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
               </div>
               <p className="font-bold text-green-700">{fmtFull(paidRevenue)}</p>
             </div>
-            <div className="flex justify-between items-center py-2 border-b">
-              <div>
-                <p className="font-medium text-orange-700">Unpaid Registered Revenue</p>
-                <p className="text-xs text-orange-600">{unpaidSessions} camper-sessions registered but NOT paid</p>
-              </div>
-              <p className="font-bold text-orange-600">{fmtFull(unpaidRevenue)}</p>
-            </div>
-            <div className="flex justify-between items-center py-2 bg-green-50 rounded-lg px-3">
-              <p className="font-bold text-gray-800">Total Potential Revenue</p>
-              <p className="font-bold text-green-700 text-lg">{fmtFull(totalRegisteredRevenue)}</p>
+            <div className={`flex justify-between items-center py-2 rounded-lg px-3 ${profitPaidOnly >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+              <p className="font-bold text-gray-800">{profitPaidOnly >= 0 ? 'Profit' : 'Loss'}</p>
+              <p className={`font-bold text-lg ${profitPaidOnly >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmtAcct(profitPaidOnly)}</p>
             </div>
           </div>
         </div>
@@ -539,7 +531,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <td className="p-2 text-center text-gray-500">{Object.values(dayBreakdown).reduce((s, d) => s + d.afternoon.counselors, 0)}</td>
                   <td className="p-2 text-right text-red-700">{fmt(GYM_DAILY_RATE * rentalDates.length)}</td>
                   <td className="p-2 text-right text-orange-700">{fmt(Object.values(dayBreakdown).reduce((s, d) => s + (d.morning.counselors + d.afternoon.counselors) * COUNSELOR_PAY_PER_SESSION, 0))}</td>
-                  <td className="p-2 text-right text-green-700">{fmt(totalRegisteredRevenue)}</td>
+                  <td className="p-2 text-right text-green-700">{fmt(paidRevenue)}</td>
                 </tr>
               </tfoot>
             </table>
