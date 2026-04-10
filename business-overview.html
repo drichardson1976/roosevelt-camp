@@ -410,11 +410,12 @@
     </div>
   </div>
 
-  <!-- ==================== SLIDE 10: PROFIT PROJECTION ==================== -->
+  <!-- ==================== SLIDE 10: DONATION PROJECTION ==================== -->
   <div class="slide" data-slide="10">
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
-      <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">Financial Projection</p>
-      <h2 class="text-4xl md:text-6xl font-bold mb-10">Path to profitability</h2>
+      <p class="text-pink-400 font-semibold text-lg tracking-widest uppercase mb-6">Financial Projection</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-4">Path to giving back</h2>
+      <p class="text-lg text-gray-500 mb-8 max-w-2xl">50% of every dollar of profit goes to the Roosevelt Girls Varsity Basketball program. Here's how many sessions it takes to reach each donation level.</p>
       <div class="max-w-3xl w-full">
         <!-- Thermometer-style progress bar -->
         <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mb-6">
@@ -440,16 +441,16 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
-            <p class="text-sm text-gray-500 mb-3">Unit Economics</p>
+            <p class="text-sm text-gray-500 mb-3">How It Works</p>
             <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span class="text-gray-400">Avg revenue per session</span><span class="text-green-400 font-medium" id="econRevenue">—</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">Counselor cost per session</span><span class="text-red-400 font-medium">-$16.00</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">Processing fees per session</span><span class="text-red-400 font-medium" id="econFees">—</span></div>
-              <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net contribution</span><span class="text-green-400 font-bold" id="econNet">—</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Revenue per session</span><span class="text-green-400 font-medium" id="econRevenue">—</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Costs per session</span><span class="text-red-400 font-medium" id="econFees">—</span></div>
+              <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net per session</span><span class="text-green-400 font-bold" id="econNet">—</span></div>
+              <div class="flex justify-between"><span class="text-gray-300 font-medium">50% donated to RHS</span><span class="text-pink-400 font-bold" id="econDonation">—</span></div>
             </div>
           </div>
           <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
-            <p class="text-sm text-gray-500 mb-3">Profit Milestones (sessions needed)</p>
+            <p class="text-sm text-gray-500 mb-3">Donation Goals (sessions needed)</p>
             <div class="space-y-2 text-sm" id="milestonesContainer">
               <div class="text-gray-500 text-center py-2">Loading...</div>
             </div>
@@ -701,24 +702,31 @@
         document.getElementById('unpaidLabel').textContent = 'Registered: ' + totalSessions + ' sessions';
         document.getElementById('thermLabel').textContent = 'Break-even: ' + breakEvenSessions + ' sessions';
 
-        // Unit economics
+        // Unit economics — show combined costs and donation per session
+        const totalCostPerSession = marginalCounselorCost + processingPctCost;
+        const donationPerSession = netPerSession * 0.5;
         document.getElementById('econRevenue').textContent = fmtDec(avgRevenuePerSession);
-        document.getElementById('econFees').textContent = '-' + fmtDec(processingPctCost);
+        document.getElementById('econFees').textContent = '-' + fmtDec(totalCostPerSession);
         document.getElementById('econNet').textContent = fmtDec(netPerSession);
+        const econDonation = document.getElementById('econDonation');
+        if (econDonation) econDonation.textContent = fmtDec(donationPerSession) + '/session';
 
-        // Milestones
-        const milestoneTargets = [
-          { label: 'Break even', profit: 0 },
-          { label: '$5,000 profit', profit: 5000 },
-          { label: '$10,000 profit', profit: 10000 },
-          { label: '$20,000 profit', profit: 20000 },
+        // Donation milestones (donation = 50% of profit, so profit needed = donation × 2)
+        const donationTargets = [
+          { label: 'Break even (before donations)', donation: 0 },
+          { label: 'Donate $500 to RHS', donation: 500 },
+          { label: 'Donate $1,000 to RHS', donation: 1000 },
+          { label: 'Donate $2,500 to RHS', donation: 2500 },
+          { label: 'Donate $5,000 to RHS', donation: 5000 },
+          { label: 'Donate $10,000 to RHS', donation: 10000 },
         ];
         const mc = document.getElementById('milestonesContainer');
-        mc.innerHTML = milestoneTargets.map(m => {
-          const s = sessionsForProfit(m.profit);
+        mc.innerHTML = donationTargets.map(m => {
+          const profitNeeded = m.donation === 0 ? 0 : m.donation * 2; // 50% of profit = donation
+          const s = sessionsForProfit(profitNeeded);
           const capped = s > MAX_CAPACITY;
-          const color = m.profit === 0 ? 'text-amber-400' : capped ? 'text-red-400' : 'text-green-400';
-          const display = capped ? 'N/A (>' + MAX_CAPACITY + ')' : s + ' sessions';
+          const color = m.donation === 0 ? 'text-amber-400' : capped ? 'text-red-400' : 'text-pink-400';
+          const display = capped ? 'exceeds capacity' : s + ' sessions';
           return '<div class="flex justify-between"><span class="text-gray-400">' + m.label + '</span><span class="' + color + ' font-medium">' + display + '</span></div>';
         }).join('');
 
