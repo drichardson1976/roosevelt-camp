@@ -490,6 +490,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <th className="p-2 font-medium text-right">Gym Rental</th>
                   <th className="p-2 font-medium text-right">Counselor Pay</th>
                   <th className="p-2 font-medium text-right">Day Revenue</th>
+                  <th className="p-2 font-medium text-right">Profit / Loss</th>
                 </tr>
                 <tr className="text-xs text-gray-400 border-b">
                   <th className="p-1"></th>
@@ -497,6 +498,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <th className="p-1 text-center font-normal">Counselors</th>
                   <th className="p-1 text-center font-normal">Campers</th>
                   <th className="p-1 text-center font-normal">Counselors</th>
+                  <th className="p-1"></th>
                   <th className="p-1"></th>
                   <th className="p-1"></th>
                   <th className="p-1"></th>
@@ -518,6 +520,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                       <td className="p-2 text-right text-red-600">{fmt(GYM_DAILY_RATE)}</td>
                       <td className="p-2 text-right text-orange-600">{dayCounselorCost > 0 ? fmt(dayCounselorCost) : <span className="text-gray-300">$0</span>}</td>
                       <td className="p-2 text-right text-green-700">{dayRevenue > 0 ? fmt(dayRevenue) : <span className="text-gray-300">$0</span>}</td>
+                      {(() => { const dayPL = dayRevenue - GYM_DAILY_RATE - dayCounselorCost; return (
+                        <td className={`p-2 text-right font-medium ${dayPL >= 0 ? 'text-green-700' : 'text-red-700'}`}>{dayPL >= 0 ? fmt(dayPL) : '(' + fmt(dayPL) + ')'}</td>
+                      ); })()}
                     </tr>
                   );
                 })}
@@ -532,6 +537,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   <td className="p-2 text-right text-red-700">{fmt(GYM_DAILY_RATE * rentalDates.length)}</td>
                   <td className="p-2 text-right text-orange-700">{fmt(Object.values(dayBreakdown).reduce((s, d) => s + (d.morning.counselors + d.afternoon.counselors) * COUNSELOR_PAY_PER_SESSION, 0))}</td>
                   <td className="p-2 text-right text-green-700">{fmt(paidRevenue)}</td>
+                  {(() => { const totalPL = paidRevenue - (GYM_DAILY_RATE * rentalDates.length) - Object.values(dayBreakdown).reduce((s, d) => s + (d.morning.counselors + d.afternoon.counselors) * COUNSELOR_PAY_PER_SESSION, 0); return (
+                    <td className={`p-2 text-right font-bold ${totalPL >= 0 ? 'text-green-700' : 'text-red-700'}`}>{totalPL >= 0 ? fmt(totalPL) : '(' + fmt(totalPL) + ')'}</td>
+                  ); })()}
                 </tr>
               </tfoot>
             </table>
