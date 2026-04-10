@@ -257,19 +257,9 @@
               <div class="w-3 h-3 rounded-full bg-green-500 mt-1.5"></div>
             </div>
             <div>
-              <p class="text-xs text-gray-500">Late January 2026</p>
-              <p class="text-base font-semibold">First line of code</p>
-              <p class="text-sm text-gray-500">Started building the camp website using Claude AI. Login page, parent signup, and admin dashboard built in a single evening.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4 md:gap-6 pl-0">
-            <div class="w-8 md:w-12 flex-shrink-0 flex flex-col items-center z-10">
-              <div class="w-3 h-3 rounded-full bg-green-500 mt-1.5"></div>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500">Early February</p>
-              <p class="text-base font-semibold">Full platform working</p>
-              <p class="text-sm text-gray-500">Parent onboarding, counselor applications, session calendar, payment tracking, pod assignments — over 200 updates shipped in 2 weeks.</p>
+              <p class="text-xs text-gray-500">January 2026</p>
+              <p class="text-base font-semibold">The idea</p>
+              <p class="text-sm text-gray-500">What if we built our own camp — and ran it like a real business? Started building a custom website using AI instead of paying for expensive platforms.</p>
             </div>
           </div>
           <div class="flex items-start gap-4 md:gap-6 pl-0">
@@ -279,7 +269,7 @@
             <div>
               <p class="text-xs text-gray-500">February 28</p>
               <p class="text-base font-semibold">LLC formed</p>
-              <p class="text-sm text-gray-500">Roosevelt Girls Basketball LLC officially filed with the State of Washington. This is a real company.</p>
+              <p class="text-sm text-gray-500">Roosevelt Girls Basketball LLC officially filed with the State of Washington. A real company, not a school project.</p>
             </div>
           </div>
           <div class="flex items-start gap-4 md:gap-6 pl-0">
@@ -289,17 +279,7 @@
             <div>
               <p class="text-xs text-gray-500">March 9</p>
               <p class="text-base font-semibold">WA State certificate + IRS EIN</p>
-              <p class="text-sm text-gray-500">Certificate of Formation received from the Secretary of State. Federal Employer Identification Number obtained from the IRS.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-4 md:gap-6 pl-0">
-            <div class="w-8 md:w-12 flex-shrink-0 flex flex-col items-center z-10">
-              <div class="w-3 h-3 rounded-full bg-blue-500 mt-1.5"></div>
-            </div>
-            <div>
-              <p class="text-xs text-gray-500">March 11</p>
-              <p class="text-base font-semibold">Credit card payments go live</p>
-              <p class="text-sm text-gray-500">Stripe integration added — parents can now pay with a credit card directly on the website, in addition to Venmo.</p>
+              <p class="text-sm text-gray-500">Certificate of Formation from the Secretary of State. Federal Employer Identification Number from the IRS.</p>
             </div>
           </div>
           <div class="flex items-start gap-4 md:gap-6 pl-0">
@@ -309,7 +289,17 @@
             <div>
               <p class="text-xs text-gray-500">March 19</p>
               <p class="text-base font-semibold">Gym permit approved</p>
-              <p class="text-sm text-gray-500">Seattle Parks & Recreation approves permit #R282920 for Magnuson Community Center — 10 days, August 17–28. Facility secured.</p>
+              <p class="text-sm text-gray-500">Seattle Parks & Recreation approves permit for Magnuson Community Center — 10 days, August 17–28. Facility secured.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 md:gap-6 pl-0">
+            <div class="w-8 md:w-12 flex-shrink-0 flex flex-col items-center z-10">
+              <div class="w-3 h-3 rounded-full bg-blue-500 mt-1.5"></div>
+            </div>
+            <div>
+              <p class="text-xs text-gray-500">March</p>
+              <p class="text-base font-semibold">Website goes live — first families sign up</p>
+              <p class="text-sm text-gray-500">Parents start creating accounts, registering their daughters, and paying for sessions. The camp is real.</p>
             </div>
           </div>
           <div class="flex items-start gap-4 md:gap-6 pl-0">
@@ -318,8 +308,8 @@
             </div>
             <div>
               <p class="text-xs text-gray-500">March – April</p>
-              <p class="text-base font-semibold">Counselors recruited, families registering</p>
-              <p class="text-sm text-gray-500">9 counselors signed up. Families are creating accounts, registering campers, and paying for sessions. The camp is happening.</p>
+              <p class="text-base font-semibold">9 counselors recruited</p>
+              <p class="text-sm text-gray-500">Current and former Roosevelt players sign up to coach. Each one sets their availability and accepts the role.</p>
             </div>
           </div>
           <div class="flex items-start gap-4 md:gap-6 pl-0">
@@ -328,8 +318,8 @@
             </div>
             <div>
               <p class="text-xs text-gray-500">Today</p>
-              <p class="text-base font-semibold text-green-400">385 code updates shipped. Business is live and growing.</p>
-              <p class="text-sm text-gray-500">Financial projections, analytics dashboard, and this presentation — all built and running.</p>
+              <p class="text-base font-semibold text-green-400" id="journeyToday">Loading...</p>
+              <p class="text-sm text-gray-500" id="journeyTodayDetail">Camp is 4 months away and growing every week.</p>
             </div>
           </div>
         </div>
@@ -367,7 +357,7 @@
             <span class="text-2xl">💳</span>
             <div>
               <p class="font-medium">Payment Processing</p>
-              <p class="text-sm text-gray-500">Venmo integration with tracking, invoice generation, and revenue reporting</p>
+              <p class="text-sm text-gray-500">Venmo and credit card payments (Stripe), invoice generation, and revenue reporting</p>
             </div>
           </div>
         </div>
@@ -691,6 +681,12 @@
         // --- Update slide 4: Break-even on cost structure ---
         const costBE = document.getElementById('costBreakEven');
         if (costBE) costBE.textContent = '~' + breakEvenSessions;
+
+        // --- Update slide 7: Journey "Today" milestone ---
+        const jToday = document.getElementById('journeyToday');
+        const jDetail = document.getElementById('journeyTodayDetail');
+        if (jToday) jToday.textContent = parents.length + ' families, ' + campers.length + ' campers, ' + totalSessions + ' sessions booked.';
+        if (jDetail) jDetail.textContent = fmt(paidRevenue) + ' collected, ' + fmt(unpaidRevenue) + ' pending. Camp is 4 months away and growing every week.';
 
         // --- Update slide 8: Financial projections ---
         // Thermometer
