@@ -760,17 +760,28 @@
         if (econDonation) econDonation.textContent = fmtDec(donationPerSession) + '/session';
 
         // Donation milestones (donation = 50% of profit, so profit needed = donation × 2)
+        // Calculate donation at max capacity (600 sessions)
+        const maxRevenue600 = MAX_CAPACITY * avgRevenuePerSession;
+        const maxCounselorCost600 = MAX_CAPACITY * marginalCounselorCost;
+        const maxFees600 = maxRevenue600 * PAYMENT_PROCESSING_RATE + (MAX_CAPACITY * 0.5) * PAYMENT_PROCESSING_FIXED;
+        const maxProfit600 = maxRevenue600 - GYM_RENTAL_TOTAL - maxCounselorCost600 - maxFees600;
+        const maxDonation600 = Math.max(0, maxProfit600 * 0.5);
+
         const donationTargets = [
           { label: 'Break even (before donations)', donation: 0 },
           { label: 'Donate $500 to RHS', donation: 500 },
           { label: 'Donate $1,000 to RHS', donation: 1000 },
           { label: 'Donate $2,500 to RHS', donation: 2500 },
           { label: 'Donate $5,000 to RHS', donation: 5000 },
-          { label: 'Donate $10,000 to RHS', donation: 10000 },
+          { label: 'Camp Capacity — donate ' + fmt(maxDonation600) + ' to RHS', donation: -1, sessions: MAX_CAPACITY },
         ];
         const mc = document.getElementById('milestonesContainer');
         mc.innerHTML = donationTargets.map(m => {
-          const profitNeeded = m.donation === 0 ? 0 : m.donation * 2; // 50% of profit = donation
+          if (m.sessions) {
+            // Special capacity row
+            return '<div class="flex justify-between"><span class="text-gray-400">' + m.label + '</span><span class="text-green-400 font-bold">' + m.sessions + ' sessions</span></div>';
+          }
+          const profitNeeded = m.donation === 0 ? 0 : m.donation * 2;
           const s = sessionsForProfit(profitNeeded);
           const capped = s > MAX_CAPACITY;
           const color = m.donation === 0 ? 'text-amber-400' : capped ? 'text-red-400' : 'text-pink-400';
