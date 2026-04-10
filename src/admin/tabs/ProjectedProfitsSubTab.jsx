@@ -10,6 +10,10 @@ const KIDS_PER_COUNSELOR = 5;
 const PROFIT_MAX = 20000; // Chart goes up to $20K profit
 const PAYMENT_PROCESSING_RATE = 0.029; // 2.9% Stripe/Venmo business fee
 const PAYMENT_PROCESSING_FIXED = 0.30; // $0.30 per transaction (estimated)
+const MAX_CAMPERS_PER_SESSION = 30;
+const SESSIONS_PER_DAY = 2;
+const MAX_CAPACITY = MAX_CAMPERS_PER_SESSION * SESSIONS_PER_DAY * GYM_DAYS; // 600
+const DONATION_RATE = 0.50; // 50% of profit donated to RHS Girls Varsity Basketball
 
 export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSchedule, gymRentals, content, sessionCost }) => {
   const analysis = useMemo(() => {
@@ -83,7 +87,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       const counselorCost = sessions * marginalCounselorCost;
       const processingFees = revenue * PAYMENT_PROCESSING_RATE + (sessions * 0.5) * PAYMENT_PROCESSING_FIXED;
       const profit = revenue - GYM_RENTAL_TOTAL - counselorCost - processingFees;
-      return { label, profit: targetProfit, actualProfit: profit, sessions, revenue, gymCost: GYM_RENTAL_TOTAL, counselorCost, processingFees };
+      const donation = Math.max(0, profit * DONATION_RATE);
+      const netProfit = profit - donation;
+      return { label, profit: targetProfit, actualProfit: profit, sessions, revenue, gymCost: GYM_RENTAL_TOTAL, counselorCost, processingFees, donation, netProfit, overCapacity: sessions > MAX_CAPACITY };
     };
 
     const milestones = [buildMilestone(0, 'Break Even')];
@@ -91,9 +97,12 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       milestones.push(buildMilestone(p, `$${(p / 1000).toFixed(0)}K`));
     }
 
-    // Max revenue on chart (for scaling bars by revenue)
-    const maxRevenue = milestones[milestones.length - 1].revenue;
-    const maxSessions = milestones[milestones.length - 1].sessions;
+    // Filter out milestones that exceed max capacity
+    const reachableMilestones = milestones.filter(m => m.sessions <= MAX_CAPACITY);
+    // Max revenue on chart (for scaling bars by revenue) — capped at capacity
+    const maxRevenueAtCapacity = MAX_CAPACITY * avgRevenuePerSession;
+    const maxRevenue = reachableMilestones.length > 0 ? Math.max(reachableMilestones[reachableMilestones.length - 1].revenue, maxRevenueAtCapacity) : maxRevenueAtCapacity;
+    const maxSessions = MAX_CAPACITY;
 
     // Per-day breakdown for the detail table
     const dayBreakdown = {};
@@ -151,14 +160,16 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
   const chartWidth = 800;
   const leftMargin = 110;
   const rightMargin = 80;
-  const topMargin = 40;
+  const currentBarHeight = 54; // 3× the milestone bar height
+  const currentBarGap = 16;
+  const topMargin = 40 + currentBarHeight + currentBarGap;
   const bottomMargin = 50;
   const barAreaWidth = chartWidth - leftMargin - rightMargin;
   const barHeight = 20;
   const barGap = 4;
 
-  // Only show a subset of milestones on chart (break even + every $2K + $20K)
-  const chartMilestones = milestones.filter((m, i) => i === 0 || m.profit % 2000 === 0);
+  // Only show a subset of reachable milestones on chart (break even + every $2K)
+  const chartMilestones = reachableMilestones.filter((m, i) => i === 0 || m.profit % 2000 === 0);
   const rowHeight = barHeight + barGap;
   const adjustedChartHeight = topMargin + chartMilestones.length * rowHeight + bottomMargin;
 
@@ -273,9 +284,73 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
             {/* Background */}
             <rect x="0" y="0" width={chartWidth} height={adjustedChartHeight} fill="white" rx="8" />
 
+            {/* ====== CURRENT STATUS BAR (3× height) ====== */}
+            {(() => {
+              const cy = 30;
+              const currentRevenue = paidRevenue;
+              const currentSessions = paidSessions;
+              const currentCounselorCost = currentSessions * marginalCounselorCost;
+              const currentFees = currentRevenue * 0.029 + (currentSessions * 0.5) * 0.30;
+              const currentGrossProfit = currentRevenue - GYM_RENTAL_TOTAL - currentCounselorCost - currentFees;
+              const currentDonation = Math.max(0, currentGrossProfit * DONATION_RATE);
+              const currentNetProfit = currentGrossProfit - currentDonation;
+              const totalBarW = currentRevenue > 0 ? (currentRevenue / maxRevenue) * barAreaWidth : 0;
+
+              // Segment widths
+              const gW = currentRevenue > 0 ? (GYM_RENTAL_TOTAL / currentRevenue) * totalBarW : 0;
+              const cW = currentRevenue > 0 ? (currentCounselorCost / currentRevenue) * totalBarW : 0;
+              const fW = currentRevenue > 0 ? (currentFees / currentRevenue) * totalBarW : 0;
+              const dW = currentRevenue > 0 && currentDonation > 0 ? (currentDonation / currentRevenue) * totalBarW : 0;
+              const pW = Math.max(0, totalBarW - gW - cW - fW - dW);
+
+              return (
+                <g>
+                  {/* Background for current bar area */}
+                  <rect x={leftMargin} y={cy} width={barAreaWidth} height={currentBarHeight} fill="#f0fdf4" rx="4" stroke="#86efac" strokeWidth="1" />
+
+                  {/* Label */}
+                  <text x={leftMargin - 8} y={cy + currentBarHeight / 2} textAnchor="end" fontSize="13" fill="#15803d" fontWeight="700" dominantBaseline="middle">
+                    Current
+                  </text>
+                  <text x={leftMargin - 8} y={cy + currentBarHeight / 2 + 14} textAnchor="end" fontSize="10" fill="#6b7280" dominantBaseline="middle">
+                    {currentSessions} paid
+                  </text>
+
+                  {/* Stacked segments */}
+                  {totalBarW > 0 && (
+                    <>
+                      <rect x={leftMargin} y={cy + 4} width={gW} height={currentBarHeight - 8} fill="#ef4444" rx="4" />
+                      <rect x={leftMargin + gW} y={cy + 4} width={cW} height={currentBarHeight - 8} fill="#f97316" />
+                      <rect x={leftMargin + gW + cW} y={cy + 4} width={fW} height={currentBarHeight - 8} fill="#6366f1" />
+                      {dW > 0 && <rect x={leftMargin + gW + cW + fW} y={cy + 4} width={dW} height={currentBarHeight - 8} fill="#ec4899" />}
+                      {pW > 0 && <rect x={leftMargin + gW + cW + fW + dW} y={cy + 4} width={pW} height={currentBarHeight - 8} fill="#22c55e" rx="4" />}
+                    </>
+                  )}
+
+                  {/* Profit/loss label */}
+                  <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 - 6} fontSize="13" fill={currentGrossProfit >= 0 ? '#15803d' : '#dc2626'} fontWeight="700" dominantBaseline="middle">
+                    {currentGrossProfit < 0 ? '-' : ''}{fmt(currentGrossProfit)} {currentGrossProfit >= 0 ? 'profit' : 'loss'}
+                  </text>
+                  {currentDonation > 0 && (
+                    <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 + 10} fontSize="10" fill="#ec4899" fontWeight="600" dominantBaseline="middle">
+                      {fmt(currentDonation)} to RHS
+                    </text>
+                  )}
+                  {currentGrossProfit < 0 && (
+                    <text x={leftMargin + totalBarW + 6} y={cy + currentBarHeight / 2 + 10} fontSize="10" fill="#6b7280" dominantBaseline="middle">
+                      {fmt(Math.abs(currentGrossProfit))} more needed to break even
+                    </text>
+                  )}
+                </g>
+              );
+            })()}
+
+            {/* Separator line */}
+            <line x1={leftMargin} y1={topMargin - currentBarGap / 2} x2={leftMargin + barAreaWidth} y2={topMargin - currentBarGap / 2} stroke="#e5e7eb" strokeWidth="1" strokeDasharray="4,4" />
+
             {/* Column header */}
-            <text x={leftMargin + barAreaWidth / 2} y={topMargin - 16} textAnchor="middle" fontSize="12" fill="#6b7280" fontWeight="600">
-              Total Revenue Breakdown
+            <text x={leftMargin + barAreaWidth / 2} y={topMargin - 4} textAnchor="middle" fontSize="11" fill="#9ca3af" fontWeight="500">
+              Profit Goals
             </text>
 
             {/* Milestone rows */}
@@ -288,13 +363,15 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
               const gymW = (m.gymCost / m.revenue) * totalBarW;
               const counselorW = (m.counselorCost / m.revenue) * totalBarW;
               const feesW = (m.processingFees / m.revenue) * totalBarW;
-              const profitW = Math.max(0, totalBarW - gymW - counselorW - feesW);
+              const donationW = (m.donation / m.revenue) * totalBarW;
+              const netProfitW = Math.max(0, totalBarW - gymW - counselorW - feesW - donationW);
 
               // Precompute x offsets for stacked segments
               const gymX = leftMargin;
               const counselorX = gymX + gymW;
               const feesX = counselorX + counselorW;
-              const profitX = feesX + feesW;
+              const donationX = feesX + feesW;
+              const profitX = donationX + donationW;
 
               return (
                 <g key={m.label}>
@@ -319,14 +396,19 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
                   {/* Processing Fees (indigo) */}
                   <rect x={feesX} y={y + 1} width={feesW} height={barHeight - 2} fill="#6366f1" />
 
-                  {/* Profit (green) */}
-                  {profitW > 0 && (
-                    <rect x={profitX} y={y + 1} width={profitW} height={barHeight - 2} fill="#22c55e" rx="3" />
+                  {/* RHS Donation (pink/rose) */}
+                  {donationW > 0 && (
+                    <rect x={donationX} y={y + 1} width={donationW} height={barHeight - 2} fill="#ec4899" />
+                  )}
+
+                  {/* Net Profit (green) */}
+                  {netProfitW > 0 && (
+                    <rect x={profitX} y={y + 1} width={netProfitW} height={barHeight - 2} fill="#22c55e" rx="3" />
                   )}
 
                   {/* Right label: profit amount */}
                   <text x={leftMargin + totalBarW + 6} y={y + barHeight / 2 + 1} fontSize="11" fill={isBreakEven ? '#92400e' : '#15803d'} fontWeight="600" dominantBaseline="middle">
-                    {isBreakEven ? 'Break Even' : fmt(m.profit) + ' profit'}
+                    {isBreakEven ? 'Break Even' : fmt(m.profit) + ' profit' + (m.donation > 0 ? ' (' + fmt(m.donation) + ' to RHS)' : '')}
                   </text>
                 </g>
               );
@@ -340,8 +422,10 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
               <text x="106" y="10" fontSize="10" fill="#374151">Counselor Pay</text>
               <rect x="200" y="0" width="12" height="12" fill="#6366f1" rx="2" />
               <text x="216" y="10" fontSize="10" fill="#374151">Processing Fees</text>
-              <rect x="320" y="0" width="12" height="12" fill="#22c55e" rx="2" />
-              <text x="336" y="10" fontSize="10" fill="#374151">Profit</text>
+              <rect x="320" y="0" width="12" height="12" fill="#ec4899" rx="2" />
+              <text x="336" y="10" fontSize="10" fill="#374151">RHS Donation (50%)</text>
+              <rect x="450" y="0" width="12" height="12" fill="#22c55e" rx="2" />
+              <text x="466" y="10" fontSize="10" fill="#374151">Net Profit</text>
             </g>
           </svg>
         </div>

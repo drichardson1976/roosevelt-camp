@@ -168,7 +168,7 @@
           <p class="text-xs text-gray-600 mt-2">All on free tiers — custom-built website eliminates SaaS subscription costs</p>
         </div>
         <div class="bg-gradient-to-r from-green-900/20 to-gray-900 rounded-2xl p-6 border border-green-800 mt-4">
-          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> ~135 camper-sessions — after that, every session sold is profit</p>
+          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> <span id="costBreakEven">~146</span> camper-sessions — after that, every session sold is profit</p>
           <p class="text-sm text-gray-500 mt-1">With 20 session-slots over 10 days and up to 30 campers per session, the total addressable market is 600 camper-sessions</p>
         </div>
       </div>
@@ -313,12 +313,12 @@
         <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 mb-6">
           <div class="flex justify-between text-sm text-gray-500 mb-2">
             <span>0 sessions</span>
-            <span id="thermLabel">Break-even: ~135 sessions</span>
+            <span id="thermLabel">Loading...</span>
             <span>600 max</span>
           </div>
           <div class="w-full bg-gray-800 rounded-full h-8 relative overflow-hidden">
             <!-- Break-even marker -->
-            <div class="absolute top-0 h-full w-0.5 bg-amber-500 z-10" id="breakEvenMarker" style="left: 22.5%"></div>
+            <div class="absolute top-0 h-full w-0.5 bg-amber-500 z-10" id="breakEvenMarker" style="left: 24%"></div>
             <!-- Paid fill -->
             <div class="absolute top-0 left-0 h-full bg-green-500 rounded-l-full transition-all duration-1000" id="paidBar" style="width: 0%"></div>
             <!-- Unpaid fill -->
@@ -335,18 +335,16 @@
           <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
             <p class="text-sm text-gray-500 mb-3">Unit Economics</p>
             <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span class="text-gray-400">Revenue per session</span><span class="text-green-400 font-medium">$60</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">Counselor cost per session</span><span class="text-red-400 font-medium">-$16</span></div>
-              <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net contribution</span><span class="text-green-400 font-bold">$44</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Avg revenue per session</span><span class="text-green-400 font-medium" id="econRevenue">—</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Counselor cost per session</span><span class="text-red-400 font-medium">-$16.00</span></div>
+              <div class="flex justify-between"><span class="text-gray-400">Processing fees per session</span><span class="text-red-400 font-medium" id="econFees">—</span></div>
+              <div class="flex justify-between border-t border-gray-800 pt-2"><span class="text-gray-300 font-medium">Net contribution</span><span class="text-green-400 font-bold" id="econNet">—</span></div>
             </div>
           </div>
           <div class="bg-gray-900 rounded-xl p-6 border border-gray-800 text-left">
             <p class="text-sm text-gray-500 mb-3">Profit Milestones (sessions needed)</p>
-            <div class="space-y-2 text-sm">
-              <div class="flex justify-between"><span class="text-gray-400">Break even</span><span class="text-amber-400 font-medium">~135 sessions</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">$5,000 profit</span><span class="text-green-400 font-medium">~249 sessions</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">$10,000 profit</span><span class="text-green-400 font-medium">~362 sessions</span></div>
-              <div class="flex justify-between"><span class="text-gray-400">$20,000 profit</span><span class="text-green-400 font-medium">~590 sessions</span></div>
+            <div class="space-y-2 text-sm" id="milestonesContainer">
+              <div class="text-gray-500 text-center py-2">Loading...</div>
             </div>
           </div>
         </div>
@@ -354,8 +352,40 @@
     </div>
   </div>
 
-  <!-- ==================== SLIDE 9: WHAT I'VE LEARNED ==================== -->
+  <!-- ==================== SLIDE 9: GIVING BACK ==================== -->
   <div class="slide" data-slide="9">
+    <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
+      <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">Giving Back</p>
+      <h2 class="text-4xl md:text-6xl font-bold mb-10">More than a business —<br>a <span class="gradient-text">commitment</span></h2>
+      <div class="max-w-3xl w-full">
+        <div class="bg-gradient-to-b from-green-900/30 to-gray-900 rounded-2xl p-10 border border-green-700 mb-6">
+          <div class="text-5xl mb-4">🏀</div>
+          <p class="text-2xl md:text-3xl font-bold text-green-400 mb-4">For every $0.50 of profit earned,<br>a donation will be made to the<br>Roosevelt High School Girls Varsity Basketball Program</p>
+          <p class="text-lg text-gray-400 mt-6">This camp exists because of Roosevelt basketball. The skills, the community, the mentorship — it all starts with the school program. Giving back isn't an afterthought. It's the whole point.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-900 rounded-xl p-5 border border-gray-800 text-center">
+            <p class="text-sm text-gray-500">If we hit $5K profit</p>
+            <p class="text-2xl font-bold text-green-400">$2,500</p>
+            <p class="text-xs text-gray-600">donated to RHS Girls Basketball</p>
+          </div>
+          <div class="bg-gray-900 rounded-xl p-5 border border-gray-800 text-center">
+            <p class="text-sm text-gray-500">If we hit $10K profit</p>
+            <p class="text-2xl font-bold text-green-400">$5,000</p>
+            <p class="text-xs text-gray-600">donated to RHS Girls Basketball</p>
+          </div>
+          <div class="bg-gray-900 rounded-xl p-5 border border-gray-800 text-center">
+            <p class="text-sm text-gray-500">If we hit $20K profit</p>
+            <p class="text-2xl font-bold text-green-400">$10,000</p>
+            <p class="text-xs text-gray-600">donated to RHS Girls Basketball</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SLIDE 10: WHAT I'VE LEARNED ==================== -->
+  <div class="slide" data-slide="10">
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <p class="text-purple-400 font-semibold text-lg tracking-widest uppercase mb-6">What I've Learned</p>
       <h2 class="text-4xl md:text-6xl font-bold mb-10">More than basketball</h2>
@@ -392,8 +422,8 @@
     </div>
   </div>
 
-  <!-- ==================== SLIDE 10: CLOSING ==================== -->
-  <div class="slide" data-slide="10">
+  <!-- ==================== SLIDE 11: CLOSING ==================== -->
+  <div class="slide" data-slide="11">
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <div class="text-7xl mb-8">🏀</div>
       <h2 class="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-5xl">This summer, girls in our community<br>will <span class="gradient-text">fall in love with basketball</span></h2>
@@ -453,6 +483,15 @@
 
     // ==================== LIVE DATA FROM SUPABASE ====================
     (async function loadLiveData() {
+      // Financial constants — must match admin ProjectedProfitsSubTab.jsx
+      const GYM_RENTAL_TOTAL = 5929;
+      const COUNSELOR_PAY_PER_SESSION = 80;
+      const KIDS_PER_COUNSELOR = 5;
+      const PAYMENT_PROCESSING_RATE = 0.029;
+      const PAYMENT_PROCESSING_FIXED = 0.30;
+      const BASE_PRICE = 60;
+      const MAX_CAPACITY = 600; // 30 campers × 2 sessions/day × 10 days
+
       try {
         const SUPABASE_URL = 'https://rdrtsebhninqgfbrleft.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkcnRzZWJobmlucWdmYnJsZWZ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2OTcyMTMsImV4cCI6MjA4NTI3MzIxM30.l6gt5vvG1bXemZt9_BKSRy4kzbSatE4UIrV0a872QYw';
@@ -461,17 +500,18 @@
           global: { headers: { 'Accept-Profile': 'public', 'Content-Profile': 'public' } }
         });
 
+        // Registrations are individual rows (not id='main' JSONB array)
         const [parentsRes, campersRes, counselorsRes, regsRes] = await Promise.all([
           sb.from('camp_parents').select('data').eq('id', 'main').single(),
           sb.from('camp_campers').select('data').eq('id', 'main').single(),
           sb.from('camp_counselors').select('data, id').neq('id', 'main'),
-          sb.from('camp_registrations').select('data').eq('id', 'main').single(),
+          sb.from('camp_registrations').select('data'),
         ]);
 
         const parents = parentsRes.data?.data || [];
         const campers = campersRes.data?.data || [];
         const counselors = counselorsRes.data || [];
-        const registrations = regsRes.data?.data || [];
+        const registrations = (regsRes.data || []).map(r => r.data).filter(Boolean);
 
         // Count active registrations
         const activeRegs = registrations.filter(r => r.status !== 'cancelled');
@@ -490,8 +530,19 @@
 
         const approvedCounselors = counselors.filter(c => c.data?.approved !== false);
 
-        // Update slide 7 stats
-        const fmt = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        // --- Financial calculations (matching admin tab exactly) ---
+        const marginalCounselorCost = COUNSELOR_PAY_PER_SESSION / KIDS_PER_COUNSELOR; // $16
+        const avgRevenuePerSession = totalSessions > 0 ? totalRevenue / totalSessions : BASE_PRICE;
+        const processingPctCost = avgRevenuePerSession * PAYMENT_PROCESSING_RATE + PAYMENT_PROCESSING_FIXED * 0.5;
+        const netPerSession = avgRevenuePerSession - marginalCounselorCost - processingPctCost;
+
+        const sessionsForProfit = (target) => Math.ceil((target + GYM_RENTAL_TOTAL) / netPerSession);
+        const breakEvenSessions = sessionsForProfit(0);
+
+        const fmt = (n) => '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const fmtDec = (n) => '$' + n.toFixed(2);
+
+        // --- Update slide 7: Live stats ---
         document.getElementById('statFamilies').textContent = parents.length;
         document.getElementById('statCampers').textContent = campers.length;
         document.getElementById('statCounselors').textContent = approvedCounselors.length;
@@ -501,15 +552,43 @@
         document.getElementById('statTotalRevenue').textContent = fmt(totalRevenue);
         document.getElementById('dataTimestamp').textContent = 'Live data as of ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
-        // Update slide 8 thermometer
-        const maxCapacity = 600;
-        const paidPct = (paidSessions / maxCapacity) * 100;
-        const unpaidPct = (unpaidSessions / maxCapacity) * 100;
+        // --- Update slide 4: Break-even on cost structure ---
+        const costBE = document.getElementById('costBreakEven');
+        if (costBE) costBE.textContent = '~' + breakEvenSessions;
+
+        // --- Update slide 8: Financial projections ---
+        // Thermometer
+        const paidPct = (paidSessions / MAX_CAPACITY) * 100;
+        const unpaidPct = (unpaidSessions / MAX_CAPACITY) * 100;
+        const bePct = (breakEvenSessions / MAX_CAPACITY) * 100;
         document.getElementById('paidBar').style.width = paidPct + '%';
         document.getElementById('unpaidBar').style.left = paidPct + '%';
         document.getElementById('unpaidBar').style.width = unpaidPct + '%';
+        document.getElementById('breakEvenMarker').style.left = bePct + '%';
         document.getElementById('paidLabel').textContent = 'Paid: ' + paidSessions + ' sessions';
-        document.getElementById('unpaidLabel').textContent = 'Registered: ' + (paidSessions + unpaidSessions) + ' sessions';
+        document.getElementById('unpaidLabel').textContent = 'Registered: ' + totalSessions + ' sessions';
+        document.getElementById('thermLabel').textContent = 'Break-even: ' + breakEvenSessions + ' sessions';
+
+        // Unit economics
+        document.getElementById('econRevenue').textContent = fmtDec(avgRevenuePerSession);
+        document.getElementById('econFees').textContent = '-' + fmtDec(processingPctCost);
+        document.getElementById('econNet').textContent = fmtDec(netPerSession);
+
+        // Milestones
+        const milestoneTargets = [
+          { label: 'Break even', profit: 0 },
+          { label: '$5,000 profit', profit: 5000 },
+          { label: '$10,000 profit', profit: 10000 },
+          { label: '$20,000 profit', profit: 20000 },
+        ];
+        const mc = document.getElementById('milestonesContainer');
+        mc.innerHTML = milestoneTargets.map(m => {
+          const s = sessionsForProfit(m.profit);
+          const capped = s > MAX_CAPACITY;
+          const color = m.profit === 0 ? 'text-amber-400' : capped ? 'text-red-400' : 'text-green-400';
+          const display = capped ? 'N/A (>' + MAX_CAPACITY + ')' : s + ' sessions';
+          return '<div class="flex justify-between"><span class="text-gray-400">' + m.label + '</span><span class="' + color + ' font-medium">' + display + '</span></div>';
+        }).join('');
 
       } catch (err) {
         console.error('Failed to load live data:', err);
