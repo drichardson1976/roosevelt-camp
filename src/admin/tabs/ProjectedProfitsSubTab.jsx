@@ -127,12 +127,28 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       day.afternoon.counselors = Math.ceil(day.afternoon.campers / KIDS_PER_COUNSELOR);
     });
 
-    // Estimated processing fees for current registrations
+    // Counselor costs for PAID sessions only (ceil-based, same method as total)
+    const paidSessionSlots = {};
+    paidRegs.forEach(r => {
+      (r.sessions || []).forEach(s => {
+        const key = `${r.date}_${s}`;
+        paidSessionSlots[key] = (paidSessionSlots[key] || 0) + 1;
+      });
+    });
+    let paidCounselorsNeeded = 0;
+    Object.values(paidSessionSlots).forEach(count => {
+      paidCounselorsNeeded += Math.ceil(count / KIDS_PER_COUNSELOR);
+    });
+    const paidCounselorCost = paidCounselorsNeeded * COUNSELOR_PAY_PER_SESSION;
+
+    // Processing fees
     const estimatedProcessingFees = totalRegisteredRevenue * PAYMENT_PROCESSING_RATE + (totalRegisteredSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+    const paidProcessingFees = paidRevenue * PAYMENT_PROCESSING_RATE + (paidSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+
+    // Profit calculations — both use same method (gym + ceil-based counselor + fees)
     const totalCostsWithFees = totalFixedCosts + estimatedCounselorCost + estimatedProcessingFees;
     const profitIfAllPayWithFees = totalRegisteredRevenue - totalCostsWithFees;
-    const paidProcessingFees = paidRevenue * PAYMENT_PROCESSING_RATE + (paidSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
-    const profitPaidOnlyWithFees = paidRevenue - totalFixedCosts - (paidSessions * marginalCounselorCost) - paidProcessingFees;
+    const profitPaidOnlyWithFees = paidRevenue - totalFixedCosts - paidCounselorCost - paidProcessingFees;
 
     return {
       basePrice, avgRevenuePerSession, marginalCounselorCost, netPerSession,

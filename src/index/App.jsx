@@ -14,9 +14,9 @@ import { DEFAULT_CONTENT, DEFAULT_COUNSELORS, DEFAULT_ADMINS } from '../shared/d
 import { calculateDiscountedTotal } from '../shared/pricing';
 
     // ==================== VERSION INFO ====================
-    const VERSION = "13.210";
+    const VERSION = "13.214";
     // BUILD_DATE - update this timestamp when committing changes
-    const BUILD_DATE = new Date("2026-03-19T17:35:00");
+    const BUILD_DATE = new Date("2026-04-10T00:08:00");
 
     // ==================== COUNSELOR EDIT FORM ====================
     const CounselorEditForm = ({ counselor, onSave, onCancel, onDelete }) => {
@@ -1829,6 +1829,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
       const [toast, setToast] = useState(null);
       const [loading, setLoading] = useState(true);
       const [showBanner, setShowBanner] = useState(false);
+      const [showDonation, setShowDonation] = useState(false); // Hidden donation modal
       const [transitioning, setTransitioning] = useState(false); // Global transition state for login/registration
       const [backgroundLoaded, setBackgroundLoaded] = useState(false); // Phase 2 data loaded
       const [pendingGoogleLogin, setPendingGoogleLogin] = useState(null); // { email, name } waiting for background data
@@ -2282,7 +2283,7 @@ Afternoon sessions: Drop-off is between 11:45 AM - 12:00 PM
         return (
           <nav className="bg-green-900 text-white shadow-lg">
             <div className="max-w-6xl mx-auto px-3 sm:px-4 py-3 sm:py-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => setPage('home')} onDoubleClick={() => !isDevEnv && setShowBanner(p => !p)}>🏀 ROOSEVELT CAMP</div>
+              <div className="font-display text-xl sm:text-2xl cursor-pointer" onClick={() => setPage('home')} onDoubleClick={() => { if (isDevEnv) { setShowBanner(p => !p); } else { setShowDonation(true); } }}>🏀 ROOSEVELT CAMP</div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2 items-center">
                 {['home', 'schedule', 'pricing', 'location', 'counselors'].map(p => (
                   <button key={p} onClick={() => setPage(p)} className={'px-3 sm:px-4 py-2.5 sm:py-2 rounded text-sm sm:text-base capitalize min-h-[44px] ' + (page === p ? 'bg-green-700' : 'hover:bg-green-800')}>{p}</button>
@@ -2831,6 +2832,133 @@ As a 1099 contractor, you are responsible for:
 • Paying self-employment taxes
 • We will provide a 1099 form at year end for income over $600
       `.trim();
+
+      // ==================== DONATION MODAL (hidden — activated by double-clicking site title) ====================
+      const DonationModal = ({ onClose, content, showToast }) => {
+        const [step, setStep] = useState(1); // 1=info, 2=venmo instructions, 3=thank you
+        const [name, setName] = useState('');
+        const [email, setEmail] = useState('');
+        const [amount, setAmount] = useState('');
+        const [sending, setSending] = useState(false);
+        const venmoUser = content?.venmoUsername || '@RHSDayCamp';
+        const donationCode = name ? 'DONATE-' + generateVenmoCode(name, 'donation') : 'DONATE';
+
+        const handleDonate = async () => {
+          setSending(true);
+          try {
+            await fetch('/.netlify/functions/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: [email, 'rhsdaycamp@gmail.com'],
+                subject: 'Thank You for Your Donation — Roosevelt Girls Basketball Day Camp',
+                html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+                  <h2 style="color:#15803d;">🏀 Thank You, ${name}!</h2>
+                  <p style="font-size:16px;color:#333;">Your generous donation of <strong>$${amount}</strong> to Roosevelt Girls Basketball Day Camp will go directly to the <strong>Roosevelt High School Girls Varsity Basketball Program</strong>.</p>
+                  <p style="font-size:14px;color:#666;">Your support helps cover expenses like food, travel, uniforms, basketballs, and gym rentals for the team. Every dollar makes a difference.</p>
+                  <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:8px;padding:16px;margin:16px 0;">
+                    <p style="margin:0;font-size:14px;color:#666;">Donation Code: <strong>${donationCode}</strong></p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#666;">Amount: <strong>$${amount}</strong></p>
+                    <p style="margin:4px 0 0;font-size:14px;color:#666;">Donor: <strong>${name}</strong></p>
+                  </div>
+                  <p style="font-size:14px;color:#666;">100% of donations go to the Roosevelt HS Girls Varsity Basketball program.</p>
+                  <p style="font-size:14px;color:#15803d;font-weight:bold;">— Roosevelt Girls Basketball Day Camp</p>
+                  <p style="font-size:12px;color:#999;">rhsbasketballdaycamp.com</p>
+                </div>`
+              })
+            });
+            setStep(3);
+          } catch (err) {
+            console.error('Donation email failed:', err);
+            showToast('Thank you! (Email delivery may be delayed)');
+            setStep(3);
+          }
+          setSending(false);
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+              {step === 1 && (
+                <>
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-2">🏀</div>
+                    <h3 className="text-xl font-bold text-green-800">Donate to Roosevelt Basketball</h3>
+                    <p className="text-sm text-gray-500 mt-2">Don't have a camper but want to support the program? 100% of donations go directly to the <strong>Roosevelt HS Girls Varsity Basketball</strong> program.</p>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-300" placeholder="Jane Smith" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Your Email</label>
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-300" placeholder="jane@example.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Donation Amount ($)</label>
+                      <input type="number" min="1" value={amount} onChange={e => setAmount(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-300" placeholder="25" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button onClick={() => { if (name && email && amount) setStep(2); }} disabled={!name || !email || !amount} className="flex-1 bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed">Continue to Venmo</button>
+                    <button onClick={onClose} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">Cancel</button>
+                  </div>
+                </>
+              )}
+
+              {step === 2 && (
+                <>
+                  <div className="text-center mb-4">
+                    <h3 className="text-xl font-bold text-green-800">Send Your Donation via Venmo</h3>
+                    <p className="text-sm text-gray-500 mt-1">Follow these steps to complete your <strong>${amount}</strong> donation.</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="text-center">
+                      <a href="https://account.venmo.com/u/RHSDayCamp" target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent('https://account.venmo.com/u/RHSDayCamp')}
+                          alt="Venmo QR Code"
+                          className="w-40 h-40 mx-auto border-2 border-blue-200 rounded-lg"
+                        />
+                      </a>
+                      <p className="text-xs text-gray-500 mt-1">Tap to open Venmo, or scan with your phone</p>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-4 text-sm space-y-2">
+                      <p className="font-medium text-blue-800">Step 1: Open Venmo</p>
+                      <p className="text-blue-700">Search for <strong className="text-blue-900">{venmoUser}</strong> or scan the QR code above.</p>
+                      <p className="font-medium text-blue-800 mt-3">Step 2: Send ${amount}</p>
+                      <p className="text-blue-700">In the note, include this code: <strong className="font-mono text-blue-900 bg-blue-100 px-2 py-0.5 rounded">{donationCode}</strong></p>
+                      <p className="font-medium text-blue-800 mt-3">Step 3: Click "I've Sent It" below</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <button onClick={handleDonate} disabled={sending} className="flex-1 bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50">
+                      {sending ? 'Sending...' : "I've Sent It — Thank You!"}
+                    </button>
+                    <button onClick={() => setStep(1)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200">Back</button>
+                  </div>
+                </>
+              )}
+
+              {step === 3 && (
+                <>
+                  <div className="text-center py-4">
+                    <div className="text-5xl mb-3">💚</div>
+                    <h3 className="text-2xl font-bold text-green-800 mb-2">Thank You, {name}!</h3>
+                    <p className="text-gray-600 mb-2">Your <strong>${amount}</strong> donation will go directly to the Roosevelt HS Girls Varsity Basketball program.</p>
+                    <p className="text-sm text-gray-500">A confirmation email has been sent to <strong>{email}</strong>.</p>
+                    <div className="mt-4 bg-green-50 rounded-lg p-4 text-sm text-green-700">
+                      <p>Your generosity helps cover team expenses like food, travel, uniforms, and equipment. Every dollar matters. 🏀</p>
+                    </div>
+                  </div>
+                  <button onClick={onClose} className="w-full mt-4 bg-green-600 text-white py-2.5 px-4 rounded-lg font-medium hover:bg-green-700">Close</button>
+                </>
+              )}
+            </div>
+          </div>
+        );
+      };
 
       const CounselorOnboarding = ({ onComplete, onBack, counselorUsers, saveCounselorUsers, counselors, saveCounselors, availability, saveAvailability, counselorSchedule, saveCounselorSchedule, sitePhotos, googleUser }) => {
         const [step, setStep] = useState(1);
@@ -4122,6 +4250,7 @@ As a 1099 contractor, you are responsible for:
           {page === 'location' && <Location />}
           {page === 'counselors' && <Counselors />}
           {page === 'login' && <Login />}
+          {showDonation && <DonationModal onClose={() => setShowDonation(false)} content={content} showToast={showToast} />}
           <footer className="bg-gray-800 text-white py-6 text-center">© 2026 Roosevelt Girls Basketball Day Camp</footer>
         </div>
       );
