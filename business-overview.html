@@ -44,7 +44,7 @@
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <div class="text-7xl mb-6">🏀</div>
       <h1 class="text-5xl md:text-7xl font-black mb-4 gradient-text leading-tight">Roosevelt Girls Basketball<br>Day Camp</h1>
-      <p class="text-xl md:text-2xl text-gray-400 font-light mb-8">A business built by a student, for the community</p>
+      <p class="text-xl md:text-2xl text-gray-400 font-light mb-8">A student-run camp that gives back to the Roosevelt basketball program</p>
       <div class="flex flex-col items-center gap-3 text-lg text-gray-500">
         <span class="font-semibold text-white text-xl">Audrey Richardson</span>
         <span>Roosevelt High School, Class of 2028</span>
@@ -102,7 +102,8 @@
   <div class="slide" data-slide="3">
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <p class="text-amber-400 font-semibold text-lg tracking-widest uppercase mb-6">The Business</p>
-      <h2 class="text-4xl md:text-6xl font-bold mb-10">A real LLC, run by<br>a <span class="gradient-gold">high school junior</span></h2>
+      <h2 class="text-4xl md:text-6xl font-bold mb-4">A real LLC, run by<br>a <span class="gradient-gold">high school junior</span></h2>
+      <p class="text-lg text-gray-500 mb-8 max-w-2xl">Every dollar of profit above costs is split — half to grow the business, half donated to the RHS Girls Varsity Basketball program.</p>
       <div class="max-w-4xl w-full">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 text-left space-y-4">
@@ -178,7 +179,7 @@
           <p class="text-xs text-gray-600 mt-2">All on free tiers — custom-built website eliminates SaaS subscription costs</p>
         </div>
         <div class="bg-gradient-to-r from-green-900/20 to-gray-900 rounded-2xl p-6 border border-green-800 mt-4">
-          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> <span id="costBreakEven">~146</span> camper-sessions — after that, every session sold is profit</p>
+          <p class="text-lg text-gray-300"><strong class="text-green-400">Break-even:</strong> <span id="costBreakEven">~146</span> camper-sessions — after that, <strong class="text-pink-400">50% of every dollar of profit goes to RHS Girls Basketball</strong></p>
           <p class="text-sm text-gray-500 mt-1">With 20 session-slots over 10 days and up to 30 campers per session, the total addressable market is 600 camper-sessions</p>
         </div>
       </div>
@@ -226,7 +227,7 @@
           </ul>
         </div>
       </div>
-      <p class="text-gray-600 text-sm mt-8 max-w-xl">Built with React, Supabase, Netlify, and Claude AI — automated emails, SMS verification, Google login, photo storage, and more</p>
+      <p class="text-gray-600 text-sm mt-8 max-w-xl">Built with AI instead of expensive platforms — keeping costs near zero so more money flows to the RHS basketball program</p>
     </div>
   </div>
 
@@ -332,7 +333,7 @@
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <p class="text-green-400 font-semibold text-lg tracking-widest uppercase mb-6">See It Live</p>
       <h2 class="text-4xl md:text-6xl font-bold mb-6">The website is <span class="gradient-text">live right now</span></h2>
-      <p class="text-xl text-gray-500 mb-10">Parents are already signing up, registering their kids, and paying for sessions.</p>
+      <p class="text-xl text-gray-500 mb-10">Every registration brings us closer to our first donation to the RHS basketball program.</p>
       <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 max-w-2xl w-full">
         <div class="flex items-center justify-center gap-3 mb-6">
           <div class="w-3 h-3 bg-green-500 rounded-full stat-pulse"></div>
@@ -406,7 +407,13 @@
         </div>
       </div>
 
-      <p class="text-gray-600 text-xs mt-6">Data pulled live from the camp database — numbers update as new families register</p>
+      <div class="bg-pink-900/20 rounded-xl p-5 border border-pink-700 max-w-3xl w-full mt-4">
+        <p class="text-sm text-pink-400 font-medium">Projected Donation to RHS Girls Basketball</p>
+        <p class="text-3xl font-bold text-pink-400" id="statDonation">—</p>
+        <p class="text-xs text-gray-500">50% of profit after all costs — grows with every session booked</p>
+      </div>
+
+      <p class="text-gray-600 text-xs mt-4">Data pulled live from the camp database — numbers update as new families register</p>
     </div>
   </div>
 
@@ -534,10 +541,10 @@
   <div class="slide" data-slide="13">
     <div class="flex flex-col items-center justify-center min-h-screen w-full px-8 text-center fade-in">
       <div class="text-7xl mb-8">🏀</div>
-      <h2 class="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-5xl">This summer, girls in our community<br>will <span class="gradient-text">fall in love with basketball</span></h2>
-      <p class="text-xl md:text-2xl text-gray-400 font-light mb-4 max-w-3xl">And they'll be coached by their peers — high school athletes who want to give back.</p>
+      <h2 class="text-4xl md:text-6xl font-black mb-6 leading-tight max-w-5xl">Every session booked is a<br><span class="gradient-text">donation to Roosevelt basketball</span></h2>
+      <p class="text-xl md:text-2xl text-gray-400 font-light mb-4 max-w-3xl">Girls learn to love the game. Counselors earn real wages. And the profits go right back to the program that started it all.</p>
       <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 max-w-2xl mt-6">
-        <p class="text-lg text-gray-300 leading-relaxed mb-4">Roosevelt Girls Basketball Day Camp is more than a summer program. It's a student-run business that creates jobs for teen athletes, teaches younger girls to love the game, and proves that high schoolers can build something real.</p>
+        <p class="text-lg text-gray-300 leading-relaxed mb-4">This camp is run by current and former Roosevelt players who want to grow the sport, support younger girls, and give back to the varsity program that shaped them. 50% of every dollar of profit is donated to RHS Girls Basketball.</p>
         <div class="flex items-center justify-center gap-3 mt-6">
           <div class="w-2 h-2 bg-green-500 rounded-full"></div>
           <a href="https://rhsbasketballdaycamp.com" class="text-green-400 font-semibold hover:underline text-lg" target="_blank">rhsbasketballdaycamp.com</a>
@@ -677,6 +684,14 @@
         document.getElementById('statPaidRevenue').textContent = fmt(paidRevenue);
         document.getElementById('statUnpaidRevenue').textContent = fmt(unpaidRevenue);
         document.getElementById('statTotalRevenue').textContent = fmt(totalRevenue);
+
+        // Projected donation (50% of profit if all registered pay)
+        const allCounselorCost = totalSessions * marginalCounselorCost;
+        const allFees = totalRevenue * PAYMENT_PROCESSING_RATE + (totalSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+        const projectedProfit = totalRevenue - GYM_RENTAL_TOTAL - allCounselorCost - allFees;
+        const projectedDonation = Math.max(0, projectedProfit * 0.5);
+        const donationEl = document.getElementById('statDonation');
+        if (donationEl) donationEl.textContent = projectedDonation > 0 ? fmt(projectedDonation) : 'Need more sessions to break even';
         document.getElementById('dataTimestamp').textContent = 'Live data as of ' + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
 
         // --- Update slide 4: Break-even on cost structure ---
