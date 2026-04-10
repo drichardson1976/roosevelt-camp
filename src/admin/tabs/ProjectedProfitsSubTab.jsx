@@ -8,6 +8,8 @@ const GYM_DAYS = 10;           // Aug 17-21 + Aug 24-28
 const COUNSELOR_PAY_PER_SESSION = 80;  // $80/session (3 hrs)
 const KIDS_PER_COUNSELOR = 5;
 const PROFIT_MAX = 20000; // Chart goes up to $20K profit
+const PAYMENT_PROCESSING_RATE = 0.029; // 2.9% Stripe/Venmo business fee
+const PAYMENT_PROCESSING_FIXED = 0.30; // $0.30 per transaction (estimated)
 
 export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSchedule, gymRentals, content, sessionCost }) => {
   const analysis = useMemo(() => {
@@ -68,20 +70,29 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
     // Sessions needed for various profit milestones
     // Revenue = sessions × avgRevenuePerSession
     // CounselorCost = sessions × marginalCounselorCost
-    // Profit = Revenue - GYM_RENTAL_TOTAL - CounselorCost
-    // Profit = sessions × netPerSession - GYM_RENTAL_TOTAL
-    // sessions = (Profit + GYM_RENTAL_TOTAL) / netPerSession
-    const sessionsForProfit = (targetProfit) => Math.ceil((targetProfit + GYM_RENTAL_TOTAL) / netPerSession);
-    const revenueForProfit = (targetProfit) => sessionsForProfit(targetProfit) * avgRevenuePerSession;
+    // ProcessingFees = Revenue × PAYMENT_PROCESSING_RATE + estimatedTransactions × PAYMENT_PROCESSING_FIXED
+    // Profit = Revenue - GYM_RENTAL_TOTAL - CounselorCost - ProcessingFees
+    // For simplicity, estimate ~2 sessions per transaction (AM+PM same day)
+    const processingPctCost = avgRevenuePerSession * PAYMENT_PROCESSING_RATE + PAYMENT_PROCESSING_FIXED * 0.5; // ~$0.30 per 2 sessions
+    const netPerSessionAfterFees = avgRevenuePerSession - marginalCounselorCost - processingPctCost;
+    const sessionsForProfit = (targetProfit) => Math.ceil((targetProfit + GYM_RENTAL_TOTAL) / netPerSessionAfterFees);
 
-    const milestones = [
-      { label: 'Break Even', profit: 0, sessions: sessionsForProfit(0), revenue: revenueForProfit(0) },
-    ];
+    const buildMilestone = (targetProfit, label) => {
+      const sessions = sessionsForProfit(targetProfit);
+      const revenue = sessions * avgRevenuePerSession;
+      const counselorCost = sessions * marginalCounselorCost;
+      const processingFees = revenue * PAYMENT_PROCESSING_RATE + (sessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+      const profit = revenue - GYM_RENTAL_TOTAL - counselorCost - processingFees;
+      return { label, profit: targetProfit, actualProfit: profit, sessions, revenue, gymCost: GYM_RENTAL_TOTAL, counselorCost, processingFees };
+    };
+
+    const milestones = [buildMilestone(0, 'Break Even')];
     for (let p = 1000; p <= PROFIT_MAX; p += 1000) {
-      milestones.push({ label: `$${(p / 1000).toFixed(0)}K Profit`, profit: p, sessions: sessionsForProfit(p), revenue: revenueForProfit(p) });
+      milestones.push(buildMilestone(p, `$${(p / 1000).toFixed(0)}K`));
     }
 
-    // Max sessions on chart
+    // Max revenue on chart (for scaling bars by revenue)
+    const maxRevenue = milestones[milestones.length - 1].revenue;
     const maxSessions = milestones[milestones.length - 1].sessions;
 
     // Per-day breakdown for the detail table
@@ -103,13 +114,21 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
       day.afternoon.counselors = Math.ceil(day.afternoon.campers / KIDS_PER_COUNSELOR);
     });
 
+    // Estimated processing fees for current registrations
+    const estimatedProcessingFees = totalRegisteredRevenue * PAYMENT_PROCESSING_RATE + (totalRegisteredSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+    const totalCostsWithFees = totalFixedCosts + estimatedCounselorCost + estimatedProcessingFees;
+    const profitIfAllPayWithFees = totalRegisteredRevenue - totalCostsWithFees;
+    const paidProcessingFees = paidRevenue * PAYMENT_PROCESSING_RATE + (paidSessions * 0.5) * PAYMENT_PROCESSING_FIXED;
+    const profitPaidOnlyWithFees = paidRevenue - totalFixedCosts - (paidSessions * marginalCounselorCost) - paidProcessingFees;
+
     return {
       basePrice, avgRevenuePerSession, marginalCounselorCost, netPerSession,
       paidSessions, unpaidSessions, totalRegisteredSessions,
       paidRevenue, unpaidRevenue, totalRegisteredRevenue,
-      estimatedCounselorCost, totalFixedCosts, totalCosts,
-      profitIfAllPay, profitPaidOnly,
-      milestones, maxSessions,
+      estimatedCounselorCost, totalFixedCosts, totalCosts: totalCostsWithFees,
+      estimatedProcessingFees,
+      profitIfAllPay: profitIfAllPayWithFees, profitPaidOnly: profitPaidOnlyWithFees,
+      milestones, maxSessions, maxRevenue,
       totalCounselorsNeeded, slotDetails, dayBreakdown, rentalDates
     };
   }, [registrations, counselors, counselorSchedule, gymRentals, content, sessionCost]);
@@ -119,8 +138,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
     paidSessions, unpaidSessions, totalRegisteredSessions,
     paidRevenue, unpaidRevenue, totalRegisteredRevenue,
     estimatedCounselorCost, totalFixedCosts, totalCosts,
+    estimatedProcessingFees,
     profitIfAllPay, profitPaidOnly,
-    milestones, maxSessions,
+    milestones, maxSessions, maxRevenue,
     totalCounselorsNeeded, dayBreakdown, rentalDates
   } = analysis;
 
@@ -129,13 +149,12 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
   // Chart dimensions
   const chartWidth = 800;
-  const chartHeight = 520;
-  const leftMargin = 95;
-  const rightMargin = 30;
+  const leftMargin = 110;
+  const rightMargin = 80;
   const topMargin = 40;
-  const bottomMargin = 60;
+  const bottomMargin = 50;
   const barAreaWidth = chartWidth - leftMargin - rightMargin;
-  const barHeight = 18;
+  const barHeight = 20;
   const barGap = 4;
 
   // Only show a subset of milestones on chart (break even + every $2K + $20K)
@@ -143,9 +162,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
   const rowHeight = barHeight + barGap;
   const adjustedChartHeight = topMargin + chartMilestones.length * rowHeight + bottomMargin;
 
-  const xScale = (sessions) => leftMargin + (sessions / maxSessions) * barAreaWidth;
-  const paidX = xScale(paidSessions);
-  const registeredX = xScale(totalRegisteredSessions);
+  // Scale bars by revenue (proportional to total money flowing through)
+  const revenueScale = (rev) => leftMargin + (rev / maxRevenue) * barAreaWidth;
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr + 'T12:00:00');
@@ -203,6 +221,13 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
               </div>
               <p className="font-bold text-red-700">{fmtFull(estimatedCounselorCost)}</p>
             </div>
+            <div className="flex justify-between items-center py-2 border-b">
+              <div>
+                <p className="font-medium text-gray-800">Payment Processing Fees (estimated)</p>
+                <p className="text-xs text-gray-500">~2.9% + $0.30/transaction on {fmtFull(totalRegisteredRevenue)} registered revenue</p>
+              </div>
+              <p className="font-bold text-red-700">{fmtFull(estimatedProcessingFees)}</p>
+            </div>
             <div className="flex justify-between items-center py-2 bg-red-50 rounded-lg px-3">
               <p className="font-bold text-gray-800">Total Estimated Costs</p>
               <p className="font-bold text-red-700 text-lg">{fmtFull(totalCosts)}</p>
@@ -238,10 +263,9 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
       {/* Profit Milestone Chart */}
       <div className="bg-white rounded-xl shadow p-6">
-        <h3 className="font-bold text-lg text-gray-800 mb-1">Sessions Needed for Profit Goals</h3>
+        <h3 className="font-bold text-lg text-gray-800 mb-1">Where the Money Goes at Each Profit Goal</h3>
         <p className="text-sm text-gray-500 mb-4">
-          Each bar shows how many camper-sessions you need to sell to hit that profit level.
-          Green fill = paid sessions ({paidSessions}). Orange fill = registered but unpaid ({unpaidSessions}). Gray = still needed.
+          Each bar shows total revenue at that session count, broken down by cost category and remaining profit.
         </p>
 
         <div className="overflow-x-auto -mx-2">
@@ -251,82 +275,73 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
             {/* Column header */}
             <text x={leftMargin + barAreaWidth / 2} y={topMargin - 16} textAnchor="middle" fontSize="12" fill="#6b7280" fontWeight="600">
-              Camper-Sessions Sold
+              Total Revenue Breakdown
             </text>
 
             {/* Milestone rows */}
             {chartMilestones.map((m, i) => {
               const y = topMargin + i * rowHeight;
-              const barW = xScale(m.sessions) - leftMargin;
+              const totalBarW = revenueScale(m.revenue) - leftMargin;
               const isBreakEven = m.profit === 0;
+
+              // Cost segment widths (proportional to revenue)
+              const gymW = (m.gymCost / m.revenue) * totalBarW;
+              const counselorW = (m.counselorCost / m.revenue) * totalBarW;
+              const feesW = (m.processingFees / m.revenue) * totalBarW;
+              const profitW = Math.max(0, totalBarW - gymW - counselorW - feesW);
+
+              // Precompute x offsets for stacked segments
+              const gymX = leftMargin;
+              const counselorX = gymX + gymW;
+              const feesX = counselorX + counselorW;
+              const profitX = feesX + feesW;
 
               return (
                 <g key={m.label}>
                   {/* Alternating row background */}
                   {i % 2 === 0 && <rect x={leftMargin} y={y} width={barAreaWidth} height={rowHeight} fill="#f9fafb" />}
 
-                  {/* Break-even line highlight */}
+                  {/* Break-even row highlight */}
                   {isBreakEven && <rect x={leftMargin} y={y} width={barAreaWidth} height={rowHeight} fill="#fef3c7" />}
 
-                  {/* Label */}
+                  {/* Left label: session count */}
                   <text x={leftMargin - 8} y={y + barHeight / 2 + 1} textAnchor="end" fontSize="11" fill={isBreakEven ? '#92400e' : '#374151'} fontWeight={isBreakEven ? '700' : '500'} dominantBaseline="middle">
-                    {m.label}
+                    {m.sessions} sessions
                   </text>
 
-                  {/* Full bar background (gray = still needed) */}
-                  <rect x={leftMargin} y={y + 1} width={barW} height={barHeight - 2} fill="#e5e7eb" rx="3" />
+                  {/* Stacked bar segments */}
+                  {/* Gym Rental (red) */}
+                  <rect x={gymX} y={y + 1} width={gymW} height={barHeight - 2} fill="#ef4444" rx="3" />
 
-                  {/* Paid fill (green) */}
-                  {paidSessions > 0 && (
-                    <rect x={leftMargin} y={y + 1} width={Math.min(xScale(paidSessions) - leftMargin, barW)} height={barHeight - 2} fill="#22c55e" rx="3" />
+                  {/* Counselor Pay (orange) */}
+                  <rect x={counselorX} y={y + 1} width={counselorW} height={barHeight - 2} fill="#f97316" />
+
+                  {/* Processing Fees (indigo) */}
+                  <rect x={feesX} y={y + 1} width={feesW} height={barHeight - 2} fill="#6366f1" />
+
+                  {/* Profit (green) */}
+                  {profitW > 0 && (
+                    <rect x={profitX} y={y + 1} width={profitW} height={barHeight - 2} fill="#22c55e" rx="3" />
                   )}
 
-                  {/* Registered unpaid fill (orange) - starts after paid */}
-                  {totalRegisteredSessions > paidSessions && (
-                    <rect
-                      x={Math.min(xScale(paidSessions), leftMargin + barW)}
-                      y={y + 1}
-                      width={Math.max(0, Math.min(xScale(totalRegisteredSessions), leftMargin + barW) - Math.min(xScale(paidSessions), leftMargin + barW))}
-                      height={barHeight - 2}
-                      fill="#fb923c"
-                      rx="0"
-                    />
-                  )}
-
-                  {/* Sessions count at end of bar */}
-                  <text x={leftMargin + barW + 6} y={y + barHeight / 2 + 1} fontSize="10" fill="#6b7280" dominantBaseline="middle">
-                    {m.sessions} sessions ({fmt(m.revenue)})
+                  {/* Right label: profit amount */}
+                  <text x={leftMargin + totalBarW + 6} y={y + barHeight / 2 + 1} fontSize="11" fill={isBreakEven ? '#92400e' : '#15803d'} fontWeight="600" dominantBaseline="middle">
+                    {isBreakEven ? 'Break Even' : fmt(m.profit) + ' profit'}
                   </text>
                 </g>
               );
             })}
 
-            {/* Current position markers */}
-            {paidSessions > 0 && (
-              <g>
-                <line x1={paidX} y1={topMargin - 6} x2={paidX} y2={topMargin + chartMilestones.length * rowHeight} stroke="#15803d" strokeWidth="2" strokeDasharray="4,3" />
-                <text x={paidX} y={topMargin + chartMilestones.length * rowHeight + 14} textAnchor="middle" fontSize="10" fill="#15803d" fontWeight="700">
-                  Paid: {paidSessions}
-                </text>
-              </g>
-            )}
-            {totalRegisteredSessions > paidSessions && (
-              <g>
-                <line x1={registeredX} y1={topMargin - 6} x2={registeredX} y2={topMargin + chartMilestones.length * rowHeight} stroke="#ea580c" strokeWidth="2" strokeDasharray="4,3" />
-                <text x={registeredX} y={topMargin + chartMilestones.length * rowHeight + 28} textAnchor="middle" fontSize="10" fill="#ea580c" fontWeight="700">
-                  Registered: {totalRegisteredSessions}
-                </text>
-              </g>
-            )}
-
             {/* Legend */}
-            <g transform={`translate(${leftMargin}, ${topMargin + chartMilestones.length * rowHeight + 40})`}>
-              <rect x="0" y="0" width="12" height="12" fill="#22c55e" rx="2" />
-              <text x="16" y="10" fontSize="10" fill="#374151">Paid</text>
-              <rect x="60" y="0" width="12" height="12" fill="#fb923c" rx="2" />
-              <text x="76" y="10" fontSize="10" fill="#374151">Registered (Unpaid)</text>
-              <rect x="190" y="0" width="12" height="12" fill="#e5e7eb" rx="2" />
-              <text x="206" y="10" fontSize="10" fill="#374151">Still Needed</text>
+            <g transform={`translate(${leftMargin}, ${topMargin + chartMilestones.length * rowHeight + 12})`}>
+              <rect x="0" y="0" width="12" height="12" fill="#ef4444" rx="2" />
+              <text x="16" y="10" fontSize="10" fill="#374151">Gym Rental</text>
+              <rect x="90" y="0" width="12" height="12" fill="#f97316" rx="2" />
+              <text x="106" y="10" fontSize="10" fill="#374151">Counselor Pay</text>
+              <rect x="200" y="0" width="12" height="12" fill="#6366f1" rx="2" />
+              <text x="216" y="10" fontSize="10" fill="#374151">Processing Fees</text>
+              <rect x="320" y="0" width="12" height="12" fill="#22c55e" rx="2" />
+              <text x="336" y="10" fontSize="10" fill="#374151">Profit</text>
             </g>
           </svg>
         </div>
@@ -429,6 +444,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
           <li>Session price: {fmt(basePrice)}/camper-session{avgRevenuePerSession < basePrice ? ` (avg with discounts: ${fmtFull(avgRevenuePerSession)})` : ''}</li>
           <li>Counselor pay: {fmt(COUNSELOR_PAY_PER_SESSION)}/session, 1 counselor per {KIDS_PER_COUNSELOR} campers</li>
           <li>Gym rental: {fmt(GYM_RENTAL_TOTAL)} total ({GYM_DAYS} days — Magnuson Community Center permit #R282920)</li>
+          <li>Payment processing: {(PAYMENT_PROCESSING_RATE * 100).toFixed(1)}% + {fmtFull(PAYMENT_PROCESSING_FIXED)}/transaction (Stripe/Venmo business rate)</li>
           <li>Counselor costs scale with registrations — more campers per session = more counselors needed</li>
           <li>Projections use average revenue per session to account for week/multi-week discounts</li>
         </ul>
