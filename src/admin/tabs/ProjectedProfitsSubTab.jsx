@@ -104,9 +104,13 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
     const maxRevenue = reachableMilestones.length > 0 ? Math.max(reachableMilestones[reachableMilestones.length - 1].revenue, maxRevenueAtCapacity) : maxRevenueAtCapacity;
     const maxSessions = MAX_CAPACITY;
 
-    // Per-day breakdown for the detail table
+    // Per-day breakdown for the detail table — only camp dates (Aug 17-28)
+    const CAMP_START = '2026-08-17';
+    const CAMP_END = '2026-08-28';
     const dayBreakdown = {};
-    const rentalDates = gymRentals ? Object.keys(gymRentals).sort() : [];
+    const rentalDates = gymRentals
+      ? Object.keys(gymRentals).filter(d => d >= CAMP_START && d <= CAMP_END).sort()
+      : [];
     rentalDates.forEach(date => {
       dayBreakdown[date] = { morning: { campers: 0, counselors: 0 }, afternoon: { campers: 0, counselors: 0 } };
     });
