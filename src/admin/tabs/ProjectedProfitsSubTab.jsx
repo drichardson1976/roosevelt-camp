@@ -196,8 +196,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
   const rowHeight = barHeight + barGap;
   const adjustedChartHeight = topMargin + chartMilestones.length * rowHeight + bottomMargin;
 
-  // Scale bars by revenue (proportional to total money flowing through)
-  const revenueScale = (rev) => leftMargin + (rev / maxRevenue) * barAreaWidth;
+  // Scale bars by sessions (proportional to session count, capped at max capacity)
+  const sessionScale = (sessions) => leftMargin + (sessions / MAX_CAPACITY) * barAreaWidth;
 
   const formatDate = (dateStr) => {
     const d = new Date(dateStr + 'T12:00:00');
@@ -308,14 +308,16 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
               const currentGrossProfit = profitPaidOnly;
               const currentDonation = Math.max(0, currentGrossProfit * DONATION_RATE);
               const currentNetProfit = currentGrossProfit - currentDonation;
-              const totalBarW = currentRevenue > 0 ? (currentRevenue / maxRevenue) * barAreaWidth : 0;
+              const totalBarW = currentSessions > 0 ? (currentSessions / MAX_CAPACITY) * barAreaWidth : 0;
 
-              // Segment widths
-              const gW = currentRevenue > 0 ? (GYM_RENTAL_TOTAL / currentRevenue) * totalBarW : 0;
-              const cW = currentRevenue > 0 ? (currentCounselorCost / currentRevenue) * totalBarW : 0;
-              const fW = currentRevenue > 0 ? (currentFees / currentRevenue) * totalBarW : 0;
-              const dW = currentRevenue > 0 && currentDonation > 0 ? (currentDonation / currentRevenue) * totalBarW : 0;
-              const pW = Math.max(0, totalBarW - gW - cW - fW - dW);
+              // Segment widths — scale relative to total costs+profit to fit in bar
+              const totalSpend = GYM_RENTAL_TOTAL + currentCounselorCost + currentFees + currentDonation + Math.max(0, currentNetProfit);
+              const scale = totalSpend > 0 ? totalBarW / totalSpend : 0;
+              const gW = GYM_RENTAL_TOTAL * scale;
+              const cW = currentCounselorCost * scale;
+              const fW = currentFees * scale;
+              const dW = currentDonation * scale;
+              const pW = Math.max(0, currentNetProfit) * scale;
 
               return (
                 <g>
@@ -373,15 +375,17 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
             {/* Milestone rows */}
             {chartMilestones.map((m, i) => {
               const y = topMargin + i * rowHeight;
-              const totalBarW = revenueScale(m.revenue) - leftMargin;
+              const totalBarW = sessionScale(m.sessions) - leftMargin;
               const isBreakEven = m.profit === 0;
 
-              // Cost segment widths (proportional to revenue)
-              const gymW = (m.gymCost / m.revenue) * totalBarW;
-              const counselorW = (m.counselorCost / m.revenue) * totalBarW;
-              const feesW = (m.processingFees / m.revenue) * totalBarW;
-              const donationW = (m.donation / m.revenue) * totalBarW;
-              const netProfitW = Math.max(0, totalBarW - gymW - counselorW - feesW - donationW);
+              // Cost segment widths (proportional within bar, scaled to fill)
+              const mTotal = m.gymCost + m.counselorCost + m.processingFees + m.donation + Math.max(0, m.netProfit);
+              const mScale = mTotal > 0 ? totalBarW / mTotal : 0;
+              const gymW = m.gymCost * mScale;
+              const counselorW = m.counselorCost * mScale;
+              const feesW = m.processingFees * mScale;
+              const donationW = m.donation * mScale;
+              const netProfitW = Math.max(0, m.netProfit) * mScale;
 
               // Precompute x offsets for stacked segments
               const gymX = leftMargin;
