@@ -175,6 +175,8 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
   const fmt = (n) => '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   const fmtFull = (n) => '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Financial bracket format: positive = "$1,234", negative = "($1,234)"
+  const fmtAcct = (n) => n < 0 ? '(' + fmt(n) + ')' : fmt(n);
 
   // Chart dimensions
   const chartWidth = 960;
@@ -211,16 +213,16 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
         {/* Top-line profit/loss */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className={`rounded-xl p-4 text-center border-2 ${profitPaidOnly >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
-            <p className="text-sm font-medium text-gray-600">Profit (Paid Only)</p>
+            <p className="text-sm font-medium text-gray-600">{profitPaidOnly >= 0 ? 'Profit' : 'Loss'} (Paid Only)</p>
             <p className={`text-3xl font-bold ${profitPaidOnly >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              {profitPaidOnly < 0 ? '-' : ''}{fmt(profitPaidOnly)}
+              {fmtAcct(profitPaidOnly)}
             </p>
             <p className="text-xs text-gray-500">{paidSessions} sessions collected</p>
           </div>
           <div className={`rounded-xl p-4 text-center border-2 border-dashed ${profitIfAllPay >= 0 ? 'bg-green-50 border-green-300' : 'bg-orange-50 border-orange-300'}`}>
-            <p className="text-sm font-medium text-gray-600">Profit (If All Registered Pay)</p>
+            <p className="text-sm font-medium text-gray-600">{profitIfAllPay >= 0 ? 'Profit' : 'Loss'} (If All Registered Pay)</p>
             <p className={`text-3xl font-bold ${profitIfAllPay >= 0 ? 'text-green-700' : 'text-orange-700'}`}>
-              {profitIfAllPay < 0 ? '-' : ''}{fmt(profitIfAllPay)}
+              {fmtAcct(profitIfAllPay)}
             </p>
             <p className="text-xs text-gray-500">{totalRegisteredSessions} total sessions</p>
           </div>
@@ -349,7 +351,7 @@ export const ProjectedProfitsSubTab = ({ registrations, counselors, counselorSch
 
                   {/* Profit/loss label — to the right of bar */}
                   <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 - 8} fontSize="14" fill={currentGrossProfit >= 0 ? '#15803d' : '#dc2626'} fontWeight="700" dominantBaseline="middle">
-                    {currentGrossProfit < 0 ? '-' : ''}{fmt(currentGrossProfit)} {currentGrossProfit >= 0 ? 'profit' : 'loss'}
+                    {currentGrossProfit >= 0 ? fmt(currentGrossProfit) + ' profit' : fmtAcct(currentGrossProfit) + ' loss'}
                   </text>
                   <text x={leftMargin + barAreaWidth + 8} y={cy + currentBarHeight / 2 + 6} fontSize="11" fill="#6b7280" dominantBaseline="middle">
                     {fmtFull(paidRevenue)} revenue from {paidSessions} sessions
